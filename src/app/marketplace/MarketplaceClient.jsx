@@ -3122,199 +3122,200 @@ function VueVendeur({
         {/* ========================================================================= */}
         {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU (1:1 Capture exacte)      */}
         {/* ========================================================================= */}
-        <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden sticky top-20">
-          {/* Header de la carte avec lien APERÇU et RÉGLAGES */}
-          <div className="p-5 pt-4 pb-4 flex flex-col items-center text-center relative">
-            <div className="absolute top-3.5 right-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setModalApercuOuverte(true)}
-                className="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition cursor-pointer shadow-2xs"
-                title="Aperçu public de ma boutique (comme les visiteurs la voient)"
-              >
-                <i className="fa-regular fa-eye text-xs"></i>
-                <span>Aperçu</span>
-              </button>
+        {ongletVendeur !== "publier" && (
+          <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden sticky top-20">
+            {/* Header de la carte avec lien APERÇU et RÉGLAGES */}
+            <div className="p-5 pt-4 pb-4 flex flex-col items-center text-center relative">
+              <div className="absolute top-3.5 right-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModalApercuOuverte(true)}
+                  className="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                  title="Aperçu public de ma boutique (comme les visiteurs la voient)"
+                >
+                  <i className="fa-regular fa-eye text-xs"></i>
+                  <span>Aperçu</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("parametres")}
+                  className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1 transition cursor-pointer tracking-wider"
+                  title="Paramètres de la boutique"
+                >
+                  <span>RÉGLAGES</span>
+                  <i className="fa-solid fa-gear text-xs"></i>
+                </button>
+              </div>
+
+              {/* Avatar vert rond (1:1 Capture exacte) */}
+              <div className="w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-5xl mt-3 mb-3 shadow-xs">
+                <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+              </div>
+
+              {/* Nom du commerçant / Boutique */}
+              <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                {nomVendeur}
+              </h3>
+
+              {/* Lien / Statut Numéro de Téléphone */}
               <button
                 type="button"
                 onClick={() => setOngletVendeur("parametres")}
-                className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1 transition cursor-pointer tracking-wider"
-                title="Paramètres de la boutique"
+                className="text-[11px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
               >
-                <span>RÉGLAGES</span>
-                <i className="fa-solid fa-gear text-xs"></i>
+                {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
               </button>
             </div>
 
-            {/* Avatar vert rond (1:1 Capture exacte) */}
-            <div className="w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-5xl mt-3 mb-3 shadow-xs">
-              <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-
-            {/* Nom du commerçant / Boutique */}
-            <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
-              {nomVendeur}
-            </h3>
-
-            {/* Lien / Statut Numéro de Téléphone */}
-            <button
-              type="button"
-              onClick={() => setOngletVendeur("parametres")}
-              className="text-[11px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
-            >
-              {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
-            </button>
-          </div>
-
-          {/* Liste des options avec les séparateurs de la capture d'écran */}
-          <div className="border-t border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200">
-            {/* 0. Publier un article (Assistant IA) */}
-            <div className="p-2.5 border-b border-gray-100 dark:border-gray-800">
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("publier")}
-                className={`w-full px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-left transition cursor-pointer shadow-sm ${
-                  ongletVendeur === "publier"
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20 font-black"
-                    : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/60 dark:border-emerald-800/50"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <i className="fa-solid fa-circle-plus text-base text-emerald-500"></i>
-                  <span className="font-extrabold text-xs sm:text-sm">Publier un article</span>
-                </div>
-                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
-                  IA
-                </span>
-              </button>
-            </div>
-
-            {/* 1. Faire profit */}
-            <div className="border-b border-gray-100 dark:border-gray-800">
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("profit")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "profit"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <span className="text-lg">🤑</span>
-                <span className="flex-1 text-sm font-bold">Faire profit</span>
-              </button>
-            </div>
-
-            {/* 1bis. Premium Marketplace (jetons) */}
-            <div className="border-b border-gray-100 dark:border-gray-800">
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("premium")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "premium"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <span className="text-lg">👑</span>
-                <span className="flex-1 text-sm font-bold">Premium Marketplace</span>
-              </button>
-            </div>
-
-            {/* Séparateur / Bloc 2, 3, 4 */}
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {/* 2. Abonnés */}
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("abonnes")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "abonnes"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <i className="fa-regular fa-address-card text-lg text-gray-800 dark:text-gray-200"></i>
-                <span className="flex-1 text-sm font-bold">Abonnés</span>
-              </button>
-
-              {/* 3. Mes annonces */}
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("annonces")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "annonces"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <i className="fa-regular fa-calendar-days text-lg text-gray-800 dark:text-gray-200"></i>
-                <span className="flex-1 text-sm font-bold">Mes annonces</span>
-                {articles.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
-                    {articles.length}
+            {/* Liste des options avec les séparateurs de la capture d'écran */}
+            <div className="border-t border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200">
+              {/* 0. Publier un article (Assistant IA) */}
+              <div className="p-2.5 border-b border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("publier")}
+                  className={`w-full px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-left transition cursor-pointer shadow-sm ${
+                    ongletVendeur === "publier"
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20 font-black"
+                      : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/60 dark:border-emerald-800/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <i className="fa-solid fa-circle-plus text-base text-emerald-500"></i>
+                    <span className="font-extrabold text-xs sm:text-sm">Publier un article</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
+                    IA
                   </span>
-                )}
-              </button>
+                </button>
+              </div>
 
-              {/* 4. Avis */}
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("avis")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "avis"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <i className="fa-regular fa-face-smile text-lg text-gray-800 dark:text-gray-200"></i>
-                <span className="flex-1 text-sm font-bold">Avis</span>
-              </button>
-            </div>
+              {/* 1. Faire profit */}
+              <div className="border-b border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("profit")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "profit"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <span className="text-lg">🤑</span>
+                  <span className="flex-1 text-sm font-bold">Faire profit</span>
+                </button>
+              </div>
 
-            {/* Séparateur / Bloc 5 */}
-            <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
-              {/* 5. Foire aux questions */}
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("faq")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "faq"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <i className="fa-regular fa-circle-question text-lg text-gray-800 dark:text-gray-200"></i>
-                <span className="flex-1 text-sm font-bold">Foire aux questions</span>
-              </button>
+              {/* 1bis. Premium Marketplace (jetons) */}
+              <div className="border-b border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("premium")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "premium"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <span className="text-lg">👑</span>
+                  <span className="flex-1 text-sm font-bold">Premium Marketplace</span>
+                </button>
+              </div>
 
-              {/* 6. Réglages */}
-              <button
-                type="button"
-                onClick={() => setOngletVendeur("parametres")}
-                className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                  ongletVendeur === "parametres"
-                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-              >
-                <i className="fa-solid fa-gear text-lg text-gray-800 dark:text-gray-200"></i>
-                <span className="flex-1 text-sm font-bold">Réglages</span>
-              </button>
+              {/* Séparateur / Bloc 2, 3, 4 */}
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {/* 2. Abonnés */}
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("abonnes")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "abonnes"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <i className="fa-regular fa-address-card text-lg text-gray-800 dark:text-gray-200"></i>
+                  <span className="flex-1 text-sm font-bold">Abonnés</span>
+                </button>
+
+                {/* 3. Mes annonces */}
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("annonces")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "annonces"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <i className="fa-regular fa-calendar-days text-lg text-gray-800 dark:text-gray-200"></i>
+                  <span className="flex-1 text-sm font-bold">Mes annonces</span>
+                  {articles.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+                      {articles.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* 4. Avis */}
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("avis")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "avis"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <i className="fa-regular fa-face-smile text-lg text-gray-800 dark:text-gray-200"></i>
+                  <span className="flex-1 text-sm font-bold">Avis</span>
+                </button>
+              </div>
+
+              {/* Séparateur / Bloc 5 */}
+              <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+                {/* 5. Foire aux questions */}
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("faq")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "faq"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <i className="fa-regular fa-circle-question text-lg text-gray-800 dark:text-gray-200"></i>
+                  <span className="flex-1 text-sm font-bold">Foire aux questions</span>
+                </button>
+
+                {/* 6. Réglages */}
+                <button
+                  type="button"
+                  onClick={() => setOngletVendeur("parametres")}
+                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
+                    ongletVendeur === "parametres"
+                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <i className="fa-solid fa-gear text-lg text-gray-800 dark:text-gray-200"></i>
+                  <span className="flex-1 text-sm font-bold">Réglages</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* ========================================================================= */}
         {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (1:1 Capture 2 plein espace) */}
         {/* ========================================================================= */}
         <div className="flex-1 min-w-0 w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden min-h-[calc(100vh-160px)]">
-          {/* Header de la section principale (sauf pour annonces où la bannière fait office d'en-tête) */}
-          {ongletVendeur !== "annonces" && (
+          {/* Header de la section principale (sauf pour annonces et publier où le formulaire a son propre en-tête dédié) */}
+          {ongletVendeur !== "annonces" && ongletVendeur !== "publier" && (
             <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
-                {ongletVendeur === "publier" && "Publier une annonce"}
                 {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
                 {ongletVendeur === "premium" && "Premium Marketplace"}
                 {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
