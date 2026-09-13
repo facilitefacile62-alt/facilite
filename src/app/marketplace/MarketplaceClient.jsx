@@ -2395,25 +2395,41 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
 
       {/* Modal Avatar façon Bitmoji — anonymat préservé, pas de vraie photo obligatoire */}
       {modalActive === "avatar" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-4 sm:p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[92vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b pb-3 mb-2 border-gray-100 dark:border-zinc-800 shrink-0">
-              <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                <i className="fa-solid fa-wand-magic-sparkles text-emerald-500"></i>
-                <span>Avatar anonyme</span>
-              </h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 h-[92vh] max-h-[660px] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b pb-2.5 mb-1.5 border-gray-100 dark:border-zinc-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-500">
+                  <i className="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white leading-none">
+                    Avatar anonyme
+                  </h3>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                    Personnalisez votre style
+                  </span>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => setModalActive(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
+                onClick={() => {
+                  setModalActive(null);
+                  if (sectionInitiale === "avatar") onRetour?.();
+                }}
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition active:scale-95"
+                title="Fermer"
               >
-                <i className="fa-solid fa-xmark text-sm"></i>
+                <i className="fa-solid fa-xmark text-xs sm:text-sm"></i>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <EditeurAvatarBoutique
                 configInitial={boutique?.avatar_config || profile?.avatar_config}
-                onAnnuler={() => setModalActive(null)}
+                onAnnuler={() => {
+                  setModalActive(null);
+                  if (sectionInitiale === "avatar") onRetour?.();
+                }}
                 onEnregistrer={async (config) => {
                   if (boutique?.id && boutique?.id !== "facilite_shop") {
                     await modifierAvatarBoutique(boutique.id, config);
@@ -2431,6 +2447,7 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
                   setModalActive(null);
                   showToast("✓ Avatar mis à jour avec succès !");
                   onEnregistre?.();
+                  if (sectionInitiale === "avatar") onRetour?.();
                 }}
               />
             </div>

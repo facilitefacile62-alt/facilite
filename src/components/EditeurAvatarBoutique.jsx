@@ -3,8 +3,7 @@
 // Éditeur d'avatar façon Bitmoji pour une boutique — anonymat possible,
 // aucune vraie photo obligatoire. Le rendu (aperçu + vignettes) est du SVG
 // DiceBear généré en local à chaque changement, donc aucun round-trip
-// serveur pour prévisualiser ; seul le clic sur "Enregistrer" écrit en base
-// (via modifier_mon_avatar_boutique, appelé par le composant parent).
+// serveur pour prévisualiser ; seul le clic sur "Enregistrer" écrit en base.
 import { useMemo, useState } from "react";
 import {
   configAvatarAleatoire,
@@ -28,28 +27,32 @@ function LigneAxeType({ label, options, valeur, onChange }) {
   const precedent = () => onChange(options[(index - 1 + options.length) % options.length].valeur);
 
   return (
-    <div className="flex items-center justify-between gap-2 py-2.5">
-      <span className="text-xs font-bold text-gray-700 dark:text-gray-300 w-24 shrink-0">{label}</span>
-      <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-        <button
-          type="button"
-          onClick={precedent}
-          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer transition shrink-0"
-          aria-label={`${label} précédent`}
-        >
-          <i className="fa-solid fa-chevron-left text-[10px]"></i>
-        </button>
-        <span className="text-xs font-semibold text-gray-900 dark:text-white min-w-0 flex-1 text-center truncate">
-          {options[index]?.label}
+    <div className="py-1.5">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2 bg-gray-50 dark:bg-zinc-800/60 rounded-xl sm:rounded-2xl p-1.5 sm:p-2 border border-gray-100 dark:border-zinc-800/80">
+        <span className="text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 pl-1 sm:pl-2 shrink-0 max-w-[80px] sm:max-w-[100px] truncate">
+          {label}
         </span>
-        <button
-          type="button"
-          onClick={suivant}
-          className="w-7 h-7 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center text-gray-600 dark:text-gray-300 cursor-pointer transition shrink-0"
-          aria-label={`${label} suivant`}
-        >
-          <i className="fa-solid fa-chevron-right text-[10px]"></i>
-        </button>
+        <div className="flex items-center gap-1 sm:gap-1.5 justify-end flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={precedent}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-white dark:bg-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-600 shadow-2xs flex items-center justify-center text-gray-700 dark:text-gray-200 cursor-pointer transition shrink-0 active:scale-90"
+            aria-label={`${label} précédent`}
+          >
+            <i className="fa-solid fa-chevron-left text-[10px] sm:text-xs"></i>
+          </button>
+          <span className="text-[11px] sm:text-xs font-bold text-zinc-900 dark:text-white px-1.5 sm:px-2 py-1 bg-white dark:bg-zinc-900 rounded-lg shadow-2xs flex-1 min-w-0 text-center truncate">
+            {options[index]?.label}
+          </span>
+          <button
+            type="button"
+            onClick={suivant}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-white dark:bg-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-600 shadow-2xs flex items-center justify-center text-gray-700 dark:text-gray-200 cursor-pointer transition shrink-0 active:scale-90"
+            aria-label={`${label} suivant`}
+          >
+            <i className="fa-solid fa-chevron-right text-[10px] sm:text-xs"></i>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -57,9 +60,11 @@ function LigneAxeType({ label, options, valeur, onChange }) {
 
 function LigneAxeCouleur({ label, options, valeur, onChange }) {
   return (
-    <div className="py-2.5">
-      <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1.5">{label}</span>
-      <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="py-1.5">
+      <span className="text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 block mb-1 pl-1">
+        {label}
+      </span>
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap bg-gray-50 dark:bg-zinc-800/60 rounded-xl sm:rounded-2xl p-2 border border-gray-100 dark:border-zinc-800/80">
         {options.map((o) => (
           <button
             key={o.valeur}
@@ -67,10 +72,10 @@ function LigneAxeCouleur({ label, options, valeur, onChange }) {
             onClick={() => onChange(o.valeur)}
             title={o.label}
             aria-label={o.label}
-            className={`w-7 h-7 rounded-full border-2 cursor-pointer transition ${
+            className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 cursor-pointer transition shrink-0 ${
               valeur === o.valeur
-                ? "border-gray-900 dark:border-white scale-110 shadow-sm"
-                : "border-transparent hover:scale-105"
+                ? "border-emerald-500 scale-110 shadow-md ring-2 ring-emerald-500/30"
+                : "border-white/50 dark:border-zinc-700 hover:scale-105"
             }`}
             style={{ backgroundColor: `#${o.valeur}` }}
           />
@@ -102,26 +107,29 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Aperçu centré & Bouton Aléatoire */}
-      <div className="flex flex-col items-center gap-2.5 pb-3 shrink-0">
-        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-emerald-400 dark:border-emerald-500 shadow-md bg-gray-100 dark:bg-zinc-800 shrink-0">
+    <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
+      {/* Aperçu centré & Bouton Aléatoire (Compact) */}
+      <div className="flex items-center justify-center gap-3 pb-2.5 pt-1 shrink-0 bg-white dark:bg-zinc-900">
+        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-3 border-emerald-400 dark:border-emerald-500 shadow-md bg-gray-100 dark:bg-zinc-800 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={apercu} alt="Aperçu de l'avatar de la boutique" className="w-full h-full object-cover" />
+          <img src={apercu} alt="Aperçu de l'avatar" className="w-full h-full object-cover" />
         </div>
-        <button
-          type="button"
-          onClick={() => setConfig(configAvatarAleatoire())}
-          className="px-3.5 py-1.5 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-xs font-black text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer transition shadow-xs"
-        >
-          <i className="fa-solid fa-shuffle text-emerald-500"></i>
-          <span>Aléatoire</span>
-        </button>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">Aperçu en direct</span>
+          <button
+            type="button"
+            onClick={() => setConfig(configAvatarAleatoire())}
+            className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-xs font-black text-gray-800 dark:text-gray-100 flex items-center gap-1.5 cursor-pointer transition shadow-2xs active:scale-95"
+          >
+            <i className="fa-solid fa-shuffle text-emerald-500 text-xs"></i>
+            <span>Aléatoire</span>
+          </button>
+        </div>
       </div>
 
-      {/* Liste des options défilable */}
-      <div className="divide-y divide-gray-100 dark:divide-zinc-800 pb-2">
-        <LigneAxeCouleur label="Peau" options={OPTIONS_SKIN_COLOR} valeur={config.skinColor} onChange={definir("skinColor")} />
+      {/* Liste des options défilable (avec barre de défilement propre et espace) */}
+      <div className="flex-1 overflow-y-auto px-1 py-1 min-h-0 space-y-0.5 custom-scrollbar">
+        <LigneAxeCouleur label="Couleur de peau" options={OPTIONS_SKIN_COLOR} valeur={config.skinColor} onChange={definir("skinColor")} />
         <LigneAxeType label="Cheveux" options={OPTIONS_TOP} valeur={config.top} onChange={definir("top")} />
         <LigneAxeCouleur
           label="Couleur cheveux"
@@ -141,22 +149,22 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
           onChange={definir("accessories")}
         />
         <LigneAxeCouleur
-          label="Fond"
+          label="Couleur de fond"
           options={OPTIONS_BACKGROUND_COLOR}
           valeur={config.backgroundColor}
           onChange={definir("backgroundColor")}
         />
       </div>
 
-      {erreur && <p className="text-xs font-bold text-red-600 my-2">{erreur}</p>}
+      {erreur && <p className="text-xs font-bold text-red-600 px-2 my-1 shrink-0">{erreur}</p>}
 
-      {/* Barre d'action sticky en bas (100% toujours visible pour enregistrer) */}
-      <div className="sticky bottom-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm pt-3 pb-1 border-t border-gray-100 dark:border-zinc-800 mt-2 z-20 flex items-center gap-2">
+      {/* Barre d'action fixe en bas (100% visible et toujours accessible) */}
+      <div className="shrink-0 pt-2.5 pb-1 mt-1 border-t border-gray-100 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900">
         {onAnnuler && (
           <button
             type="button"
             onClick={onAnnuler}
-            className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-black cursor-pointer transition"
+            className="w-1/3 py-2.5 sm:py-3 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-bold cursor-pointer transition active:scale-95 text-center"
           >
             Annuler
           </button>
@@ -165,10 +173,10 @@ export default function EditeurAvatarBoutique({ configInitial, onEnregistrer, on
           type="button"
           onClick={enregistrer}
           disabled={envoi}
-          className="flex-2 py-3 rounded-xl bg-[#0b1329] hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-xs sm:text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
+          className="flex-1 py-2.5 sm:py-3 rounded-xl bg-[#0b1329] hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-xs sm:text-sm font-black disabled:opacity-50 cursor-pointer shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5 active:scale-95"
         >
-          <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"}`}></i>
-          <span>{envoi ? "Enregistrement…" : "Enregistrer les modifications"}</span>
+          <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-floppy-disk"} text-xs sm:text-sm`}></i>
+          <span className="truncate">{envoi ? "Enregistrement…" : "Enregistrer"}</span>
         </button>
       </div>
     </div>
