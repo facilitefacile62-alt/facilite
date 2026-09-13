@@ -1,8 +1,14 @@
 // Copie directe de src/lib/spontaneousData.js (web) — fichier de données
 // pur (aucune dépendance), portable tel quel. Utilisé par
 // candidature-spontanee.tsx et fiche-entreprise/[slug].tsx (Point E du
-// handoff design). Un seul écart avec l'original : annotation de type
-// ajoutée ici (le fichier web est en .js).
+// handoff design). Deux écarts avec l'original : annotation de type
+// ajoutée ici (le fichier web est en .js), et les 4 image_url en chemin
+// relatif (Foundever/Seter/Soboa/Demdikk) préfixées par l'origine réelle
+// du site — un chemin comme "/foundever_conseiller_client.jpg" ne
+// résout correctement que servi depuis ffacilite.com ; côté mobile il
+// se résolvait contre l'origine de l'app elle-même (404 systématique,
+// trouvé le 13/09/2026 en capturant l'app réelle). Toute nouvelle
+// entrée avec une image doit utiliser une URL absolue directement.
 export type EntrepriseSpontanee = {
   id: string;
   slug: string;
@@ -35,7 +41,7 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     contactType: "url",
     externalLink: "https://jobs.foundever.com/",
     documentsRequired: "CV & Lettre de motivation",
-    image_url: "/foundever_conseiller_client.jpg",
+    image_url: "https://ffacilite.com/foundever_conseiller_client.jpg",
     poles: ["Conseillers Clients", "Réception d'appels", "Expérience Client (CX)", "Support Client"],
   },
   // --- LISTES PRÉCÉDENTES (65 Entreprises) ---
@@ -324,7 +330,7 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     contactType: "url",
     externalLink: "https://seter.sn/recrutement/",
     documentsRequired: "CV, Lettre de motivation",
-    image_url: "/seterimage.avif",
+    image_url: "https://ffacilite.com/seterimage.avif",
     poles: ["RH", "Transport", "Achats", "Marketing", "Maintenance", "Finance", "QHSE"],
   },
   {
@@ -340,7 +346,7 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     contactType: "url",
     externalLink: "https://soboa.sn/carriere/",
     documentsRequired: "CV, Lettre de motivation",
-    image_url: "/soboa.png",
+    image_url: "https://ffacilite.com/soboa.png",
     poles: ["Production", "Qualité", "Maintenance", "Logistique"],
   },
   {
@@ -356,7 +362,7 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     contactType: "url",
     externalLink: "https://jobs.demdikk.sn/offres/candidature-spontanee/",
     documentsRequired: "CV, Lettre de motivation",
-    image_url: "/demdikk.jpeg",
+    image_url: "https://ffacilite.com/demdikk.jpeg",
     poles: ["Conducteur", "Receveur", "IT", "RH", "Finance"],
   },
   {
