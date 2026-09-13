@@ -45,8 +45,8 @@
 // v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
 // v25 (13/09/2026) : atterrissage direct sur sa propre boutique vierge (0 article) après création
 // v26 (13/09/2026) : refonte visuelle de la page de bienvenue (logo officiel, lueur douce, tuiles enrichies)
-// v35 (13/09/2026) : affichage 1:1 avec barre latérale profil fixe et formulaire de publication
-const VERSION_CACHE = "facilite-v35";
+// v37 (13/09/2026) : refonte 1:1 de la carte profil vendeur avec bannière couverture par défaut et menu complet
+const VERSION_CACHE = "facilite-v37";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

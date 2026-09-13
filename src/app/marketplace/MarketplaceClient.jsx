@@ -3056,6 +3056,71 @@ function VueVendeur({
     };
   }, [choisie, ongletVendeur]);
 
+  const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (userId) {
+        try {
+          const photoPath = await envoyerPhoto(file, userId);
+          const publicPhotoUrl = urlPhoto(photoPath);
+          await supabase.from("profiles").update({ cover_url: publicPhotoUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+          if (boutiqueActive?.id && boutiqueActive.id !== "facilite_shop") {
+            await modifierBoutique(boutiqueActive.id, { cover_url: publicPhotoUrl });
+          }
+        } catch {
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${userId}/boutique_cover_${Date.now()}.${ext}`;
+          await supabase.storage.from("covers").upload(path, file, { upsert: true });
+          const { data: pubData } = supabase.storage.from("covers").getPublicUrl(path);
+          if (pubData?.publicUrl) {
+            await supabase.from("profiles").update({ cover_url: pubData.publicUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+            if (boutiqueActive?.id && boutiqueActive.id !== "facilite_shop") {
+              await modifierBoutique(boutiqueActive.id, { cover_url: pubData.publicUrl });
+            }
+          }
+        }
+        recharger();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (userId) {
+        try {
+          const photoPath = await envoyerPhoto(file, userId);
+          const publicPhotoUrl = urlPhoto(photoPath);
+          await supabase.from("profiles").update({ avatar_url: publicPhotoUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+          if (boutiqueActive?.id && boutiqueActive.id !== "facilite_shop") {
+            await modifierBoutique(boutiqueActive.id, { avatar_url: publicPhotoUrl });
+          }
+        } catch {
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${userId}/boutique_avatar_${Date.now()}.${ext}`;
+          await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+          const { data: pubData } = supabase.storage.from("avatars").getPublicUrl(path);
+          if (pubData?.publicUrl) {
+            await supabase.from("profiles").update({ avatar_url: pubData.publicUrl, updated_at: new Date().toISOString() }).eq("id", userId);
+            if (boutiqueActive?.id && boutiqueActive.id !== "facilite_shop") {
+              await modifierBoutique(boutiqueActive.id, { avatar_url: pubData.publicUrl });
+            }
+          }
+        }
+        recharger();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (!userId) {
     return (
       <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -3086,6 +3151,13 @@ function VueVendeur({
   const boutiqueActive = boutiques.find((b) => b.id === choisie) || boutiques[0] || null;
   const nomVendeur = boutiqueActive?.nom || profile?.full_name || "Facilite Facile";
   const telephoneVendeur = boutiqueActive?.telephone_whatsapp || profile?.phone || "";
+  const initiales = nomVendeur.substring(0, 2).toUpperCase();
+  const avatarBitmojiUri = boutiqueActive?.avatar_config ? dataUriAvatarBoutique(boutiqueActive.avatar_config, 160) : null;
+  const statutOuverture = useMemo(() => {
+    return calculerStatutOuverture(boutiqueActive, []);
+  }, [boutiqueActive]);
+  const estEtablissement = boutiqueActive?.type_boutique === "etablissement";
+  const estService = boutiqueActive?.type_boutique === "service";
 
   return (
     <div className="space-y-5">
@@ -3095,66 +3167,125 @@ function VueVendeur({
         </div>
       )}
 
-      {/* Disposition en 2 colonnes (1:1 Identique à la capture d'écran) */}
+      {/* Disposition en 2 colonnes (1:1 Identique à la capture d'écran 2) */}
       <div className="flex flex-col md:flex-row gap-6 items-start w-full">
         {/* ========================================================================= */}
-        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU (1:1 Capture exacte)      */}
+        {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU (1:1 Capture exacte 2)     */}
         {/* ========================================================================= */}
         {ongletVendeur !== "publier" && (
-          <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden sticky top-20">
-            {/* Header de la carte avec lien APERÇU et RÉGLAGES */}
-            <div className="p-5 pt-4 pb-4 flex flex-col items-center text-center relative">
-              <div className="absolute top-3.5 right-4 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setModalApercuOuverte(true)}
-                  className="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition cursor-pointer shadow-2xs"
-                  title="Aperçu public de ma boutique (comme les visiteurs la voient)"
-                >
-                  <i className="fa-regular fa-eye text-xs"></i>
-                  <span>Aperçu</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("parametres")}
-                  className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1 transition cursor-pointer tracking-wider"
-                  title="Paramètres de la boutique"
-                >
-                  <span>RÉGLAGES</span>
-                  <i className="fa-solid fa-gear text-xs"></i>
-                </button>
-              </div>
+          <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-20">
+            {/* Inputs cachés de téléchargement */}
+            <input
+              type="file"
+              ref={avatarInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+            <input
+              type="file"
+              ref={coverInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverUpload}
+            />
 
-              {/* Avatar vert rond (1:1 Capture exacte) */}
-              <div className="w-24 h-24 rounded-full bg-[#86EFAC] text-white flex items-center justify-center text-5xl mt-3 mb-3 shadow-xs">
-                <svg className="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-              </div>
-
-              {/* Nom du commerçant / Boutique */}
-              <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
-                {nomVendeur}
-              </h3>
-
-              {/* Lien / Statut Numéro de Téléphone */}
+            {/* Bannière de couverture en haut de la carte (1:1 Capture 2 avec image par défaut) */}
+            <div
+              className="h-28 bg-cover bg-center bg-no-repeat relative block bg-slate-900"
+              style={{ backgroundImage: `url('${boutiqueActive?.cover_url || profile?.cover_url || "/default-cover.png"}')` }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
+              {/* Bouton Appareil Photo pour changer la couverture */}
               <button
                 type="button"
-                onClick={() => setOngletVendeur("parametres")}
-                className="text-[11px] font-bold text-[#718096] dark:text-gray-400 hover:text-blue-600 uppercase tracking-wider mt-1.5 transition cursor-pointer"
+                onClick={() => coverInputRef.current?.click()}
+                className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-white/90 hover:bg-white dark:bg-black/70 dark:hover:bg-black text-zinc-900 dark:text-white flex items-center justify-center shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95"
+                title="Changer la photo de couverture"
               >
-                {telephoneVendeur ? `TÉL : ${telephoneVendeur}` : "AJOUTER LE NUMÉRO DE TÉLÉPHONE"}
+                <i className="fa-solid fa-camera text-xs"></i>
               </button>
             </div>
 
-            {/* Liste des options avec les séparateurs de la capture d'écran */}
-            <div className="border-t border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200">
+            {/* Profil : Avatar avec overlay Modifier + Nom + Titre + Badges */}
+            <div className="px-4 pb-3 pt-0 relative flex flex-col items-start text-left border-b border-gray-100 dark:border-zinc-800">
+              {/* Avatar avec bouton Modifier */}
+              <div className="relative group -mt-10 mb-2 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white text-2xl font-black shadow-md overflow-hidden shrink-0">
+                {avatarBitmojiUri ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarBitmojiUri} alt={nomVendeur} className="w-full h-full object-cover" />
+                ) : (boutiqueActive?.avatar_url || profile?.avatar_url) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={boutiqueActive?.avatar_url || profile?.avatar_url}
+                    alt={nomVendeur}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{initiales}</span>
+                )}
+
+                {/* Overlay interactif de modification au survol / clic */}
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition duration-200 flex flex-col items-center justify-center text-white cursor-pointer"
+                  title="Modifier l'avatar"
+                >
+                  <i className="fa-solid fa-camera text-sm mb-0.5"></i>
+                  <span className="text-[9px] font-bold">Modifier</span>
+                </button>
+              </div>
+
+              {/* Nom du commerçant / Boutique & Badge BOUTIQUE */}
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h3 className="text-xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
+                  {nomVendeur}
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                  {estEtablissement ? "ÉTABLISSEMENT" : estService ? "SERVICE" : "BOUTIQUE"}
+                </span>
+              </div>
+
+              {/* Statut Ouvert / Fermé */}
+              <div className="mb-2">
+                <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+              </div>
+
+              {/* Headline / Description */}
+              <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mb-2.5 line-clamp-1">
+                {boutiqueActive?.description || profile?.headline || "Boutique officielle partenaire sur Facilité Sénégal"}
+              </p>
+
+              {/* Tag Pilule Métier / Secteur */}
+              <div className="w-full mb-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-bold border border-gray-200/60 dark:border-zinc-700/60 w-full">
+                  <i className="fa-regular fa-folder text-zinc-400"></i>
+                  <span className="truncate">Commerce &amp; Vente au détail</span>
+                </span>
+              </div>
+
+              {/* Bouton Aperçu de la boutique (Bleu vif 1:1 Capture 2) */}
+              <button
+                type="button"
+                onClick={() => setModalApercuOuverte(true)}
+                className="w-full mt-2 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer bg-[#1877F2] hover:bg-blue-600 text-white shadow-md shadow-blue-500/20 active:scale-98"
+                title="Aperçu public de ma boutique"
+              >
+                <i className="fa-regular fa-eye text-sm"></i>
+                <span>Aperçu de la boutique</span>
+              </button>
+            </div>
+
+            {/* Menu complet des options avec séparateurs fins (1:1 Capture 2) */}
+            <div className="p-2 space-y-1 text-xs font-bold text-gray-800 dark:text-gray-200">
               {/* 0. Publier un article (Assistant IA) */}
-              <div className="p-2.5 border-b border-gray-100 dark:border-gray-800">
+              <div className="pb-1">
                 <button
                   type="button"
                   onClick={() => setOngletVendeur("publier")}
-                  className={`w-full px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-left transition cursor-pointer shadow-sm ${
+                  className={`w-full px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 text-left transition cursor-pointer shadow-sm ${
                     ongletVendeur === "publier"
                       ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20 font-black"
                       : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200/60 dark:border-emerald-800/50"
@@ -3162,7 +3293,7 @@ function VueVendeur({
                 >
                   <div className="flex items-center gap-2.5">
                     <i className="fa-solid fa-circle-plus text-base text-emerald-500"></i>
-                    <span className="font-extrabold text-xs sm:text-sm">Publier un article</span>
+                    <span className="font-extrabold text-xs">Publier un article</span>
                   </div>
                   <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
                     IA
@@ -3170,118 +3301,136 @@ function VueVendeur({
                 </button>
               </div>
 
-              {/* 1. Faire profit */}
-              <div className="border-b border-gray-100 dark:border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("profit")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "profit"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <span className="text-lg">🤑</span>
-                  <span className="flex-1 text-sm font-bold">Faire profit</span>
-                </button>
-              </div>
+              {/* 1. Mes annonces */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("annonces")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "annonces"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-calendar-days text-base text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Mes annonces</span>
+                {articles.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+                    {articles.length}
+                  </span>
+                )}
+              </button>
 
-              {/* 1bis. Premium Marketplace (jetons) */}
-              <div className="border-b border-gray-100 dark:border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("premium")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "premium"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <span className="text-lg">👑</span>
-                  <span className="flex-1 text-sm font-bold">Premium Marketplace</span>
-                </button>
-              </div>
+              {/* 2. Faire profit */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("profit")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "profit"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <span className="text-base">🤑</span>
+                <span className="flex-1">Faire profit</span>
+              </button>
 
-              {/* Séparateur / Bloc 2, 3, 4 */}
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {/* 2. Abonnés */}
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("abonnes")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "abonnes"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <i className="fa-regular fa-address-card text-lg text-gray-800 dark:text-gray-200"></i>
-                  <span className="flex-1 text-sm font-bold">Abonnés</span>
-                </button>
+              {/* 3. Premium Marketplace */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("premium")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "premium"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <span className="text-base">👑</span>
+                <span className="flex-1">Premium Marketplace</span>
+              </button>
 
-                {/* 3. Mes annonces */}
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("annonces")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "annonces"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <i className="fa-regular fa-calendar-days text-lg text-gray-800 dark:text-gray-200"></i>
-                  <span className="flex-1 text-sm font-bold">Mes annonces</span>
-                  {articles.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
-                      {articles.length}
-                    </span>
-                  )}
-                </button>
+              {/* 4. Abonnés */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("abonnes")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "abonnes"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-user-group text-sm text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Abonnés</span>
+              </button>
 
-                {/* 4. Avis */}
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("avis")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "avis"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <i className="fa-regular fa-face-smile text-lg text-gray-800 dark:text-gray-200"></i>
-                  <span className="flex-1 text-sm font-bold">Avis</span>
-                </button>
-              </div>
+              {/* 5. Avis */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("avis")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "avis"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-face-smile text-base text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Avis</span>
+              </button>
 
-              {/* Séparateur / Bloc 5 */}
-              <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
-                {/* 5. Foire aux questions */}
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("faq")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "faq"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <i className="fa-regular fa-circle-question text-lg text-gray-800 dark:text-gray-200"></i>
-                  <span className="flex-1 text-sm font-bold">Foire aux questions</span>
-                </button>
+              {/* 6. Foire aux questions */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("faq")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "faq"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-regular fa-circle-question text-base text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Foire aux questions</span>
+              </button>
 
-                {/* 6. Réglages */}
-                <button
-                  type="button"
-                  onClick={() => setOngletVendeur("parametres")}
-                  className={`w-full px-5 py-3.5 flex items-center gap-3.5 text-left transition cursor-pointer ${
-                    ongletVendeur === "parametres"
-                      ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <i className="fa-solid fa-gear text-lg text-gray-800 dark:text-gray-200"></i>
-                  <span className="flex-1 text-sm font-bold">Réglages</span>
-                </button>
-              </div>
+              {/* 7. À propos & Infos */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("apropos")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "apropos"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-store text-sm text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">À propos &amp; Infos</span>
+              </button>
+
+              {/* 8. Contact & Livraison */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("contact")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "contact"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-truck-fast text-sm text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Contact &amp; Livraison</span>
+              </button>
+
+              {/* 9. Réglages */}
+              <button
+                type="button"
+                onClick={() => setOngletVendeur("parametres")}
+                className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                  ongletVendeur === "parametres"
+                    ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <i className="fa-solid fa-gear text-base text-gray-700 dark:text-gray-300"></i>
+                <span className="flex-1">Réglages</span>
+              </button>
             </div>
           </div>
         )}
