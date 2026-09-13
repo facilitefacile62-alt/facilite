@@ -4943,11 +4943,11 @@ function ModalFicheBoutique({
               </div>
             </div>
 
-        {/* Bannière rectangulaire beige + Avatar circulaire en bas à droite */}
-        <div className="relative w-full px-3 pt-3 mb-12">
+        {/* Bannière de couverture + Avatar circulaire centré (1:1 Capture exacte) */}
+        <div className="relative w-full px-3 pt-3 mb-14">
           <div
-            className="relative w-full h-40 sm:h-44 rounded-2xl sm:rounded-3xl overflow-hidden bg-[#C5BBAF] dark:bg-zinc-800 bg-cover bg-center shadow-xs border border-gray-200/60 dark:border-zinc-800"
-            style={{ backgroundImage: `url('${coverUrl || "/stellar-cover.png"}')` }}
+            className="relative w-full h-40 sm:h-48 rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 bg-cover bg-center shadow-xs border border-gray-200/60 dark:border-zinc-800"
+            style={{ backgroundImage: `url('${coverUrl || "/default-cover.png"}')` }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
             {/* Bouton pour changer la bannière */}
@@ -4961,8 +4961,8 @@ function ModalFicheBoutique({
             </button>
           </div>
 
-          {/* Avatar circulaire placé sur la droite et chevauchant le bas de la bannière */}
-          <div className="absolute right-7 -bottom-8 w-20 h-20 rounded-full border-4 border-white dark:border-zinc-950 bg-black shadow-xl overflow-hidden flex items-center justify-center shrink-0 z-10 group">
+          {/* Avatar circulaire centré et chevauchant le bas de la bannière */}
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-12 w-24 h-24 rounded-full border-4 border-white dark:border-zinc-950 bg-black shadow-xl overflow-hidden flex items-center justify-center shrink-0 z-10 group">
             {avatarBitmojiUri ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarBitmojiUri} alt={nom} className="w-full h-full object-cover" />
@@ -4970,7 +4970,7 @@ function ModalFicheBoutique({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt={nom} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-white text-xl font-black">{initiales}</span>
+              <span className="text-white text-2xl font-black">{initiales}</span>
             )}
 
             <button
@@ -4979,51 +4979,59 @@ function ModalFicheBoutique({
               className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white cursor-pointer"
               title="Modifier l'avatar"
             >
-              <i className="fa-solid fa-camera text-xs"></i>
+              <i className="fa-solid fa-camera text-sm"></i>
             </button>
           </div>
         </div>
 
-        {/* Nom de la boutique / Profil (1:1 Inspiré de la capture 3) */}
-        <div className="px-4 pb-3 text-left space-y-2">
-          <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-black tracking-tight text-zinc-900 dark:text-white leading-tight">
-                {nom}
-              </h1>
-              <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
-                {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
-              </span>
-              <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
-            </div>
-
-            {/* Boutons d'actions */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setOngletActif("infos_perso")}
-                className="px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
-                title="Modifier les informations du profil"
-              >
-                <i className="fa-solid fa-pen text-[10px]"></i>
-                <span>Modifier le profil</span>
-              </button>
-            </div>
+        {/* Nom de la boutique / Profil (1:1 Inspiré de la capture fournie, centré) */}
+        <div className="px-4 pb-3 flex flex-col items-center text-center space-y-2">
+          {/* Titre & Badges */}
+          <div className="flex items-center justify-center gap-2 flex-wrap pt-0.5">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white leading-tight">
+              {nom}
+            </h1>
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider">
+              {estEtablissement ? "Établissement" : estService ? "Service" : "Boutique"}
+            </span>
+            <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
           </div>
 
           {/* Ligne amis / abonnés */}
-          <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
             1,4 K ami(e)s
           </p>
 
-          {/* Bio / Headline inspiré capture 3 */}
-          <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-snug">
+          {/* Boutons d'actions (Modifier le profil + flèche chevron sans 'Ajouter à la story') */}
+          <div className="flex items-center justify-center gap-2 w-full max-w-xs pt-0.5 pb-1">
+            <button
+              type="button"
+              onClick={() => setOngletActif("infos_perso")}
+              className="flex-1 py-2 px-4 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-2xs"
+              title="Modifier les informations du profil"
+            >
+              <i className="fa-solid fa-pen text-xs"></i>
+              <span>Modifier le profil</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMenuMobileOuvert(true)}
+              className="w-9 h-9 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-900 dark:text-white flex items-center justify-center transition active:scale-95 cursor-pointer shadow-2xs shrink-0"
+              title="Plus d'options"
+            >
+              <i className="fa-solid fa-chevron-down text-xs"></i>
+            </button>
+          </div>
+
+          {/* Bio / Headline */}
+          <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed max-w-md mx-auto">
             {description || "Youtubeur | Influenceur | Créateur | Inventeur | motivateur | businessman | Inspiration Model | AUTRE"}
           </p>
 
           {/* Localisation */}
-          <p className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-            <i className="fa-solid fa-location-dot text-gray-500 text-[11px]"></i>
+          <p className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center justify-center gap-1.5 pt-0.5">
+            <i className="fa-solid fa-location-dot text-gray-600 dark:text-gray-400 text-xs"></i>
             <span>{ville || "Dakar"}</span>
           </p>
         </div>
