@@ -227,26 +227,13 @@ export default function LoginPage() {
         if (!targetRedirect) {
           if (targetRole === "admin" || targetRole === "publisher") {
             redirectUrl = "/admin";
-          } else if (targetRole === "user") {
-            try {
-              const { data: hasVerifiedBadge } = await supabase.rpc("has_badge", {
-                check_user_id: userId,
-                badge_name: "verified_recruiter",
-              });
-              if (hasVerifiedBadge === true) {
-                redirectUrl = "/recruteur";
-              } else {
-                // Nouveau compte : orienter vers le choix de plateforme (/bienvenue)
-                const createdAtMs = data?.session?.user?.created_at
-                  ? new Date(data.session.user.created_at).getTime()
-                  : 0;
-                if (createdAtMs > 0 && Date.now() - createdAtMs < 15 * 60 * 1000) {
-                  redirectUrl = "/bienvenue";
-                }
-              }
-            } catch (e) {
-              console.warn("Impossible de vérifier le badge recruteur:", e);
-            }
+          } else {
+            // Après connexion : choix de plateforme (/bienvenue)
+            redirectUrl = "/bienvenue";
+          }
+        } else {
+          if (targetRole !== "admin" && targetRole !== "publisher" && !targetRedirect.startsWith("/admin") && !targetRedirect.startsWith("/recruteur")) {
+            redirectUrl = `/bienvenue?redirect=${encodeURIComponent(targetRedirect)}`;
           }
         }
 
@@ -270,11 +257,12 @@ export default function LoginPage() {
       const params = new URLSearchParams(window.location.search);
       const targetRedirect = params.get("redirect") || "/";
       const safeRedirect = targetRedirect.startsWith("/") && !targetRedirect.startsWith("//") ? targetRedirect : "/";
+      const nextApresConnexion = `/bienvenue?redirect=${encodeURIComponent(safeRedirect)}`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextApresConnexion)}`,
         },
       });
 
@@ -545,7 +533,7 @@ export default function LoginPage() {
                   </Link>{" "}
                   par e-mail ou Google.
                 </p>
-                <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
+                <PhoneAuthForm onSuccessRedirect={`/bienvenue?redirect=${encodeURIComponent(typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/")}`} />
               </div>
             ) : step === 1 ? (
               <form onSubmit={handleEmailStepSubmit} className="space-y-2.5">

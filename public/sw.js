@@ -42,7 +42,8 @@
 // v17 (13/09/2026) : clic sur l'avatar photo ouvre directement l'éditeur d'avatar Bitmoji
 // v21 (13/09/2026) : bouton Retour au Marketplace ferme la boutique et revient au Marketplace
 // v22 (13/09/2026) : fiabilisation du parcours d'onboarding /bienvenue après inscription & connexion
-const VERSION_CACHE = "facilite-v22";
+// v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
+const VERSION_CACHE = "facilite-v23";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
