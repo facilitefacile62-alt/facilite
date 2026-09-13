@@ -43,6 +43,14 @@ const PUBLIC_ROUTES = [
   // visiteur anonyme, donc pour l'examinateur, et la fiche Data Safety
   // serait rejetée.
   "/suppression-compte",
+  // Distribution directe de l'APK : le but même de cette page est de
+  // permettre l'installation SANS compte (ex. lien partagé sur WhatsApp).
+  // Trouvé le 13/09/2026 : un visiteur anonyme cliquant "Télécharger"
+  // recevait en réalité la page /login en HTML renommée .apk (307 vers
+  // /login?redirect=%2Ffacilite.apk), qu'Android refuse évidemment
+  // d'installer ("Erreur d'analyse"). Le binaire lui-même (/facilite.apk)
+  // est exclu du middleware via le matcher plus bas, comme sw.js.
+  "/telecharger-android",
 ];
 
 // Routes visibles SANS connexion (pour Googlebot et les visiteurs anonymes)
@@ -378,6 +386,10 @@ export const config = {
     //     enregistré du tout — le mode hors ligne ne démarrerait jamais.
     //   * hors-ligne.html : page de repli servie par le service worker,
     //     précisément quand il n'y a pas de réseau pour joindre /login.
-    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?)$).*)",
+    //   * .apk : même raisonnement que les images/polices ci-dessous, pour
+    //     le binaire de /telecharger-android — trouvé le 13/09/2026, un
+    //     visiteur anonyme recevait la page /login en HTML à la place du
+    //     paquet Android ("Erreur d'analyse" à l'installation).
+    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?|apk)$).*)",
   ],
 };
