@@ -47,7 +47,8 @@
 // v26 (13/09/2026) : refonte visuelle de la page de bienvenue (logo officiel, lueur douce, tuiles enrichies)
 // v41 (13/09/2026) : redirection directe vers le formulaire Modifier le profil au clic sur Modifier le profil
 // v42 (13/09/2026) : enrichissement complet du formulaire Modifier le profil avec champ WhatsApp et sauvegarde synchrone
-const VERSION_CACHE = "facilite-v42";
+// v43 (13/09/2026) : accordéons / menus déroulants pour les consignes et autorisations de positionnement GPS
+const VERSION_CACHE = "facilite-v43";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

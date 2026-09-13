@@ -6390,15 +6390,18 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
       className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-5 shadow-sm"
     >
       {!boutique && (
-        <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-start gap-3">
-          <i className="fa-solid fa-circle-info text-amber-600 dark:text-amber-400 mt-0.5 text-base shrink-0"></i>
-          <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-            <span className="font-extrabold uppercase tracking-wide block mb-0.5">
-              Création Unique (1 seule boutique autorisée)
+        <details className="mb-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 overflow-hidden group shadow-2xs">
+          <summary className="p-3 cursor-pointer flex items-center justify-between text-xs font-black text-amber-950 dark:text-amber-100 list-none select-none hover:bg-amber-100/50 dark:hover:bg-amber-900/30 transition">
+            <span className="flex items-center gap-2">
+              <i className="fa-solid fa-circle-info text-amber-600 dark:text-amber-400 text-sm shrink-0"></i>
+              <span className="uppercase tracking-wide font-extrabold text-[11px]">Création Unique (1 seule boutique autorisée)</span>
             </span>
+            <i className="fa-solid fa-chevron-down text-[10px] text-amber-700 dark:text-amber-300 transition-transform duration-200 group-open:rotate-180"></i>
+          </summary>
+          <div className="px-3.5 pb-3 text-xs text-amber-900/90 dark:text-amber-200/90 leading-relaxed border-t border-amber-200/60 dark:border-amber-800/40 pt-2">
             La création de votre boutique se fait une seule fois par compte. Votre position GPS sera enregistrée pour positionner votre commerce sur la carte de proximité et ne pourra plus être modifiée par la suite.
           </div>
-        </div>
+        </details>
       )}
 
       <div className="flex items-center justify-between mb-1">

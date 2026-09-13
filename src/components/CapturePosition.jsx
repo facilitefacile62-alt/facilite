@@ -176,58 +176,65 @@ export default function CapturePosition({
   const q = qualite(meilleur?.precisionM);
 
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
-      <p className="text-xs font-black text-gray-900 dark:text-white">
-        <i className="fa-solid fa-location-crosshairs mr-2"></i>
-        Positionner {entite === "boutique" ? "ma boutique" : `mon ${entite}`}
-      </p>
-      <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-        Faites-le <strong>sur place</strong>, avec un <strong>téléphone</strong> : un ordinateur
-        n&apos;a pas de GPS et devine sa position par le réseau, souvent à plusieurs centaines de
-        mètres près. Le relevé dure dix secondes, et l&apos;emplacement ne pourra plus être changé
-        {optionPayante ? " gratuitement" : ""}.
-      </p>
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3.5 space-y-3">
+      {/* Menu déroulant des informations de positionnement GPS */}
+      <details className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-2xs">
+        <summary className="px-3.5 py-2.5 cursor-pointer flex items-center justify-between font-black text-xs text-gray-900 dark:text-white select-none hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition list-none">
+          <span className="flex items-center gap-2">
+            <i className="fa-solid fa-location-crosshairs text-blue-500 text-xs"></i>
+            <span>Positionner {entite === "boutique" ? "ma boutique" : `mon ${entite}`}</span>
+          </span>
+          <span className="flex items-center gap-2 text-gray-400 text-xs font-bold">
+            <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+              Voir informations
+            </span>
+            <i className="fa-solid fa-chevron-down text-[10px] transition-transform duration-200 group-open:rotate-180"></i>
+          </span>
+        </summary>
 
-      {/* Dire AVANT ce que le navigateur va demander.
-          Une boîte de dialogue système qui surgit sans prévenir est le
-          premier motif de refus : la personne ne comprend pas pourquoi une
-          application d'emploi veut sa position, et elle refuse par réflexe.
-          Annoncer la demande et sa raison change complètement le taux
-          d'acceptation. */}
-      {!enCours && (
-        <div className="mt-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2.5">
-          {autorisation === "granted" ? (
-            <p className="text-[11px] font-black text-emerald-700 dark:text-emerald-400">
-              <i className="fa-solid fa-circle-check mr-1.5"></i>
-              Localisation déjà autorisée pour ce site — le relevé démarrera sans rien demander.
-            </p>
-          ) : autorisation === "denied" ? (
-            <>
-              <p className="text-[11px] font-black text-red-600 dark:text-red-400">
-                <i className="fa-solid fa-ban mr-1.5"></i>
-                La localisation est bloquée pour ce site
+        <div className="px-3.5 pb-3.5 pt-1.5 border-t border-gray-100 dark:border-gray-800 space-y-2.5 text-left">
+          <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed pt-0.5">
+            Faites-le <strong>sur place</strong>, avec un <strong>téléphone</strong> : un ordinateur
+            n&apos;a pas de GPS et devine sa position par le réseau, souvent à plusieurs centaines de
+            mètres près. Le relevé dure dix secondes, et l&apos;emplacement ne pourra plus être changé
+            {optionPayante ? " gratuitement" : ""}.
+          </p>
+
+          {/* Dire AVANT ce que le navigateur va demander */}
+          <div className="rounded-xl bg-gray-50 dark:bg-gray-800/70 border border-gray-200/80 dark:border-gray-700/80 p-2.5">
+            {autorisation === "granted" ? (
+              <p className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <i className="fa-solid fa-circle-check text-emerald-500"></i>
+                <span>Localisation déjà autorisée pour ce site — le relevé démarrera sans rien demander.</span>
               </p>
-              <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-                Votre navigateur ne redemandera plus. Touchez le cadenas (ou l&apos;icône ⓘ) à côté
-                de l&apos;adresse du site, puis autorisez la position, et revenez ici.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-[11px] font-black text-gray-900 dark:text-white">
-                <i className="fa-solid fa-shield-halved mr-1.5"></i>
-                Votre téléphone va vous demander l&apos;autorisation
-              </p>
-              <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-                Répondez <strong>Autoriser</strong>. La position sert uniquement à placer votre
-                {" "}{entite} sur la carte, une seule fois. Nous ne suivons pas vos déplacements et
-                elle n&apos;est jamais partagée en clair — les personnes qui vous cherchent voient
-                seulement la distance qui les sépare de vous.
-              </p>
-            </>
-          )}
+            ) : autorisation === "denied" ? (
+              <div className="space-y-1">
+                <p className="text-[11px] font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                  <i className="fa-solid fa-ban"></i>
+                  <span>La localisation est bloquée pour ce site</span>
+                </p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Votre navigateur ne redemandera plus. Touchez le cadenas (ou l&apos;icône ⓘ) à côté
+                  de l&apos;adresse du site, puis autorisez la position, et revenez ici.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-[11px] font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <i className="fa-solid fa-shield-halved text-blue-500"></i>
+                  <span>Votre téléphone va vous demander l&apos;autorisation</span>
+                </p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Répondez <strong>Autoriser</strong>. La position sert uniquement à placer votre
+                  {" "}{entite} sur la carte, une seule fois. Nous ne suivons pas vos déplacements et
+                  elle n&apos;est jamais partagée en clair — les personnes qui vous cherchent voient
+                  seulement la distance qui les sépare de vous.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </details>
 
       {enCours ? (
         <div className="mt-3">
