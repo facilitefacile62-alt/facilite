@@ -2200,7 +2200,7 @@ export default function Header() {
                     onClick={() => {
                       setMobileMenuOpen(false);
                       if (typeof window !== "undefined") {
-                        window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "vendre" }));
+                        window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "publier" }));
                       }
                       router.push("/marketplace");
                     }}
@@ -2279,7 +2279,7 @@ export default function Header() {
                       onClick={() => {
                         setMobileMenuOpen(false);
                         if (typeof window !== "undefined") {
-                          window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "vendre" }));
+                          window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "publier" }));
                         }
                         router.push("/marketplace");
                       }}

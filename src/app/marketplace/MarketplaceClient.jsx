@@ -444,7 +444,12 @@ export default function MarketplaceClient() {
 
                       <button
                         type="button"
-                        onClick={() => setOnglet("vendre")}
+                        onClick={() => {
+                          setBoutiqueModal(null);
+                          setOnglet("vendre");
+                          setOngletVendeurInitial("publier");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
                         className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
                       >
                         <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
@@ -570,6 +575,8 @@ export default function MarketplaceClient() {
             onPublierArticle={() => {
               setBoutiqueModal(null);
               setOnglet("vendre");
+              setOngletVendeurInitial("publier");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             onBoutiqueUpdate={rechargerBoutique}
             onFermer={() => setBoutiqueModal(null)}
