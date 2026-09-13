@@ -3056,6 +3056,17 @@ function VueVendeur({
     };
   }, [choisie, ongletVendeur]);
 
+  const boutiqueActive = boutiques.find((b) => b.id === choisie) || boutiques[0] || null;
+  const nomVendeur = boutiqueActive?.nom || profile?.full_name || "Facilite Facile";
+  const telephoneVendeur = boutiqueActive?.telephone_whatsapp || profile?.phone || "";
+  const initiales = nomVendeur.substring(0, 2).toUpperCase();
+  const avatarBitmojiUri = boutiqueActive?.avatar_config ? dataUriAvatarBoutique(boutiqueActive.avatar_config, 160) : null;
+  const statutOuverture = useMemo(() => {
+    return calculerStatutOuverture(boutiqueActive, []);
+  }, [boutiqueActive]);
+  const estEtablissement = boutiqueActive?.type_boutique === "etablissement";
+  const estService = boutiqueActive?.type_boutique === "service";
+
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
@@ -3147,17 +3158,6 @@ function VueVendeur({
       </div>
     );
   }
-
-  const boutiqueActive = boutiques.find((b) => b.id === choisie) || boutiques[0] || null;
-  const nomVendeur = boutiqueActive?.nom || profile?.full_name || "Facilite Facile";
-  const telephoneVendeur = boutiqueActive?.telephone_whatsapp || profile?.phone || "";
-  const initiales = nomVendeur.substring(0, 2).toUpperCase();
-  const avatarBitmojiUri = boutiqueActive?.avatar_config ? dataUriAvatarBoutique(boutiqueActive.avatar_config, 160) : null;
-  const statutOuverture = useMemo(() => {
-    return calculerStatutOuverture(boutiqueActive, []);
-  }, [boutiqueActive]);
-  const estEtablissement = boutiqueActive?.type_boutique === "etablissement";
-  const estService = boutiqueActive?.type_boutique === "service";
 
   return (
     <div className="space-y-5">
@@ -6123,11 +6123,18 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {ongletActif === "parametres" && (
+          {(ongletActif === "parametres" || ongletActif === "infos_perso" || ongletActif === "avatar") && (
             <VueReglages
               userId={userId}
               profile={profile}
               boutique={boutique}
+              sectionInitiale={
+                ongletActif === "infos_perso"
+                  ? "infos_perso"
+                  : ongletActif === "avatar"
+                  ? "avatar"
+                  : null
+              }
               onRetour={() => setOngletActif("produits")}
               onFermerMarketplace={onFermer}
               onEnregistre={() => {
