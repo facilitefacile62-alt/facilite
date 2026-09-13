@@ -17,8 +17,10 @@ import { SPONTANEOUS_COMPANIES, type EntrepriseSpontanee } from '@/lib/spontaneo
 // recopiés en dur. "Stations-Services" filtre par correspondance texte
 // (domaine/description/pôles/nom) plutôt qu'une colonne catégorie
 // dédiée, qui n'existe pas dans ces données. "Voir les dépôts physiques"
-// et le bouton micro (assistant vocal) n'ont pas d'écran/service réel
-// derrière eux : alerte honnête, comme le reste de l'app.
+// n'a pas d'écran/service réel derrière lui : alerte honnête, comme le
+// reste de l'app. Bouton micro (assistant vocal) retiré le 13/09/2026,
+// en miroir du mockup HTML corrigé (n'était présent que sur l'écran
+// Accueil dans le design d'origine).
 type Filtre = 'toutes' | 'stations';
 
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
@@ -145,18 +147,6 @@ export default function CandidatureSpontaneeScreen() {
           }
           renderItem={({ item }) => <CarteEntreprise entreprise={item} />}
         />
-
-        <Pressable
-          onPress={() => BIENTOT('Assistant vocal')}
-          className="absolute right-4 bottom-4 w-[52px] h-[52px] rounded-full overflow-hidden shadow-lg">
-          <LinearGradient colors={['#10B981', '#0ea975']} className="w-full h-full items-center justify-center">
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Path d="M9 3H15V14A3 3 0 0 1 9 14V3Z" stroke="#fff" strokeWidth={1.8} />
-              <Path d="M6 11V12C6 15.3 8.7 18 12 18C15.3 18 18 15.3 18 12V11" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-              <Path d="M12 18V21" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-          </LinearGradient>
-        </Pressable>
       </SafeAreaView>
     </View>
   );
