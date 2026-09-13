@@ -3384,42 +3384,31 @@ function VueVendeur({
 
             {/* VUE 2 : PUBLIER UN ARTICLE (Assistant IA & Zéro Saisie) */}
             {ongletVendeur === "publier" && (
-              <div>
-                {boutiqueActive ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onRetourCatalogue) onRetourCatalogue();
-                          else setOngletVendeur("annonces");
-                        }}
-                        className="text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <i className="fa-solid fa-chevron-left text-[10px]"></i>
-                        <span>Retour à l&apos;aperçu</span>
-                      </button>
-                      <span className="text-xs font-black text-gray-900 dark:text-white">
-                        Publier un nouvel article
-                      </span>
-                    </div>
-                    <FormulaireArticle
-                      userId={userId}
-                      storeId={boutiqueActive.id}
-                      onPublie={async () => {
-                        await recharger();
-                        setOngletVendeur("annonces");
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <FormulaireBoutique
-                    userId={userId}
-                    boutique={null}
-                    nombreBoutiques={boutiques.length}
-                    onEnregistre={recharger}
-                  />
-                )}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onRetourCatalogue) onRetourCatalogue();
+                      else setOngletVendeur("annonces");
+                    }}
+                    className="text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <i className="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span>Retour à l&apos;aperçu</span>
+                  </button>
+                  <span className="text-xs font-black text-gray-900 dark:text-white">
+                    Publier un nouvel article
+                  </span>
+                </div>
+                <FormulaireArticle
+                  userId={userId || profile?.id || "anonymous"}
+                  storeId={boutiqueActive?.id || "facilite_shop"}
+                  onPublie={async () => {
+                    await recharger();
+                    setOngletVendeur("annonces");
+                  }}
+                />
               </div>
             )}
 
