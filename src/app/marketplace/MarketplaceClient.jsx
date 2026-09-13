@@ -160,6 +160,7 @@ export default function MarketplaceClient() {
   const { session, profile, isAdmin, isRecruiter, signOut } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
   const [onglet, setOnglet] = useState("acheter"); // 'acheter' | 'vendre'
+  const [ongletVendeurInitial, setOngletVendeurInitial] = useState("annonces");
   const [categorie, setCategorie] = useState(null);
   const [boutiques, setBoutiques] = useState([]);
   const [maBoutiqueActive, setMaBoutiqueActive] = useState(null);
@@ -224,8 +225,12 @@ export default function MarketplaceClient() {
     // Vérifier les paramètres URL au montage (?onglet=vendre ou ?action=publier ou ?action=voir_boutique)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const o = params.get("onglet") || (params.get("action") === "publier" ? "vendre" : null);
-      if (o === "vendre" || o === "acheter") {
+      const actionParam = params.get("action");
+      const o = params.get("onglet") || (actionParam === "publier" ? "vendre" : null);
+      if (actionParam === "publier") {
+        setOnglet("vendre");
+        setOngletVendeurInitial("publier");
+      } else if (o === "vendre" || o === "acheter") {
         setOnglet(o);
       }
       if (params.get("action") === "voir_boutique" || params.get("boutique")) {
@@ -236,8 +241,16 @@ export default function MarketplaceClient() {
     }
 
     const handleSetOnglet = (e) => {
-      if (e?.detail && (e.detail === "vendre" || e.detail === "acheter")) {
-        setOnglet(e.detail);
+      if (e?.detail) {
+        if (e.detail === "publier") {
+          setOnglet("vendre");
+          setOngletVendeurInitial("publier");
+        } else if (e.detail === "vendre") {
+          setOnglet("vendre");
+          setOngletVendeurInitial("annonces");
+        } else if (e.detail === "acheter") {
+          setOnglet("acheter");
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     };
@@ -528,6 +541,8 @@ export default function MarketplaceClient() {
                 onBoutiqueChange={rechargerBoutique}
                 boutiqueActive={maBoutiqueActive}
                 boutiques={boutiques}
+                ongletInitial={ongletVendeurInitial}
+                onRetourCatalogue={() => setOnglet("acheter")}
               />
             )}
           </main>
@@ -752,13 +767,20 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     });
   }, []);
 
-  // Écoute les clics sur le bouton "Autour de moi" de la barre de navigation
+  // Écoute les clics sur les boutons "Autour de moi" et "Explorer la carte" de la barre de navigation
   useEffect(() => {
     const handleAutourDeMoi = () => {
       localiser();
     };
+    const handleExplorerCarte = () => {
+      setGlobeOuvert(true);
+    };
     window.addEventListener("facilite:autour-de-moi", handleAutourDeMoi);
-    return () => window.removeEventListener("facilite:autour-de-moi", handleAutourDeMoi);
+    window.addEventListener("facilite:explorer-carte", handleExplorerCarte);
+    return () => {
+      window.removeEventListener("facilite:autour-de-moi", handleAutourDeMoi);
+      window.removeEventListener("facilite:explorer-carte", handleExplorerCarte);
+    };
   }, [rayonKm, categorie, texte, seulementEnStock]);
 
   // Répercute ce même état dans l'URL à chaque changement (remplace
@@ -2990,15 +3012,28 @@ function VueReglages({
   );
 }
 
-function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, boutiques: boutiquesProp }) {
+function VueVendeur({
+  userId,
+  onBoutiqueChange,
+  boutiqueActive: boutiqueProp,
+  boutiques: boutiquesProp,
+  ongletInitial = "annonces",
+  onRetourCatalogue,
+}) {
   const { profile } = useAuth();
   const [boutiques, setBoutiques] = useState(boutiquesProp || []);
   const [choisie, setChoisie] = useState(null);
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
-  const [ongletVendeur, setOngletVendeur] = useState("annonces"); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres'
+  const [ongletVendeur, setOngletVendeur] = useState(ongletInitial); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres'
   const [modalApercuOuverte, setModalApercuOuverte] = useState(false);
+
+  useEffect(() => {
+    if (ongletInitial) {
+      setOngletVendeur(ongletInitial);
+    }
+  }, [ongletInitial]);
   // Résumé Premium Marketplace pour l'onglet dédié — null tant que non
   // chargé (distinct de {actif:false}, qui est un résultat réel).
   const [premiumInfo, setPremiumInfo] = useState(null);
@@ -3392,14 +3427,22 @@ function VueVendeur({ userId, onBoutiqueChange, boutiqueActive: boutiqueProp, bo
               <div>
                 {boutiqueActive ? (
                   <div className="space-y-4">
-                    <button
-                      type="button"
-                      onClick={() => setOngletVendeur("annonces")}
-                      className="text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-arrow-left"></i>
-                      <span>Retour à mes annonces</span>
-                    </button>
+                    <div className="flex items-center justify-between pb-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onRetourCatalogue) onRetourCatalogue();
+                          else setOngletVendeur("annonces");
+                        }}
+                        className="text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <i className="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span>Retour à l&apos;aperçu</span>
+                      </button>
+                      <span className="text-xs font-black text-gray-900 dark:text-white">
+                        Publier un nouvel article
+                      </span>
+                    </div>
                     <FormulaireArticle
                       userId={userId}
                       storeId={boutiqueActive.id}
