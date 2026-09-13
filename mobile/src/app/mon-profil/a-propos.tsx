@@ -73,7 +73,12 @@ export default function ProfilAProposScreen() {
               {estVerifie && <Badge bg="#d7f2ea" color="#10B981" texte="✔ Profil Vérifié" />}
             </View>
             {headline ? <Text className="text-[13px] text-[#2563EB] font-semibold mt-1.5">{headline}</Text> : null}
-            {(headline || ville) && (
+            {/* !! plutot que headline || ville : si les deux sont des chaines
+                vides (avant chargement du profil, ou un profil sans headline
+                ni ville), l'expression valait '' - une chaine, pas false -
+                que React affichait comme enfant brut de cette View ("Unexpected
+                text node"). Trouve le 13/09/2026 en capturant l'app reelle. */}
+            {!!(headline || ville) && (
               <View className="flex-row flex-wrap gap-2 mt-3">
                 {headline ? <Chip texte={`💼 ${headline}`} /> : null}
                 {ville ? <Chip texte={`📍 ${ville}`} /> : null}
