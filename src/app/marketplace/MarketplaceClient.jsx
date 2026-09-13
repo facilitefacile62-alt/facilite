@@ -2028,29 +2028,6 @@ function VueReglages({ userId, profile, boutique, onRetour, onEnregistre, sectio
         {boutique?.id && (
           <button
             type="button"
-            onClick={() => setModalActive("horaires")}
-            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <i className="fa-solid fa-clock text-violet-600 text-sm"></i>
-              <div>
-                <span className="block font-bold">Horaires d&apos;ouverture</span>
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  {boutique?.mode_horaires === "toujours_ouvert"
-                    ? "Toujours ouvert (24h/24)"
-                    : boutique?.mode_horaires === "sur_rendez_vous"
-                    ? "Sur rendez-vous"
-                    : "Horaires indiqués (7 jours)"}
-                </span>
-              </div>
-            </div>
-            <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-          </button>
-        )}
-
-        {boutique?.id && (
-          <button
-            type="button"
             onClick={() => setModalActive("avatar")}
             className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
           >

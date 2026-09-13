@@ -37,7 +37,8 @@
 // v12 (12/09/2026) : notifications filtrees par univers (Facilite vs
 // v13 (12/09/2026) : suppression du doublon de bouton Admin entre header et barre mobile
 // v14 (12/09/2026) : suppression de Détails de l'entreprise des réglages boutique
-const VERSION_CACHE = "facilite-v14";
+// v15 (13/09/2026) : suppression d'Horaires d'ouverture des réglages boutique
+const VERSION_CACHE = "facilite-v15";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
