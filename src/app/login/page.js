@@ -222,19 +222,36 @@ export default function LoginPage() {
 
         const searchParams = new URLSearchParams(window.location.search);
         const targetRedirect = searchParams.get("redirect");
-        let redirectUrl = targetRedirect || "/";
 
-        if (!targetRedirect) {
-          if (targetRole === "admin" || targetRole === "publisher") {
-            redirectUrl = "/admin";
-          } else {
-            // Après connexion : choix de plateforme (/bienvenue)
-            redirectUrl = "/bienvenue";
-          }
-        } else {
-          if (targetRole !== "admin" && targetRole !== "publisher" && !targetRedirect.startsWith("/admin") && !targetRedirect.startsWith("/recruteur")) {
-            redirectUrl = `/bienvenue?redirect=${encodeURIComponent(targetRedirect)}`;
-          }
+        // Destination normale, comportement inchangé pour un compte existant.
+        let redirectUrl = targetRedirect || ((targetRole === "admin" || targetRole === "publisher") ? "/admin" : "/");
+
+        // Choix d'univers (/bienvenue) une seule fois, juste après une
+        // inscription — jamais à chaque connexion d'un compte déjà
+        // existant. Signalé le 13/09/2026 : une version précédente
+        // redirigeait TOUTE connexion vers /bienvenue, pas seulement la
+        // première. Même détection que /auth/callback pour Google
+        // (created_at/last_sign_in_at très proches, ou compte créé il y a
+        // moins d'une minute) — la quasi-totalité des connexions par
+        // e-mail/mot de passe sont des comptes déjà existants (la toute
+        // première connexion d'un compte e-mail passe par /auth/callback,
+        // pas par ce formulaire), ce garde-fou couvre le cas rare où elle
+        // passerait quand même par ici.
+        const utilisateurConnecte = data.session.user;
+        const createdAtMs = utilisateurConnecte.created_at ? new Date(utilisateurConnecte.created_at).getTime() : 0;
+        const lastSignInMs = utilisateurConnecte.last_sign_in_at ? new Date(utilisateurConnecte.last_sign_in_at).getTime() : 0;
+        const estNouveauCompte =
+          createdAtMs > 0 &&
+          (Math.abs(createdAtMs - lastSignInMs) < 15000 || Date.now() - createdAtMs < 60000);
+
+        if (
+          estNouveauCompte &&
+          targetRole !== "admin" &&
+          targetRole !== "publisher" &&
+          !redirectUrl.startsWith("/admin") &&
+          !redirectUrl.startsWith("/recruteur")
+        ) {
+          redirectUrl = `/bienvenue?redirect=${encodeURIComponent(redirectUrl)}`;
         }
 
         setTimeout(() => {
@@ -533,7 +550,12 @@ export default function LoginPage() {
                   </Link>{" "}
                   par e-mail ou Google.
                 </p>
-                <PhoneAuthForm onSuccessRedirect={`/bienvenue?redirect=${encodeURIComponent(typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/")}`} />
+                {/* mode "login" (défaut) : shouldCreateUser:false, donc ce
+                    formulaire ne peut par construction jamais créer de
+                    compte — une connexion réussie ici est TOUJOURS un
+                    compte déjà existant. Jamais /bienvenue, contrairement
+                    au mode "signup" de /register. */}
+                <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
               </div>
             ) : step === 1 ? (
               <form onSubmit={handleEmailStepSubmit} className="space-y-2.5">
