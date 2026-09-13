@@ -40,7 +40,8 @@
 // v15 (13/09/2026) : suppression d'Horaires d'ouverture des réglages boutique
 // v16 (13/09/2026) : éditeur d'avatar avec bouton d'enregistrement persistant sticky
 // v17 (13/09/2026) : clic sur l'avatar photo ouvre directement l'éditeur d'avatar Bitmoji
-const VERSION_CACHE = "facilite-v17";
+// v18 (13/09/2026) : nouveau parcours post-inscription (/bienvenue, choix Facilite/Business puis Visiteur/Vendeur)
+const VERSION_CACHE = "facilite-v18";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
