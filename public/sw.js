@@ -45,9 +45,9 @@
 // v23 (13/09/2026) : redirection systématique vers le choix de plateforme /bienvenue après connexion
 // v25 (13/09/2026) : atterrissage direct sur sa propre boutique vierge (0 article) après création
 // v26 (13/09/2026) : refonte visuelle de la page de bienvenue (logo officiel, lueur douce, tuiles enrichies)
-// v40 (13/09/2026) : bouton permanent Modifier le profil et sélection rapide avatar sur toutes les cartes boutiques
 // v41 (13/09/2026) : redirection directe vers le formulaire Modifier le profil au clic sur Modifier le profil
-const VERSION_CACHE = "facilite-v41";
+// v42 (13/09/2026) : enrichissement complet du formulaire Modifier le profil avec champ WhatsApp et sauvegarde synchrone
+const VERSION_CACHE = "facilite-v42";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

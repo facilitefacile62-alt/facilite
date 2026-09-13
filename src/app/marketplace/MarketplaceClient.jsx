@@ -1552,6 +1552,7 @@ function VueReglages({
         await supabase.from("profiles").update({
           full_name: nomComplet,
           headline: descriptionEntreprise,
+          phone: telephone,
           city: emplacement || "Dakar",
           location: emplacement || "Dakar",
           birth_date: anniversaire || null,
@@ -1563,14 +1564,16 @@ function VueReglages({
         await modifierBoutique(boutique.id, {
           nom: nomComplet,
           description: descriptionEntreprise,
+          telephone_whatsapp: telephone,
           ville: emplacement || "Dakar",
           latitude,
           longitude,
           position_precision_m: precisionM,
         });
       }
-      showToast("✓ Informations personnelles et position enregistrées !");
-      setModalActive(null);
+      showToast("✓ Profil mis à jour avec succès !");
+      if (onRetour) onRetour();
+      else setModalActive(null);
       onEnregistre?.();
     } catch {
       showToast("Erreur lors de l'enregistrement");
@@ -1827,6 +1830,21 @@ function VueReglages({
                 value={nomFamille}
                 onChange={(e) => setNomFamille(e.target.value)}
                 placeholder="demo"
+                className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
+              />
+            </div>
+
+            {/* Champ Numéro WhatsApp */}
+            <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
+              <div className="flex justify-between items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                <span>Numéro WhatsApp*</span>
+                <span className="text-gray-400 font-normal">Contact direct</span>
+              </div>
+              <input
+                type="tel"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                placeholder="+221 77 123 45 67"
                 className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
               />
             </div>
@@ -3478,8 +3496,8 @@ function VueVendeur({
         {/* 2. COLONNE DROITE : CONTENU PRINCIPAL DYNAMIQUE (1:1 Capture 2 plein espace) */}
         {/* ========================================================================= */}
         <div className="flex-1 min-w-0 w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden min-h-[calc(100vh-160px)]">
-          {/* Header de la section principale (sauf pour annonces et publier où le formulaire a son propre en-tête dédié) */}
-          {ongletVendeur !== "annonces" && ongletVendeur !== "publier" && (
+          {/* Header de la section principale (sauf pour annonces, publier et parametres où le formulaire a son propre en-tête dédié) */}
+          {ongletVendeur !== "annonces" && ongletVendeur !== "publier" && ongletVendeur !== "parametres" && (
             <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
                 {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
