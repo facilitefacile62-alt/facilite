@@ -1423,40 +1423,13 @@ export default function Header() {
             <span>Marketplace</span>
           </Link>
 
-          {/* 📍 Bouton Autour de moi & 🌐 Explorer la carte (1:1 Exactement comme sur les captures d'écran) */}
-          <div className="flex items-center gap-2 ml-1">
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-                } else {
-                  router.push("/marketplace?autour_de_moi=1");
-                }
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-emerald-500 shadow-2xs hover:shadow-xs transition-all text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer"
-              title="Afficher les articles et boutiques autour de moi"
-            >
-              <i className="fa-solid fa-location-crosshairs text-emerald-500 text-xs"></i>
-              <span>Autour de moi</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:explorer-carte"));
-                } else {
-                  router.push("/marketplace?explorer=1");
-                }
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 shadow-2xs hover:shadow-xs transition-all text-xs font-black text-[#1877F2] cursor-pointer"
-              title="Explorer toutes les boutiques sur la carte interactive"
-            >
-              <i className="fa-solid fa-earth-africa text-xs text-[#1877F2]"></i>
-              <span>Explorer la carte</span>
-            </button>
-          </div>
+          {/* "Autour de moi" et "Explorer la carte" retirés de la barre de
+              navigation globale le 14/09/2026 (signalé par l'utilisateur) :
+              redondants et hors contexte sur les pages qui n'ont rien à voir
+              avec le Marketplace (Accueil, Offres...). La fonctionnalité
+              reste disponible à l'endroit pertinent : l'en-tête de résultats
+              de la page Marketplace elle-même (VueAcheteur,
+              MarketplaceClient.jsx), déjà restaurée le 13/09/2026. */}
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
