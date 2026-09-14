@@ -56,7 +56,8 @@
 // v49 (13/09/2026) : suppression de la grande bannière dans Mes annonces pour un affichage épuré
 // v50 (13/09/2026) : persistance absolue de la page, de la vue vendeur et de l'onglet actif après rechargement (F5)
 // v51 (13/09/2026) : fiche boutique 1:1 mobile (avatar à droite, profil complet actif pour tout nouveau compte)
-const VERSION_CACHE = "facilite-v51";
+// v52 (14/09/2026) : correction de la course qui renvoyait a l'onglet Acheteur au rechargement en mode Vendeur
+const VERSION_CACHE = "facilite-v52";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
