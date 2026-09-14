@@ -1450,7 +1450,13 @@ function VueReglages({
   sectionInitiale = null,
 }) {
   const { signOut } = useAuth();
-  const [modalActive, setModalActive] = useState(sectionInitiale || "infos_perso"); // 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
+  // null (pas "infos_perso") par défaut : ce composant démarre sur la LISTE
+  // des réglages (Faire profit, Abonnés, Avis...) — voir le
+  // `if (modalActive === "infos_perso") return ...` plus bas, qui
+  // court-circuite tout le reste du rendu. Un repli sur "infos_perso"
+  // rendait cette liste inatteignable pour quiconque n'a jamais explicitement
+  // demandé une autre section (tout nouveau vendeur). Trouvé le 14/09/2026.
+  const [modalActive, setModalActive] = useState(sectionInitiale); // null | 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
 
@@ -3113,11 +3119,23 @@ function VueVendeur({
   }); // 'annonces' | 'publier' | 'profit' | 'premium' | 'abonnes' | 'avis' | 'faq' | 'parametres' | 'service' | 'etablissement'
 
   const [sectionReglages, setSectionReglages] = useState(() => {
+    // null (pas "infos_perso") : VueReglages doit démarrer sur la LISTE des
+    // réglages (Faire profit, Abonnés, Avis, Ajouter un numéro...), pas
+    // directement sur le formulaire "Modifier le profil" — VueReglages a un
+    // `if (modalActive === "infos_perso") return <Formulaire.../>` qui
+    // COURT-CIRCUITE tout le reste du composant, donc "infos_perso" comme
+    // valeur de repli rendait la vraie liste des réglages inatteignable au
+    // premier passage : TOUT nouveau vendeur atterrissait directement sur
+    // "Modifier le profil" en cliquant "Réglages" dans le menu, jamais sur
+    // la page réelle — signalé le 14/09/2026 en comparant le compte de
+    // Wassa (jamais visité "Réglages" avant, donc toujours ce repli) à
+    // celui de la démo (dont l'état sauvegardé n'était, par hasard, pas
+    // "infos_perso").
     if (typeof window !== "undefined") {
       const fromStorage = localStorage.getItem("facilite_vendeur_section_reglages");
       if (fromStorage) return fromStorage;
     }
-    return "infos_perso";
+    return null;
   });
   const [modalApercuOuverte, setModalApercuOuverte] = useState(false);
 
@@ -3144,7 +3162,14 @@ function VueVendeur({
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      localStorage.setItem("facilite_vendeur_section_reglages", sectionReglages);
+      if (sectionReglages) {
+        localStorage.setItem("facilite_vendeur_section_reglages", sectionReglages);
+      } else {
+        // Ne jamais stocker la chaîne "null" : un getItem() ultérieur la
+        // renverrait telle quelle (chaîne non vide, donc "vraie"), ce qui
+        // empêcherait de retrouver la liste des réglages par défaut.
+        localStorage.removeItem("facilite_vendeur_section_reglages");
+      }
     } catch {}
   }, [sectionReglages]);
   // Résumé Premium Marketplace pour l'onglet dédié — null tant que non
@@ -4074,7 +4099,7 @@ function VueVendeur({
                 userId={userId}
                 profile={profile}
                 boutique={boutiqueActive}
-                sectionInitiale={sectionReglages || "infos_perso"}
+                sectionInitiale={sectionReglages}
                 onRetour={() => setOngletVendeur("annonces")}
                 onEnregistre={recharger}
               />
