@@ -1478,7 +1478,12 @@ function VueReglages({
   const [positionVerrouillee, setPositionVerrouillee] = useState(Boolean(boutique?.position_definie_le || (boutique?.latitude && boutique?.longitude)));
   const [modeRecaptureGPS, setModeRecaptureGPS] = useState(false);
   const [rechercheDep, setRechercheDep] = useState("");
-  const [anniversaire, setAnniversaire] = useState(profile?.birth_date || "");
+  // profile?.date_naissance, pas birth_date : cette colonne n'existe pas sur
+  // profiles (verifie le 14/09/2026 via information_schema en production) —
+  // avec l'ancien nom, ce champ ne se pre-remplissait jamais ET la sauvegarde
+  // du profil echouait entierement (colonne inconnue rejetee par PostgREST),
+  // pas seulement la date de naissance.
+  const [anniversaire, setAnniversaire] = useState(profile?.date_naissance || "");
   const [sexe, setSexe] = useState(profile?.gender || "Ne pas préciser");
   const [headline, setHeadline] = useState(profile?.headline || "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || boutique?.avatar_url || null);
@@ -1566,16 +1571,17 @@ function VueReglages({
       const nomComplet = `${prenom} ${nomFamille}`.trim();
       setFullName(nomComplet);
       if (userId) {
-        await supabase.from("profiles").update({
+        const { error: erreurProfil } = await supabase.from("profiles").update({
           full_name: nomComplet,
           headline: descriptionEntreprise,
           phone: telephone,
           city: emplacement || "Dakar",
           location: emplacement || "Dakar",
-          birth_date: anniversaire || null,
+          date_naissance: anniversaire || null,
           gender: sexe,
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
+        if (erreurProfil) throw new Error(erreurProfil.message);
       }
       if (boutique?.id && boutique?.id !== "facilite_shop") {
         await modifierBoutique(boutique.id, {
@@ -1587,13 +1593,34 @@ function VueReglages({
           longitude,
           position_precision_m: precisionM,
         });
+      } else {
+        // Pas encore de vraie boutique (boutique.id est null : l'objet
+        // affiché à l'écran est un simple modèle de secours côté client,
+        // voir plus haut dans ce fichier) — la créer réellement ici, sinon
+        // ce bouton "Enregistrer" ne fait strictement rien côté boutique :
+        // un nouveau vendeur remplissait ce formulaire en croyant sa
+        // boutique déjà active, sans qu'aucune ligne ne soit jamais écrite
+        // dans marketplace_stores. creer_ma_boutique exige une position
+        // GPS (voir migration 20260902240000) : si elle n'a pas encore été
+        // relevée, l'erreur levée par la RPC est affichée telle quelle
+        // ci-dessous plutôt qu'un message générique, pour que la personne
+        // sache exactement quoi faire ensuite.
+        await creerBoutique(userId, {
+          nom: nomComplet,
+          description: descriptionEntreprise,
+          telephone_whatsapp: telephone,
+          ville: emplacement || "Dakar",
+          latitude,
+          longitude,
+          precisionM,
+        });
       }
       showToast("✓ Profil mis à jour avec succès !");
       if (onRetour) onRetour();
       else setModalActive(null);
       onEnregistre?.();
-    } catch {
-      showToast("Erreur lors de l'enregistrement");
+    } catch (err) {
+      showToast(err?.message || "Erreur lors de l'enregistrement");
     } finally {
       setEnCours(false);
     }
