@@ -588,6 +588,21 @@ export default function Header() {
       (href === "/marketplace" && pathname?.startsWith("/marketplace"))
     ) {
       e.preventDefault();
+      // Vider la persistance de vue du Marketplace (MarketplaceClient.jsx)
+      // avant de recharger : sinon ce rechargement — pourtant demandé
+      // précisément pour "revenir à l'accueil du Marketplace" — restaure
+      // aussitôt l'onglet Vendeur quitté (lu depuis localStorage faute de
+      // query string sur cette URL "propre"), donnant l'impression que le
+      // clic sur Accueil/Marketplace n'a rien fait. Signalé le 14/09/2026 :
+      // en mode Vendeur, cliquer Accueil ou Marketplace ne ramenait jamais
+      // à la vue Acheteur.
+      if (href === "/marketplace" && typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("facilite_marketplace_onglet");
+          localStorage.removeItem("facilite_vendeur_onglet");
+          localStorage.removeItem("facilite_vendeur_section_reglages");
+        } catch {}
+      }
       window.location.href = href;
       return;
     }
