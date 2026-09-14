@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
 import EditeurAvatarBoutique from "@/components/EditeurAvatarBoutique";
+import SecurityTabContent from "@/components/SecurityTabContent";
 import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 // Chargé en dynamique, sans SSR : maplibre-gl (~257 Ko compressés) touche
 // `window`/WebGL et ne doit être téléchargé que par les personnes qui
@@ -50,6 +51,7 @@ import {
   creerBoutique,
   modifierBoutique,
   modifierAvatarBoutique,
+  definirVisibiliteBoutique,
   envoyerPhoto,
   majStock,
   normaliserWhatsapp,
@@ -1427,9 +1429,19 @@ function IllustrationAvionPapier() {
  * Composant Réglages (1:1 Strictement conforme aux 2 captures d'écran fournies)
  * - Header: < Réglages
  * - Groupe 1: Informations personnelles, Détails de l'entreprise >
- * - Groupe 2: Ajouter un numéro de téléphone, Changer l’email, Changer la langue
- * - Groupe 3: Désactiver le chat, Désactiver les commentaires, Gérer les notifications
- * - Groupe 4: Changer le mot de passe, Supprimer définitivement mon compte, Se déconnecter
+ * - Groupe 2: Coordonnées, Contact & Livraison, Foire aux questions, Changer la langue
+ * - Groupe 3: Confidentialité, Désactiver le chat, Désactiver les commentaires, Gérer les notifications
+ * - Groupe 4: Sécurité & Connexion, Se déconnecter
+ *
+ * Coordonnées, Confidentialité et Sécurité & Connexion reprennent la même
+ * structure que les 3 onglets homonymes de /profil (candidat) — demande
+ * explicite de l'utilisateur (14/09/2026). Coordonnées et Sécurité &
+ * Connexion partagent les MÊMES données (profiles.phone/contact_email,
+ * auth.users) via le même composant SecurityTabContent : un changement sur
+ * une plateforme est visible sur l'autre, aucune duplication de logique.
+ * Confidentialité reste volontairement INDÉPENDANTE de celle du profil
+ * candidat (CV/recrutement) : chaque plateforme gère la sienne (l'une gère
+ * les CV/candidatures, l'autre les achats/ventes).
  */
 function VueReglages({
   userId,
@@ -1440,14 +1452,14 @@ function VueReglages({
   onFermerMarketplace,
   sectionInitiale = null,
 }) {
-  const { signOut } = useAuth();
+  const { session, signOut } = useAuth();
   // null (pas "infos_perso") par défaut : ce composant démarre sur la LISTE
   // des réglages (Faire profit, Abonnés, Avis...) — voir le
   // `if (modalActive === "infos_perso") return ...` plus bas, qui
   // court-circuite tout le reste du rendu. Un repli sur "infos_perso"
   // rendait cette liste inatteignable pour quiconque n'a jamais explicitement
   // demandé une autre section (tout nouveau vendeur). Trouvé le 14/09/2026.
-  const [modalActive, setModalActive] = useState(sectionInitiale); // null | 'infos_perso' | 'details_entreprise' | 'telephone' | 'email' | 'langue' | 'notifs' | 'password' | 'supprimer'
+  const [modalActive, setModalActive] = useState(sectionInitiale); // null | 'infos_perso' | 'details_entreprise' | 'coordonnees' | 'confidentialite' | 'langue' | 'notifs' | 'securite'
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
 
@@ -1494,7 +1506,23 @@ function VueReglages({
   const [ville, setVille] = useState(boutique?.ville || profile?.city || "Dakar");
   const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Guinaw rail nord");
   const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221771001212");
-  const [email, setEmail] = useState(profile?.email || "");
+
+  // Coordonnées de contact du COMPTE (pas de la boutique) — mêmes colonnes
+  // profiles.phone / profiles.contact_email que la section "Coordonnées" de
+  // /profil (candidat) : demande explicite de l'utilisateur, ces infos
+  // doivent rester identiques quelle que soit la plateforme utilisée pour
+  // les modifier. Distinct du téléphone WhatsApp public de la boutique
+  // (telephone_whatsapp, ci-dessus) géré depuis "Modifier le profil".
+  const [coordPhone, setCoordPhone] = useState(profile?.phone || "");
+  const [coordEmail, setCoordEmail] = useState(profile?.contact_email || "");
+
+  // Confidentialité Marketplace — indépendante de celle du profil candidat
+  // (/profil, CV/recrutement) : demande explicite de l'utilisateur, chaque
+  // plateforme gère la sienne. boutiqueVisible reflète marketplace_stores.actif,
+  // déjà utilisé comme filtre réel par chargerTousLesArticles /
+  // rechercher_boutiques_proches.
+  const [boutiqueVisible, setBoutiqueVisible] = useState(boutique?.actif !== false);
+  const [savingVisibiliteBoutique, setSavingVisibiliteBoutique] = useState(false);
 
   // Champs spécifiques au type_boutique (jamais le type lui-même, choisi une
   // seule fois à la création — voir FormulaireBoutique).
@@ -1517,10 +1545,6 @@ function VueReglages({
     }
   });
 
-  // Mot de passe & Suppression
-  const [nouveauMdp, setNouveauMdp] = useState("");
-  const [confirmMdp, setConfirmMdp] = useState("");
-  const [supprConfirm, setSupprConfirm] = useState("");
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -1659,38 +1683,45 @@ function VueReglages({
     }
   };
 
-  const handleSaveTelephone = async (e) => {
-    e.preventDefault();
+  // Coordonnées de contact du compte (profiles.phone / profiles.contact_email)
+  // — mêmes colonnes, même mécanisme direct que handleSaveAboutField sur
+  // /profil (candidat) : garantit que la valeur affichée/modifiée est
+  // rigoureusement la même quelle que soit la plateforme utilisée.
+  const handleSaveCoordonnee = async (champ, valeur) => {
+    if (!userId) return;
     setEnCours(true);
     try {
-      if (boutique?.id && boutique?.id !== "facilite_shop") {
-        await modifierBoutique(boutique.id, { telephone_whatsapp: telephone });
-      }
-      if (userId) {
-        await supabase.from("profiles").update({ phone: telephone, updated_at: new Date().toISOString() }).eq("id", userId);
-      }
-      showToast("✓ Numéro de téléphone mis à jour !");
-      setModalActive(null);
-      onEnregistre?.();
-    } catch {
-      showToast("Erreur lors de la mise à jour");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ [champ]: valeur, updated_at: new Date().toISOString() })
+        .eq("id", userId);
+      if (error) throw error;
+      if (champ === "phone") setCoordPhone(valeur);
+      else setCoordEmail(valeur);
+      showToast("✓ Coordonnées mises à jour !");
+    } catch (err) {
+      showToast(err.message || "Erreur lors de la mise à jour");
     } finally {
       setEnCours(false);
     }
   };
 
-  const handleSaveEmail = async (e) => {
-    e.preventDefault();
-    setEnCours(true);
+  // Confidentialité Marketplace : visibilité de la boutique sur le
+  // Marketplace (annonces/recherche), indépendante de la confidentialité du
+  // profil candidat sur /profil.
+  const handleToggleVisibiliteBoutique = async () => {
+    if (!boutique?.id || boutique.id === "facilite_shop") return;
+    const nouvelleValeur = !boutiqueVisible;
+    setSavingVisibiliteBoutique(true);
     try {
-      const { error } = await supabase.auth.updateUser({ email });
-      if (error) throw error;
-      showToast("✓ Un email de confirmation a été envoyé !");
-      setModalActive(null);
+      await definirVisibiliteBoutique(boutique.id, nouvelleValeur);
+      setBoutiqueVisible(nouvelleValeur);
+      showToast(nouvelleValeur ? "✓ Boutique visible sur le Marketplace" : "✓ Boutique masquée du Marketplace");
+      onEnregistre?.();
     } catch (err) {
-      showToast(err.message || "Erreur lors du changement d'email");
+      showToast(err.message || "Erreur lors de la mise à jour");
     } finally {
-      setEnCours(false);
+      setSavingVisibiliteBoutique(false);
     }
   };
 
@@ -1703,31 +1734,6 @@ function VueReglages({
     setModalActive(null);
   };
 
-  const handleSavePassword = async (e) => {
-    e.preventDefault();
-    if (nouveauMdp.length < 6) {
-      showToast("Le mot de passe doit contenir au moins 6 caractères");
-      return;
-    }
-    if (nouveauMdp !== confirmMdp) {
-      showToast("Les mots de passe ne correspondent pas");
-      return;
-    }
-    setEnCours(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: nouveauMdp });
-      if (error) throw error;
-      showToast("✓ Mot de passe mis à jour avec succès !");
-      setNouveauMdp("");
-      setConfirmMdp("");
-      setModalActive(null);
-    } catch (err) {
-      showToast(err.message || "Erreur lors du changement de mot de passe");
-    } finally {
-      setEnCours(false);
-    }
-  };
-
   const handleDeconnexion = async () => {
     if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
       try {
@@ -1736,26 +1742,6 @@ function VueReglages({
         await supabase.auth.signOut();
       }
       window.location.href = "/login";
-    }
-  };
-
-  const handleSupprimerCompte = async (e) => {
-    e.preventDefault();
-    if (supprConfirm.trim().toUpperCase() !== "SUPPRIMER") {
-      showToast("Veuillez taper 'SUPPRIMER' pour confirmer");
-      return;
-    }
-    setEnCours(true);
-    try {
-      if (userId) {
-        await supabase.from("profiles").delete().eq("id", userId);
-      }
-      await supabase.auth.signOut();
-      window.location.href = "/";
-    } catch (err) {
-      showToast(err.message || "Erreur lors de la suppression du compte");
-    } finally {
-      setEnCours(false);
     }
   };
 
@@ -2233,18 +2219,11 @@ function VueReglages({
       <div>
         <button
           type="button"
-          onClick={() => setModalActive("telephone")}
+          onClick={() => setModalActive("coordonnees")}
           className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
         >
-          <span>Ajouter un numéro de téléphone</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setModalActive("email")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Changer l’email</span>
+          <span>Coordonnées</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
         </button>
 
         <button
@@ -2277,8 +2256,17 @@ function VueReglages({
       {/* SÉPARATEUR 2 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 3 : Toggles Chat, Commentaires & Notifs */}
+      {/* GROUPE 3 : Confidentialité, Toggles Chat, Commentaires & Notifs */}
       <div>
+        <button
+          type="button"
+          onClick={() => setModalActive("confidentialite")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Confidentialité</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+
         <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
           <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             Désactiver le chat
@@ -2325,22 +2313,15 @@ function VueReglages({
       {/* SÉPARATEUR 3 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 4 : Mot de passe, Suppression, Déconnexion & Sortie */}
+      {/* GROUPE 4 : Sécurité & Connexion, Déconnexion & Sortie */}
       <div>
         <button
           type="button"
-          onClick={() => setModalActive("password")}
+          onClick={() => setModalActive("securite")}
           className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
         >
-          <span>Changer le mot de passe</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setModalActive("supprimer")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Supprimer définitivement mon compte</span>
+          <span>Sécurité &amp; Connexion</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
         </button>
 
         <button
@@ -2618,13 +2599,17 @@ function VueReglages({
         </div>
       )}
 
-      {/* 3. Modal Ajouter / Modifier Téléphone */}
-      {modalActive === "telephone" && (
+      {/* 3. Modal Coordonnées — phone/contact_email du COMPTE, mêmes colonnes
+          profiles que la section "Coordonnées" de /profil (candidat). Ces
+          informations restent donc identiques quelle que soit la
+          plateforme utilisée pour les modifier (demande explicite de
+          l'utilisateur, 14/09/2026). */}
+      {modalActive === "coordonnees" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
             <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
               <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
-                Numéro de téléphone
+                Coordonnées
               </h3>
               <button
                 type="button"
@@ -2635,40 +2620,64 @@ function VueReglages({
               </button>
             </div>
 
-            <form onSubmit={handleSaveTelephone} className="space-y-3.5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Numéro de contact / WhatsApp *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={telephone}
-                  onChange={(e) => setTelephone(e.target.value)}
-                  placeholder="Ex : +221771001212 ou 771001212"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
+            <div className="space-y-3.5">
+              <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-zinc-700 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Téléphone</h4>
+                  <p className="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5 truncate">{coordPhone || "Non renseigné"}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={enCours}
+                  onClick={() => {
+                    const nouveau = prompt("Modifier votre numéro de téléphone :", coordPhone || "");
+                    if (nouveau !== null) handleSaveCoordonnee("phone", nouveau.trim());
+                  }}
+                  className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/30 transition cursor-pointer shrink-0"
+                  title="Modifier"
+                >
+                  <i className="fa-solid fa-pen text-xs"></i>
+                </button>
               </div>
 
-              <button
-                type="submit"
-                disabled={enCours}
-                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
-              >
-                {enCours ? "Enregistrement..." : "Enregistrer le numéro"}
-              </button>
-            </form>
+              <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-zinc-700 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-wider">E-mail de contact</h4>
+                  <p className="text-sm font-extrabold text-gray-900 dark:text-white mt-0.5 truncate">{coordEmail || "Non renseigné"}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={enCours}
+                  onClick={() => {
+                    const nouveau = prompt("Modifier votre email de contact :", coordEmail || session?.user?.email || "");
+                    if (nouveau !== null) handleSaveCoordonnee("contact_email", nouveau.trim());
+                  }}
+                  className="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/30 transition cursor-pointer shrink-0"
+                  title="Modifier"
+                >
+                  <i className="fa-solid fa-pen text-xs"></i>
+                </button>
+              </div>
+
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Ces coordonnées sont partagées avec votre profil Facilité : les modifier ici les modifie partout.
+                Le numéro WhatsApp public de votre boutique se règle séparément, depuis « Modifier le profil ».
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 4. Modal Changer l'email */}
-      {modalActive === "email" && (
+      {/* 3bis. Modal Confidentialité — Marketplace uniquement, indépendante de
+          la confidentialité du profil candidat sur /profil (CV/recrutement) :
+          demande explicite de l'utilisateur, chaque plateforme gère la
+          sienne. */}
+      {modalActive === "confidentialite" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
             <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
               <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
-                Changer l'adresse e-mail
+                Confidentialité
               </h3>
               <button
                 type="button"
@@ -2679,33 +2688,35 @@ function VueReglages({
               </button>
             </div>
 
-            <form onSubmit={handleSaveEmail} className="space-y-3.5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Nouvelle adresse e-mail *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Ex : monemail@gmail.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
+            <div className="flex items-start justify-between gap-4 p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-zinc-700">
+              <div className="min-w-0">
+                <h4 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                  <i className="fa-solid fa-store text-xs text-blue-600"></i>
+                  Rendre ma boutique visible
+                </h4>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-relaxed">
+                  Désactivé, votre boutique et ses articles n&apos;apparaissent plus dans les
+                  résultats du Marketplace (recherche, autour de moi, catégories) — vos
+                  données restent intactes, rien n&apos;est supprimé.
+                </p>
               </div>
-
-              <p className="text-[11px] text-gray-500">
-                Un e-mail de confirmation sera envoyé à cette nouvelle adresse pour valider le changement.
-              </p>
-
               <button
-                type="submit"
-                disabled={enCours}
-                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
+                type="button"
+                role="switch"
+                aria-checked={boutiqueVisible}
+                disabled={savingVisibiliteBoutique}
+                onClick={handleToggleVisibiliteBoutique}
+                className={`relative shrink-0 w-12 h-6 rounded-full transition cursor-pointer disabled:opacity-50 ${
+                  boutiqueVisible ? "bg-[#10E688]" : "bg-gray-300"
+                }`}
               >
-                {enCours ? "Envoi..." : "Mettre à jour l'e-mail"}
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    boutiqueVisible ? "translate-x-6" : "translate-x-0"
+                  }`}
+                ></span>
               </button>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -2823,13 +2834,26 @@ function VueReglages({
         </div>
       )}
 
-      {/* 7. Modal Changer mot de passe */}
-      {modalActive === "password" && (
+      {/* 7. Modal Sécurité & Connexion — réutilise EXACTEMENT le même
+          composant que la section "Sécurité & Connexion" de /profil
+          (candidat) : mêmes données (auth.users, profiles), mêmes flux
+          (mot de passe, e-mail/téléphone avec OTP, désactivation,
+          suppression via request_own_account_deletion()). Remplace les
+          anciens formulaires "Changer le mot de passe" et "Supprimer
+          définitivement mon compte" propres au Marketplace, qui
+          duplicaient ces flux avec un niveau de sécurité moindre — la
+          suppression, en particulier, ne faisait qu'un DELETE direct sur
+          profiles (probablement bloqué par RLS en silence, aucune table de
+          ce dépôt n'accordant DELETE à authenticated) au lieu de la vraie
+          suppression différée de 30 jours. Un seul composant, un seul
+          comportement, quelle que soit la plateforme (14/09/2026, demande
+          explicite de l'utilisateur). */}
+      {modalActive === "securite" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
               <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
-                Changer le mot de passe
+                Sécurité &amp; Connexion
               </h3>
               <button
                 type="button"
@@ -2840,92 +2864,7 @@ function VueReglages({
               </button>
             </div>
 
-            <form onSubmit={handleSavePassword} className="space-y-3.5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Nouveau mot de passe *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={nouveauMdp}
-                  onChange={(e) => setNouveauMdp(e.target.value)}
-                  placeholder="Au moins 6 caractères"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Confirmer le mot de passe *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmMdp}
-                  onChange={(e) => setConfirmMdp(e.target.value)}
-                  placeholder="Répétez le mot de passe"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={enCours}
-                className="w-full py-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
-              >
-                {enCours ? "Mise à jour..." : "Modifier mon mot de passe"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 8. Modal Supprimer compte */}
-      {modalActive === "supprimer" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-red-200 dark:border-red-900/50 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-red-100 dark:border-red-900/30">
-              <h3 className="text-base font-extrabold text-red-600 dark:text-red-400 flex items-center gap-2">
-                <i className="fa-solid fa-triangle-exclamation"></i>
-                Supprimer mon compte
-              </h3>
-              <button
-                type="button"
-                onClick={() => setModalActive(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
-              >
-                <i className="fa-solid fa-xmark text-sm"></i>
-              </button>
-            </div>
-
-            <form onSubmit={handleSupprimerCompte} className="space-y-3.5">
-              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                Cette action est <strong>irréversible</strong>. Toutes vos annonces, vos données de boutique et votre profil seront définitivement supprimés.
-              </p>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-red-600 dark:text-red-400">
-                  Tapez <strong>SUPPRIMER</strong> pour confirmer :
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={supprConfirm}
-                  onChange={(e) => setSupprConfirm(e.target.value)}
-                  placeholder="SUPPRIMER"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-xs sm:text-sm font-semibold text-red-900 dark:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={enCours || supprConfirm.trim().toUpperCase() !== "SUPPRIMER"}
-                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition cursor-pointer disabled:opacity-50 mt-2"
-              >
-                {enCours ? "Suppression en cours..." : "Confirmer la suppression définitive"}
-              </button>
-            </form>
+            <SecurityTabContent userSession={session} />
           </div>
         </div>
       )}

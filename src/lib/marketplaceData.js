@@ -342,6 +342,23 @@ export async function modifierBoutique(storeId, champs) {
 }
 
 /**
+ * Boutique visible ou masquée sur le Marketplace (achats/annonces) — section
+ * Confidentialité des Réglages vendeur, indépendante de la confidentialité
+ * du profil candidat sur /profil. actif filtre déjà réellement l'affichage
+ * (chargerTousLesArticles, rechercher_boutiques_proches) ; jusqu'ici rien ne
+ * permettait au vendeur de le faire varier lui-même après la création.
+ */
+export async function definirVisibiliteBoutique(storeId, actif) {
+  if (!storeId) throw new Error("Boutique introuvable.");
+  const { data, error } = await supabase.rpc("definir_visibilite_boutique", {
+    p_id: storeId,
+    p_actif: Boolean(actif),
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
  * Enregistre l'avatar façon Bitmoji de la boutique (config DiceBear, pas une
  * image rendue). Fonction séparée de modifierBoutique/modifier_ma_boutique :
  * un nom de RPC neuf ne peut pas créer de collision de surcharge — voir le
