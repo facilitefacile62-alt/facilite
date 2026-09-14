@@ -56,11 +56,8 @@
 // v49 (13/09/2026) : suppression de la grande bannière dans Mes annonces pour un affichage épuré
 // v50 (13/09/2026) : persistance absolue de la page, de la vue vendeur et de l'onglet actif après rechargement (F5)
 // v51 (13/09/2026) : fiche boutique 1:1 mobile (avatar à droite, profil complet actif pour tout nouveau compte)
-// v52 (14/09/2026) : correction de la course qui renvoyait a l'onglet Acheteur au rechargement en mode Vendeur
-// v53 (14/09/2026) : un nouveau vendeur qui enregistre son profil cree reellement sa boutique (date_naissance + creerBoutique)
-// v54 (14/09/2026) : Accueil/Marketplace ramene bien a l'onglet Acheteur ; Reglages affiche la vraie liste pour tout nouveau vendeur
-// v55 (14/09/2026) : Autour de moi/Explorer retires de la nav globale ; Modifier le profil en plein ecran sur mobile
-const VERSION_CACHE = "facilite-v55";
+// v56 (14/09/2026) : utilisation de useSearchParams pour éliminer les erreurs d'hydratation SSR
+const VERSION_CACHE = "facilite-v56";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
