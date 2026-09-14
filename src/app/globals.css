@@ -224,16 +224,21 @@ html.dark .divide-gray-100 > * + * {
   scrollbar-color: #CBD5E1 #F1F5F9;
 }
 
-/* WhatsApp Chat Wallpaper Pattern */
+/* Fond d'écran des discussions — motif de marque Facilité (tuile 280x280
+   seamless), remplace l'ancien pointillé générique façon WhatsApp. Les
+   bulles de message ont un fond opaque (#D9FDD3/#005C4B envoyé, blanc
+   reçu, voir MessagerieClient.js) : le motif ne reste visible que dans les
+   espaces entre les bulles, jamais derrière le texte. */
 .bg-whatsapp-chat {
-  background-color: #EFEAE2;
-  background-image: radial-gradient(#00000008 1px, transparent 1px), radial-gradient(#00000005 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: 0 0, 12px 12px;
+  background-color: #FAF6F1;
+  background-image: url('/facilite-pattern-background.svg');
+  background-repeat: repeat;
+  background-size: 280px 280px;
 }
 
 html.dark .bg-whatsapp-chat {
   background-color: #0B141A !important;
+  background-image: none;
 }
 
 /* Cartes latérales sidebar alignées (Expérience & Statistiques) */
