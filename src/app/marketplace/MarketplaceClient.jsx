@@ -1770,7 +1770,15 @@ function VueReglages({
 
   if (modalActive === "infos_perso") {
     return (
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden text-left relative w-full min-h-[600px] animate-fadeIn">
+      // Plein écran fixe sur mobile (z-50, par-dessus la carte boutique et
+      // sa bannière) : sans ça, ce panneau se contentait de s'empiler SOUS
+      // la colonne boutique sur petit écran (2 colonnes desktop qui
+      // passent naturellement en 1 colonne mobile), donnant l'impression
+      // d'une modale flottant devant un arrière-plan visible au lieu d'une
+      // vraie page dédiée. Signalé le 14/09/2026. À partir de md: (desktop),
+      // retour au comportement d'origine : contenu de la 2e colonne, à
+      // côté de la carte boutique.
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-white dark:bg-zinc-900 md:static md:z-auto md:overflow-hidden md:rounded-2xl md:border md:border-gray-100 md:dark:border-zinc-800 md:shadow-sm text-left w-full md:min-h-[600px] animate-fadeIn">
         {/* Toast de confirmation */}
         {toastMessage && (
           <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
