@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconGoogle } from '@/components/facilite-icons';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
@@ -105,7 +105,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <ImageBackground
+      source={require('../../../assets/images/facilite-pattern-background.png')}
+      resizeMode="repeat"
+      style={{ flex: 1 }}
+    >
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
           <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
@@ -268,7 +272,7 @@ export default function LoginScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
+    </ImageBackground>
   );
 }
 
