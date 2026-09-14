@@ -1178,20 +1178,6 @@ export default function Header() {
               <span>Extracteur</span>
             </Link>
           )}
-          {userSession && (
-            <Link
-              href="/messagerie"
-              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                pathname === "/messagerie"
-                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                  : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-              }`}
-            >
-              <i className="fa-solid fa-comments text-sm"></i>
-              <span>Messagerie</span>
-            </Link>
-          )}
 
           {/* Menu déroulant "Plus" (visible uniquement si l'utilisateur est connecté) */}
           {userSession && (
@@ -1401,6 +1387,27 @@ export default function Header() {
           )}
         </>
       )}
+
+          {/* Messagerie : visible que l'on soit en mode Candidat ou Vendeur
+              (Marketplace) — avant le 14/09/2026, ce lien vivait DANS le
+              bloc !isBusinessActive ci-dessus et disparaissait donc
+              entièrement dès qu'on naviguait dans le Marketplace, sans
+              aucun moyen d'y revenir depuis la barre de navigation.
+              Signalé par l'utilisateur. */}
+          {userSession && (
+            <Link
+              href="/messagerie"
+              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                pathname === "/messagerie"
+                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                  : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+              }`}
+            >
+              <i className="fa-solid fa-comments text-sm"></i>
+              <span>Messagerie</span>
+            </Link>
+          )}
 
           {/* 🏪 Bouton Marketplace Desktop (à côté de Plus) */}
           <Link
@@ -1816,19 +1823,25 @@ export default function Header() {
                 <i className="fa-solid fa-list-check text-sm sm:text-base"></i>
                 <span className="text-[9px] font-bold tracking-tight truncate w-full">Offres</span>
               </Link>
-              {userSession && (
-                <Link
-                  href="/messagerie"
-                  onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
-                  className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                    pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-                  }`}
-                >
-                  <i className="fa-regular fa-comments text-sm sm:text-base"></i>
-                  <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
-                </Link>
-              )}
             </>
+          )}
+
+          {/* Messages : visible en mode Candidat ET en mode Vendeur
+              (Marketplace) — avant le 14/09/2026 ce bouton vivait dans le
+              bloc !isBusinessActive ci-dessus et disparaissait de la barre
+              du bas dès qu'on entrait dans le Marketplace. Signalé par
+              l'utilisateur. */}
+          {userSession && (
+            <Link
+              href="/messagerie"
+              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+              className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              }`}
+            >
+              <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
+            </Link>
           )}
 
           {userSession && (
