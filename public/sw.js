@@ -59,7 +59,8 @@
 // v52 (14/09/2026) : correction de la course qui renvoyait a l'onglet Acheteur au rechargement en mode Vendeur
 // v53 (14/09/2026) : un nouveau vendeur qui enregistre son profil cree reellement sa boutique (date_naissance + creerBoutique)
 // v54 (14/09/2026) : Accueil/Marketplace ramene bien a l'onglet Acheteur ; Reglages affiche la vraie liste pour tout nouveau vendeur
-const VERSION_CACHE = "facilite-v54";
+// v55 (14/09/2026) : Autour de moi/Explorer retires de la nav globale ; Modifier le profil en plein ecran sur mobile
+const VERSION_CACHE = "facilite-v55";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
