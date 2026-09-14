@@ -29,6 +29,7 @@ import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
 import EditeurAvatarBoutique from "@/components/EditeurAvatarBoutique";
 import SecurityTabContent from "@/components/SecurityTabContent";
+import InformationsPersonnellesContent from "@/components/InformationsPersonnellesContent";
 import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 // Chargé en dynamique, sans SSR : maplibre-gl (~257 Ko compressés) touche
 // `window`/WebGL et ne doit être téléchargé que par les personnes qui
@@ -1426,22 +1427,25 @@ function IllustrationAvionPapier() {
 }
 
 /**
- * Composant Réglages (1:1 Strictement conforme aux 2 captures d'écran fournies)
+ * Composant Réglages
  * - Header: < Réglages
- * - Groupe 1: Informations personnelles, Détails de l'entreprise >
- * - Groupe 2: Coordonnées, Contact & Livraison, Foire aux questions, Changer la langue
+ * - Groupe 1: Boutique, Vitrine & Ventes (Faire profit & Boost, Abonnés, Avis clients)
+ * - Groupe 2: Informations personnelles, Coordonnées, Contact & Livraison, Foire aux questions, Changer la langue
  * - Groupe 3: Confidentialité, Désactiver le chat, Désactiver les commentaires, Gérer les notifications
- * - Groupe 4: Sécurité & Connexion, Se déconnecter
+ * - Groupe 4: Sécurité & Connexion, Se déconnecter, Retour au Marketplace
  *
- * Coordonnées, Confidentialité et Sécurité & Connexion reprennent la même
- * structure que les 3 onglets homonymes de /profil (candidat) — demande
- * explicite de l'utilisateur (14/09/2026). Coordonnées et Sécurité &
- * Connexion partagent les MÊMES données (profiles.phone/contact_email,
- * auth.users) via le même composant SecurityTabContent : un changement sur
- * une plateforme est visible sur l'autre, aucune duplication de logique.
- * Confidentialité reste volontairement INDÉPENDANTE de celle du profil
- * candidat (CV/recrutement) : chaque plateforme gère la sienne (l'une gère
- * les CV/candidatures, l'autre les achats/ventes).
+ * Informations personnelles, Coordonnées, Confidentialité et Sécurité &
+ * Connexion reprennent la même structure que les onglets homonymes de
+ * /profil (candidat) — demande explicite de l'utilisateur (14/09/2026).
+ * Informations personnelles, Coordonnées et Sécurité & Connexion
+ * partagent les MÊMES données (profiles.city/quartier/country/gender/
+ * education_level_code, profiles.phone/contact_email, auth.users) via les
+ * MÊMES composants (InformationsPersonnellesContent, SecurityTabContent) :
+ * un changement sur une plateforme est visible sur l'autre, aucune
+ * duplication de logique susceptible de diverger. Confidentialité reste
+ * volontairement INDÉPENDANTE de celle du profil candidat (CV/recrutement) :
+ * chaque plateforme gère la sienne (l'une gère les CV/candidatures, l'autre
+ * les achats/ventes).
  */
 function VueReglages({
   userId,
@@ -1459,7 +1463,7 @@ function VueReglages({
   // court-circuite tout le reste du rendu. Un repli sur "infos_perso"
   // rendait cette liste inatteignable pour quiconque n'a jamais explicitement
   // demandé une autre section (tout nouveau vendeur). Trouvé le 14/09/2026.
-  const [modalActive, setModalActive] = useState(sectionInitiale); // null | 'infos_perso' | 'details_entreprise' | 'coordonnees' | 'confidentialite' | 'langue' | 'notifs' | 'securite'
+  const [modalActive, setModalActive] = useState(sectionInitiale); // null | 'infos_perso' | 'details_entreprise' | 'informations_personnelles' | 'coordonnees' | 'confidentialite' | 'langue' | 'notifs' | 'securite'
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
 
@@ -2215,8 +2219,17 @@ function VueReglages({
       {/* SÉPARATEUR 1 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 2 : Coordonnées, Contact, FAQ & Langue */}
+      {/* GROUPE 2 : Informations personnelles, Coordonnées, Contact, FAQ & Langue */}
       <div>
+        <button
+          type="button"
+          onClick={() => setModalActive("informations_personnelles")}
+          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
+          <span>Informations personnelles</span>
+          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+        </button>
+
         <button
           type="button"
           onClick={() => setModalActive("coordonnees")}
@@ -2595,6 +2608,34 @@ function VueReglages({
                 }}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2bis. Modal Informations personnelles — réutilise EXACTEMENT le même
+          composant que la section homonyme de /profil (candidat) :
+          InformationsPersonnellesContent, mêmes colonnes profiles (city,
+          quartier, country, gender, education_level_code). Un changement
+          sur une plateforme est donc immédiatement visible sur l'autre —
+          c'est la même ligne en base, pas une copie de logique susceptible
+          de diverger (demande explicite de l'utilisateur, 14/09/2026). */}
+      {modalActive === "informations_personnelles" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-gray-100 dark:border-zinc-800 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100 dark:border-zinc-800">
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                Informations personnelles
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalActive(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
+              >
+                <i className="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+
+            <InformationsPersonnellesContent userSession={session} />
           </div>
         </div>
       )}
