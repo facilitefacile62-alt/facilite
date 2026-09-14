@@ -1,0 +1,20 @@
+-- Corrige un bug latent : profiles.quartier a été ajoutée le 2026-08-18
+-- (voir 20260818100000_profiles_quartier.sql) avec le commentaire "éditable
+-- manuellement comme city/country via handleSaveAboutField" — mais la
+-- colonne n'a JAMAIS reçu le GRANT UPDATE nécessaire pour que ce soit
+-- réellement le cas.
+--
+-- Cause : le correctif DEFAULT PRIVILEGES du 2026-08-07 (voir
+-- 20260802200000_security_advisor_fixes.sql / tests/security/invariants
+-- Invariant "DEFAULT PRIVILEGES") a changé le comportement pour toute
+-- colonne créée APRÈS cette date — plus d'héritage automatique de droits
+-- anon/authenticated. quartier, ajoutée 11 jours plus tard, n'a donc jamais
+-- eu ce droit alors que city/country/gender (colonnes plus anciennes) l'ont.
+--
+-- Confirmé en conditions réelles le 14/09/2026 : toute tentative
+-- d'enregistrement du quartier (candidat sur /profil, vendeur sur le
+-- Marketplace) échouait avec "permission denied for table profiles"
+-- (403), silencieusement absorbée par le bloc catch générique — l'écran
+-- affichait un message de succès optimiste sans que la valeur ne soit
+-- jamais réellement écrite en base.
+GRANT UPDATE (quartier) ON TABLE public.profiles TO authenticated;
