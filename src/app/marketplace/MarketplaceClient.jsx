@@ -159,7 +159,27 @@ function depuis(dateIso) {
 export default function MarketplaceClient() {
   const { session, profile, isAdmin, isRecruiter, signOut } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
-  const [onglet, setOnglet] = useState("acheter"); // 'acheter' | 'vendre'
+  const [onglet, setOnglet] = useState(() => {
+    // Lecture synchrone (pas un useEffect) : demarrer sur "acheter" par
+    // defaut puis le corriger apres coup dans un effet crée une course
+    // avec l'effet de persistance juste en dessous (dépendances [onglet]) —
+    // celui-ci peut s'exécuter AVANT la correction, avec la valeur encore
+    // fausse, et écraser l'URL en retirant onglet=vendre. Confirmé le
+    // 13/09/2026 en traçant les appels history.replaceState en direct sur
+    // un rechargement réel : 8 appels s'enchaînent en quelques ms, le
+    // dernier gagnant la course au hasard du timing — d'où le retour
+    // aléatoire à la vue Acheteur au rechargement signalé par l'utilisateur.
+    // Même remède déjà appliqué à ongletVendeur (VueVendeur) plus bas dans
+    // ce fichier : lire le bon état dès le tout premier rendu, sans effet.
+    if (typeof window === "undefined") return "acheter";
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("action") === "publier") return "vendre";
+    const urlOnglet = params.get("onglet");
+    if (urlOnglet === "vendre" || urlOnglet === "acheter") return urlOnglet;
+    const savedOnglet = localStorage.getItem("facilite_marketplace_onglet");
+    if (savedOnglet === "vendre" || savedOnglet === "acheter") return savedOnglet;
+    return "acheter";
+  }); // 'acheter' | 'vendre'
   const [ongletVendeurInitial, setOngletVendeurInitial] = useState("annonces");
   const [categorie, setCategorie] = useState(null);
   const [boutiques, setBoutiques] = useState([]);
@@ -222,13 +242,14 @@ export default function MarketplaceClient() {
       })
       .subscribe();
 
-    // Vérifier les paramètres URL et le cache local au montage pour persister la page actuelle
+    // Vérifier les paramètres URL et le cache local au montage pour persister
+    // le sous-onglet vendeur actif. "onglet" (acheter/vendre) lui-même est
+    // déjà initialisé en lecture synchrone ci-dessus — le refaire ici, de
+    // façon asynchrone, recréerait exactement la course déjà corrigée.
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const actionParam = params.get("action");
-      const urlOnglet = params.get("onglet");
       const urlTab = params.get("tab");
-      const savedOnglet = localStorage.getItem("facilite_marketplace_onglet");
       const savedTab = localStorage.getItem("facilite_vendeur_onglet");
 
       const tabActif = urlTab || savedTab;
@@ -237,12 +258,7 @@ export default function MarketplaceClient() {
       }
 
       if (actionParam === "publier") {
-        setOnglet("vendre");
         setOngletVendeurInitial("publier");
-      } else if (urlOnglet === "vendre" || urlOnglet === "acheter") {
-        setOnglet(urlOnglet);
-      } else if (savedOnglet === "vendre" || savedOnglet === "acheter") {
-        setOnglet(savedOnglet);
       }
 
       if (params.get("action") === "voir_boutique" || params.get("boutique")) {
