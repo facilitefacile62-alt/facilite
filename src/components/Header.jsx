@@ -1292,10 +1292,10 @@ export default function Header() {
 
           {!isBusinessActive && (
             <>
-              {/* 2. 💼 Offres d'emploi */}
+              {/* 2. 💼 Offres */}
               <Link
                 href="/offres"
-                onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
+                onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres")}
                 className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   pathname?.startsWith("/offres")
                     ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
@@ -1303,7 +1303,7 @@ export default function Header() {
                 }`}
               >
                 <i className="fa-solid fa-briefcase text-sm"></i>
-                <span>Offres d&apos;emploi</span>
+                <span>Offres</span>
               </Link>
 
               {/* 3. ⚡ Extracteur (si connecté) */}
