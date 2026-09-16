@@ -587,7 +587,12 @@ export default function Header() {
     if (
       pathname === href ||
       (href === "/" && pathname === "/") ||
-      (href === "/marketplace" && pathname?.startsWith("/marketplace"))
+      (href === "/marketplace" && pathname?.startsWith("/marketplace")) ||
+      // /messagerie?contexte=marketplace vs /messagerie (nu) : même pathname,
+      // query différente — un Link "soft" ne remonterait pas le composant,
+      // et le useEffect de chargement (dépendances []) ne relirait donc
+      // jamais le nouveau contexte. Un rechargement dur force le remontage.
+      (href?.startsWith("/messagerie") && pathname?.startsWith("/messagerie"))
     ) {
       e.preventDefault();
       // Vider la persistance de vue du Marketplace (MarketplaceClient.jsx)
@@ -1324,11 +1329,14 @@ export default function Header() {
             </>
           )}
 
-          {/* 4. 💬 Messagerie */}
+          {/* 4. 💬 Messagerie — ?contexte=marketplace en mode Vendeur/Marketplace :
+              scope la vue par défaut aux échanges client<->vendeur, distincts
+              de la messagerie Facilité (candidat<->recruteur). Signalé par
+              l'utilisateur (captures d'écran, 16/09/2026). */}
           {userSession && (
             <Link
-              href="/messagerie"
-              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+              href={isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie"}
+              onClick={(e) => handleNavClick(e, isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie", "nav_messagerie", "Messagerie")}
               className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 pathname === "/messagerie"
                   ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
@@ -2024,8 +2032,8 @@ export default function Header() {
               l'utilisateur. */}
           {userSession && (
             <Link
-              href="/messagerie"
-              onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+              href={isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie"}
+              onClick={(e) => handleNavClick(e, isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie", "nav_messagerie", "Messagerie")}
               className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
                 pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
               }`}
@@ -2524,8 +2532,8 @@ export default function Header() {
 
                     {/* 4. Messages / Clients */}
                     <Link
-                      href="/messagerie"
-                      onClick={(e) => handleNavClick(e, "/messagerie", "nav_messagerie", "Messagerie")}
+                      href="/messagerie?contexte=marketplace"
+                      onClick={(e) => handleNavClick(e, "/messagerie?contexte=marketplace", "nav_messagerie", "Messagerie")}
                       className={`rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] ${
                         !checkFeatureAllowed("nav_messagerie")
                           ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/90 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 text-gray-400 pointer-events-none select-none shadow-none"

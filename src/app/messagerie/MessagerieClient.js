@@ -312,6 +312,11 @@ export default function MessagerieClient() {
   // next/dynamic avec ssr:false, jamais de rendu serveur pour useSearchParams.
   const searchParams = useSearchParams();
   const recipientParam = searchParams.get("recipient");
+  // 'marketplace' quand on arrive via "Contacter le vendeur" (fiche article)
+  // ou le lien Messagerie de la barre de navigation en mode Vendeur/Marketplace
+  // — sépare ces échanges client<->vendeur de la messagerie Facilité
+  // (candidat<->recruteur). Voir MarketplaceClient.jsx et Header.jsx.
+  const contexteParam = searchParams.get("contexte");
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -898,17 +903,48 @@ export default function MessagerieClient() {
         });
 
       // ?recipient=<userId> (ex. bouton "Contacter le recruteur" d'une
-      // vitrine /recruteurs/[id]) : ouvre une conversation directe avec ce
+      // vitrine /recruteurs/[id], ou "Contacter le vendeur" sur une fiche
+      // article du Marketplace) : ouvre une conversation directe avec ce
       // destinataire précis, en plus (pas à la place) du fil Support.
+      // ?contexte=marketplace distingue le second cas : nom/avatar résolus
+      // depuis la boutique (pas recruiter_profiles, qui ne concerne que le
+      // premier cas), et les messages envoyés dans ce fil sont étiquetés
+      // MARKETPLACE (voir handleSendMessage/handleSendAttachment) pour ne
+      // jamais retomber dans le fil fusionné "Support RH Facilité" ni parmi
+      // les échanges génériques Facilité.
+      const estContexteMarketplace = contexteParam === "marketplace";
       if (recipientParam && recipientParam !== session.user.id) {
         resolveConversationWith(session.user.id, recipientParam).then(async (result) => {
           if (!result || !isActive) return;
 
-          const { data: recruiterProfile } = await supabase
-            .from("recruiter_profiles")
-            .select("company_name, sector, logo_url")
-            .eq("user_id", recipientParam)
-            .maybeSingle();
+          let displayName = "Recruteur";
+          let title = "Recruteur";
+          let avatarUrl = null;
+
+          if (estContexteMarketplace) {
+            const { data: boutique } = await supabase
+              .from("marketplace_stores")
+              .select("nom, avatar_config")
+              .eq("owner_id", recipientParam)
+              .maybeSingle();
+            displayName = boutique?.nom || "Boutique";
+            title = "Vendeur Marketplace";
+            if (boutique?.avatar_config) {
+              try {
+                const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique");
+                avatarUrl = dataUriAvatarBoutique(boutique.avatar_config);
+              } catch {}
+            }
+          } else {
+            const { data: recruiterProfile } = await supabase
+              .from("recruiter_profiles")
+              .select("company_name, sector, logo_url")
+              .eq("user_id", recipientParam)
+              .maybeSingle();
+            displayName = recruiterProfile?.company_name || "Recruteur";
+            title = recruiterProfile?.sector || "Recruteur";
+            avatarUrl = recruiterProfile?.logo_url || null;
+          }
 
           const { data: directMessages } = await supabase
             .from("messages")
@@ -919,32 +955,50 @@ export default function MessagerieClient() {
           if (!isActive) return;
 
           const formattedMsgs = (directMessages || []).map((row) => formatMessageRow(row, session.user.id));
-          const displayName = recruiterProfile?.company_name || "Recruteur";
 
           setDirectRecipientId(recipientParam);
           setDirectConversationId(result.conversationId);
 
           setConversations((prev) => {
-            if (prev.some((c) => c.id === recipientParam)) return prev;
+            const existing = prev.find((c) => c.id === recipientParam);
+            if (existing) {
+              // Déjà reconstruite par la passe générale (conversation qui
+              // avait déjà des messages) : ne remplace pas la carte, juste
+              // au cas où son étiquetage MARKETPLACE aurait été manqué.
+              if (estContexteMarketplace && existing.typeDiscussion !== "MARKETPLACE") {
+                return prev.map((c) => (c.id === recipientParam ? { ...c, typeDiscussion: "MARKETPLACE" } : c));
+              }
+              return prev;
+            }
             const directConv = {
               id: recipientParam,
               name: displayName,
-              title: recruiterProfile?.sector || "Recruteur",
+              title,
               company: displayName,
-              avatarColor: "bg-blue-600",
+              avatarColor: estContexteMarketplace ? "bg-emerald-600" : "bg-blue-600",
               avatarInitials: displayName.slice(0, 2).toUpperCase(),
-              logo: recruiterProfile?.logo_url || null,
+              logo: avatarUrl,
               lastMessage: formattedMsgs.length > 0 ? formattedMsgs[formattedMsgs.length - 1].text : "",
               time: formattedMsgs.length > 0 ? formattedMsgs[formattedMsgs.length - 1].time : "",
               unreadCount: 0,
               online: false,
               favorite: false,
+              typeDiscussion: estContexteMarketplace ? "MARKETPLACE" : "ECHANGE",
               messages: formattedMsgs,
             };
             return [...prev, directConv];
           });
           setActiveConvId(recipientParam);
+          if (estContexteMarketplace) {
+            setDiscussionTypeFilter("MARKETPLACE");
+          }
         });
+      } else if (estContexteMarketplace) {
+        // Arrivée depuis le lien "Messagerie" de la barre de navigation en
+        // mode Vendeur/Marketplace, sans destinataire précis : on scope
+        // simplement la vue par défaut aux échanges Marketplace déjà
+        // reconstruits par la passe générale ci-dessous.
+        setDiscussionTypeFilter("MARKETPLACE");
       }
 
       // Écouter également les changements de session en temps réel
@@ -1045,8 +1099,97 @@ export default function MessagerieClient() {
           };
         });
 
-        // Les messages Support généraux (excluant les candidatures)
-        const supportMsgs = formattedMsgs.filter((m) => m.typeDiscussion !== "OFFRE");
+        // Reconstruction des conversations DIRECTES (Marketplace acheteur<->
+        // vendeur, vitrine recruteur) à partir de la table conversations —
+        // pas seulement au moment du clic sur "Contacter..." (?recipient=).
+        // Sans ça, ces échanges disparaissaient du fil dédié dès qu'on
+        // rouvrait /messagerie normalement : leurs messages (typeDiscussion
+        // ni OFFRE ni SUPPORT) retombaient tous dans le fil fusionné
+        // "Support RH Facilité" ci-dessous, mélangés au vrai support
+        // technique. Signalé par l'utilisateur (captures d'écran).
+        const { data: adminIdForExclusion } = await supabase.rpc("resolve_admin_id");
+        const { data: mesConversations } = await supabase
+          .from("conversations")
+          .select("id, user_1_id, user_2_id")
+          .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`);
+
+        const conversationsDirectes = (mesConversations || []).filter((c) => {
+          const autrePartieId = c.user_1_id === session.user.id ? c.user_2_id : c.user_1_id;
+          return autrePartieId && autrePartieId !== adminIdForExclusion;
+        });
+
+        const autresPartiesIds = [...new Set(conversationsDirectes.map((c) =>
+          c.user_1_id === session.user.id ? c.user_2_id : c.user_1_id
+        ))];
+
+        let directCards = [];
+        const idsAvecConversationDirecte = new Set();
+        if (autresPartiesIds.length > 0) {
+          const [{ data: boutiques }, { data: recruteurs }, { data: profilsGeneraux }] = await Promise.all([
+            supabase.from("marketplace_stores").select("owner_id, nom, avatar_config").in("owner_id", autresPartiesIds),
+            supabase.from("recruiter_profiles").select("user_id, company_name, sector, logo_url").in("user_id", autresPartiesIds),
+            supabase.from("profiles").select("id, full_name, avatar_url").in("id", autresPartiesIds),
+          ]);
+          const boutiqueParId = new Map((boutiques || []).map((b) => [b.owner_id, b]));
+          const recruteurParId = new Map((recruteurs || []).map((r) => [r.user_id, r]));
+          const profilParId = new Map((profilsGeneraux || []).map((p) => [p.id, p]));
+          const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique").catch(() => ({ dataUriAvatarBoutique: null }));
+
+          directCards = conversationsDirectes.map((conv) => {
+            const autrePartieId = conv.user_1_id === session.user.id ? conv.user_2_id : conv.user_1_id;
+            idsAvecConversationDirecte.add(autrePartieId);
+            const msgsDeCetteConv = formattedMsgs.filter((m) => m.conversationId === conv.id);
+            const estMarketplace = boutiqueParId.has(autrePartieId) || msgsDeCetteConv.some((m) => m.typeDiscussion === "MARKETPLACE");
+            const boutique = boutiqueParId.get(autrePartieId);
+            const recruteur = recruteurParId.get(autrePartieId);
+            const profilGeneral = profilParId.get(autrePartieId);
+
+            let name = "Utilisateur";
+            let title = "Échange direct";
+            let logo = null;
+            if (estMarketplace && boutique) {
+              name = boutique.nom || "Boutique";
+              title = "Vendeur Marketplace";
+              if (boutique.avatar_config && dataUriAvatarBoutique) {
+                try { logo = dataUriAvatarBoutique(boutique.avatar_config); } catch {}
+              }
+            } else if (recruteur) {
+              name = recruteur.company_name || "Recruteur";
+              title = recruteur.sector || "Recruteur";
+              logo = recruteur.logo_url || null;
+            } else if (profilGeneral) {
+              name = profilGeneral.full_name || "Utilisateur";
+              logo = profilGeneral.avatar_url || null;
+            }
+
+            const dernierMsg = msgsDeCetteConv[msgsDeCetteConv.length - 1];
+            return {
+              id: autrePartieId,
+              name,
+              title,
+              company: name,
+              avatarColor: estMarketplace ? "bg-emerald-600" : "bg-blue-600",
+              avatarInitials: name.slice(0, 2).toUpperCase(),
+              logo,
+              lastMessage: dernierMsg?.text || "",
+              time: dernierMsg?.time || "",
+              unreadCount: 0,
+              online: false,
+              favorite: false,
+              typeDiscussion: estMarketplace ? "MARKETPLACE" : "ECHANGE",
+              messages: msgsDeCetteConv,
+            };
+          });
+        }
+
+        // Les messages Support généraux : exclut les candidatures (OFFRE) ET
+        // les conversations directes ci-dessus (Marketplace/recruteur) —
+        // seuls les échanges sans conversation_id (historique) ou rattachés
+        // à l'admin restent dans le fil fusionné.
+        const supportMsgs = formattedMsgs.filter((m) =>
+          m.typeDiscussion !== "OFFRE" &&
+          !(m.conversationId && conversationsDirectes.some((c) => c.id === m.conversationId))
+        );
 
         if (!isActive) return;
 
@@ -1072,9 +1215,32 @@ export default function MessagerieClient() {
             const alreadyPresent = prev.some((c) => c.id === card.id) || next.some((c) => c.id === card.id);
             if (!alreadyPresent) next.push(card);
           }
+          for (const card of directCards) {
+            const existante = prev.find((c) => c.id === card.id);
+            if (existante) {
+              // Conserve une carte déjà posée par le bloc ?recipient= (peut
+              // avoir un nom déjà résolu identique) mais complète ses
+              // messages si la reconstruction générale en a trouvé plus.
+              if (!next.some((c) => c.id === card.id)) {
+                next.push(card.messages.length >= (existante.messages?.length || 0) ? card : existante);
+              }
+            } else if (!next.some((c) => c.id === card.id)) {
+              next.push(card);
+            }
+          }
           return next;
         });
-        if (window.innerWidth >= 768) {
+        // Ne force PAS la sélection par défaut "Support RH Facilité" :
+        // - si un ?recipient= précis est demandé, sinon cette sélection
+        //   générique, résolue en parallèle, écrase aléatoirement (course)
+        //   la conversation directe ouverte par le bloc ci-dessus dès que
+        //   celui-ci répond après celui-là ;
+        // - en arrivée ?contexte=marketplace (lien Messagerie de la barre de
+        //   navigation en mode Vendeur, sans destinataire précis) : le fil
+        //   Support est alors masqué par le filtre Marketplace actif, et le
+        //   sélectionner quand même affichait un panneau "Support RH
+        //   Facilité" incohérent avec une liste qui ne le montre plus.
+        if (window.innerWidth >= 768 && !recipientParam && !estContexteMarketplace) {
           setActiveConvId("ai-assistant");
         }
       } catch (err) {
@@ -1083,7 +1249,7 @@ export default function MessagerieClient() {
           const aiConv = prev.find(c => c.id === AI_PINNED_CHAT.id) || AI_PINNED_CHAT;
           return [aiConv];
         });
-        if (window.innerWidth >= 768) {
+        if (window.innerWidth >= 768 && !recipientParam && !estContexteMarketplace) {
           setActiveConvId("ai-assistant");
         }
       }
@@ -1439,7 +1605,14 @@ export default function MessagerieClient() {
     const tempId = `temp-${(tempIdCounterRef.current += 1)}`;
 
     // 1. Add user message to state
-    const optimisticTypeDiscussion = discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE";
+    // Étiquette selon la NATURE de la conversation active (MARKETPLACE),
+    // pas seulement le filtre par onglet actuellement sélectionné — sans ça,
+    // un message envoyé dans un fil Marketplace retombait en "ECHANGE" dès
+    // que l'onglet actif n'était pas explicitement celui du Marketplace.
+    const optimisticTypeDiscussion =
+      conversations.find((c) => c.id === activeConvId)?.typeDiscussion === "MARKETPLACE"
+        ? "MARKETPLACE"
+        : discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE";
     setConversations(prev => prev.map(c => {
       if (c.id === activeConvId) {
         const newMsg = {
@@ -1494,7 +1667,7 @@ export default function MessagerieClient() {
           content: userMessageText,
           receiverId: replyTarget.receiverId,
           conversationId: replyTarget.conversationId,
-          typeDiscussion: discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE"
+          typeDiscussion: optimisticTypeDiscussion
         });
 
         if (sendError) {
@@ -1833,8 +2006,12 @@ export default function MessagerieClient() {
 
     // Même correctif que handleSendMessage : sans typeDiscussion, le filtre
     // par onglet masque ce message optimiste s'il ne correspond pas à
-    // l'onglet actif au moment de l'envoi.
-    const optimisticTypeDiscussion = discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE";
+    // l'onglet actif au moment de l'envoi. Étiquette selon la nature de la
+    // conversation active (MARKETPLACE) plutôt que le seul onglet actif.
+    const optimisticTypeDiscussion =
+      conversations.find((c) => c.id === activeConvId)?.typeDiscussion === "MARKETPLACE"
+        ? "MARKETPLACE"
+        : discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE";
     setConversations((prev) =>
       prev.map((c) => {
         if (c.id === activeConvId) {
@@ -1891,7 +2068,7 @@ export default function MessagerieClient() {
           attachment_type: attachmentType,
           file_name: fileName,
           file_size: fileSizeText,
-          type_discussion: discussionTypeFilter === "SUPPORT" ? "SUPPORT" : "ECHANGE",
+          type_discussion: optimisticTypeDiscussion,
           created_at: new Date().toISOString(),
         }).select().single();
 
@@ -1954,6 +2131,9 @@ export default function MessagerieClient() {
       } else if (discussionTypeFilter === "SUPPORT") {
         const isSupport = c.id === 1 || c.typeDiscussion === "SUPPORT" || (c.messages || []).some(m => m.typeDiscussion === "SUPPORT");
         if (!isSupport) return false;
+      } else if (discussionTypeFilter === "MARKETPLACE") {
+        const isMarketplace = c.typeDiscussion === "MARKETPLACE" || (c.messages || []).some(m => m.typeDiscussion === "MARKETPLACE");
+        if (!isMarketplace) return false;
       }
     }
 
@@ -2644,6 +2824,15 @@ export default function MessagerieClient() {
               >
                 Stages
               </button>
+              <button
+                type="button"
+                onClick={() => setDiscussionTypeFilter("MARKETPLACE")}
+                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                  discussionTypeFilter === "MARKETPLACE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                Marketplace
+              </button>
             </div>
 
             {/* Liste des conversations WhatsApp */}
@@ -2755,6 +2944,12 @@ export default function MessagerieClient() {
                       <div className="text-2xl mb-1">🎧</div>
                       <p className="text-gray-700 font-bold">Aucun échange support</p>
                       <p className="text-[11px] text-gray-400">Le fil Support RH Facilité s'affichera dès votre premier message.</p>
+                    </>
+                  ) : discussionTypeFilter === "MARKETPLACE" ? (
+                    <>
+                      <div className="text-2xl mb-1">🛍️</div>
+                      <p className="text-gray-700 font-bold">Aucun échange Marketplace</p>
+                      <p className="text-[11px] text-gray-400">Vos discussions avec un client ou un vendeur du Marketplace s'affichent ici.</p>
                     </>
                   ) : (
                     <p className="italic">Aucune discussion trouvée.</p>
@@ -3017,6 +3212,8 @@ export default function MessagerieClient() {
                         ? "Aucun échange lié à une candidature pour le moment."
                         : discussionTypeFilter === "SUPPORT"
                         ? "Aucune demande de support pour le moment."
+                        : discussionTypeFilter === "MARKETPLACE"
+                        ? "Aucun message pour le moment. Envoyez le premier message à ce vendeur."
                         : "Aucune demande de stage pour le moment."}
                     </div>
                   )}
@@ -3025,7 +3222,11 @@ export default function MessagerieClient() {
                   <div className="flex items-center justify-center my-2">
                     <span className="text-[11px] font-semibold text-[#54656F] bg-[#FFEECD]/90 border border-amber-300/60 px-3.5 py-1.5 rounded-lg shadow-2xs flex items-center gap-1.5 text-center max-w-md">
                       <i className="fa-solid fa-lock text-[10px] text-amber-700"></i>
-                      <span>Les échanges avec le Support RH Facilité sont chiffrés et assistés par nos conseillers & IA.</span>
+                      <span>
+                        {activeConversation?.typeDiscussion === "MARKETPLACE"
+                          ? "Les échanges avec ce vendeur/client du Marketplace sont chiffrés."
+                          : "Les échanges avec le Support RH Facilité sont chiffrés et assistés par nos conseillers & IA."}
+                      </span>
                     </span>
                   </div>
 

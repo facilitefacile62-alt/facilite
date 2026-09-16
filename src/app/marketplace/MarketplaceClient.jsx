@@ -4725,7 +4725,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
                 remontée pour cette boutique) : bouton simplement masqué. */}
             {article.boutique_owner_id && (
               <Link
-                href={`/messagerie?recipient=${article.boutique_owner_id}`}
+                href={`/messagerie?recipient=${article.boutique_owner_id}&contexte=marketplace`}
                 className="w-12 h-12 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center transition cursor-pointer shrink-0"
                 title="Envoyer un message au vendeur"
               >
@@ -6036,7 +6036,7 @@ function ModalFicheBoutique({
 
                   {!estProprietaire && boutique?.owner_id && (
                     <Link
-                      href={`/messagerie?recipient=${boutique.owner_id}`}
+                      href={`/messagerie?recipient=${boutique.owner_id}&contexte=marketplace`}
                       className="px-4 py-2 rounded-full bg-white/90 hover:bg-white text-gray-900 text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition cursor-pointer shrink-0"
                     >
                       <i className="fa-regular fa-comment-dots text-base"></i>
@@ -6431,7 +6431,7 @@ function ModalFicheBoutique({
 
                 {!estProprietaire && boutique?.owner_id && (
                   <Link
-                    href={`/messagerie?recipient=${boutique.owner_id}`}
+                    href={`/messagerie?recipient=${boutique.owner_id}&contexte=marketplace`}
                     className="mt-3 w-full py-3 px-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
                   >
                     <i className="fa-regular fa-comment-dots text-base"></i>
