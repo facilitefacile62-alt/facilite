@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { sendMessage, resolveConversationWith, touchConversation } from '@/lib/messages';
-import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from '@/lib/featureFlags';
+import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from '@/lib/featureFlags';
 import { triggerFeatureDisabledModal } from '@/components/FeatureDisabledModal';
 import LiveMapLocation from './LiveMapLocation';
 
@@ -31,20 +31,11 @@ export default function VoiceAssistant() {
   const { session, isAdmin, isRecruiter } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-
-    const channel = supabase
-      .channel("public-feature-flags-voice-assistant")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
-        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  // Cache + canal Realtime partagés avec Header et les pages (voir
+  // subscribeFeatureFlagsTree, src/lib/featureFlags.js) — ce widget étant
+  // monté globalement comme Header, il dupliquait le même fetch + le même
+  // canal Realtime sur absolument chaque page du site.
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
   const [isOpen, setIsOpen] = useState(false);
   const [hasEngaged, setHasEngaged] = useState(false);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { computeApplicationMatch } from "@/lib/matchScore";
-import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { enregistrerIntentionCandidature } from "@/lib/candidatureIntentions";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,9 +68,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-  }, []);
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
   // Charger la session et les CVs de l'utilisateur sur mount
   useEffect(() => {

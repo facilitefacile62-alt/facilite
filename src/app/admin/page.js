@@ -10,7 +10,7 @@ import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
-import { getFeatureFlagsTreeAsync, persistFeatureFlagsOverrides, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { subscribeFeatureFlagsTree, persistFeatureFlagsOverrides, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   requestDocumentAccess,
   fetchAccessibleDocument,
@@ -256,9 +256,7 @@ export default function AdminDashboardPage() {
     branch_services: true,
   });
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureTree).catch(() => {});
-  }, []);
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureTree), []);
 
   const toggleBranch = (branchId) => {
     setExpandedBranches((prev) => ({ ...prev, [branchId]: !prev[branchId] }));
