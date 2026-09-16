@@ -66,7 +66,8 @@
 // v66 (16/09/2026) : bouton Rechercher et accents passes en Vert Facilite (#10E688 / Emeraude)
 // v67 (16/09/2026) : separation stricte Facilite vs Marketplace (ancienne barre et retrait boutons sur Facilite)
 // v68 (16/09/2026) : messagerie Marketplace (client/vendeur) separee du Support RH Facilite
-const VERSION_CACHE = "facilite-v68";
+// v69 (16/09/2026) : perimetre Marketplace strict, exclut toute candidature (OFFRE) et masque les pilules Facilite
+const VERSION_CACHE = "facilite-v69";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
