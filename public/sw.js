@@ -59,8 +59,8 @@
 // v56 (14/09/2026) : utilisation de useSearchParams pour éliminer les erreurs d'hydratation SSR
 // v57 (14/09/2026) : Messagerie visible en mode Vendeur ; Reglages Marketplace avec Coordonnees/Confidentialite/Securite & Connexion
 // v58 (14/09/2026) : Informations personnelles partagees Facilite/Business ; correctif GRANT profiles.quartier
-// v59 (14/09/2026) : motif de fond Facilite sur Connexion et Messagerie
-const VERSION_CACHE = "facilite-v59";
+// v60 (16/09/2026) : barre de navigation alignée 1:1 avec la capture (Accueil, Messagerie, Marketplace, Admin)
+const VERSION_CACHE = "facilite-v60";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
