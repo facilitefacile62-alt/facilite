@@ -37,7 +37,7 @@ import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
   ssr: false,
 });
-import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
   chargerMesBoutiques,
   BOUTIQUES_OFFERTES,
@@ -227,15 +227,14 @@ export default function MarketplaceClient() {
     }
   }, [userId]);
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-    const channel = supabase
-      .channel("public-feature-flags-marketplace")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
-        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-      })
-      .subscribe();
+  // Cache + canal Realtime partagés avec Header et les autres pages (voir
+  // subscribeFeatureFlagsTree, src/lib/featureFlags.js) — avant ce correctif
+  // ce fetch/canal étaient en plus recréés à chaque changement de
+  // maBoutiqueActive/boutiques (dépendances de l'effet ci-dessous), en plus
+  // d'être dupliqués avec Header et les autres pages.
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
+  useEffect(() => {
     // Vérifier les paramètres URL et le cache local au montage pour persister
     // le sous-onglet vendeur actif. "onglet" (acheter/vendre) lui-même est
     // déjà initialisé en lecture synchrone ci-dessus — le refaire ici, de
@@ -309,7 +308,6 @@ export default function MarketplaceClient() {
     window.addEventListener("marketplace_ouvrir_ma_boutique", handleOuvrirBoutique);
 
     return () => {
-      supabase.removeChannel(channel);
       window.removeEventListener("marketplace_set_onglet", handleSetOnglet);
       window.removeEventListener("marketplace_ouvrir_ma_boutique", handleOuvrirBoutique);
     };

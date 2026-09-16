@@ -17,7 +17,7 @@ import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { resolveOfferAction } from "@/lib/offerContact";
-import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
@@ -313,20 +313,7 @@ export default function Home({ initialOffers = [] }) {
   // Arbre dynamique de feature flags
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-
-    const channel = supabase
-      .channel("public-feature-flags-homepage")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
-        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
   const userRole = !userSession ? "visitor" : userProfile?.role === "admin" ? "admin" : userProfile?.role === "recruiter" ? "recruiter" : "user";
   const checkFeatureAllowed = (featureKey) => {

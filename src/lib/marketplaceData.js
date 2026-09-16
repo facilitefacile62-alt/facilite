@@ -953,7 +953,15 @@ export function calculerStatutOuverture(boutique, horaires = [], dateReference =
   }
 }
 
-/** Position du navigateur, en promesse. */
+/**
+ * Position du navigateur, en promesse. `enableHighAccuracy: false` — cette
+ * position ne sert qu'à filtrer des articles par rayon en kilomètres (pas à
+ * du guidage précis) : la précision GPS coûtait plusieurs secondes (voire le
+ * timeout complet, appareils sans puce GPS) pour rien, alors que la
+ * localisation réseau/Wi-Fi répond en général en moins d'une seconde pour un
+ * usage largement suffisant ici. Signalé par l'utilisateur (bouton "Autour
+ * de moi" long à s'ouvrir).
+ */
 export function positionActuelle() {
   return new Promise((resolve, reject) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -963,7 +971,7 @@ export function positionActuelle() {
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude }),
       (err) => reject(new Error(err.message || "Localisation refusée.")),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
     );
   });
 }

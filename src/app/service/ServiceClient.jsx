@@ -10,7 +10,7 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import AdminPosterManagerModal from "@/components/AdminPosterManagerModal";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
-import { getFeatureFlagsTreeAsync, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
 const translations = {
@@ -236,20 +236,7 @@ export default function Home() {
   // Feature Flags
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-
-    const channel = supabase
-      .channel("public-feature-flags-servicepage")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
-        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
   const userRole = !userSession ? "visitor" : "user";
   const checkFeatureAllowed = (featureKey) => {

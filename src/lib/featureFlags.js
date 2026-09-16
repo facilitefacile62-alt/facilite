@@ -368,6 +368,68 @@ export async function getFeatureFlagsTreeAsync() {
   return mergeFeatureFlagsTree(await fetchFeatureFlagsOverrides());
 }
 
+// ---------------------------------------------------------------------------
+// Cache partagé + abonnement Realtime unique (module-level, par onglet) —
+// avant ce correctif, Header.jsx ET chaque page (Accueil, Marketplace,
+// Offres, Service) appelaient chacun leur propre getFeatureFlagsTreeAsync()
+// au montage ET ouvraient chacun leur propre canal Realtime sur la même
+// table feature_flags : au moins 2 requêtes REST identiques + 2 abonnements
+// WebSocket redondants sur quasi toutes les pages du site (Header étant
+// global), signalé par l'utilisateur comme lenteur générale de la
+// plateforme. Même principe que la mutualisation session/profil déjà faite
+// pour AuthContext (voir commentaire "Point F1" dans HomeClient.jsx) :
+// un seul fetch, un seul canal, partagés par tous les composants montés.
+let arbreEnCache = null;
+let chargementEnCours = null;
+let canalPartage = null;
+const abonnes = new Set();
+
+function chargerEtDiffuser() {
+  if (chargementEnCours) return chargementEnCours;
+  chargementEnCours = getFeatureFlagsTreeAsync()
+    .then((arbre) => {
+      arbreEnCache = arbre;
+      abonnes.forEach((cb) => cb(arbre));
+      return arbre;
+    })
+    .finally(() => {
+      chargementEnCours = null;
+    });
+  return chargementEnCours;
+}
+
+function assurerCanalRealtime() {
+  if (canalPartage) return;
+  canalPartage = supabase
+    .channel("public-feature-flags-shared")
+    .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
+      chargerEtDiffuser();
+    })
+    .subscribe();
+}
+
+/**
+ * S'abonne à l'arbre de feature flags partagé : livre immédiatement la
+ * dernière version connue (cache ou DEFAULT_FEATURE_TREE le temps du tout
+ * premier chargement), puis à chaque mise à jour Realtime. Un seul fetch et
+ * un seul canal Realtime sont réellement ouverts, quel que soit le nombre de
+ * composants abonnés simultanément (Header + page courante).
+ * @param {(arbre: Array) => void} callback
+ * @returns {() => void} fonction de désabonnement
+ */
+export function subscribeFeatureFlagsTree(callback) {
+  abonnes.add(callback);
+  assurerCanalRealtime();
+  if (arbreEnCache) {
+    callback(arbreEnCache);
+  } else {
+    chargerEtDiffuser();
+  }
+  return () => {
+    abonnes.delete(callback);
+  };
+}
+
 /**
  * Écrit un lot d'overrides — une requête UPDATE par ligne (jamais upsert :
  * les 23 lignes existent déjà depuis le seed de la migration, l'app ne crée

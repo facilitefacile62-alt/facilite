@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
-import { isFeatureAllowed, getFeatureFlagsTreeAsync, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import { isFeatureAllowed, subscribeFeatureFlagsTree, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
@@ -256,24 +256,11 @@ export default function Header() {
   }, []);
 
   // Charge les indicateurs de fonctionnalités au montage, puis reste à jour
-  // via Realtime (même patron que l'abonnement job_offers de
-  // src/app/offres/page.js) — quand un admin bascule une fonctionnalité
-  // depuis /admin, tous les onglets déjà ouverts d'autres utilisateurs le
-  // voient sans avoir besoin de recharger la page.
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-
-    const channel = supabase
-      .channel("public-feature-flags-header")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
-        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  // via Realtime — cache + canal partagés avec les autres pages (voir
+  // subscribeFeatureFlagsTree dans src/lib/featureFlags.js) : Header étant
+  // présent sur chaque route, il ne doit plus déclencher son propre fetch
+  // et son propre canal en plus de celui de la page courante.
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
   useEffect(() => {
     if (mobileMenuOpen) {

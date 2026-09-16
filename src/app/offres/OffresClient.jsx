@@ -23,7 +23,7 @@ import { isOfferExpired } from "@/lib/offerExpiration";
 // identifiants libres d'un module client, et la règle no-undef n'est pas
 // active dans cette configuration. Seule l'ouverture réelle de la page le
 // révélait.
-import { DEFAULT_FEATURE_TREE, getFeatureFlagsTreeAsync, isFeatureAllowed } from "@/lib/featureFlags";
+import { DEFAULT_FEATURE_TREE, subscribeFeatureFlagsTree, isFeatureAllowed } from "@/lib/featureFlags";
 import { useCandidateMatchScores } from "@/lib/useCandidateMatchScores";
 import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 
@@ -121,20 +121,7 @@ function OffresContent({ listingType } = {}) {
   // Arbre dynamique de feature flags & permissions
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
 
-  useEffect(() => {
-    getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-
-    const channel = supabase
-      .channel("public-feature-flags-offres")
-      .on("postgres_changes", { event: "*", schema: "public", table: "feature_flags" }, () => {
-        getFeatureFlagsTreeAsync().then(setFeatureFlagsTree).catch(() => {});
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  useEffect(() => subscribeFeatureFlagsTree(setFeatureFlagsTree), []);
 
   const userRole = !userSession ? "visitor" : authProfile?.role === "admin" ? "admin" : authProfile?.role === "recruiter" ? "recruiter" : "user";
   const checkFeatureAllowed = useCallback((featureKey) => {
