@@ -219,6 +219,8 @@ export default function Header() {
   const [mobileLang, setMobileLang] = useState("FR");
   const [mounted, setMounted] = useState(false);
   const [maBoutiqueInfo, setMaBoutiqueInfo] = useState(null);
+  const [headerScanPhotoEnCours, setHeaderScanPhotoEnCours] = useState(false);
+  const headerFileInputPhotoRef = useRef(null);
 
   const isBusinessActive = pathname?.startsWith("/marketplace");
 
@@ -940,6 +942,50 @@ export default function Header() {
     }
   };
 
+  // Recherche par photo (IA Scanner Vision) pour la barre du Header
+  const handleHeaderScanPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setHeaderScanPhotoEnCours(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/marketplace/scan-product", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const titreDetecte = data?.fiche?.titre || data?.titre || "";
+        if (titreDetecte) {
+          setQuery(titreDetecte);
+          executeSearch(titreDetecte);
+        } else {
+          const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+          setQuery(fallback);
+          executeSearch(fallback);
+        }
+      } else {
+        const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+        setQuery(fallback);
+        executeSearch(fallback);
+      }
+    } catch (err) {
+      console.warn("Erreur recherche par image:", err);
+      const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+      setQuery(fallback);
+      executeSearch(fallback);
+    } finally {
+      setHeaderScanPhotoEnCours(false);
+      if (headerFileInputPhotoRef.current) {
+        headerFileInputPhotoRef.current.value = "";
+      }
+    }
+  };
+
   // Helper pour styliser dynamiquement les badges selon badgeColor renvoyé par l'API
   const getBadgeStyles = (color) => {
     switch (color) {
@@ -980,49 +1026,119 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* 🔍 BARRE DE RECHERCHE GLOBALE AVEC AUTOCOMPLÉTION FASTAPI */}
+        {/* 🔍 BARRE DE RECHERCHE GLOBALE HAUTE-FIDÉLITÉ (Style AliExpress : Contour orange #FF5500, Caméra IA, Bouton Dégradé) */}
         <div
           ref={searchContainerRef}
-          className={`relative md:block md:flex-1 md:max-w-[280px] lg:max-w-[340px] md:mx-2 ${
+          className={`relative md:block md:flex-1 md:max-w-[340px] lg:max-w-[440px] xl:max-w-[500px] md:mx-2 ${
             isMobileSearchOpen ? "flex flex-1 w-full max-w-none mx-0 items-center gap-2" : "hidden"
           }`}
         >
           <div className="relative flex-1 w-full">
-            <div className="relative flex items-center w-full">
-            <i className="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-sm pointer-events-none"></i>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => {
-                if (debouncedQuery.length >= 1 || results.length > 0) setIsOpen(true);
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                searchInputRef.current?.blur();
+                executeSearch(query);
               }}
-              onKeyDown={handleKeyDown}
-              placeholder="Rechercher une offre, une entreprise..."
-              className={`w-full pl-10 pr-10 py-2 bg-white/80 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-full text-xs sm:text-sm font-medium border transition-all shadow-xs ${
-                isOpen
-                  ? "rounded-b-none border-emerald-500 ring-2 ring-emerald-500/20 bg-white dark:bg-gray-800"
-                  : "border-gray-200 dark:border-gray-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              className={`relative flex items-center w-full bg-white dark:bg-gray-900 rounded-full border-2 border-[#FF5500] shadow-md shadow-orange-500/15 p-1 pl-3 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/30 ${
+                isOpen ? "rounded-b-none" : ""
               }`}
-            />
+            >
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => {
+                  if (debouncedQuery.length >= 1 || results.length > 0) setIsOpen(true);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  headerScanPhotoEnCours
+                    ? "Scan photo IA en cours..."
+                    : "Rechercher une offre, un article, une boutique..."
+                }
+                disabled={headerScanPhotoEnCours}
+                className="flex-1 min-w-0 bg-transparent text-gray-900 dark:text-white text-xs sm:text-sm font-semibold placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none pr-1.5"
+              />
 
-            {/* Spinner ou Bouton X d'effacement rapide */}
-            <div className="absolute right-3.5 flex items-center gap-1.5">
-              {isLoading ? (
-                <i className="fa-solid fa-circle-notch fa-spin text-emerald-600 text-xs"></i>
-              ) : query ? (
-                <button
-                  type="button"
-                  onClick={handleClearInput}
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                  title="Effacer la recherche"
+              {/* Spinner de recherche ou Bouton Effacer (X) */}
+              <div className="flex items-center gap-1 shrink-0">
+                {isLoading ? (
+                  <i className="fa-solid fa-circle-notch fa-spin text-orange-500 text-xs mr-1"></i>
+                ) : query && !headerScanPhotoEnCours ? (
+                  <button
+                    type="button"
+                    onClick={handleClearInput}
+                    className="w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-400 flex items-center justify-center text-[10px] cursor-pointer mr-1 transition"
+                    title="Effacer la recherche"
+                    aria-label="Effacer la recherche"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Icône Appareil Photo / Recherche Visuelle IA (Style signature AliExpress) */}
+              <label
+                className="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-orange-50 dark:hover:bg-orange-950/40 cursor-pointer text-gray-700 dark:text-gray-300 hover:text-gray-950 dark:hover:text-white transition group mr-1 shrink-0"
+                title="Rechercher par photo (IA Scanner Vision)"
+              >
+                <input
+                  ref={headerFileInputPhotoRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleHeaderScanPhoto}
+                  className="hidden"
+                  disabled={headerScanPhotoEnCours}
+                />
+                {headerScanPhotoEnCours ? (
+                  <i className="fa-solid fa-circle-notch fa-spin text-xs sm:text-sm text-[#FF5500]"></i>
+                ) : (
+                  <div className="relative flex flex-col items-center justify-center pt-0.5">
+                    {/* Petite barre orange supérieure caractéristique */}
+                    <span className="w-3 sm:w-3.5 h-[2px] bg-[#FF5500] rounded-full mb-[2px] group-hover:w-4 transition-all"></span>
+                    {/* Appareil photo épuré SVG */}
+                    <svg
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-700 dark:text-gray-300 group-hover:text-black dark:group-hover:text-white group-hover:scale-105 transition-transform"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </div>
+                )}
+              </label>
+
+              {/* Bouton Pilule Dégradé Rechercher */}
+              <button
+                type="submit"
+                disabled={headerScanPhotoEnCours}
+                className="shrink-0 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-[#FFA000] via-[#FF5722] to-[#FF2D00] hover:from-[#FFB300] hover:via-[#FF6E40] hover:to-[#FF3D00] text-white font-extrabold text-xs sm:text-sm tracking-tight shadow-md shadow-orange-500/30 active:scale-95 transition-all cursor-pointer select-none"
+              >
+                {/* Loupe avec étincelle intégrée */}
+                <svg
+                  className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <i className="fa-solid fa-xmark text-xs"></i>
-                </button>
-              ) : null}
-            </div>
-          </div>
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  <path d="M11 8.5v5M8.5 11h5" stroke="currentColor" strokeWidth="2" />
+                </svg>
+                <span className="hidden xs:inline sm:inline">Rechercher</span>
+              </button>
+            </form>
 
           {/* 🔽 MENU DÉROULANT DES RÉSULTATS (DROPDOWN) */}
           {isOpen && (
@@ -1647,43 +1763,41 @@ export default function Header() {
             </button>
           )}
 
-          {/* + Publier repositionné (1:1 Capture exacte) */}
-          {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "publier" }));
-                }
-              }}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] text-gray-700 dark:text-gray-200 hover:text-emerald-600 transition group"
-              title="Publier un nouvel article sur la Marketplace"
-            >
-              <div className="w-5 h-5 rounded-full border border-gray-400 dark:border-gray-500 group-hover:border-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950 flex items-center justify-center transition shadow-2xs">
-                <i className="fa-solid fa-plus text-[10px] text-gray-700 dark:text-gray-200 group-hover:text-emerald-600"></i>
-              </div>
-              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Publier</span>
-            </button>
-          )}
+          {/* + Publier un article (mobile) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (pathname?.startsWith("/marketplace")) {
+                window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "publier" }));
+              } else {
+                router.push("/marketplace?action=publier");
+              }
+            }}
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] text-gray-700 dark:text-gray-200 hover:text-emerald-600 transition group"
+            title="Publier un nouvel article sur la Marketplace"
+          >
+            <div className="w-5 h-5 rounded-full border border-gray-400 dark:border-gray-500 group-hover:border-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950 flex items-center justify-center transition shadow-2xs">
+              <i className="fa-solid fa-plus text-[10px] text-gray-700 dark:text-gray-200 group-hover:text-emerald-600"></i>
+            </div>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Publier</span>
+          </button>
 
-          {/* 📍 Autour de moi (alterné avec le bouton Publier) */}
-          {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-                } else {
-                  router.push("/marketplace?autour_de_moi=1");
-                }
-              }}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition text-gray-700 dark:text-gray-200 hover:text-emerald-600 group"
-              title="Afficher les articles et boutiques autour de moi"
-            >
-              <i className="fa-solid fa-location-crosshairs text-sm sm:text-base text-emerald-500 group-hover:scale-110 transition-transform"></i>
-              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Autour de moi</span>
-            </button>
-          )}
+          {/* 📍 Autour de moi (mobile) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (pathname?.startsWith("/marketplace")) {
+                window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
+              } else {
+                router.push("/marketplace?autour_de_moi=1");
+              }
+            }}
+            className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition text-gray-700 dark:text-gray-200 hover:text-emerald-600 group"
+            title="Afficher les articles et boutiques autour de moi"
+          >
+            <i className="fa-solid fa-location-crosshairs text-sm sm:text-base text-emerald-500 group-hover:scale-110 transition-transform"></i>
+            <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Autour de moi</span>
+          </button>
 
           <RoleNavLink session={userSession} variant="bottom-bar" />
         </div>

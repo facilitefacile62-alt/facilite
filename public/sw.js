@@ -61,7 +61,8 @@
 // v58 (14/09/2026) : Informations personnelles partagees Facilite/Business ; correctif GRANT profiles.quartier
 // v61 (16/09/2026) : ajout des boutons Autour de moi et Publier un article sur la barre de navigation
 // v62 (16/09/2026) : refonte barre de recherche e-commerce (contour orange, scan photo IA, bouton gradient)
-const VERSION_CACHE = "facilite-v62";
+// v63 (16/09/2026) : application de la barre orange sur le Header et boutons mobile Publier & Autour de moi
+const VERSION_CACHE = "facilite-v63";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
