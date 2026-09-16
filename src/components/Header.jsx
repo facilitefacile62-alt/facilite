@@ -1285,14 +1285,14 @@ export default function Header() {
           <Link
             href={accueilHref}
             onClick={handleLogoOrHomeClick}
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
               pathname === "/"
-                ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                ? "text-emerald-600 dark:text-emerald-400"
                 : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             }`}
           >
-            <i className="fa-solid fa-house text-sm"></i>
-            <span>Accueil</span>
+            <i className="fa-solid fa-house text-base"></i>
+            <span className="text-[10px] font-bold tracking-tight">Accueil</span>
           </Link>
 
           {!isBusinessActive && (
@@ -1301,14 +1301,14 @@ export default function Header() {
               <Link
                 href="/offres"
                 onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres")}
-                className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                   pathname?.startsWith("/offres")
-                    ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                    ? "text-emerald-600 dark:text-emerald-400"
                     : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
                 }`}
               >
-                <i className="fa-solid fa-briefcase text-sm"></i>
-                <span>Offres</span>
+                <i className="fa-solid fa-briefcase text-base"></i>
+                <span className="text-[10px] font-bold tracking-tight">Offres</span>
               </Link>
 
               {/* 3. ⚡ Extracteur (si connecté) */}
@@ -1316,14 +1316,14 @@ export default function Header() {
                 <Link
                   href="/candidat/extracteur"
                   onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-                  className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                     pathname === "/candidat/extracteur"
-                      ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                      ? "text-emerald-600 dark:text-emerald-400"
                       : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
                   }`}
                 >
-                  <i className="fa-solid fa-bolt text-amber-500 text-sm"></i>
-                  <span>Extracteur</span>
+                  <i className="fa-solid fa-bolt text-amber-500 text-base"></i>
+                  <span className="text-[10px] font-bold tracking-tight">Extracteur</span>
                 </Link>
               )}
             </>
@@ -1337,14 +1337,14 @@ export default function Header() {
             <Link
               href={isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie"}
               onClick={(e) => handleNavClick(e, isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie", "nav_messagerie", "Messagerie")}
-              className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                 pathname === "/messagerie"
-                  ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                  ? "text-emerald-600 dark:text-emerald-400"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
-              <i className="fa-solid fa-comments text-sm"></i>
-              <span>Messagerie</span>
+              <i className="fa-solid fa-comments text-base"></i>
+              <span className="text-[10px] font-bold tracking-tight">Messagerie</span>
             </Link>
           )}
 
@@ -1354,15 +1354,17 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
-                className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                   plusDropdownOpen || pathname === "/service" || pathname === "/boite-a-idees" || pathname?.startsWith("/recrutement-") || pathname === "/concours" || pathname === "/formations" || pathname === "/faq" || pathname === "/fonctionnalites"
-                    ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                    ? "text-emerald-600 dark:text-emerald-400"
                     : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
                 }`}
               >
-                <i className="fa-solid fa-layer-group text-sm"></i>
-                <span>Plus</span>
-                <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+                <i className="fa-solid fa-layer-group text-base"></i>
+                <span className="text-[10px] font-bold tracking-tight flex items-center gap-0.5">
+                  Plus
+                  <i className={`fa-solid fa-chevron-down text-[8px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+                </span>
               </button>
 
               {plusDropdownOpen && (
@@ -1583,20 +1585,20 @@ export default function Header() {
             href="/marketplace"
             onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
             title="Marketplace — Sélection du jour"
-            className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
               !checkFeatureAllowed("nav_marketplace")
                 ? "opacity-40 grayscale cursor-not-allowed text-gray-400"
                 : pathname?.startsWith("/marketplace")
-                ? "text-[#1877F2] dark:text-[#1877F2] font-extrabold"
+                ? "text-[#1877F2] dark:text-[#1877F2]"
                 : "text-gray-700 dark:text-gray-300 hover:text-[#1877F2] dark:hover:text-[#1877F2]"
             }`}
           >
             <img
               src="/marketplace.svg"
               alt="Marketplace"
-              className="w-4.5 h-4.5 sm:w-5 sm:h-5 object-contain transition-transform hover:scale-110 drop-shadow-xs"
+              className="w-5 h-5 object-contain transition-transform hover:scale-110 drop-shadow-xs"
             />
-            <span>Marketplace</span>
+            <span className="text-[10px] font-bold tracking-tight">Marketplace</span>
           </Link>
 
           {/* 🎯 Bouton Autour de moi (Uniquement sur Marketplace) */}
@@ -1611,10 +1613,10 @@ export default function Header() {
                 }
               }}
               title="Afficher les articles et opportunités autour de moi"
-              className="text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+              className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             >
-              <i className="fa-solid fa-location-crosshairs text-emerald-500 text-sm"></i>
-              <span>Autour de moi</span>
+              <i className="fa-solid fa-location-crosshairs text-emerald-500 text-base"></i>
+              <span className="text-[10px] font-bold tracking-tight">Autour de moi</span>
             </button>
           )}
 
