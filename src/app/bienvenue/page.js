@@ -73,9 +73,9 @@ function BienvenueContent() {
               type="button"
               onClick={choisirFacilite}
               disabled={enCours}
-              className="group w-full p-3.5 sm:p-4 bg-[#10E688] hover:bg-[#0fd67e] active:scale-[0.98] rounded-2xl shadow-[0_8px_20px_-4px_rgba(16,230,136,0.4)] hover:shadow-[0_10px_25px_-3px_rgba(16,230,136,0.5)] transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left border border-emerald-300/40"
+              className="group w-full p-3.5 sm:p-4 bg-[#10E688] hover:bg-[#0fd67e] active:scale-[0.98] rounded-full shadow-[0_8px_20px_-4px_rgba(16,230,136,0.4)] hover:shadow-[0_10px_25px_-3px_rgba(16,230,136,0.5)] transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left border border-emerald-300/40"
             >
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-gray-950/10 dark:bg-black/15 flex items-center justify-center text-gray-950 text-xl group-hover:scale-105 transition-transform">
+              <div className="w-12 h-12 shrink-0 rounded-full bg-gray-950/10 dark:bg-black/15 flex items-center justify-center text-gray-950 text-xl group-hover:scale-105 transition-transform">
                 <i className="fa-solid fa-briefcase"></i>
               </div>
               <div className="min-w-0 flex-1">
@@ -90,9 +90,9 @@ function BienvenueContent() {
               type="button"
               onClick={choisirBusiness}
               disabled={enCours}
-              className="group w-full p-3.5 sm:p-4 bg-white dark:bg-zinc-800/90 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] rounded-2xl transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-xs hover:shadow-md"
+              className="group w-full p-3.5 sm:p-4 bg-white dark:bg-zinc-800/90 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] rounded-full transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-xs hover:shadow-md"
             >
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[#E8FAF0] dark:bg-emerald-950/60 flex items-center justify-center text-[#10E688] dark:text-emerald-400 text-xl group-hover:scale-105 transition-transform">
+              <div className="w-12 h-12 shrink-0 rounded-full bg-[#E8FAF0] dark:bg-emerald-950/60 flex items-center justify-center text-[#10E688] dark:text-emerald-400 text-xl group-hover:scale-105 transition-transform">
                 <i className="fa-solid fa-store"></i>
               </div>
               <div className="min-w-0 flex-1">
