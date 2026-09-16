@@ -1187,6 +1187,40 @@ export default function Header() {
             />
             <span>Marketplace</span>
           </Link>
+
+          {/* 🎯 Bouton Autour de moi */}
+          <button
+            type="button"
+            onClick={() => {
+              if (pathname?.startsWith("/marketplace")) {
+                window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
+              } else {
+                router.push("/marketplace?autour_de_moi=1");
+              }
+            }}
+            title="Afficher les articles et opportunités autour de moi"
+            className="text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+          >
+            <i className="fa-solid fa-location-crosshairs text-emerald-500 text-sm"></i>
+            <span>Autour de moi</span>
+          </button>
+
+          {/* ➕ Bouton Publier un article */}
+          <button
+            type="button"
+            onClick={() => {
+              if (pathname?.startsWith("/marketplace")) {
+                window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "publier" }));
+              } else {
+                router.push("/marketplace?action=publier");
+              }
+            }}
+            title="Publier un nouvel article sur la Marketplace"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-bold shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer"
+          >
+            <i className="fa-solid fa-plus text-[11px]"></i>
+            <span>Publier un article</span>
+          </button>
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
