@@ -121,6 +121,50 @@ export default function GlobeExplorateurBoutiques({
   // boutiques/articles déjà chargés par le Marketplace (aucun nouvel appel
   // réseau) : cherche un article ou une boutique, jamais bloquant.
   const [rechercheCarte, setRechercheCarte] = useState("");
+  const [scanPhotoEnCours, setScanPhotoEnCours] = useState(false);
+  const inputRechercheRef = useRef(null);
+  const fileInputPhotoRef = useRef(null);
+
+  // Recherche par photo (IA Scanner Vision)
+  const handleScanPhotoRecherche = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanPhotoEnCours(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/marketplace/scan-product", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const titreDetecte = data?.fiche?.titre || data?.titre || "";
+        if (titreDetecte) {
+          setRechercheCarte(titreDetecte);
+        } else {
+          const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+          setRechercheCarte(fallback || "article");
+        }
+      } else {
+        const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+        setRechercheCarte(fallback || "article");
+      }
+    } catch (err) {
+      console.warn("Erreur recherche par image:", err);
+      const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+      setRechercheCarte(fallback || "article");
+    } finally {
+      setScanPhotoEnCours(false);
+      if (fileInputPhotoRef.current) {
+        fileInputPhotoRef.current.value = "";
+      }
+    }
+  };
+
   // Bascule d'affichage du dock inférieur : liste de boutiques (existante)
   // ou nouvelle liste d'articles individuels (Point C) — deux vues
   // distinctes dans le même espace, pas de carrousel supplémentaire empilé.
@@ -683,27 +727,123 @@ export default function GlobeExplorateurBoutiques({
           </div>
         </div>
 
-        {/* Recherche mot-clé (Point C) — filtre les marqueurs affichés et les
-            articles du dock inférieur, recentre la carte sur les résultats
-            (voir rechercheNormalisee/boutiquesAffichees/articlesFiltres). */}
-        <div className="pointer-events-auto relative">
-          <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input
-            type="text"
-            value={rechercheCarte}
-            onChange={(e) => setRechercheCarte(e.target.value)}
-            placeholder="Rechercher un article, une boutique..."
-            className="w-full pl-9 pr-8 py-2 rounded-full bg-gray-900/80 text-white text-xs font-bold placeholder:text-gray-400 placeholder:font-medium border border-gray-700/80 backdrop-blur-md focus:outline-none focus:border-emerald-500 shadow-md"
-          />
-          {rechercheCarte && (
-            <button
-              type="button"
-              onClick={() => setRechercheCarte("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center text-[10px] cursor-pointer transition"
-              aria-label="Effacer la recherche"
+        {/* Recherche mot-clé haute-fidélité (Inspiration E-Commerce / AliExpress) :
+            Contour orange vif (#FF5500), scan photo IA par caméra, bouton dégradé chaud "Rechercher",
+            filtre instantané des marqueurs carte et dock articles. */}
+        <div className="pointer-events-auto relative w-full">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              inputRechercheRef.current?.blur();
+              if (boutiquesAffichees.length > 0 && carteRef.current) {
+                (async () => {
+                  const L = (await import("leaflet")).default;
+                  carteRef.current.fitBounds(
+                    L.latLngBounds(boutiquesAffichees.map((b) => [b.lat, b.lng])),
+                    { padding: [35, 35], maxZoom: 15 }
+                  );
+                })();
+              }
+            }}
+            className="relative flex items-center w-full bg-white rounded-full border-2 border-[#FF5500] shadow-xl shadow-orange-500/20 p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/40"
+          >
+            <input
+              ref={inputRechercheRef}
+              type="text"
+              value={rechercheCarte}
+              onChange={(e) => setRechercheCarte(e.target.value)}
+              placeholder={
+                scanPhotoEnCours
+                  ? "Scan IA en cours, analyse de l'image..."
+                  : "Rechercher un article, une boutique..."
+              }
+              disabled={scanPhotoEnCours}
+              className="flex-1 min-w-0 bg-transparent text-gray-900 text-xs sm:text-sm font-semibold placeholder:text-gray-400 focus:outline-none pr-1.5"
+            />
+
+            {/* Bouton Effacer rapide */}
+            {rechercheCarte && !scanPhotoEnCours && (
+              <button
+                type="button"
+                onClick={() => {
+                  setRechercheCarte("");
+                  inputRechercheRef.current?.focus();
+                }}
+                className="w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-[10px] cursor-pointer mr-1.5 transition shrink-0"
+                aria-label="Effacer la recherche"
+                title="Effacer"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
+
+            {/* Icône Appareil Photo / Recherche Visuelle IA (Style signature AliExpress) */}
+            <label
+              className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-orange-50 cursor-pointer text-gray-700 hover:text-gray-950 transition group mr-1.5 shrink-0"
+              title="Rechercher par photo (IA Scanner Vision)"
             >
-              <i className="fa-solid fa-xmark"></i>
+              <input
+                ref={fileInputPhotoRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleScanPhotoRecherche}
+                className="hidden"
+                disabled={scanPhotoEnCours}
+              />
+              {scanPhotoEnCours ? (
+                <i className="fa-solid fa-circle-notch fa-spin text-sm text-[#FF5500]"></i>
+              ) : (
+                <div className="relative flex flex-col items-center justify-center pt-0.5">
+                  {/* Petite barre orange supérieure caractéristique */}
+                  <span className="w-3.5 h-[2px] bg-[#FF5500] rounded-full mb-[2px] group-hover:w-4 transition-all"></span>
+                  {/* Appareil photo épuré */}
+                  <svg
+                    className="w-4 h-4 text-gray-700 group-hover:text-black group-hover:scale-105 transition-transform"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </div>
+              )}
+            </label>
+
+            {/* Bouton Pilule Dégradé Rechercher */}
+            <button
+              type="submit"
+              disabled={scanPhotoEnCours}
+              className="shrink-0 flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#FFA000] via-[#FF5722] to-[#FF2D00] hover:from-[#FFB300] hover:via-[#FF6E40] hover:to-[#FF3D00] text-white font-black text-xs sm:text-sm tracking-tight shadow-md shadow-orange-500/30 active:scale-95 transition-all cursor-pointer select-none"
+            >
+              {/* Loupe avec étincelle intégrée */}
+              <svg
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <path d="M11 8.5v5M8.5 11h5" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              <span>Rechercher</span>
             </button>
+          </form>
+
+          {/* Indication visuelle si scan photo en cours */}
+          {scanPhotoEnCours && (
+            <div className="absolute -bottom-6 left-4 text-[11px] font-bold text-amber-300 drop-shadow flex items-center gap-1.5 animate-pulse">
+              <i className="fa-solid fa-wand-magic-sparkles text-xs text-orange-400"></i>
+              <span>L'intelligence artificielle analyse votre photo...</span>
+            </div>
           )}
         </div>
 
