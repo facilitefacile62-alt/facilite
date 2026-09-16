@@ -1040,7 +1040,8 @@ export default function Header() {
                 searchInputRef.current?.blur();
                 executeSearch(query);
               }}
-              className={`relative flex items-center w-full bg-[#E3DBCC] dark:bg-[#E3DBCC] rounded-full border-2 border-[#FF5500] shadow-md shadow-orange-500/15 p-1 pl-3 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/30 ${
+              style={{ backgroundColor: "#e3dbcc", borderColor: "#e3dbcc" }}
+              className={`relative flex items-center w-full bg-[#e3dbcc] rounded-full border-2 border-[#e3dbcc] shadow-md p-1 pl-3 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#c4b89f] ${
                 isOpen ? "rounded-b-none" : ""
               }`}
             >

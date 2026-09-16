@@ -745,7 +745,8 @@ export default function GlobeExplorateurBoutiques({
                 })();
               }
             }}
-            className="relative flex items-center w-full bg-[#E3DBCC] rounded-full border-2 border-[#FF5500] shadow-xl shadow-orange-500/20 p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/40"
+            style={{ backgroundColor: "#e3dbcc", borderColor: "#e3dbcc" }}
+            className="relative flex items-center w-full bg-[#e3dbcc] rounded-full border-2 border-[#e3dbcc] shadow-xl p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#c4b89f]"
           >
             <input
               ref={inputRechercheRef}

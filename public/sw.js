@@ -63,7 +63,8 @@
 // v62 (16/09/2026) : refonte barre de recherche e-commerce (contour orange, scan photo IA, bouton gradient)
 // v63 (16/09/2026) : application de la barre orange sur le Header et boutons mobile Publier & Autour de moi
 // v64 (16/09/2026) : couleur de fond de la barre de recherche passee a #E3DBCC
-const VERSION_CACHE = "facilite-v64";
+// v65 (16/09/2026) : bordure et fond harmonises en #e3dbcc (style inline + classe)
+const VERSION_CACHE = "facilite-v65";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
