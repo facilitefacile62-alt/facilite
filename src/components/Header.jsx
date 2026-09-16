@@ -1274,8 +1274,9 @@ export default function Header() {
         </div>
 
 
-        {/* Navigation Links (Desktop & Tablette - Navigation complète Facilité & Marketplace) */}
+        {/* Navigation Links (Desktop & Tablette - Navigation ordonnée : Accueil, Offres, Extracteur, Messagerie, Plus, Marketplace) */}
         <nav className="hidden md:flex items-center space-x-1.5 md:space-x-2 lg:space-x-3 xl:space-x-4 flex-shrink-0">
+          {/* 1. Accueil */}
           <Link
             href={accueilHref}
             onClick={handleLogoOrHomeClick}
@@ -1291,7 +1292,7 @@ export default function Header() {
 
           {!isBusinessActive && (
             <>
-              {/* 💼 Offres d'emploi */}
+              {/* 2. 💼 Offres d'emploi */}
               <Link
                 href="/offres"
                 onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
@@ -1305,21 +1306,7 @@ export default function Header() {
                 <span>Offres d&apos;emploi</span>
               </Link>
 
-              {/* 📄 Services & Modèles de CV */}
-              <Link
-                href="/service"
-                onClick={(e) => handleNavClick(e, "/service", "nav_service", "Services & Modèles")}
-                className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  pathname === "/service"
-                    ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                    : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                }`}
-              >
-                <i className="fa-solid fa-file-lines text-sm"></i>
-                <span>Services</span>
-              </Link>
-
-              {/* ⚡ Extracteur (si connecté) */}
+              {/* 3. ⚡ Extracteur (si connecté) */}
               {userSession && (
                 <Link
                   href="/candidat/extracteur"
@@ -1334,214 +1321,10 @@ export default function Header() {
                   <span>Extracteur</span>
                 </Link>
               )}
-
-              {/* 🗂️ Menu déroulant "Plus" */}
-              <div className="relative" ref={plusDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
-                  className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    plusDropdownOpen || pathname === "/boite-a-idees" || pathname?.startsWith("/recrutement-") || pathname === "/concours" || pathname === "/formations" || pathname === "/faq" || pathname === "/fonctionnalites"
-                      ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
-                      : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                  }`}
-                >
-                  <i className="fa-solid fa-layer-group text-sm"></i>
-                  <span>Plus</span>
-                  <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
-                </button>
-
-                {plusDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
-                    {/* 1. Recrutement Spontané */}
-                    <Link
-                      href="/recrutement-spontane"
-                      onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_recrutement_spontane")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname?.startsWith("/recrutement-spontane")
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-building-user text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center justify-between">
-                          <span>Recrutement Spontané</span>
-                          {!checkFeatureAllowed("nav_plus_recrutement_spontane") && (
-                            <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
-                      </div>
-                    </Link>
-
-                    {/* 2. Dépôts Physiques */}
-                    <Link
-                      href="/recrutement-journalier"
-                      onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_depots")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname === "/recrutement-journalier"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-gas-pump text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center justify-between">
-                          <span>Dépôts Physiques</span>
-                          {!checkFeatureAllowed("nav_plus_depots") && (
-                            <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
-                      </div>
-                    </Link>
-
-                    {/* 3. Concours */}
-                    <Link
-                      href="/concours"
-                      onClick={(e) => handleNavClick(e, "/concours", "nav_plus_concours", "Concours")}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_concours")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname === "/concours"
-                          ? "bg-amber-50 text-amber-700 dark:bg-gray-800 dark:text-amber-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-award text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center justify-between">
-                          <span>Concours</span>
-                          <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md">Public</span>
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Avis & Examens d'État</div>
-                      </div>
-                    </Link>
-
-                    {/* 4. Formation */}
-                    <Link
-                      href="/formations"
-                      onClick={(e) => handleNavClick(e, "/formations", "nav_plus_formation", "Formation")}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_formation")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname === "/formations"
-                          ? "bg-teal-50 text-teal-700 dark:bg-gray-800 dark:text-teal-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-graduation-cap text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center justify-between">
-                          <span>Formation</span>
-                          <span className="px-1.5 py-0.2 bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 text-[8px] font-black rounded-md">Pro</span>
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Certifications & Cours</div>
-                      </div>
-                    </Link>
-
-                    {/* 5. Boîte à idées */}
-                    <Link
-                      href="/boite-a-idees"
-                      onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_boite_idees")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname === "/boite-a-idees"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950 text-pink-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-lightbulb text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center justify-between">
-                          <span>Boîte à idées</span>
-                          {!checkFeatureAllowed("nav_plus_boite_idees") && (
-                            <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Votez pour les fonctionnalités</div>
-                      </div>
-                    </Link>
-
-                    {/* 6. FAQ & Aide */}
-                    <Link
-                      href="/faq"
-                      onClick={(e) => handleNavClick(e, "/faq", "nav_plus_faq", "FAQ & Aide")}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_faq")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname === "/faq"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-circle-question text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center justify-between">
-                          <span>FAQ & Aide</span>
-                          {!checkFeatureAllowed("nav_plus_faq") && (
-                            <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes</div>
-                      </div>
-                    </Link>
-
-                    <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
-
-                    {/* 7. Page Fonctionnalités Complètes */}
-                    <Link
-                      href="/fonctionnalites"
-                      onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites", "Toutes les fonctionnalités")}
-                      className={`flex items-center gap-3 px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${
-                        !checkFeatureAllowed("nav_plus_fonctionnalites")
-                          ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
-                          : pathname === "/fonctionnalites"
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                        <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-extrabold flex items-center gap-1.5 justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <span>Fonctionnalités</span>
-                            <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
-                          </div>
-                          {!checkFeatureAllowed("nav_plus_fonctionnalites") && (
-                            <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
-                      </div>
-                    </Link>
-                  </div>
-                )}
-              </div>
             </>
           )}
 
-          {/* Messagerie */}
+          {/* 4. 💬 Messagerie */}
           {userSession && (
             <Link
               href="/messagerie"
@@ -1557,7 +1340,237 @@ export default function Header() {
             </Link>
           )}
 
-          {/* 🏪 Bouton Marketplace Desktop */}
+          {/* 5. 🗂️ Menu déroulant "Plus" (Positionné AVANT Marketplace) */}
+          {!isBusinessActive && (
+            <div className="relative" ref={plusDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setPlusDropdownOpen(!plusDropdownOpen)}
+                className={`text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  plusDropdownOpen || pathname === "/service" || pathname === "/boite-a-idees" || pathname?.startsWith("/recrutement-") || pathname === "/concours" || pathname === "/formations" || pathname === "/faq" || pathname === "/fonctionnalites"
+                    ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                    : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+                }`}
+              >
+                <i className="fa-solid fa-layer-group text-sm"></i>
+                <span>Plus</span>
+                <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${plusDropdownOpen ? "rotate-180" : ""}`}></i>
+              </button>
+
+              {plusDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-[100] animate-in fade-in zoom-in-95 duration-150">
+                  {/* 1. Services & Modèles de CV */}
+                  <Link
+                    href="/service"
+                    onClick={(e) => handleNavClick(e, "/service", "nav_service", "Services & Modèles")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_service")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/service"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-file-lines text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Services</span>
+                        <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Modèles & Tarifs</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Création de CV, lettre & tarifs</div>
+                    </div>
+                  </Link>
+
+                  {/* 2. Recrutement Spontané */}
+                  <Link
+                    href="/recrutement-spontane"
+                    onClick={(e) => handleNavClick(e, "/recrutement-spontane", "nav_plus_recrutement_spontane", "Recrutement Spontané")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_recrutement_spontane")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname?.startsWith("/recrutement-spontane")
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-building-user text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Recrutement Spontané</span>
+                        {!checkFeatureAllowed("nav_plus_recrutement_spontane") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Répertoire des 77 entreprises</div>
+                    </div>
+                  </Link>
+
+                  {/* 3. Dépôts Physiques */}
+                  <Link
+                    href="/recrutement-journalier"
+                    onClick={(e) => handleNavClick(e, "/recrutement-journalier", "nav_plus_depots", "Dépôts Physiques")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_depots")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/recrutement-journalier"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-gas-pump text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Dépôts Physiques</span>
+                        {!checkFeatureAllowed("nav_plus_depots") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Stations-services & contacts</div>
+                    </div>
+                  </Link>
+
+                  {/* 4. Concours */}
+                  <Link
+                    href="/concours"
+                    onClick={(e) => handleNavClick(e, "/concours", "nav_plus_concours", "Concours")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_concours")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/concours"
+                        ? "bg-amber-50 text-amber-700 dark:bg-gray-800 dark:text-amber-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-award text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Concours</span>
+                        <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[8px] font-black rounded-md">Public</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Avis & Examens d'État</div>
+                    </div>
+                  </Link>
+
+                  {/* 5. Formation */}
+                  <Link
+                    href="/formations"
+                    onClick={(e) => handleNavClick(e, "/formations", "nav_plus_formation", "Formation")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_formation")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/formations"
+                        ? "bg-teal-50 text-teal-700 dark:bg-gray-800 dark:text-teal-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-graduation-cap text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Formation</span>
+                        <span className="px-1.5 py-0.2 bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 text-[8px] font-black rounded-md">Pro</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Certifications & Cours</div>
+                    </div>
+                  </Link>
+
+                  {/* 6. Boîte à idées */}
+                  <Link
+                    href="/boite-a-idees"
+                    onClick={(e) => handleNavClick(e, "/boite-a-idees", "nav_plus_boite_idees", "Boîte à idées")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_boite_idees")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/boite-a-idees"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-950 text-pink-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-lightbulb text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>Boîte à idées</span>
+                        {!checkFeatureAllowed("nav_plus_boite_idees") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Votez pour les fonctionnalités</div>
+                    </div>
+                  </Link>
+
+                  {/* 7. FAQ & Aide */}
+                  <Link
+                    href="/faq"
+                    onClick={(e) => handleNavClick(e, "/faq", "nav_plus_faq", "FAQ & Aide")}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_faq")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/faq"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950 text-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-circle-question text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center justify-between">
+                        <span>FAQ & Aide</span>
+                        {!checkFeatureAllowed("nav_plus_faq") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Questions fréquentes</div>
+                    </div>
+                  </Link>
+
+                  <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+
+                  {/* 8. Page Fonctionnalités Complètes */}
+                  <Link
+                    href="/fonctionnalites"
+                    onClick={(e) => handleNavClick(e, "/fonctionnalites", "nav_plus_fonctionnalites", "Toutes les fonctionnalités")}
+                    className={`flex items-center gap-3 px-4 py-2 text-xs font-bold transition-colors cursor-pointer ${
+                      !checkFeatureAllowed("nav_plus_fonctionnalites")
+                        ? "opacity-40 grayscale cursor-not-allowed bg-gray-100/50 dark:bg-gray-800/30 text-gray-400 dark:text-gray-500"
+                        : pathname === "/fonctionnalites"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold flex items-center gap-1.5 justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span>Fonctionnalités</span>
+                          <span className="px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[8px] font-black rounded-md">Page & Outils</span>
+                        </div>
+                        {!checkFeatureAllowed("nav_plus_fonctionnalites") && (
+                          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[8px] font-black rounded-md">Bientôt</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-normal">Outils PDF, IA & Modèles</div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 6. 🏪 Bouton Marketplace Desktop */}
           <Link
             href="/marketplace"
             onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
