@@ -745,7 +745,7 @@ export default function GlobeExplorateurBoutiques({
                 })();
               }
             }}
-            className="relative flex items-center w-full bg-white rounded-full border-2 border-[#FF5500] shadow-xl shadow-orange-500/20 p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/40"
+            className="relative flex items-center w-full bg-[#E3DBCC] rounded-full border-2 border-[#FF5500] shadow-xl shadow-orange-500/20 p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/40"
           >
             <input
               ref={inputRechercheRef}
@@ -758,7 +758,7 @@ export default function GlobeExplorateurBoutiques({
                   : "Rechercher un article, une boutique..."
               }
               disabled={scanPhotoEnCours}
-              className="flex-1 min-w-0 bg-transparent text-gray-900 text-xs sm:text-sm font-semibold placeholder:text-gray-400 focus:outline-none pr-1.5"
+              className="flex-1 min-w-0 bg-transparent text-stone-950 text-xs sm:text-sm font-bold placeholder:text-stone-600 focus:outline-none pr-1.5"
             />
 
             {/* Bouton Effacer rapide */}
@@ -769,7 +769,7 @@ export default function GlobeExplorateurBoutiques({
                   setRechercheCarte("");
                   inputRechercheRef.current?.focus();
                 }}
-                className="w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-[10px] cursor-pointer mr-1.5 transition shrink-0"
+                className="w-5 h-5 rounded-full bg-stone-300/80 hover:bg-stone-400/80 text-stone-800 flex items-center justify-center text-[10px] cursor-pointer mr-1.5 transition shrink-0"
                 aria-label="Effacer la recherche"
                 title="Effacer"
               >
@@ -779,7 +779,7 @@ export default function GlobeExplorateurBoutiques({
 
             {/* Icône Appareil Photo / Recherche Visuelle IA (Style signature AliExpress) */}
             <label
-              className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-orange-50 cursor-pointer text-gray-700 hover:text-gray-950 transition group mr-1.5 shrink-0"
+              className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-black/5 cursor-pointer text-stone-800 hover:text-black transition group mr-1.5 shrink-0"
               title="Rechercher par photo (IA Scanner Vision)"
             >
               <input

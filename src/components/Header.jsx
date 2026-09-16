@@ -1040,7 +1040,7 @@ export default function Header() {
                 searchInputRef.current?.blur();
                 executeSearch(query);
               }}
-              className={`relative flex items-center w-full bg-white dark:bg-gray-900 rounded-full border-2 border-[#FF5500] shadow-md shadow-orange-500/15 p-1 pl-3 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/30 ${
+              className={`relative flex items-center w-full bg-[#E3DBCC] dark:bg-[#E3DBCC] rounded-full border-2 border-[#FF5500] shadow-md shadow-orange-500/15 p-1 pl-3 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#FF5500]/30 ${
                 isOpen ? "rounded-b-none" : ""
               }`}
             >
@@ -1059,7 +1059,7 @@ export default function Header() {
                     : "Rechercher une offre, un article, une boutique..."
                 }
                 disabled={headerScanPhotoEnCours}
-                className="flex-1 min-w-0 bg-transparent text-gray-900 dark:text-white text-xs sm:text-sm font-semibold placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none pr-1.5"
+                className="flex-1 min-w-0 bg-transparent text-stone-950 dark:text-stone-950 text-xs sm:text-sm font-bold placeholder:text-stone-600 dark:placeholder:text-stone-600 focus:outline-none pr-1.5"
               />
 
               {/* Spinner de recherche ou Bouton Effacer (X) */}
