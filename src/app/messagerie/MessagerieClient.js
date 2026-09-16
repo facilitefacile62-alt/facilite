@@ -317,6 +317,12 @@ export default function MessagerieClient() {
   // — sépare ces échanges client<->vendeur de la messagerie Facilité
   // (candidat<->recruteur). Voir MarketplaceClient.jsx et Header.jsx.
   const contexteParam = searchParams.get("contexte");
+  // Portee sur toute la page (pas seulement le chargement initial) : en mode
+  // Marketplace, les fils Offres/Stages/Support (plateforme Facilite) n'ont
+  // pas leur place, y compris sous le filtre "Toutes" — signale par
+  // l'utilisateur (une conversation avec un proprietaire de boutique ayant
+  // aussi postule a une offre s'affichait a tort comme un fil Marketplace).
+  const estContexteMarketplace = contexteParam === "marketplace";
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
@@ -911,8 +917,8 @@ export default function MessagerieClient() {
       // premier cas), et les messages envoyés dans ce fil sont étiquetés
       // MARKETPLACE (voir handleSendMessage/handleSendAttachment) pour ne
       // jamais retomber dans le fil fusionné "Support RH Facilité" ni parmi
-      // les échanges génériques Facilité.
-      const estContexteMarketplace = contexteParam === "marketplace";
+      // les échanges génériques Facilité. (estContexteMarketplace calculé au
+      // niveau du composant, réutilisé partout dans ce fichier.)
       if (recipientParam && recipientParam !== session.user.id) {
         resolveConversationWith(session.user.id, recipientParam).then(async (result) => {
           if (!result || !isActive) return;
@@ -1139,7 +1145,23 @@ export default function MessagerieClient() {
             const autrePartieId = conv.user_1_id === session.user.id ? conv.user_2_id : conv.user_1_id;
             idsAvecConversationDirecte.add(autrePartieId);
             const msgsDeCetteConv = formattedMsgs.filter((m) => m.conversationId === conv.id);
-            const estMarketplace = boutiqueParId.has(autrePartieId) || msgsDeCetteConv.some((m) => m.typeDiscussion === "MARKETPLACE");
+            // Une conversation qui contient un message de candidature (OFFRE)
+            // concerne la plateforme Facilité, jamais le Marketplace — même si
+            // l'autre partie possède par ailleurs une boutique (cas réel en
+            // prod : un candidat qui a aussi une boutique). Signalé par
+            // l'utilisateur (fil "masque" affiché à tort comme Marketplace).
+            // On ne supprime pas la carte pour autant — l'historique réel
+            // (candidature + échanges) doit rester visible côté Facilité,
+            // juste jamais classé/affiché comme Marketplace.
+            const contientOffre = msgsDeCetteConv.some((m) => m.typeDiscussion === "OFFRE");
+            // Le statut de propriétaire de boutique ne sert de repère que pour
+            // une conversation toute neuve, sans aucun message étiqueté —
+            // sinon l'étiquette réelle des messages fait foi.
+            const estMarketplace = !contientOffre && (
+              msgsDeCetteConv.length === 0
+                ? boutiqueParId.has(autrePartieId)
+                : msgsDeCetteConv.some((m) => m.typeDiscussion === "MARKETPLACE")
+            );
             const boutique = boutiqueParId.get(autrePartieId);
             const recruteur = recruteurParId.get(autrePartieId);
             const profilGeneral = profilParId.get(autrePartieId);
@@ -1176,7 +1198,7 @@ export default function MessagerieClient() {
               unreadCount: 0,
               online: false,
               favorite: false,
-              typeDiscussion: estMarketplace ? "MARKETPLACE" : "ECHANGE",
+              typeDiscussion: estMarketplace ? "MARKETPLACE" : contientOffre ? "OFFRE" : "ECHANGE",
               messages: msgsDeCetteConv,
             };
           });
@@ -2117,6 +2139,13 @@ export default function MessagerieClient() {
     if (filterTab === "unread" && c.unreadCount === 0) return false;
     if (filterTab === "favorites" && !c.favorite) return false;
 
+    // En contexte Marketplace, les fils Offres/Stages/Support (plateforme
+    // Facilité) n'ont pas leur place, même sous "Toutes" — signalé par
+    // l'utilisateur. Seuls le Marketplace et l'assistant IA restent visibles.
+    if (estContexteMarketplace && c.id !== AI_PINNED_CHAT.id && c.typeDiscussion !== "MARKETPLACE") {
+      return false;
+    }
+
     // Filtre par catégorie de discussion (OFFRE / ECHANGE / SUPPORT)
     if (discussionTypeFilter !== "all") {
       if (c.id === AI_PINNED_CHAT.id) return false;
@@ -2797,42 +2826,48 @@ export default function MessagerieClient() {
                   </span>
                 )}
               </button>
-              <button
-                type="button"
-                onClick={() => setDiscussionTypeFilter("OFFRE")}
-                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
-                  discussionTypeFilter === "OFFRE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                }`}
-              >
-                Offres
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscussionTypeFilter("SUPPORT")}
-                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
-                  discussionTypeFilter === "SUPPORT" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                }`}
-              >
-                Support
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscussionTypeFilter("ECHANGE")}
-                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
-                  discussionTypeFilter === "ECHANGE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                }`}
-              >
-                Stages
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscussionTypeFilter("MARKETPLACE")}
-                className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
-                  discussionTypeFilter === "MARKETPLACE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                }`}
-              >
-                Marketplace
-              </button>
+              {!estContexteMarketplace && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setDiscussionTypeFilter("OFFRE")}
+                    className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                      discussionTypeFilter === "OFFRE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    Offres
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiscussionTypeFilter("SUPPORT")}
+                    className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                      discussionTypeFilter === "SUPPORT" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    Support
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiscussionTypeFilter("ECHANGE")}
+                    className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                      discussionTypeFilter === "ECHANGE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    Stages
+                  </button>
+                </>
+              )}
+              {!estContexteMarketplace && (
+                <button
+                  type="button"
+                  onClick={() => setDiscussionTypeFilter("MARKETPLACE")}
+                  className={`px-3 py-1 text-[11px] font-extrabold rounded-full transition cursor-pointer whitespace-nowrap ${
+                    discussionTypeFilter === "MARKETPLACE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  Marketplace
+                </button>
+              )}
             </div>
 
             {/* Liste des conversations WhatsApp */}
