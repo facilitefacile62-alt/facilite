@@ -68,7 +68,8 @@
 // v68 (16/09/2026) : messagerie Marketplace (client/vendeur) separee du Support RH Facilite
 // v69 (16/09/2026) : perimetre Marketplace strict, exclut toute candidature (OFFRE) et masque les pilules Facilite
 // v70 (16/09/2026) : nav desktop harmonisee icone-au-dessus/libelle-en-dessous (inspiration LinkedIn)
-const VERSION_CACHE = "facilite-v70";
+// v71 (16/09/2026) : geolocalisation "Autour de moi" plus rapide + suppression des fetch/canaux feature_flags dupliques (lenteur generale)
+const VERSION_CACHE = "facilite-v71";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
