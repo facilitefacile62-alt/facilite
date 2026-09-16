@@ -64,7 +64,8 @@
 // v63 (16/09/2026) : application de la barre orange sur le Header et boutons mobile Publier & Autour de moi
 // v65 (16/09/2026) : bordure et fond harmonises en #e3dbcc (style inline + classe)
 // v66 (16/09/2026) : bouton Rechercher et accents passes en Vert Facilite (#10E688 / Emeraude)
-const VERSION_CACHE = "facilite-v66";
+// v67 (16/09/2026) : separation stricte Facilite vs Marketplace (ancienne barre et retrait boutons sur Facilite)
+const VERSION_CACHE = "facilite-v67";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
