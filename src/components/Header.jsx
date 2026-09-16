@@ -1275,7 +1275,7 @@ export default function Header() {
 
 
         {/* Navigation Links (Desktop & Tablette - Navigation complète Facilité & Marketplace) */}
-        <nav className="hidden lg:flex items-center space-x-2 lg:space-x-3 xl:space-x-4 flex-shrink-0">
+        <nav className="hidden md:flex items-center space-x-1.5 md:space-x-2 lg:space-x-3 xl:space-x-4 flex-shrink-0">
           <Link
             href={accueilHref}
             onClick={handleLogoOrHomeClick}
@@ -1618,10 +1618,10 @@ export default function Header() {
         </nav>
 
         {/* Auth / Action (Sans doublon Accueil, avec liens Admin/Recruteur et Notifications) */}
-        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden lg:flex" : "flex"}`}>
+        <div className={`items-center gap-1.5 sm:gap-2 flex-shrink-0 ${isMobileSearchOpen ? "hidden md:flex" : "flex"}`}>
           {/* Liens Admin (si role='admin') et Recruteur (si has_badge='verified_recruiter') — Visible sur desktop */}
           {userSession && (
-            <div className="hidden lg:flex items-center">
+            <div className="hidden md:flex items-center">
               <RoleNavLink session={userSession} variant="header-desktop" />
             </div>
           )}
@@ -1631,7 +1631,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setNotificationsModalOpen(true)}
-              className="hidden lg:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
+              className="hidden md:flex p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-[#10E688] dark:hover:text-[#10E688] rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition relative items-center justify-center flex-shrink-0 cursor-pointer"
               title="Centre de notifications"
               aria-label="Ouvrir les notifications"
             >
@@ -1648,7 +1648,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(true)}
-            className="lg:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
+            className="md:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none transition flex-shrink-0"
             title="Rechercher"
             aria-label="Ouvrir la recherche"
           >
@@ -1952,7 +1952,7 @@ export default function Header() {
           {/* Mobile Menu Toggle (Hamburger - Uniquement pour mobile < 768px) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none flex-shrink-0"
+            className="md:hidden p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg focus:outline-none flex-shrink-0"
             aria-label="Toggle menu"
           >
             <i className={`fa-solid ${mobileMenuOpen ? "fa-xmark" : "fa-bars"} text-base sm:text-lg`}></i>
@@ -1962,7 +1962,7 @@ export default function Header() {
 
       {/* Barre d'onglets horizontale sur mobile (sous-header uniquement pour smartphones < 768px) */}
       {!isMobileSearchOpen && (
-        <div className="flex xl:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
+        <div className="flex md:hidden items-center justify-around w-full border-t border-gray-200/60 dark:border-gray-800 py-1 bg-[#FAF6F1]/95 dark:bg-gray-900/95 overflow-hidden px-0.5">
           <Link
             href={accueilHref}
             onClick={(e) => {
@@ -2050,13 +2050,11 @@ export default function Header() {
                   window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "publier" }));
                 }
               }}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] text-gray-700 dark:text-gray-200 hover:text-emerald-600 transition group"
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition text-gray-700 dark:text-gray-200 hover:text-emerald-600 group"
               title="Publier un nouvel article sur la Marketplace"
             >
-              <div className="w-5 h-5 rounded-full border border-gray-400 dark:border-gray-500 group-hover:border-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950 flex items-center justify-center transition shadow-2xs">
-                <i className="fa-solid fa-plus text-[10px] text-gray-700 dark:text-gray-200 group-hover:text-emerald-600"></i>
-              </div>
-              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Publier</span>
+              <i className="fa-solid fa-plus text-sm sm:text-base text-[#1877F2] group-hover:scale-110 transition-transform"></i>
+              <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Vendre</span>
             </button>
           )}
 
@@ -2085,7 +2083,7 @@ export default function Header() {
 
       {/* Mobile Drawer Menu (Menu Hub Facebook 1:1 via React Portal pour mobile < 768px) */}
       {mounted && mobileMenuOpen && typeof document !== "undefined" && createPortal(
-        <div className="xl:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden animate-in fade-in duration-200">
+        <div className="md:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden animate-in fade-in duration-200">
           
           {/* 1. Header fixe du Menu (Style Facebook : < Menu + Recherche rapide + Fermer) */}
           <div className="bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0 shadow-2xs z-10">

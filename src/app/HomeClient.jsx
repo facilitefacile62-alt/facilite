@@ -1366,11 +1366,11 @@ export default function Home({ initialOffers = [] }) {
       </nav>
 
       {/* Main Job Board Feed (LinkedIn Style) */}
-      <main className="min-h-screen bg-[#F4F2EE] pt-4 pb-8 md:pb-16 px-4 md:px-6" suppressHydrationWarning>
-        <div className="max-w-[1180px] mx-auto flex flex-col xl:flex-row gap-6 items-start justify-center">
+      <main className="min-h-screen bg-[#F4F2EE] pt-4 pb-8 md:pb-16 px-2 sm:px-4 md:px-6" suppressHydrationWarning>
+        <div className="max-w-[1240px] mx-auto flex flex-col lg:flex-row gap-4 xl:gap-6 items-start justify-center">
           
           {/* --- COLONNE DE GAUCHE : Profil & Stats --- */}
-          <aside className="hidden xl:flex xl:w-[215px] flex-shrink-0 flex-col gap-2 xl:pr-0.5 xl:sticky xl:top-[72px] xl:h-fit xl:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          <aside className="hidden lg:flex lg:w-[200px] xl:w-[225px] flex-shrink-0 flex-col gap-2 lg:sticky lg:top-[72px] lg:h-fit lg:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
 
             {authLoading && !userProfile ? (
               /* Squelette de chargement doux pour éviter les 3 états sautillants */
@@ -1610,7 +1610,7 @@ export default function Home({ initialOffers = [] }) {
           </aside>
 
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
-          <section className="w-full xl:w-[555px] flex-shrink-0 flex flex-col space-y-4">
+          <section className="w-full lg:w-[500px] xl:w-[560px] flex-shrink-0 flex flex-col space-y-4">
 
             {/* Carrousel "Stories" des modèles de CV — tout en haut du fil,
                 juste sous la navbar. Le clic ouvre TemplatePreviewModal (même
@@ -1819,8 +1819,8 @@ export default function Home({ initialOffers = [] }) {
 
           </section>
 
-          {/* --- COLONNE DE DROITE : Offres recommandées & Publicité (Visible uniquement sur Desktop) --- */}
-          <aside className="hidden xl:flex xl:w-[260px] flex-shrink-0 flex-col space-y-3 xl:pr-0.5 xl:sticky xl:top-[72px] xl:h-fit xl:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
+          {/* --- COLONNE DE DROITE : Offres recommandées & Publicité (Visible sur Desktop / Tablettes larges) --- */}
+          <aside className="hidden lg:flex lg:w-[240px] xl:w-[260px] flex-shrink-0 flex-col space-y-3 lg:sticky lg:top-[72px] lg:h-fit lg:max-h-[calc(100vh-72px)] overflow-y-auto no-scrollbar pb-4">
             
             {/* Offres Recommandées */}
             <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-xs">
