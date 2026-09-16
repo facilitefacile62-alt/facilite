@@ -65,7 +65,8 @@
 // v65 (16/09/2026) : bordure et fond harmonises en #e3dbcc (style inline + classe)
 // v66 (16/09/2026) : bouton Rechercher et accents passes en Vert Facilite (#10E688 / Emeraude)
 // v67 (16/09/2026) : separation stricte Facilite vs Marketplace (ancienne barre et retrait boutons sur Facilite)
-const VERSION_CACHE = "facilite-v67";
+// v68 (16/09/2026) : messagerie Marketplace (client/vendeur) separee du Support RH Facilite
+const VERSION_CACHE = "facilite-v68";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
