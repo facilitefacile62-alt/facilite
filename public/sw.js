@@ -62,9 +62,9 @@
 // v61 (16/09/2026) : ajout des boutons Autour de moi et Publier un article sur la barre de navigation
 // v62 (16/09/2026) : refonte barre de recherche e-commerce (contour orange, scan photo IA, bouton gradient)
 // v63 (16/09/2026) : application de la barre orange sur le Header et boutons mobile Publier & Autour de moi
-// v64 (16/09/2026) : couleur de fond de la barre de recherche passee a #E3DBCC
 // v65 (16/09/2026) : bordure et fond harmonises en #e3dbcc (style inline + classe)
-const VERSION_CACHE = "facilite-v65";
+// v66 (16/09/2026) : bouton Rechercher et accents passes en Vert Facilite (#10E688 / Emeraude)
+const VERSION_CACHE = "facilite-v66";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

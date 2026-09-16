@@ -793,11 +793,11 @@ export default function GlobeExplorateurBoutiques({
                 disabled={scanPhotoEnCours}
               />
               {scanPhotoEnCours ? (
-                <i className="fa-solid fa-circle-notch fa-spin text-sm text-[#FF5500]"></i>
+                <i className="fa-solid fa-circle-notch fa-spin text-sm text-[#10E688]"></i>
               ) : (
                 <div className="relative flex flex-col items-center justify-center pt-0.5">
-                  {/* Petite barre orange supérieure caractéristique */}
-                  <span className="w-3.5 h-[2px] bg-[#FF5500] rounded-full mb-[2px] group-hover:w-4 transition-all"></span>
+                  {/* Petite barre vert émeraude supérieure caractéristique */}
+                  <span className="w-3.5 h-[2px] bg-[#10E688] rounded-full mb-[2px] group-hover:w-4 transition-all"></span>
                   {/* Appareil photo épuré */}
                   <svg
                     className="w-4 h-4 text-gray-700 group-hover:text-black group-hover:scale-105 transition-transform"
@@ -815,11 +815,11 @@ export default function GlobeExplorateurBoutiques({
               )}
             </label>
 
-            {/* Bouton Pilule Dégradé Rechercher */}
+            {/* Bouton Pilule Vert Facilité Officiel (#10E688 / Émeraude) */}
             <button
               type="submit"
               disabled={scanPhotoEnCours}
-              className="shrink-0 flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#FFA000] via-[#FF5722] to-[#FF2D00] hover:from-[#FFB300] hover:via-[#FF6E40] hover:to-[#FF3D00] text-white font-black text-xs sm:text-sm tracking-tight shadow-md shadow-orange-500/30 active:scale-95 transition-all cursor-pointer select-none"
+              className="shrink-0 flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-[#10E688] via-[#059669] to-[#047857] hover:from-[#13f591] hover:via-[#059669] hover:to-[#065f46] text-white font-black text-xs sm:text-sm tracking-tight shadow-md shadow-emerald-500/25 active:scale-95 transition-all cursor-pointer select-none"
             >
               {/* Loupe avec étincelle intégrée */}
               <svg
@@ -842,7 +842,7 @@ export default function GlobeExplorateurBoutiques({
           {/* Indication visuelle si scan photo en cours */}
           {scanPhotoEnCours && (
             <div className="absolute -bottom-6 left-4 text-[11px] font-bold text-amber-300 drop-shadow flex items-center gap-1.5 animate-pulse">
-              <i className="fa-solid fa-wand-magic-sparkles text-xs text-orange-400"></i>
+              <i className="fa-solid fa-wand-magic-sparkles text-xs text-[#10E688]"></i>
               <span>L'intelligence artificielle analyse votre photo...</span>
             </div>
           )}
