@@ -4884,6 +4884,11 @@ function ModalFicheBoutique({
 }) {
   const [listeArticles, setListeArticles] = useState(articles);
   const [ongletActif, setOngletActif] = useState(boutique?.ongletActifInitial || "apercu"); // 'apercu' | 'produits' | 'profit' | 'abonnes' | 'avis' | 'faq' | 'apropos' | 'contact' | 'parametres' | 'publier'
+  // Sous-section de VueReglages à ouvrir quand "parametres" est actif —
+  // permet aux boutons "Modifier mes prestations"/"Modifier l'établissement"
+  // (onglets mobiles Service/métier et Établissement) de mener directement
+  // au bon formulaire, comme sur le tableau de bord desktop (VueVendeur).
+  const [sectionReglagesInitiale, setSectionReglagesInitiale] = useState(null);
   const [chargement, setChargement] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -5251,13 +5256,18 @@ function ModalFicheBoutique({
             profile={profile}
             boutique={boutique}
             sectionInitiale={
-              ongletActif === "infos_perso"
+              sectionReglagesInitiale
+                ? sectionReglagesInitiale
+                : ongletActif === "infos_perso"
                 ? "infos_perso"
                 : ongletActif === "avatar"
                 ? "avatar"
                 : null
             }
-            onRetour={() => setOngletActif("produits")}
+            onRetour={() => {
+              setSectionReglagesInitiale(null);
+              setOngletActif("produits");
+            }}
             onFermerMarketplace={onFermer}
             onEnregistre={() => {
               onBoutiqueUpdate?.();
@@ -5406,7 +5416,7 @@ function ModalFicheBoutique({
                 : "text-zinc-700 dark:text-zinc-200 hover:bg-[#E3DBCC]/40 dark:hover:bg-zinc-800/60"
             }`}
           >
-            Activité
+            Service
           </button>
 
           <button
@@ -5416,13 +5426,13 @@ function ModalFicheBoutique({
               setOngletMobile("domaine");
               setOngletActif("apropos");
             }}
-            className={`relative z-10 flex-1 py-2.5 px-3 rounded-2xl text-[11px] sm:text-xs font-black uppercase tracking-wider text-center transition-colors cursor-pointer active:scale-95 border border-transparent ${
+            className={`relative z-10 flex-1 py-2.5 px-2 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wide text-center transition-colors cursor-pointer active:scale-95 border border-transparent ${
               ongletMobile === "domaine"
                 ? "text-white dark:text-zinc-950"
                 : "text-zinc-700 dark:text-zinc-200 hover:bg-[#E3DBCC]/40 dark:hover:bg-zinc-800/60"
             }`}
           >
-            Domaine
+            Établissement
           </button>
         </div>
 
@@ -5478,9 +5488,40 @@ function ModalFicheBoutique({
             </div>
           )}
 
-          {/* Contenu Activité Mobile (Page par défaut de la boutique) */}
+          {/* Contenu Service / Métier Mobile (anciennement "Activité") */}
           {ongletMobile === "activite" && ongletActif !== "publier" && ongletActif !== "parametres" && (
             <div className="p-4 space-y-4">
+              {/* Métier / Prestations proposées — même info que le panneau
+                  desktop "Service / Métier" (VueVendeur), pour que la personne
+                  puisse définir ce qu'elle propose (livreur, électricien...). */}
+              <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
+                    Métier / Prestation
+                  </span>
+                  {estProprietaire && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionReglagesInitiale("details_entreprise");
+                        setOngletActif("parametres");
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-black hover:bg-blue-200 dark:hover:bg-blue-800/60 transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-pen-to-square mr-1"></i>
+                      Modifier
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm font-black text-blue-700 dark:text-blue-300">
+                  {boutique?.metier || "Non renseigné"}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  {boutique?.description_prestation || "Prestation de service sur mesure."}
+                </p>
+              </div>
+
               {/* Carte Chiffres & Activité en temps réel */}
               <div className="grid grid-cols-2 gap-2.5">
                 <button
@@ -5563,6 +5604,29 @@ function ModalFicheBoutique({
                 <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
                   {description || (estEtablissement ? "Établissement officiel sur Facilité Sénégal." : "Boutique officielle sur Facilité Sénégal.")}
                 </p>
+
+                {/* Catégorie d'établissement — permet de définir ce que
+                    représente ce lieu (Point Wave, pharmacie, salon...). */}
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-zinc-800">
+                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Catégorie de l&apos;établissement :</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold uppercase text-[10px]">
+                      {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Non renseignée"}
+                    </span>
+                    {estProprietaire && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSectionReglagesInitiale("details_entreprise");
+                          setOngletActif("parametres");
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-[10px] font-black hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition cursor-pointer"
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
                   <div className="flex items-center justify-between">
