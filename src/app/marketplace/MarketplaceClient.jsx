@@ -440,41 +440,58 @@ export default function MarketplaceClient() {
                 <>
                   {/* 1. Carte de Profil Boutique pour tout utilisateur connecté (Nouveau ou Existant) */}
                   {(() => {
+                    // Sans vraie boutique (visiteur jamais passé par la
+                    // création), on n'invente plus de fiche (ancien objet
+                    // "boutique_<id>" avec numéro WhatsApp fictif) : cliquer
+                    // dessus montrait une boutique qui n'existe pas. Le nom/
+                    // avatar/ville restent ceux du profil réel de la
+                    // personne (pas fabriqués), mais tout clic mène
+                    // désormais à la création plutôt qu'à une fiche
+                    // fictive. Signalé par l'utilisateur (visiteur voyant
+                    // "Publier un article" comme s'il avait déjà une
+                    // boutique).
+                    const estVraieBoutique = Boolean(maBoutiqueActive);
                     const bActive = maBoutiqueActive || {
-                      id: "boutique_" + (userId || "me"),
                       nom: profile?.full_name || "Facile demo",
-                      description: profile?.headline || "Boutique officielle partenaire sur Facilité Sénégal · Vente d'articles & livraison express",
-                      owner_id: userId,
                       avatar_url: profile?.avatar_url,
                       cover_url: profile?.cover_url || "/default-cover.png",
                       ville: profile?.city || profile?.location || "Dakar",
                       quartier: profile?.quartier || "",
-                      telephone_whatsapp: profile?.phone || "+221773014510",
-                      amis_count: "4 K",
+                    };
+                    const irVersCreation = () => {
+                      setOnglet("vendre");
+                      setOngletVendeurInitial("parametres");
+                      setSectionReglagesInitial("infos_perso");
+                    };
+                    const ouvrirProfil = () => {
+                      if (estVraieBoutique) setBoutiqueModal(bActive);
+                      else irVersCreation();
                     };
                     return (
                       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xs flex-shrink-0">
                         {/* Bannière Boutique Cliquable */}
                         <div
-                          onClick={() => setBoutiqueModal(bActive)}
+                          onClick={ouvrirProfil}
                           className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
                           style={{ backgroundImage: `url('${bActive.cover_url || profile?.cover_url || "/stellar-cover.png"}')` }}
-                          title="Voir le profil de ma boutique"
+                          title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir vendeur"}
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
-                          <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
-                            <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
-                              BOUTIQUE
-                            </span>
-                          </div>
+                          {estVraieBoutique && (
+                            <div className="absolute inset-0 flex items-center justify-end px-3 pointer-events-none">
+                              <span className="text-white/20 font-black text-xs uppercase tracking-widest select-none">
+                                BOUTIQUE
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="px-3 pb-3.5 pt-0 relative flex flex-col items-center text-center">
                           {/* Avatar / Logo de la Boutique */}
                           <div
-                            onClick={() => setBoutiqueModal(bActive)}
+                            onClick={ouvrirProfil}
                             className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
-                            title="Voir le profil de ma boutique"
+                            title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir vendeur"}
                           >
                             {bActive.avatar_url || profile?.avatar_url ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
@@ -493,9 +510,9 @@ export default function MarketplaceClient() {
                           {/* Nom de la Boutique */}
                           <button
                             type="button"
-                            onClick={() => setBoutiqueModal(bActive)}
+                            onClick={ouvrirProfil}
                             className="group cursor-pointer bg-transparent border-none p-0 text-center"
-                            title="Voir le profil de ma boutique"
+                            title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir vendeur"}
                           >
                             <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
                               {bActive.nom}
@@ -511,15 +528,16 @@ export default function MarketplaceClient() {
                           <button
                             type="button"
                             onClick={() => {
-                              setBoutiqueModal({
-                                ...bActive,
-                                ongletActifInitial: "publier",
-                              });
+                              if (estVraieBoutique) {
+                                setBoutiqueModal({ ...bActive, ongletActifInitial: "publier" });
+                              } else {
+                                irVersCreation();
+                              }
                             }}
                             className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
                           >
-                            <i className="fa-solid fa-plus text-[8px] text-gray-500"></i>
-                            <span>Publier un article</span>
+                            <i className={`fa-solid ${estVraieBoutique ? "fa-plus" : "fa-store"} text-[8px] text-gray-500`}></i>
+                            <span>{estVraieBoutique ? "Publier un article" : "Devenir Vendeur"}</span>
                           </button>
                         </div>
                       </div>
