@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { creerBoutique, chargerMesBoutiques } from "@/lib/marketplaceData";
+import { creerBoutique, chargerMesBoutiques, departementLePlusProche } from "@/lib/marketplaceData";
+import CapturePosition from "@/components/CapturePosition";
 
 function VendeurInformationsPersonnellesContent() {
   const router = useRouter();
@@ -14,6 +15,8 @@ function VendeurInformationsPersonnellesContent() {
   const [nomBoutique, setNomBoutique] = useState("");
   const [telephone, setTelephone] = useState("");
   const [ville, setVille] = useState("");
+  const [position, setPosition] = useState({ latitude: null, longitude: null, precisionM: null });
+  const [boutiqueExistante, setBoutiqueExistante] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState("");
@@ -48,6 +51,7 @@ function VendeurInformationsPersonnellesContent() {
           // Pré-remplir le nom de la boutique si déjà existante
           const mesBoutiques = await chargerMesBoutiques(user.id).catch(() => []);
           if (mesBoutiques && mesBoutiques.length > 0) {
+            setBoutiqueExistante(mesBoutiques[0]);
             setNomBoutique(mesBoutiques[0].nom || "");
             if (mesBoutiques[0].telephone_whatsapp) setTelephone(mesBoutiques[0].telephone_whatsapp);
             if (mesBoutiques[0].ville) setVille(mesBoutiques[0].ville);
@@ -101,6 +105,16 @@ function VendeurInformationsPersonnellesContent() {
         try {
           const mesBoutiques = await chargerMesBoutiques(user.id).catch(() => []);
           if (!mesBoutiques || mesBoutiques.length === 0) {
+            // Même règle que "Ouvrir ma boutique" sur le Marketplace : jamais
+            // de repli sur un centre-ville par défaut, une position fausse
+            // coûte cher au commerçant et à l'acheteur qui se déplace pour
+            // rien (voir FormulaireBoutique/CapturePosition). Signalé par
+            // l'utilisateur comme la partie la plus importante du formulaire.
+            if (position.latitude == null || position.longitude == null) {
+              setErreur("Relevez d'abord la position, depuis votre boutique.");
+              setEnCours(false);
+              return;
+            }
             const nouvelleBoutique = await creerBoutique(user.id, {
               nom: nomBoutique.trim(),
               // Sélecteur de type retiré de cette page (toujours "produit") —
@@ -110,6 +124,9 @@ function VendeurInformationsPersonnellesContent() {
               type_boutique: "produit",
               telephone_whatsapp: telephone.trim() || null,
               ville: ville.trim() || null,
+              latitude: position.latitude,
+              longitude: position.longitude,
+              precisionM: position.precisionM,
             });
             if (nouvelleBoutique?.id) {
               router.push(`/marketplace?boutique_id=${nouvelleBoutique.id}&mode=vendeur`);
@@ -211,6 +228,20 @@ function VendeurInformationsPersonnellesContent() {
                 className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
               />
             </div>
+
+            {/* Positionnement GPS de la boutique — obligatoire à la création,
+                même règle que "Ouvrir ma boutique" sur le Marketplace. Verrouillé
+                si une boutique existe déjà (ce formulaire ne fait que rediriger
+                vers elle, jamais re-créer). */}
+            <CapturePosition
+              verrouillee={!!boutiqueExistante?.position_definie_le}
+              definieLe={boutiqueExistante?.position_definie_le}
+              onReleve={(p) => {
+                setPosition({ latitude: p.latitude, longitude: p.longitude, precisionM: p.precisionM });
+                const dep = departementLePlusProche(p.latitude, p.longitude);
+                if (dep?.nom) setVille(dep.nom);
+              }}
+            />
 
             {/* Téléphone & Ville */}
             <div className="grid grid-cols-2 gap-3">
