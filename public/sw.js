@@ -70,7 +70,8 @@
 // v70 (16/09/2026) : nav desktop harmonisee icone-au-dessus/libelle-en-dessous (inspiration LinkedIn)
 // v71 (16/09/2026) : geolocalisation "Autour de moi" plus rapide + suppression des fetch/canaux feature_flags dupliques (lenteur generale)
 // v72 (16/09/2026) : boutons Facilite/Business en pilule sur /bienvenue (inspiration Telegram)
-const VERSION_CACHE = "facilite-v72";
+// v73 (17/09/2026) : boutons Facilite/Business reduits (etaient trop imposants)
+const VERSION_CACHE = "facilite-v73";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
