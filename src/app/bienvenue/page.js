@@ -73,14 +73,14 @@ function BienvenueContent() {
               type="button"
               onClick={choisirFacilite}
               disabled={enCours}
-              className="group w-full p-3.5 sm:p-4 bg-[#10E688] hover:bg-[#0fd67e] active:scale-[0.98] rounded-full shadow-[0_8px_20px_-4px_rgba(16,230,136,0.4)] hover:shadow-[0_10px_25px_-3px_rgba(16,230,136,0.5)] transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left border border-emerald-300/40"
+              className="group w-full p-2 sm:p-2.5 bg-[#10E688] hover:bg-[#0fd67e] active:scale-[0.98] rounded-full shadow-[0_8px_20px_-4px_rgba(16,230,136,0.4)] hover:shadow-[0_10px_25px_-3px_rgba(16,230,136,0.5)] transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-2.5 text-left border border-emerald-300/40"
             >
-              <div className="w-12 h-12 shrink-0 rounded-full bg-gray-950/10 dark:bg-black/15 flex items-center justify-center text-gray-950 text-xl group-hover:scale-105 transition-transform">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-gray-950/10 dark:bg-black/15 flex items-center justify-center text-gray-950 text-sm group-hover:scale-105 transition-transform">
                 <i className="fa-solid fa-briefcase"></i>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-black text-[15px] text-gray-950 tracking-tight">Facilité</p>
-                <p className="text-xs text-gray-950/75 font-semibold line-clamp-1">Recherche d&apos;emploi et candidatures</p>
+                <p className="font-black text-[13px] text-gray-950 tracking-tight">Facilité</p>
+                <p className="text-[11px] text-gray-950/75 font-semibold line-clamp-1">Recherche d&apos;emploi et candidatures</p>
               </div>
               <i className="fa-solid fa-chevron-right text-gray-950/40 text-xs group-hover:translate-x-0.5 group-hover:text-gray-950/70 transition-all"></i>
             </button>
@@ -90,14 +90,14 @@ function BienvenueContent() {
               type="button"
               onClick={choisirBusiness}
               disabled={enCours}
-              className="group w-full p-3.5 sm:p-4 bg-white dark:bg-zinc-800/90 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] rounded-full transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-xs hover:shadow-md"
+              className="group w-full p-2 sm:p-2.5 bg-white dark:bg-zinc-800/90 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] rounded-full transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-2.5 text-left shadow-xs hover:shadow-md"
             >
-              <div className="w-12 h-12 shrink-0 rounded-full bg-[#E8FAF0] dark:bg-emerald-950/60 flex items-center justify-center text-[#10E688] dark:text-emerald-400 text-xl group-hover:scale-105 transition-transform">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-[#E8FAF0] dark:bg-emerald-950/60 flex items-center justify-center text-[#10E688] dark:text-emerald-400 text-sm group-hover:scale-105 transition-transform">
                 <i className="fa-solid fa-store"></i>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-black text-[15px] text-gray-900 dark:text-white tracking-tight">Facilité Business</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium line-clamp-1">Achetez et vendez sur la marketplace</p>
+                <p className="font-black text-[13px] text-gray-900 dark:text-white tracking-tight">Facilité Business</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium line-clamp-1">Achetez et vendez sur la marketplace</p>
               </div>
               <i className="fa-solid fa-chevron-right text-gray-300 dark:text-zinc-600 text-xs group-hover:translate-x-0.5 group-hover:text-gray-500 transition-all"></i>
             </button>
