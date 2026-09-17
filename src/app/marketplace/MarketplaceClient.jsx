@@ -3496,7 +3496,13 @@ function VueVendeur({
         metier: metierEdition,
         description_prestation: descriptionPrestationEdition,
         categorie_etablissement: boutiqueActive.categorie_etablissement,
-        type_boutique: boutiqueActive.type_boutique,
+        // La carte Service/métier est visible quel que soit le type actuel
+        // de la boutique. Le serveur (modifier_ma_boutique) n'enregistre le
+        // métier QUE si le type est déjà 'service' — sans forcer ce type
+        // ici, l'enregistrement réussissait sans erreur mais le métier
+        // restait silencieusement ignoré côté base, jamais visible ensuite.
+        // Signalé par l'utilisateur (répété plusieurs fois sans effet).
+        type_boutique: "service",
       });
       setEditionMetierOuverte(false);
       await recharger();
@@ -3524,7 +3530,10 @@ function VueVendeur({
         metier: boutiqueActive.metier,
         description_prestation: boutiqueActive.description_prestation,
         categorie_etablissement: categorieEdition,
-        type_boutique: boutiqueActive.type_boutique,
+        // Même raison que côté métier/service : forcer le type ici, sinon
+        // la catégorie choisie n'est jamais réellement enregistrée si la
+        // boutique n'était pas déjà de type 'etablissement'.
+        type_boutique: "etablissement",
       });
       setEditionCategorieOuverte(false);
       await recharger();
@@ -5547,7 +5556,13 @@ function ModalFicheBoutique({
         metier: metierEdition,
         description_prestation: descriptionPrestationEdition,
         categorie_etablissement: boutique?.categorie_etablissement,
-        type_boutique: boutique?.type_boutique,
+        // La carte Service/métier est visible quel que soit le type actuel
+        // de la boutique. Le serveur (modifier_ma_boutique) n'enregistre le
+        // métier QUE si le type est déjà 'service' — sans forcer ce type
+        // ici, l'enregistrement réussissait sans erreur mais le métier
+        // restait silencieusement ignoré côté base, jamais visible ensuite.
+        // Signalé par l'utilisateur (répété plusieurs fois sans effet).
+        type_boutique: "service",
       });
       showToast("✓ Métier enregistré !");
       setEditionMetierOuverte(false);
@@ -5576,7 +5591,10 @@ function ModalFicheBoutique({
         metier: boutique?.metier,
         description_prestation: boutique?.description_prestation,
         categorie_etablissement: categorieEdition,
-        type_boutique: boutique?.type_boutique,
+        // Même raison que côté métier/service : forcer le type ici, sinon
+        // la catégorie choisie n'est jamais réellement enregistrée si la
+        // boutique n'était pas déjà de type 'etablissement'.
+        type_boutique: "etablissement",
       });
       showToast("✓ Catégorie enregistrée !");
       setEditionCategorieOuverte(false);
