@@ -87,7 +87,8 @@
 // v87 (17/09/2026) : champ metier/categorie enfin visible et sauvegarde depuis "Modifier le profil" (bouton le plus visible)
 // v88 (17/09/2026) : possibilite de changer le type de boutique existante (Produit/Service/Etablissement) dans Details de l'entreprise
 // v89 (17/09/2026) : edition du metier/categorie directement dans la carte, plus de fenetre avec fond assombri
-const VERSION_CACHE = "facilite-v89";
+// v90 (17/09/2026) : le metier/categorie enregistre s'affiche enfin apres sauvegarde (fiche mobile ne restait plus figee)
+const VERSION_CACHE = "facilite-v90";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
