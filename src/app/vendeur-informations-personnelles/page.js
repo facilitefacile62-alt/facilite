@@ -14,7 +14,6 @@ function VendeurInformationsPersonnellesContent() {
   const [nomBoutique, setNomBoutique] = useState("");
   const [telephone, setTelephone] = useState("");
   const [ville, setVille] = useState("");
-  const [typeBoutique, setTypeBoutique] = useState("produit"); // 'produit' | 'service' | 'etablissement'
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState("");
@@ -52,7 +51,6 @@ function VendeurInformationsPersonnellesContent() {
             setNomBoutique(mesBoutiques[0].nom || "");
             if (mesBoutiques[0].telephone_whatsapp) setTelephone(mesBoutiques[0].telephone_whatsapp);
             if (mesBoutiques[0].ville) setVille(mesBoutiques[0].ville);
-            if (mesBoutiques[0].type_boutique) setTypeBoutique(mesBoutiques[0].type_boutique);
           }
         }
       } catch (e) {
@@ -105,7 +103,11 @@ function VendeurInformationsPersonnellesContent() {
           if (!mesBoutiques || mesBoutiques.length === 0) {
             const nouvelleBoutique = await creerBoutique(user.id, {
               nom: nomBoutique.trim(),
-              type_boutique: typeBoutique,
+              // Sélecteur de type retiré de cette page (toujours "produit") —
+              // le choix Service/Lieu fixe se fait désormais uniquement via
+              // "Ouvrir ma boutique" sur le Marketplace, qui a son propre
+              // sélecteur (ce choix reste définitif après création).
+              type_boutique: "produit",
               telephone_whatsapp: telephone.trim() || null,
               ville: ville.trim() || null,
             });
@@ -208,51 +210,6 @@ function VendeurInformationsPersonnellesContent() {
                 placeholder="Ex. Diop High-Tech & Services"
                 className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
               />
-            </div>
-
-            {/* Type d'activité */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Type d&apos;activité
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTypeBoutique("produit")}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl border transition cursor-pointer text-center ${
-                    typeBoutique === "produit"
-                      ? "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs"
-                      : "bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  <i className="fa-solid fa-box block mb-1 text-sm"></i>
-                  <span>Produits</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTypeBoutique("service")}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl border transition cursor-pointer text-center ${
-                    typeBoutique === "service"
-                      ? "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs"
-                      : "bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  <i className="fa-solid fa-handshake block mb-1 text-sm"></i>
-                  <span>Services</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTypeBoutique("etablissement")}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl border transition cursor-pointer text-center ${
-                    typeBoutique === "etablissement"
-                      ? "bg-emerald-50 dark:bg-emerald-950/80 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-xs"
-                      : "bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400"
-                  }`}
-                >
-                  <i className="fa-solid fa-building block mb-1 text-sm"></i>
-                  <span>Lieu fixe</span>
-                </button>
-              </div>
             </div>
 
             {/* Téléphone & Ville */}
