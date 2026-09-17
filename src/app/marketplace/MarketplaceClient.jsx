@@ -1563,10 +1563,19 @@ function VueReglages({
   const [boutiqueVisible, setBoutiqueVisible] = useState(boutique?.actif !== false);
   const [savingVisibiliteBoutique, setSavingVisibiliteBoutique] = useState(false);
 
-  // Champs spécifiques au type_boutique (jamais le type lui-même, choisi une
-  // seule fois à la création — voir FormulaireBoutique).
-  const estService = boutique?.type_boutique === "service";
-  const estEtablissement = boutique?.type_boutique === "etablissement";
+  // Type choisi UNIQUEMENT à la création (aucune vraie boutique n'existe
+  // encore) — n'a plus aucun effet une fois la boutique créée, le type
+  // devient alors définitif et se lit sur boutique.type_boutique. Ferme le
+  // trou laissé par FormulaireBoutique (jamais rendu nulle part dans l'app :
+  // seul composant qui proposait ce choix jusqu'ici) : sans lui, "infos_perso"
+  // (le seul vrai chemin de création de boutique) créait toujours un
+  // type_boutique='produit' par défaut, sans jamais offrir Service ou
+  // Établissement.
+  const [typeBoutiqueChoisi, setTypeBoutiqueChoisi] = useState("produit");
+  // Champs spécifiques au type_boutique — pour une boutique déjà créée, son
+  // vrai type (définitif) ; pour une création en cours, le choix ci-dessus.
+  const estService = boutique ? boutique.type_boutique === "service" : typeBoutiqueChoisi === "service";
+  const estEtablissement = boutique ? boutique.type_boutique === "etablissement" : typeBoutiqueChoisi === "etablissement";
   const [metier, setMetier] = useState(boutique?.metier || "");
   const [descriptionPrestation, setDescriptionPrestation] = useState(boutique?.description_prestation || "");
   const [categorieEtablissement, setCategorieEtablissement] = useState(boutique?.categorie_etablissement || "point_wave");
@@ -1673,6 +1682,10 @@ function VueReglages({
           latitude,
           longitude,
           precisionM,
+          type_boutique: typeBoutiqueChoisi,
+          metier: typeBoutiqueChoisi === "service" ? metier : null,
+          description_prestation: typeBoutiqueChoisi === "service" ? descriptionPrestation : null,
+          categorie_etablissement: typeBoutiqueChoisi === "etablissement" ? categorieEtablissement : null,
         });
       }
       showToast("✓ Profil mis à jour avec succès !");
@@ -1922,6 +1935,84 @@ function VueReglages({
                 className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
               />
             </div>
+
+            {/* Type d'activité — UNIQUEMENT à la création (pas de vraie
+                boutique). Ce choix devient définitif dès l'enregistrement :
+                fermait jusqu'ici un vrai trou du produit, seul
+                FormulaireBoutique (jamais rendu nulle part) proposait ce
+                choix. Signalé par l'utilisateur. */}
+            {!boutique && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Type d&apos;activité</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {TYPES_BOUTIQUE.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTypeBoutiqueChoisi(t.id)}
+                      className={`px-2 py-2.5 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                        typeBoutiqueChoisi === t.id
+                          ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
+                          : "bg-white dark:bg-zinc-900 border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className={`fa-solid ${t.icon}`}></i>
+                      <span className="text-center leading-tight">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Ce choix est définitif : il ne pourra plus être modifié après la création.
+                </p>
+              </div>
+            )}
+
+            {!boutique && estService && (
+              <>
+                <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Métier</span>
+                  <input
+                    type="text"
+                    value={metier}
+                    onChange={(e) => setMetier(e.target.value)}
+                    placeholder="Ex : Plombier, Électricien, Livreur..."
+                    className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
+                  />
+                </div>
+                <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Description de la prestation</span>
+                  <textarea
+                    rows={2}
+                    value={descriptionPrestation}
+                    onChange={(e) => setDescriptionPrestation(e.target.value)}
+                    placeholder="Spécialités, expérience, zone d'intervention..."
+                    className="w-full bg-transparent text-sm text-gray-900 dark:text-white outline-none pt-0.5 resize-none"
+                  />
+                </div>
+              </>
+            )}
+
+            {!boutique && estEtablissement && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie d&apos;établissement</label>
+                <select
+                  value={categorieEtablissement}
+                  onChange={(e) => setCategorieEtablissement(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="point_wave">Point Wave (agent Wave/Orange Money...)</option>
+                  <option value="pharmacie">Pharmacie</option>
+                  <option value="clinique">Clinique</option>
+                  <option value="autre">Autre établissement</option>
+                </select>
+                {["point_wave", "pharmacie", "clinique"].includes(categorieEtablissement) && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                    <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                    <span>Catégorie sensible : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Sélectionnez l'emplacement* avec Verrouillage GPS */}
             <div className="space-y-2">
