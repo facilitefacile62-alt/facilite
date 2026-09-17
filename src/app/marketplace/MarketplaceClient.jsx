@@ -1577,6 +1577,12 @@ function VueReglages({
   const estService = boutique ? boutique.type_boutique === "service" : typeBoutiqueChoisi === "service";
   const estEtablissement = boutique ? boutique.type_boutique === "etablissement" : typeBoutiqueChoisi === "etablissement";
   const [metier, setMetier] = useState(boutique?.metier || "");
+  // Liste structurée (comme FormulaireBoutique) au lieu d'un champ texte
+  // libre — l'utilisateur a signalé vouloir choisir parmi plusieurs
+  // professions plutôt que taper un texte au hasard.
+  const [metierEstAutre, setMetierEstAutre] = useState(
+    Boolean(boutique?.metier) && !METIERS_SERVICE.includes(boutique.metier)
+  );
   const [descriptionPrestation, setDescriptionPrestation] = useState(boutique?.description_prestation || "");
   const [categorieEtablissement, setCategorieEtablissement] = useState(boutique?.categorie_etablissement || "point_wave");
 
@@ -1726,7 +1732,11 @@ function VueReglages({
         }).eq("id", userId);
       }
       showToast("✓ Détails de l'entreprise enregistrés !");
-      setModalActive(null);
+      // Même règle que la fermeture (X) : un accès direct via "Modifier"
+      // doit ramener sur la page d'origine après l'enregistrement, pas
+      // sur la liste des réglages jamais demandée.
+      if (sectionInitiale === "details_entreprise") onRetour?.();
+      else setModalActive(null);
       onEnregistre?.();
     } catch {
       showToast("Erreur lors de l'enregistrement");
@@ -1971,14 +1981,49 @@ function VueReglages({
               <>
                 <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
                   <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Métier</span>
-                  <input
-                    type="text"
-                    value={metier}
-                    onChange={(e) => setMetier(e.target.value)}
-                    placeholder="Ex : Plombier, Électricien, Livreur..."
-                    className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
-                  />
+                  <select
+                    value={metierEstAutre ? "autre" : metier}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "autre") {
+                        setMetierEstAutre(true);
+                        setMetier("");
+                      } else {
+                        setMetierEstAutre(false);
+                        setMetier(v);
+                      }
+                    }}
+                    className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5 cursor-pointer"
+                  >
+                    <option value="" disabled>
+                      Choisissez votre métier
+                    </option>
+                    {METIERS_SERVICE.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                    <option value="autre">Autre (précisez)</option>
+                  </select>
                 </div>
+                {metierEstAutre && (
+                  <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Précisez votre métier</span>
+                    <input
+                      type="text"
+                      value={metier}
+                      onChange={(e) => setMetier(e.target.value)}
+                      placeholder="Ex : Livreur à vélo, Coursier..."
+                      className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
+                    />
+                  </div>
+                )}
+                {!metierEstAutre && METIERS_REGLEMENTES.includes(metier) && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                    <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                    <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                  </p>
+                )}
                 <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
                   <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Description de la prestation</span>
                   <textarea
@@ -2504,7 +2549,15 @@ function VueReglages({
               </h3>
               <button
                 type="button"
-                onClick={() => setModalActive(null)}
+                onClick={() => {
+                  // Ouvert directement depuis "Modifier" (raccourci
+                  // sectionInitiale, ex. onglet Service/Établissement) :
+                  // fermer doit vraiment quitter Réglages et ramener sur
+                  // cette page, pas révéler la liste des réglages qui
+                  // n'a jamais été demandée. Signalé par l'utilisateur.
+                  if (sectionInitiale === "details_entreprise") onRetour?.();
+                  else setModalActive(null);
+                }}
                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500"
               >
                 <i className="fa-solid fa-xmark text-sm"></i>
@@ -2588,13 +2641,45 @@ function VueReglages({
                 <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-zinc-800">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier</label>
-                    <input
-                      type="text"
-                      value={metier}
-                      onChange={(e) => setMetier(e.target.value)}
-                      placeholder="Ex : Plombier, Électricien..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    />
+                    <select
+                      value={metierEstAutre ? "autre" : metier}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "autre") {
+                          setMetierEstAutre(true);
+                          setMetier("");
+                        } else {
+                          setMetierEstAutre(false);
+                          setMetier(v);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        Choisissez votre métier
+                      </option>
+                      {METIERS_SERVICE.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                      <option value="autre">Autre (précisez)</option>
+                    </select>
+                    {metierEstAutre && (
+                      <input
+                        type="text"
+                        value={metier}
+                        onChange={(e) => setMetier(e.target.value)}
+                        placeholder="Précisez votre métier"
+                        className="w-full mt-1.5 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    )}
+                    {!metierEstAutre && METIERS_REGLEMENTES.includes(metier) && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                        <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                        <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description de la prestation</label>
@@ -4378,7 +4463,16 @@ function VueVendeur({
                 profile={profile}
                 boutique={boutiqueActive}
                 sectionInitiale={sectionReglages}
-                onRetour={() => setOngletVendeur("annonces")}
+                onRetour={() => {
+                  // Sans ce reset, sectionReglages reste bloqué sur
+                  // "details_entreprise" (persisté en localStorage) et un
+                  // futur clic sur "Réglages" dans le menu latéral saute
+                  // directement dedans au lieu d'afficher la liste — même
+                  // famille de bug que la fermeture qui redirigeait au
+                  // mauvais endroit, signalée par l'utilisateur.
+                  setSectionReglages(null);
+                  setOngletVendeur("annonces");
+                }}
                 onEnregistre={recharger}
               />
             )}
@@ -6724,14 +6818,81 @@ function ModalFicheBoutique({
           {ongletActif === "service" && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 space-y-2">
-                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                  <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
-                  Prestations de Service &amp; Métier
-                </h4>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                    <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
+                    Prestations de Service &amp; Métier
+                  </h4>
+                  {estProprietaire && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionReglagesInitiale("details_entreprise");
+                        setOngletActif("parametres");
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-black hover:bg-blue-200 dark:hover:bg-blue-800/60 transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-pen-to-square mr-1"></i>
+                      Modifier
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm font-black text-blue-700 dark:text-blue-300">
+                  {boutique?.metier || "Non renseigné"}
+                </p>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                  {description || "Prestation de service sur mesure avec déplacement direct et intervention qualifiée."}
+                  {boutique?.description_prestation || description || "Prestation de service sur mesure avec déplacement direct et intervention qualifiée."}
                 </p>
               </div>
+
+              {estProprietaire && (
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
+                      Disponibilité
+                    </span>
+                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(true)}
+                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                        modeHorairesActuel === "manuel" && disponibleManuel
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-bolt mr-1"></i>
+                      Disponible maintenant
+                    </button>
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(false)}
+                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                        modeHorairesActuel === "manuel" && !disponibleManuel
+                          ? "bg-rose-600 text-white shadow-sm"
+                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-pause mr-1"></i>
+                      Indisponible
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalHorairesOuverte(true)}
+                    className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-calendar-days text-violet-500"></i>
+                    Programmer des horaires
+                  </button>
+                </div>
+              )}
+
               {whatsappUrl && (
                 <a
                   href={whatsappUrl}
@@ -6749,17 +6910,86 @@ function ModalFicheBoutique({
           {ongletActif === "etablissement" && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
-                <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                  <i className="fa-solid fa-building text-emerald-600"></i>
-                  Informations de l&apos;Établissement
-                </h4>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-sm font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                    <i className="fa-solid fa-building text-emerald-600"></i>
+                    Informations de l&apos;Établissement
+                  </h4>
+                  {estProprietaire && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSectionReglagesInitiale("details_entreprise");
+                        setOngletActif("parametres");
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-pen-to-square mr-1"></i>
+                      Modifier
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300">
                   {description || `Établissement et local physique situé à ${ville || "Dakar"}.`}
                 </p>
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                  <span className="font-bold text-zinc-500">Catégorie :</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold uppercase text-[10px]">
+                    {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Non renseignée"}
+                  </span>
+                </div>
                 <div className="text-xs text-zinc-500 pt-1">
                   <span>📍 Adresse : {quartier ? `${quartier}, ` : ""}{ville || "Dakar"}</span>
                 </div>
               </div>
+
+              {estProprietaire && (
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
+                      Disponibilité
+                    </span>
+                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(true)}
+                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                        modeHorairesActuel === "manuel" && disponibleManuel
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-bolt mr-1"></i>
+                      Disponible maintenant
+                    </button>
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(false)}
+                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                        modeHorairesActuel === "manuel" && !disponibleManuel
+                          ? "bg-rose-600 text-white shadow-sm"
+                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-pause mr-1"></i>
+                      Indisponible
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalHorairesOuverte(true)}
+                    className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-calendar-days text-violet-500"></i>
+                    Programmer des horaires
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -6917,13 +7147,18 @@ function ModalFicheBoutique({
               profile={profile}
               boutique={boutique}
               sectionInitiale={
-                ongletActif === "infos_perso"
+                sectionReglagesInitiale
+                  ? sectionReglagesInitiale
+                  : ongletActif === "infos_perso"
                   ? "infos_perso"
                   : ongletActif === "avatar"
                   ? "avatar"
                   : null
               }
-              onRetour={() => setOngletActif("produits")}
+              onRetour={() => {
+                setSectionReglagesInitiale(null);
+                setOngletActif("produits");
+              }}
               onFermerMarketplace={onFermer}
               onEnregistre={() => {
                 onBoutiqueUpdate?.();
