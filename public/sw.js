@@ -80,7 +80,8 @@
 // v80 (17/09/2026) : onglets mobiles Activite/Domaine renommes en Service/Etablissement avec vraies infos
 // v81 (17/09/2026) : boutons Disponible maintenant/Indisponible/Programmer sur Service et Etablissement
 // v82 (17/09/2026) : categories d'etablissement concretes (Point Wave/Pharmacie/Clinique/Autre)
-const VERSION_CACHE = "facilite-v82";
+// v83 (17/09/2026) : choix du type de boutique (Produit/Service/Etablissement) enfin possible a la creation
+const VERSION_CACHE = "facilite-v83";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
