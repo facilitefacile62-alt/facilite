@@ -82,7 +82,8 @@
 // v82 (17/09/2026) : categories d'etablissement concretes (Point Wave/Pharmacie/Clinique/Autre)
 // v83 (17/09/2026) : choix du type de boutique (Produit/Service/Etablissement) enfin possible a la creation
 // v84 (17/09/2026) : sidebar vendeur masque pour un visiteur sans vraie boutique (Mes annonces, Service/metier, etc.)
-const VERSION_CACHE = "facilite-v84";
+// v85 (17/09/2026) : nettoyage onglet Service mobile + Disponibilite ajoutee sur desktop (Service/Etablissement)
+const VERSION_CACHE = "facilite-v85";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
