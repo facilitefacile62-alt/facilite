@@ -71,7 +71,8 @@
 // v71 (16/09/2026) : geolocalisation "Autour de moi" plus rapide + suppression des fetch/canaux feature_flags dupliques (lenteur generale)
 // v72 (16/09/2026) : boutons Facilite/Business en pilule sur /bienvenue (inspiration Telegram)
 // v73 (17/09/2026) : boutons Facilite/Business reduits (etaient trop imposants)
-const VERSION_CACHE = "facilite-v73";
+// v74 (17/09/2026) : boutons /bienvenue encore reduits (54px -> 45px de hauteur)
+const VERSION_CACHE = "facilite-v74";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
