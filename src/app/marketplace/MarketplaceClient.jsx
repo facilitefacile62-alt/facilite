@@ -214,19 +214,21 @@ export default function MarketplaceClient() {
     }
     try {
       const liste = await chargerMesBoutiques(userId);
-      if (generation !== generationBoutiqueRef.current) return;
+      if (generation !== generationBoutiqueRef.current) return undefined;
       setBoutiques(liste);
       const active = liste[0] || null;
       setMaBoutiqueActive(active);
       if (active) {
         const arts = await chargerMesArticles(active.id);
-        if (generation !== generationBoutiqueRef.current) return;
+        if (generation !== generationBoutiqueRef.current) return liste;
         setMesArticles(arts);
       } else {
         setMesArticles([]);
       }
+      return liste;
     } catch {
       // best-effort
+      return undefined;
     } finally {
       if (generation === generationBoutiqueRef.current) setChargementBoutique(false);
     }
@@ -643,7 +645,21 @@ export default function MarketplaceClient() {
               setOngletVendeurInitial("publier");
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            onBoutiqueUpdate={rechargerBoutique}
+            onBoutiqueUpdate={async () => {
+              // boutiqueModal est une capture figée au moment de l'ouverture
+              // de la fiche : rechargerBoutique() rafraîchit maBoutiqueActive
+              // /boutiques (utilisés par VueVendeur) mais jamais cette
+              // capture. Sans re-sync explicite, tout enregistrement fait
+              // DEPUIS l'intérieur de la fiche (métier, catégorie,
+              // disponibilité...) semblait ne jamais avoir fonctionné au
+              // retour à l'écran — la carte réaffichait l'ancienne valeur.
+              // Signalé par l'utilisateur.
+              const liste = await rechargerBoutique();
+              const fraiche = liste?.find((b) => b.id === boutiqueModal?.id);
+              if (fraiche) {
+                setBoutiqueModal((prev) => (prev ? { ...fraiche, ongletActifInitial: prev.ongletActifInitial } : fraiche));
+              }
+            }}
             onFermer={() => setBoutiqueModal(null)}
             onVoirArticle={(art) => {
               setBoutiqueModal(null);
