@@ -1585,6 +1585,14 @@ function VueReglages({
   );
   const [descriptionPrestation, setDescriptionPrestation] = useState(boutique?.description_prestation || "");
   const [categorieEtablissement, setCategorieEtablissement] = useState(boutique?.categorie_etablissement || "point_wave");
+  // Choix de type dans "Détails de l'entreprise" (édition) — séparé de
+  // typeBoutiqueChoisi (création uniquement) : une boutique existante peut
+  // désormais changer de type (voir migration 20260917030000), alors que
+  // typeBoutiqueChoisi/estService/estEtablissement doivent continuer de
+  // refléter le type RÉELLEMENT enregistré ailleurs dans ce composant
+  // (ex. "Modifier le profil"). Signalé par l'utilisateur : une boutique
+  // restée en 'produit' n'avait aucun moyen de devenir un Établissement.
+  const [nouveauTypeBoutique, setNouveauTypeBoutique] = useState(boutique?.type_boutique || "produit");
 
   // Toggles de Préférences
   const [chatDesactive, setChatDesactive] = useState(false);
@@ -1726,9 +1734,10 @@ function VueReglages({
           ville,
           quartier,
           telephone_whatsapp: telephone,
-          metier,
-          description_prestation: descriptionPrestation,
-          categorie_etablissement: categorieEtablissement,
+          metier: nouveauTypeBoutique === "service" ? metier : null,
+          description_prestation: nouveauTypeBoutique === "service" ? descriptionPrestation : null,
+          categorie_etablissement: nouveauTypeBoutique === "etablissement" ? categorieEtablissement : null,
+          type_boutique: nouveauTypeBoutique,
         });
       }
       if (userId) {
@@ -2647,7 +2656,37 @@ function VueReglages({
                 />
               </div>
 
-              {estService && (
+              <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-zinc-800">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Type de boutique</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {TYPES_BOUTIQUE.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setNouveauTypeBoutique(t.id)}
+                      className={`px-2 py-2.5 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                        nouveauTypeBoutique === t.id
+                          ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
+                          : "bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className={`fa-solid ${t.icon}`}></i>
+                      <span className="text-center leading-tight">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {nouveauTypeBoutique !== boutique?.type_boutique && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                    <i className="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
+                    <span>
+                      Changer de type efface les informations propres à l&apos;ancien type (métier ou catégorie
+                      d&apos;établissement) et déclenche une nouvelle vérification avant d&apos;être visible du public.
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {nouveauTypeBoutique === "service" && (
                 <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-zinc-800">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier</label>
@@ -2704,7 +2743,7 @@ function VueReglages({
                 </div>
               )}
 
-              {estEtablissement && (
+              {nouveauTypeBoutique === "etablissement" && (
                 <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-zinc-800">
                   <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie d&apos;établissement</label>
                   <select

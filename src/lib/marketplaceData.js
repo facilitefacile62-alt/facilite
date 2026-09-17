@@ -319,9 +319,13 @@ export async function creerBoutique(userId, champs) {
 
 /**
  * Corrige l'étiquette d'une boutique : nom, quartier, ville, WhatsApp, et
- * selon le type déjà fixé à la création, métier/description ou catégorie
- * d'établissement. La position et le type_boutique n'en font pas partie —
- * relevés/choisis une seule fois, à la création.
+ * selon le type de la boutique, métier/description ou catégorie
+ * d'établissement. La position n'en fait pas partie — relevée une seule
+ * fois, à la création.
+ *
+ * champs.type_boutique (optionnel) permet de changer le type d'une
+ * boutique déjà créée (Produit/Service/Établissement) — voir la migration
+ * 20260917030000. Omis (undefined/null), le type actuel est conservé.
  */
 export async function modifierBoutique(storeId, champs) {
   const nom = String(champs?.nom || "").trim();
@@ -336,6 +340,7 @@ export async function modifierBoutique(storeId, champs) {
     p_metier: champs?.metier?.trim() || null,
     p_description_prestation: champs?.description_prestation?.trim() || null,
     p_categorie_etablissement: champs?.categorie_etablissement || null,
+    p_type_boutique: champs?.type_boutique || null,
   });
   if (error) throw new Error(error.message);
   return data;
