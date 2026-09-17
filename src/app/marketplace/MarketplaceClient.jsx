@@ -59,6 +59,7 @@ import {
   obtenirHorairesBoutique,
   obtenirBoutiqueParId,
   enregistrerHoraires,
+  definirDisponibiliteBoutique,
   calculerStatutOuverture,
   obtenirDateHeureDakar,
   JOURS_SEMAINE,
@@ -4958,9 +4959,42 @@ function ModalFicheBoutique({
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
+  // Bascule "Disponible maintenant" — état local optimiste pour un retour
+  // instantané au clic, sans attendre le rechargement complet de la
+  // boutique (voir definirDisponibiliteBoutique/onBoutiqueUpdate).
+  const [modeHorairesActuel, setModeHorairesActuel] = useState(boutique?.mode_horaires || "indiques");
+  const [disponibleManuel, setDisponibleManuel] = useState(boutique?.disponible_manuel !== false);
+  const [dispoEnCours, setDispoEnCours] = useState(false);
+  useEffect(() => {
+    setModeHorairesActuel(boutique?.mode_horaires || "indiques");
+    setDisponibleManuel(boutique?.disponible_manuel !== false);
+  }, [boutique?.mode_horaires, boutique?.disponible_manuel]);
+
+  const basculerDisponibilite = async (disponible) => {
+    if (!boutique?.id || boutique.id === "facilite_shop" || dispoEnCours) return;
+    setDispoEnCours(true);
+    const modeAvant = modeHorairesActuel;
+    const dispoAvant = disponibleManuel;
+    setModeHorairesActuel("manuel");
+    setDisponibleManuel(disponible);
+    try {
+      await definirDisponibiliteBoutique(boutique.id, disponible);
+      onBoutiqueUpdate?.();
+    } catch (err) {
+      setModeHorairesActuel(modeAvant);
+      setDisponibleManuel(dispoAvant);
+      showToast(err?.message || "Erreur lors de la mise à jour de la disponibilité");
+    } finally {
+      setDispoEnCours(false);
+    }
+  };
+
   const statutOuverture = useMemo(() => {
-    return calculerStatutOuverture(boutique, horairesEtablissement);
-  }, [boutique, horairesEtablissement]);
+    return calculerStatutOuverture(
+      { ...boutique, mode_horaires: modeHorairesActuel, disponible_manuel: disponibleManuel },
+      horairesEtablissement
+    );
+  }, [boutique, modeHorairesActuel, disponibleManuel, horairesEtablissement]);
 
   // Persiste l'onglet interne de la fiche boutique (Article/Activité/
   // Domaine, ET le sous-état associé — formulaire de publication,
@@ -5522,6 +5556,57 @@ function ModalFicheBoutique({
                 </p>
               </div>
 
+              {/* Disponibilité : bascule instantanée "Disponible maintenant"
+                  ou grille horaire programmée — deux façons distinctes de
+                  montrer sa disponibilité, au choix du prestataire. */}
+              {estProprietaire && (
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
+                      Disponibilité
+                    </span>
+                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(true)}
+                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                        modeHorairesActuel === "manuel" && disponibleManuel
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-bolt mr-1"></i>
+                      Disponible maintenant
+                    </button>
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(false)}
+                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                        modeHorairesActuel === "manuel" && !disponibleManuel
+                          ? "bg-rose-600 text-white shadow-sm"
+                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-pause mr-1"></i>
+                      Indisponible
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalHorairesOuverte(true)}
+                    className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-calendar-days text-violet-500"></i>
+                    Programmer des horaires
+                  </button>
+                </div>
+              )}
+
               {/* Carte Chiffres & Activité en temps réel */}
               <div className="grid grid-cols-2 gap-2.5">
                 <button
@@ -5628,6 +5713,47 @@ function ModalFicheBoutique({
                   </div>
                 </div>
 
+                {/* Disponibilité : bascule instantanée ou horaires
+                    programmés — même choix que sur l'onglet Service. */}
+                {estProprietaire && (
+                  <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                        <i className="fa-solid fa-circle-dot text-emerald-500"></i>
+                        Disponibilité
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={dispoEnCours}
+                        onClick={() => basculerDisponibilite(true)}
+                        className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                          modeHorairesActuel === "manuel" && disponibleManuel
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                        }`}
+                      >
+                        <i className="fa-solid fa-bolt mr-1"></i>
+                        Disponible maintenant
+                      </button>
+                      <button
+                        type="button"
+                        disabled={dispoEnCours}
+                        onClick={() => basculerDisponibilite(false)}
+                        className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
+                          modeHorairesActuel === "manuel" && !disponibleManuel
+                            ? "bg-rose-600 text-white shadow-sm"
+                            : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                        }`}
+                      >
+                        <i className="fa-solid fa-pause mr-1"></i>
+                        Indisponible
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -5641,8 +5767,8 @@ function ModalFicheBoutique({
                           onClick={() => setModalHorairesOuverte(true)}
                           className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-[10px] font-black hover:bg-blue-100 dark:hover:bg-blue-900/60 transition cursor-pointer"
                         >
-                          <i className="fa-solid fa-pen-to-square mr-1"></i>
-                          Modifier
+                          <i className="fa-solid fa-calendar-days mr-1"></i>
+                          Programmer
                         </button>
                       )}
                     </div>

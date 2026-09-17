@@ -778,6 +778,21 @@ export async function enregistrerHoraires(storeId, horaires, modeHoraires = "ind
 }
 
 /**
+ * Bascule "Disponible maintenant" / "Indisponible" — instantané, ne touche
+ * jamais à la grille horaire déjà programmée (voir
+ * definir_disponibilite_boutique, migration 20260917010000). Distinct de
+ * enregistrerHoraires : sert le bouton rapide, pas le formulaire "Programmer".
+ */
+export async function definirDisponibiliteBoutique(storeId, disponible) {
+  if (!storeId || storeId === "facilite_shop") return;
+  const { error } = await supabase.rpc("definir_disponibilite_boutique", {
+    p_store_id: storeId,
+    p_disponible: Boolean(disponible),
+  });
+  if (error) throw new Error(error.message);
+}
+
+/**
  * Calcule le jour de la semaine (0 = Dimanche ... 6 = Samedi) et l'heure
  * actuelle sur le fuseau horaire officiel du Sénégal (Africa/Dakar, UTC+0).
  */
@@ -840,6 +855,30 @@ export const HORAIRES_DEFAUT = [
  */
 export function calculerStatutOuverture(boutique, horaires = [], dateReference = new Date()) {
   const mode = boutique?.mode_horaires || "indiques";
+
+  // Bascule manuelle instantanée ("Disponible maintenant" / "Indisponible")
+  // — un prestataire (livreur, électricien...) qui n'a pas de grille horaire
+  // fixe. Voir definir_disponibilite_boutique (migration 20260917010000).
+  if (mode === "manuel") {
+    const disponible = boutique?.disponible_manuel !== false;
+    return disponible
+      ? {
+          ouvert: true,
+          mode: "manuel",
+          couleur: "emerald",
+          texteBadge: "Disponible",
+          texteDetail: "Disponible maintenant",
+          renseigne: true,
+        }
+      : {
+          ouvert: false,
+          mode: "manuel",
+          couleur: "rose",
+          texteBadge: "Indisponible",
+          texteDetail: "Indisponible pour le moment",
+          renseigne: true,
+        };
+  }
 
   if (mode === "toujours_ouvert") {
     return {
