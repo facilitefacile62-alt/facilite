@@ -74,7 +74,8 @@
 // v74 (17/09/2026) : boutons /bienvenue encore reduits (54px -> 45px de hauteur)
 // v75 (17/09/2026) : retrait du selecteur Type d'activite sur Informations Vendeur (toujours "produit")
 // v76 (17/09/2026) : ajout du positionnement GPS obligatoire sur Informations Vendeur (manquant)
-const VERSION_CACHE = "facilite-v76";
+// v77 (17/09/2026) : "Publier un article" sans vraie boutique devient "Devenir Vendeur" et mene au vrai formulaire
+const VERSION_CACHE = "facilite-v77";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
