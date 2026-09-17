@@ -73,7 +73,8 @@
 // v73 (17/09/2026) : boutons Facilite/Business reduits (etaient trop imposants)
 // v74 (17/09/2026) : boutons /bienvenue encore reduits (54px -> 45px de hauteur)
 // v75 (17/09/2026) : retrait du selecteur Type d'activite sur Informations Vendeur (toujours "produit")
-const VERSION_CACHE = "facilite-v75";
+// v76 (17/09/2026) : ajout du positionnement GPS obligatoire sur Informations Vendeur (manquant)
+const VERSION_CACHE = "facilite-v76";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
