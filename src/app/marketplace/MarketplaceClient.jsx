@@ -175,6 +175,10 @@ export default function MarketplaceClient() {
   }); // 'acheter' | 'vendre'
 
   const [ongletVendeurInitial, setOngletVendeurInitial] = useState(() => tabParam || "annonces");
+  // Sous-section de "Réglages" à ouvrir au montage de VueVendeur — sert
+  // uniquement à envoyer directement un visiteur sans boutique réelle vers
+  // le formulaire de création (infos + position GPS), voir handleSetOnglet.
+  const [sectionReglagesInitial, setSectionReglagesInitial] = useState(null);
   const [categorie, setCategorie] = useState(null);
   const [boutiques, setBoutiques] = useState([]);
   const [maBoutiqueActive, setMaBoutiqueActive] = useState(null);
@@ -264,17 +268,20 @@ export default function MarketplaceClient() {
     const handleSetOnglet = (e) => {
       if (e?.detail) {
         if (e.detail === "publier") {
-          const b = maBoutiqueActive || boutiques[0] || {
-            id: "facilite_shop",
-            nom: profile?.full_name || "facile demo",
-            owner_id: userId,
-            avatar_url: profile?.avatar_url,
-            cover_url: profile?.cover_url,
-            ville: profile?.city || profile?.location || "Dakar",
-            quartier: profile?.quartier || "Sénégal",
-            telephone_whatsapp: profile?.phone || "+221773014510",
-          };
-          setBoutiqueModal({ ...b, ongletActifInitial: "publier" });
+          const b = maBoutiqueActive || boutiques[0] || null;
+          if (b) {
+            setBoutiqueModal({ ...b, ongletActifInitial: "publier" });
+          } else {
+            // Même bug que handleOuvrirBoutique ci-dessus (fiche fictive
+            // "facilite shop") : sans vraie boutique, "Publier un article"
+            // doit mener au vrai formulaire de création (nom, contact,
+            // position GPS obligatoire — voir FormulaireBoutique), jamais à
+            // une fiche inventée. Signalé par l'utilisateur (visiteur sans
+            // boutique voyant un faux tableau de bord "BOUTIQUE").
+            setOnglet("vendre");
+            setOngletVendeurInitial("parametres");
+            setSectionReglagesInitial("infos_perso");
+          }
         } else if (e.detail === "vendre") {
           setOnglet("vendre");
           setOngletVendeurInitial("annonces");
@@ -575,6 +582,7 @@ export default function MarketplaceClient() {
                 boutiqueActive={maBoutiqueActive}
                 boutiques={boutiques}
                 ongletInitial={ongletVendeurInitial}
+                sectionReglagesInitial={sectionReglagesInitial}
                 onRetourCatalogue={() => setOnglet("acheter")}
               />
             )}
@@ -3076,6 +3084,7 @@ function VueVendeur({
   boutiqueActive: boutiqueProp,
   boutiques: boutiquesProp,
   ongletInitial = "annonces",
+  sectionReglagesInitial = null,
   onRetourCatalogue,
 }) {
   const { profile } = useAuth();
@@ -3121,6 +3130,14 @@ function VueVendeur({
       setOngletVendeur(ongletInitial);
     }
   }, [ongletInitial]);
+
+  // Permet à un appelant externe (handleSetOnglet, "Publier un article" sans
+  // vraie boutique) d'ouvrir directement le formulaire "Modifier le profil".
+  useEffect(() => {
+    if (sectionReglagesInitial) {
+      setSectionReglages(sectionReglagesInitial);
+    }
+  }, [sectionReglagesInitial]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -3389,10 +3406,12 @@ function VueVendeur({
                 <h3 className="text-xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
                   {nomVendeur}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
-                  {estEtablissement ? "ÉTABLISSEMENT" : estService ? "SERVICE" : "BOUTIQUE"}
-                </span>
+                {boutiqueActive && (
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                    {estEtablissement ? "ÉTABLISSEMENT" : estService ? "SERVICE" : "BOUTIQUE"}
+                  </span>
+                )}
               </div>
 
               {/* Statut Ouvert / Fermé */}
@@ -3427,25 +3446,39 @@ function VueVendeur({
                 <span>Modifier le profil</span>
               </button>
 
-              {/* Bouton Aperçu de la boutique (Bleu vif 1:1 Capture 2) */}
-              <button
-                type="button"
-                onClick={() => setModalApercuOuverte(true)}
-                className="w-full mt-1.5 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer bg-[#1877F2] hover:bg-blue-600 text-white shadow-md shadow-blue-500/20 active:scale-98"
-                title="Aperçu public de ma boutique"
-              >
-                <i className="fa-regular fa-eye text-sm"></i>
-                <span>Aperçu de la boutique</span>
-              </button>
+              {/* Bouton Aperçu de la boutique — seulement si une vraie
+                  boutique existe (sinon la modale afficherait une fiche
+                  fictive, voir son repli "facilite_shop" plus bas). */}
+              {boutiqueActive && (
+                <button
+                  type="button"
+                  onClick={() => setModalApercuOuverte(true)}
+                  className="w-full mt-1.5 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer bg-[#1877F2] hover:bg-blue-600 text-white shadow-md shadow-blue-500/20 active:scale-98"
+                  title="Aperçu public de ma boutique"
+                >
+                  <i className="fa-regular fa-eye text-sm"></i>
+                  <span>Aperçu de la boutique</span>
+                </button>
+              )}
             </div>
 
             {/* Menu complet des options avec séparateurs fins (1:1 Capture 2) */}
             <div className="p-2 space-y-1 text-xs font-bold text-gray-800 dark:text-gray-200">
-              {/* 0. Publier un article (Assistant IA) */}
+              {/* 0. Publier un article (Assistant IA) — devient "Devenir
+                  Vendeur" tant qu'aucune vraie boutique n'existe (visiteur) :
+                  sinon ce bouton ouvrait un article rattaché à une boutique
+                  fictive. Mène alors au vrai formulaire de création. */}
               <div className="pb-1">
                 <button
                   type="button"
-                  onClick={() => setOngletVendeur("publier")}
+                  onClick={() => {
+                    if (boutiqueActive) {
+                      setOngletVendeur("publier");
+                    } else {
+                      setSectionReglages("infos_perso");
+                      setOngletVendeur("parametres");
+                    }
+                  }}
                   className={`w-full px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 text-left transition cursor-pointer shadow-sm ${
                     ongletVendeur === "publier"
                       ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20 font-black"
@@ -3453,12 +3486,14 @@ function VueVendeur({
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <i className="fa-solid fa-circle-plus text-base text-emerald-500"></i>
-                    <span className="font-extrabold text-xs">Publier un article</span>
+                    <i className={`fa-solid ${boutiqueActive ? "fa-circle-plus" : "fa-store"} text-base text-emerald-500`}></i>
+                    <span className="font-extrabold text-xs">{boutiqueActive ? "Publier un article" : "Devenir Vendeur"}</span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
-                    IA
-                  </span>
+                  {boutiqueActive && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
+                      IA
+                    </span>
+                  )}
                 </button>
               </div>
 
