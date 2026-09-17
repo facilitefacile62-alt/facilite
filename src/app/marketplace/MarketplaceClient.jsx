@@ -1569,7 +1569,7 @@ function VueReglages({
   const estEtablissement = boutique?.type_boutique === "etablissement";
   const [metier, setMetier] = useState(boutique?.metier || "");
   const [descriptionPrestation, setDescriptionPrestation] = useState(boutique?.description_prestation || "");
-  const [categorieEtablissement, setCategorieEtablissement] = useState(boutique?.categorie_etablissement || "sante");
+  const [categorieEtablissement, setCategorieEtablissement] = useState(boutique?.categorie_etablissement || "point_wave");
 
   // Toggles de Préférences
   const [chatDesactive, setChatDesactive] = useState(false);
@@ -2526,12 +2526,12 @@ function VueReglages({
                     onChange={(e) => setCategorieEtablissement(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   >
-                    <option value="sante">Santé (clinique, pharmacie...)</option>
-                    <option value="finance">Finance (point Wave/Orange Money...)</option>
-                    <option value="beaute">Beauté (salon, barbier...)</option>
+                    <option value="point_wave">Point Wave (agent Wave/Orange Money...)</option>
+                    <option value="pharmacie">Pharmacie</option>
+                    <option value="clinique">Clinique</option>
                     <option value="autre">Autre établissement</option>
                   </select>
-                  {["sante", "finance"].includes(categorieEtablissement) && (
+                  {["point_wave", "pharmacie", "clinique"].includes(categorieEtablissement) && (
                     <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
                       <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
                       <span>
@@ -4864,10 +4864,10 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique }) {
 }
 
 const LIBELLES_CATEGORIE_ETABLISSEMENT = {
-  sante: "Santé",
-  finance: "Finance",
-  beaute: "Beauté",
-  autre: "Établissement",
+  point_wave: "Point Wave",
+  pharmacie: "Pharmacie",
+  clinique: "Clinique",
+  autre: "Autre établissement",
 };
 
 /**
@@ -6842,7 +6842,7 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
     type_boutique: boutique?.type_boutique || "produit",
     metier: boutique?.metier || "",
     description_prestation: boutique?.description_prestation || "",
-    categorie_etablissement: boutique?.categorie_etablissement || "sante",
+    categorie_etablissement: boutique?.categorie_etablissement || "point_wave",
   });
   // Bascule d'affichage uniquement : le select propose la liste + "Autre",
   // mais la valeur réellement stockée dans champs.metier est toujours le
@@ -7083,12 +7083,12 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
             onChange={(e) => setChamps({ ...champs, categorie_etablissement: e.target.value })}
             className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm cursor-pointer"
           >
-            <option value="sante">Santé (clinique, pharmacie...)</option>
-            <option value="finance">Finance (point Wave/Orange Money...)</option>
-            <option value="beaute">Beauté (salon, barbier...)</option>
+            <option value="point_wave">Point Wave (agent Wave/Orange Money...)</option>
+            <option value="pharmacie">Pharmacie</option>
+            <option value="clinique">Clinique</option>
             <option value="autre">Autre établissement</option>
           </select>
-          {["sante", "finance"].includes(champs.categorie_etablissement) && (
+          {["point_wave", "pharmacie", "clinique"].includes(champs.categorie_etablissement) && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
               <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
               <span>
