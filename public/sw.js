@@ -84,7 +84,8 @@
 // v84 (17/09/2026) : sidebar vendeur masque pour un visiteur sans vraie boutique (Mes annonces, Service/metier, etc.)
 // v85 (17/09/2026) : nettoyage onglet Service mobile + Disponibilite ajoutee sur desktop (Service/Etablissement)
 // v86 (17/09/2026) : metier en liste deroulante, fermeture des reglages corrigee, 3e copie du panneau desktop Service/Etablissement alignee
-const VERSION_CACHE = "facilite-v86";
+// v87 (17/09/2026) : champ metier/categorie enfin visible et sauvegarde depuis "Modifier le profil" (bouton le plus visible)
+const VERSION_CACHE = "facilite-v87";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
