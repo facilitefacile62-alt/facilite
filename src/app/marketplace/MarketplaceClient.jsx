@@ -519,11 +519,21 @@ export default function MarketplaceClient() {
                             </h2>
                           </button>
 
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal mt-1 mb-2">
-                            {bActive.ville
-                              ? `${bActive.quartier ? `${bActive.quartier}, ` : ""}${bActive.ville}, Sénégal`
-                              : (profile?.location || "Dakar, Sénégal")}
-                          </p>
+                          <div className="flex items-center justify-center gap-1.5 mt-1 mb-2">
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">
+                              {bActive.ville
+                                ? `${bActive.quartier ? `${bActive.quartier}, ` : ""}${bActive.ville}, Sénégal`
+                                : (profile?.location || "Dakar, Sénégal")}
+                            </p>
+                            {/* Badge Visiteur : disparaît dès qu'une vraie
+                                boutique existe (devient alors le badge
+                                BOUTIQUE sur le bandeau ci-dessus). */}
+                            {!estVraieBoutique && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[8px] font-black uppercase tracking-wider">
+                                Visiteur
+                              </span>
+                            )}
+                          </div>
 
                           <button
                             type="button"
@@ -3424,10 +3434,14 @@ function VueVendeur({
                 <h3 className="text-xl font-black text-zinc-900 dark:text-white leading-tight tracking-tight">
                   {nomVendeur}
                 </h3>
-                {boutiqueActive && (
+                {boutiqueActive ? (
                   <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
                     {estEtablissement ? "ÉTABLISSEMENT" : estService ? "SERVICE" : "BOUTIQUE"}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[9px] font-black uppercase tracking-wider">
+                    Visiteur
                   </span>
                 )}
               </div>
