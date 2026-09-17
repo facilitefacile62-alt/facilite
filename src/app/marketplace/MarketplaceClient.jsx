@@ -3306,6 +3306,24 @@ function VueVendeur({
     }
   }, [userId, choisie, onBoutiqueChange]);
 
+  // Bascule "Disponible maintenant" (desktop) — même RPC que sur mobile
+  // (ModalFicheBoutique), simplement suivie d'un recharger() plutôt que
+  // d'un état local optimiste : boutiqueActive vient déjà de Supabase, pas
+  // besoin de le dupliquer ici.
+  const [dispoEnCours, setDispoEnCours] = useState(false);
+  const basculerDisponibilite = async (disponible) => {
+    if (!boutiqueActive?.id || dispoEnCours) return;
+    setDispoEnCours(true);
+    try {
+      await definirDisponibiliteBoutique(boutiqueActive.id, disponible);
+      await recharger();
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setDispoEnCours(false);
+    }
+  };
+
   useEffect(() => {
     recharger();
   }, [recharger]);
@@ -3996,6 +4014,46 @@ function VueVendeur({
                     )}
                   </div>
                 </div>
+
+                {/* Disponibilité : bascule instantanée ou horaires
+                    programmés — même fonctionnalité que sur mobile. */}
+                <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
+                      Disponibilité
+                    </span>
+                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(true)}
+                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer disabled:opacity-50 ${
+                        boutiqueActive?.mode_horaires === "manuel" && boutiqueActive?.disponible_manuel !== false
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-bolt mr-1"></i>
+                      Disponible maintenant
+                    </button>
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(false)}
+                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer disabled:opacity-50 ${
+                        boutiqueActive?.mode_horaires === "manuel" && boutiqueActive?.disponible_manuel === false
+                          ? "bg-rose-600 text-white shadow-sm"
+                          : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-pause mr-1"></i>
+                      Indisponible
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -4022,7 +4080,7 @@ function VueVendeur({
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie de l&apos;établissement :</span>
                     <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase">
-                      {boutiqueActive?.categorie_etablissement || "Commerce / Local physique"}
+                      {LIBELLES_CATEGORIE_ETABLISSEMENT[boutiqueActive?.categorie_etablissement] || "Non renseignée"}
                     </span>
                   </div>
                   <div className="space-y-1">
@@ -4054,6 +4112,46 @@ function VueVendeur({
                         <span>WhatsApp direct</span>
                       </a>
                     )}
+                  </div>
+                </div>
+
+                {/* Disponibilité : bascule instantanée, ou horaires
+                    programmés via "Modifier l'établissement" ci-dessus. */}
+                <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
+                      Disponibilité
+                    </span>
+                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(true)}
+                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer disabled:opacity-50 ${
+                        boutiqueActive?.mode_horaires === "manuel" && boutiqueActive?.disponible_manuel !== false
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-bolt mr-1"></i>
+                      Disponible maintenant
+                    </button>
+                    <button
+                      type="button"
+                      disabled={dispoEnCours}
+                      onClick={() => basculerDisponibilite(false)}
+                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer disabled:opacity-50 ${
+                        boutiqueActive?.mode_horaires === "manuel" && boutiqueActive?.disponible_manuel === false
+                          ? "bg-rose-600 text-white shadow-sm"
+                          : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      <i className="fa-solid fa-pause mr-1"></i>
+                      Indisponible
+                    </button>
                   </div>
                 </div>
               </div>
@@ -5742,72 +5840,6 @@ function ModalFicheBoutique({
                 </div>
               )}
 
-              {/* Carte Chiffres & Activité en temps réel */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOngletMobile("article");
-                    setOngletActif("produits");
-                  }}
-                  className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 text-left shadow-2xs hover:border-blue-400 transition cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-bold text-zinc-500">Mes Annonces</span>
-                    <i className="fa-regular fa-calendar-days text-blue-500 text-xs"></i>
-                  </div>
-                  <div className="text-xl font-black text-zinc-900 dark:text-white">{listeArticles.length}</div>
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
-                    Voir la vitrine ➔
-                  </span>
-                </button>
-
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 text-left shadow-2xs">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-bold text-zinc-500">Ventes WhatsApp</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  </div>
-                  <div className="text-xl font-black text-emerald-600">Direct Live</div>
-                  <span className="text-[10px] font-bold text-zinc-400">Clients connectés</span>
-                </div>
-              </div>
-
-              {/* Bannière Faire Profit & Boost Commercial */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/60 space-y-2.5 shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">🤑</span>
-                  <h3 className="text-sm font-black text-amber-950 dark:text-amber-100">
-                    Faire profit &amp; Multiplier vos ventes
-                  </h3>
-                </div>
-                <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
-                  Boostez la visibilité de vos articles au sommet de la Marketplace pour recevoir un flux continu de commandes directes sur votre WhatsApp.
-                </p>
-                {estProprietaire && (
-                  <button
-                    type="button"
-                    onClick={() => setOngletActif("publier")}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
-                  >
-                    <i className="fa-solid fa-circle-plus"></i>
-                    <span>Publier un nouvel article (IA)</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Avis clients & Abonnés */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-3 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-star text-amber-400 text-sm"></i>
-                    <span className="text-xs font-black text-zinc-900 dark:text-white">Note &amp; Réputation</span>
-                  </div>
-                  <span className="text-xs font-black text-amber-500">5.0 / 5 ★</span>
-                </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  « Vendeur vérifié et très réactif. Produits conformes et livraison rapide. »
-                </p>
-              </div>
             </div>
           )}
 
