@@ -1667,6 +1667,16 @@ function VueReglages({
           latitude,
           longitude,
           position_precision_m: precisionM,
+          // Sans ces trois champs, "Modifier le profil" (accessible dès
+          // l'arrivée sur la fiche, avant même d'aller dans Réglages)
+          // écrivait un profil qui ignorait totalement le métier / la
+          // catégorie d'établissement — champ absent du formulaire ET du
+          // payload d'enregistrement, alors que modifierBoutique/RPC les
+          // gèrent déjà. Signalé par l'utilisateur : le champ métier
+          // restait introuvable malgré le passage en liste déroulante.
+          metier: estService ? metier : undefined,
+          description_prestation: estService ? descriptionPrestation : undefined,
+          categorie_etablissement: estEtablissement ? categorieEtablissement : undefined,
         });
       } else {
         // Pas encore de vraie boutique (boutique.id est null : l'objet
@@ -1977,7 +1987,7 @@ function VueReglages({
               </div>
             )}
 
-            {!boutique && estService && (
+            {estService && (
               <>
                 <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
                   <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Métier</span>
@@ -2037,7 +2047,7 @@ function VueReglages({
               </>
             )}
 
-            {!boutique && estEtablissement && (
+            {estEtablissement && (
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie d&apos;établissement</label>
                 <select
