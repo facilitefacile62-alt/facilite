@@ -3458,6 +3458,67 @@ function VueVendeur({
     }
   };
 
+  // Édition du métier/catégorie directement dans la carte, sans ouvrir la
+  // fenêtre "Détails de l'entreprise" (fond assombri jugé intrusif pour un
+  // simple champ par l'utilisateur — même correctif que sur mobile).
+  const [editionMetierOuverte, setEditionMetierOuverte] = useState(false);
+  const [metierEdition, setMetierEdition] = useState("");
+  const [metierEditionEstAutre, setMetierEditionEstAutre] = useState(false);
+  const [descriptionPrestationEdition, setDescriptionPrestationEdition] = useState("");
+  const [enregistrementMetierEnCours, setEnregistrementMetierEnCours] = useState(false);
+
+  const handleEnregistrerMetierInline = async () => {
+    if (!boutiqueActive?.id || enregistrementMetierEnCours) return;
+    setEnregistrementMetierEnCours(true);
+    try {
+      await modifierBoutique(boutiqueActive.id, {
+        nom: boutiqueActive.nom,
+        description: boutiqueActive.description,
+        ville: boutiqueActive.ville,
+        quartier: boutiqueActive.quartier,
+        telephone_whatsapp: boutiqueActive.telephone_whatsapp,
+        metier: metierEdition,
+        description_prestation: descriptionPrestationEdition,
+        categorie_etablissement: boutiqueActive.categorie_etablissement,
+        type_boutique: boutiqueActive.type_boutique,
+      });
+      setEditionMetierOuverte(false);
+      await recharger();
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setEnregistrementMetierEnCours(false);
+    }
+  };
+
+  const [editionCategorieOuverte, setEditionCategorieOuverte] = useState(false);
+  const [categorieEdition, setCategorieEdition] = useState("point_wave");
+  const [enregistrementCategorieEnCours, setEnregistrementCategorieEnCours] = useState(false);
+
+  const handleEnregistrerCategorieInline = async () => {
+    if (!boutiqueActive?.id || enregistrementCategorieEnCours) return;
+    setEnregistrementCategorieEnCours(true);
+    try {
+      await modifierBoutique(boutiqueActive.id, {
+        nom: boutiqueActive.nom,
+        description: boutiqueActive.description,
+        ville: boutiqueActive.ville,
+        quartier: boutiqueActive.quartier,
+        telephone_whatsapp: boutiqueActive.telephone_whatsapp,
+        metier: boutiqueActive.metier,
+        description_prestation: boutiqueActive.description_prestation,
+        categorie_etablissement: categorieEdition,
+        type_boutique: boutiqueActive.type_boutique,
+      });
+      setEditionCategorieOuverte(false);
+      await recharger();
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setEnregistrementCategorieEnCours(false);
+    }
+  };
+
   useEffect(() => {
     recharger();
   }, [recharger]);
@@ -4111,42 +4172,110 @@ function VueVendeur({
                 </div>
 
                 <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier / Domaine d&apos;activité :</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold">
-                      {boutiqueActive?.metier || "Commerce & Prestation"}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Description de la prestation :</span>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {boutiqueActive?.description_prestation || boutiqueActive?.description || "Prestation de service sur mesure avec déplacement rapide à Dakar et banlieue."}
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSectionReglages("details_entreprise");
-                        setOngletVendeur("parametres");
-                      }}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-pen mr-1.5"></i>
-                      Modifier mes prestations
-                    </button>
-                    {telephoneVendeur && (
-                      <a
-                        href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  {editionMetierOuverte ? (
+                    <div className="space-y-2.5">
+                      <select
+                        value={metierEditionEstAutre ? "autre" : metierEdition}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "autre") {
+                            setMetierEditionEstAutre(true);
+                            setMetierEdition("");
+                          } else {
+                            setMetierEditionEstAutre(false);
+                            setMetierEdition(v);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
                       >
-                        <i className="fa-brands fa-whatsapp text-sm"></i>
-                        <span>WhatsApp direct</span>
-                      </a>
-                    )}
-                  </div>
+                        <option value="" disabled>Choisissez votre métier</option>
+                        {METIERS_SERVICE.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                        <option value="autre">Autre (précisez)</option>
+                      </select>
+                      {metierEditionEstAutre && (
+                        <input
+                          type="text"
+                          value={metierEdition}
+                          onChange={(e) => setMetierEdition(e.target.value)}
+                          placeholder="Précisez votre métier"
+                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      )}
+                      {!metierEditionEstAutre && METIERS_REGLEMENTES.includes(metierEdition) && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                          <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                        </p>
+                      )}
+                      <textarea
+                        rows={2}
+                        value={descriptionPrestationEdition}
+                        onChange={(e) => setDescriptionPrestationEdition(e.target.value)}
+                        placeholder="Spécialités, expérience, zone d'intervention..."
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={enregistrementMetierEnCours}
+                          onClick={handleEnregistrerMetierInline}
+                          className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                        >
+                          {enregistrementMetierEnCours ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditionMetierOuverte(false)}
+                          className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier / Domaine d&apos;activité :</span>
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold">
+                          {boutiqueActive?.metier || "Commerce & Prestation"}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Description de la prestation :</span>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          {boutiqueActive?.description_prestation || boutiqueActive?.description || "Prestation de service sur mesure avec déplacement rapide à Dakar et banlieue."}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMetierEdition(boutiqueActive?.metier || "");
+                            setMetierEditionEstAutre(Boolean(boutiqueActive?.metier) && !METIERS_SERVICE.includes(boutiqueActive.metier));
+                            setDescriptionPrestationEdition(boutiqueActive?.description_prestation || "");
+                            setEditionMetierOuverte(true);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-pen mr-1.5"></i>
+                          Modifier mes prestations
+                        </button>
+                        {telephoneVendeur && (
+                          <a
+                            href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <i className="fa-brands fa-whatsapp text-sm"></i>
+                            <span>WhatsApp direct</span>
+                          </a>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Disponibilité : bascule instantanée ou horaires
@@ -4211,42 +4340,82 @@ function VueVendeur({
                 </div>
 
                 <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie de l&apos;établissement :</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase">
-                      {LIBELLES_CATEGORIE_ETABLISSEMENT[boutiqueActive?.categorie_etablissement] || "Non renseignée"}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Adresse &amp; Localisation :</span>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                      📍 {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Dakar"}, Sénégal
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSectionReglages("details_entreprise");
-                        setOngletVendeur("parametres");
-                      }}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-pen mr-1.5"></i>
-                      Modifier l&apos;établissement
-                    </button>
-                    {telephoneVendeur && (
-                      <a
-                        href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  {editionCategorieOuverte ? (
+                    <div className="space-y-2">
+                      <select
+                        value={categorieEdition}
+                        onChange={(e) => setCategorieEdition(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
                       >
-                        <i className="fa-brands fa-whatsapp text-sm"></i>
-                        <span>WhatsApp direct</span>
-                      </a>
-                    )}
-                  </div>
+                        <option value="point_wave">Point Wave (agent Wave/Orange Money...)</option>
+                        <option value="pharmacie">Pharmacie</option>
+                        <option value="clinique">Clinique</option>
+                        <option value="autre">Autre établissement</option>
+                      </select>
+                      {["point_wave", "pharmacie", "clinique"].includes(categorieEdition) && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                          <span>Catégorie sensible : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={enregistrementCategorieEnCours}
+                          onClick={handleEnregistrerCategorieInline}
+                          className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                        >
+                          {enregistrementCategorieEnCours ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditionCategorieOuverte(false)}
+                          className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Catégorie de l&apos;établissement :</span>
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase">
+                          {LIBELLES_CATEGORIE_ETABLISSEMENT[boutiqueActive?.categorie_etablissement] || "Non renseignée"}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Adresse &amp; Localisation :</span>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          📍 {boutiqueActive?.quartier ? `${boutiqueActive.quartier}, ` : ""}{boutiqueActive?.ville || "Dakar"}, Sénégal
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCategorieEdition(boutiqueActive?.categorie_etablissement || "point_wave");
+                            setEditionCategorieOuverte(true);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer"
+                        >
+                          <i className="fa-solid fa-pen mr-1.5"></i>
+                          Modifier l&apos;établissement
+                        </button>
+                        {telephoneVendeur && (
+                          <a
+                            href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <i className="fa-brands fa-whatsapp text-sm"></i>
+                            <span>WhatsApp direct</span>
+                          </a>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Disponibilité : bascule instantanée, ou horaires
@@ -5335,6 +5504,74 @@ function ModalFicheBoutique({
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
+  // Édition du métier directement dans la carte "Métier / Prestation"
+  // (Service) et de la catégorie directement dans la carte établissement —
+  // remplace l'ouverture d'une fenêtre "Détails de l'entreprise" séparée
+  // avec fond assombri, jugée intrusive par l'utilisateur pour un simple
+  // champ. Les autres informations (nom, ville...) restent modifiables via
+  // Réglages, seul le métier/la catégorie se modifie ici, en place.
+  const [editionMetierOuverte, setEditionMetierOuverte] = useState(false);
+  const [metierEdition, setMetierEdition] = useState(boutique?.metier || "");
+  const [metierEditionEstAutre, setMetierEditionEstAutre] = useState(
+    Boolean(boutique?.metier) && !METIERS_SERVICE.includes(boutique.metier)
+  );
+  const [descriptionPrestationEdition, setDescriptionPrestationEdition] = useState(boutique?.description_prestation || "");
+  const [enregistrementMetierEnCours, setEnregistrementMetierEnCours] = useState(false);
+
+  const handleEnregistrerMetierInline = async () => {
+    if (!boutique?.id || boutique.id === "facilite_shop" || enregistrementMetierEnCours) return;
+    setEnregistrementMetierEnCours(true);
+    try {
+      await modifierBoutique(boutique.id, {
+        nom,
+        description,
+        ville,
+        quartier,
+        telephone_whatsapp: telephone,
+        metier: metierEdition,
+        description_prestation: descriptionPrestationEdition,
+        categorie_etablissement: boutique?.categorie_etablissement,
+        type_boutique: boutique?.type_boutique,
+      });
+      showToast("✓ Métier enregistré !");
+      setEditionMetierOuverte(false);
+      onBoutiqueUpdate?.();
+    } catch (err) {
+      showToast(err?.message || "Erreur lors de l'enregistrement");
+    } finally {
+      setEnregistrementMetierEnCours(false);
+    }
+  };
+
+  const [editionCategorieOuverte, setEditionCategorieOuverte] = useState(false);
+  const [categorieEdition, setCategorieEdition] = useState(boutique?.categorie_etablissement || "point_wave");
+  const [enregistrementCategorieEnCours, setEnregistrementCategorieEnCours] = useState(false);
+
+  const handleEnregistrerCategorieInline = async () => {
+    if (!boutique?.id || boutique.id === "facilite_shop" || enregistrementCategorieEnCours) return;
+    setEnregistrementCategorieEnCours(true);
+    try {
+      await modifierBoutique(boutique.id, {
+        nom,
+        description,
+        ville,
+        quartier,
+        telephone_whatsapp: telephone,
+        metier: boutique?.metier,
+        description_prestation: boutique?.description_prestation,
+        categorie_etablissement: categorieEdition,
+        type_boutique: boutique?.type_boutique,
+      });
+      showToast("✓ Catégorie enregistrée !");
+      setEditionCategorieOuverte(false);
+      onBoutiqueUpdate?.();
+    } catch (err) {
+      showToast(err?.message || "Erreur lors de l'enregistrement");
+    } finally {
+      setEnregistrementCategorieEnCours(false);
+    }
+  };
+
   // Bascule "Disponible maintenant" — état local optimiste pour un retour
   // instantané au clic, sans attendre le rechargement complet de la
   // boutique (voir definirDisponibiliteBoutique/onBoutiqueUpdate).
@@ -5910,12 +6147,14 @@ function ModalFicheBoutique({
                     <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
                     Métier / Prestation
                   </span>
-                  {estProprietaire && (
+                  {estProprietaire && !editionMetierOuverte && (
                     <button
                       type="button"
                       onClick={() => {
-                        setSectionReglagesInitiale("details_entreprise");
-                        setOngletActif("parametres");
+                        setMetierEdition(boutique?.metier || "");
+                        setMetierEditionEstAutre(Boolean(boutique?.metier) && !METIERS_SERVICE.includes(boutique.metier));
+                        setDescriptionPrestationEdition(boutique?.description_prestation || "");
+                        setEditionMetierOuverte(true);
                       }}
                       className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-black hover:bg-blue-200 dark:hover:bg-blue-800/60 transition cursor-pointer"
                     >
@@ -5924,12 +6163,79 @@ function ModalFicheBoutique({
                     </button>
                   )}
                 </div>
-                <p className="text-sm font-black text-blue-700 dark:text-blue-300">
-                  {boutique?.metier || "Non renseigné"}
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                  {boutique?.description_prestation || "Prestation de service sur mesure."}
-                </p>
+
+                {editionMetierOuverte ? (
+                  <div className="space-y-2.5">
+                    <select
+                      value={metierEditionEstAutre ? "autre" : metierEdition}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "autre") {
+                          setMetierEditionEstAutre(true);
+                          setMetierEdition("");
+                        } else {
+                          setMetierEditionEstAutre(false);
+                          setMetierEdition(v);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                    >
+                      <option value="" disabled>Choisissez votre métier</option>
+                      {METIERS_SERVICE.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                      <option value="autre">Autre (précisez)</option>
+                    </select>
+                    {metierEditionEstAutre && (
+                      <input
+                        type="text"
+                        value={metierEdition}
+                        onChange={(e) => setMetierEdition(e.target.value)}
+                        placeholder="Précisez votre métier"
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    )}
+                    {!metierEditionEstAutre && METIERS_REGLEMENTES.includes(metierEdition) && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                        <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                        <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                      </p>
+                    )}
+                    <textarea
+                      rows={2}
+                      value={descriptionPrestationEdition}
+                      onChange={(e) => setDescriptionPrestationEdition(e.target.value)}
+                      placeholder="Spécialités, expérience, zone d'intervention..."
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={enregistrementMetierEnCours}
+                        onClick={handleEnregistrerMetierInline}
+                        className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                      >
+                        {enregistrementMetierEnCours ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditionMetierOuverte(false)}
+                        className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm font-black text-blue-700 dark:text-blue-300">
+                      {boutique?.metier || "Non renseigné"}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      {boutique?.description_prestation || "Prestation de service sur mesure."}
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Disponibilité : bascule instantanée "Disponible maintenant"
@@ -6002,25 +6308,67 @@ function ModalFicheBoutique({
 
                 {/* Catégorie d'établissement — permet de définir ce que
                     représente ce lieu (Point Wave, pharmacie, salon...). */}
-                <div className="flex items-center justify-between flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-zinc-800">
-                  <span className="font-bold text-zinc-700 dark:text-zinc-300">Catégorie de l&apos;établissement :</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold uppercase text-[10px]">
-                      {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Non renseignée"}
-                    </span>
-                    {estProprietaire && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSectionReglagesInitiale("details_entreprise");
-                          setOngletActif("parametres");
-                        }}
-                        className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-[10px] font-black hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition cursor-pointer"
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                      </button>
+                <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-bold text-zinc-700 dark:text-zinc-300">Catégorie de l&apos;établissement :</span>
+                    {!editionCategorieOuverte && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold uppercase text-[10px]">
+                          {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Non renseignée"}
+                        </span>
+                        {estProprietaire && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategorieEdition(boutique?.categorie_etablissement || "point_wave");
+                              setEditionCategorieOuverte(true);
+                            }}
+                            className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-[10px] font-black hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition cursor-pointer"
+                          >
+                            <i className="fa-solid fa-pen-to-square"></i>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
+
+                  {editionCategorieOuverte && (
+                    <div className="space-y-2">
+                      <select
+                        value={categorieEdition}
+                        onChange={(e) => setCategorieEdition(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
+                      >
+                        <option value="point_wave">Point Wave (agent Wave/Orange Money...)</option>
+                        <option value="pharmacie">Pharmacie</option>
+                        <option value="clinique">Clinique</option>
+                        <option value="autre">Autre établissement</option>
+                      </select>
+                      {["point_wave", "pharmacie", "clinique"].includes(categorieEdition) && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                          <span>Catégorie sensible : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={enregistrementCategorieEnCours}
+                          onClick={handleEnregistrerCategorieInline}
+                          className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                        >
+                          {enregistrementCategorieEnCours ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditionCategorieOuverte(false)}
+                          className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Disponibilité : bascule instantanée ou horaires
@@ -6872,12 +7220,14 @@ function ModalFicheBoutique({
                     <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
                     Prestations de Service &amp; Métier
                   </h4>
-                  {estProprietaire && (
+                  {estProprietaire && !editionMetierOuverte && (
                     <button
                       type="button"
                       onClick={() => {
-                        setSectionReglagesInitiale("details_entreprise");
-                        setOngletActif("parametres");
+                        setMetierEdition(boutique?.metier || "");
+                        setMetierEditionEstAutre(Boolean(boutique?.metier) && !METIERS_SERVICE.includes(boutique.metier));
+                        setDescriptionPrestationEdition(boutique?.description_prestation || "");
+                        setEditionMetierOuverte(true);
                       }}
                       className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-black hover:bg-blue-200 dark:hover:bg-blue-800/60 transition cursor-pointer"
                     >
@@ -6886,12 +7236,79 @@ function ModalFicheBoutique({
                     </button>
                   )}
                 </div>
-                <p className="text-sm font-black text-blue-700 dark:text-blue-300">
-                  {boutique?.metier || "Non renseigné"}
-                </p>
-                <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                  {boutique?.description_prestation || description || "Prestation de service sur mesure avec déplacement direct et intervention qualifiée."}
-                </p>
+
+                {editionMetierOuverte ? (
+                  <div className="space-y-2.5">
+                    <select
+                      value={metierEditionEstAutre ? "autre" : metierEdition}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "autre") {
+                          setMetierEditionEstAutre(true);
+                          setMetierEdition("");
+                        } else {
+                          setMetierEditionEstAutre(false);
+                          setMetierEdition(v);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                    >
+                      <option value="" disabled>Choisissez votre métier</option>
+                      {METIERS_SERVICE.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                      <option value="autre">Autre (précisez)</option>
+                    </select>
+                    {metierEditionEstAutre && (
+                      <input
+                        type="text"
+                        value={metierEdition}
+                        onChange={(e) => setMetierEdition(e.target.value)}
+                        placeholder="Précisez votre métier"
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    )}
+                    {!metierEditionEstAutre && METIERS_REGLEMENTES.includes(metierEdition) && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                        <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                        <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                      </p>
+                    )}
+                    <textarea
+                      rows={2}
+                      value={descriptionPrestationEdition}
+                      onChange={(e) => setDescriptionPrestationEdition(e.target.value)}
+                      placeholder="Spécialités, expérience, zone d'intervention..."
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={enregistrementMetierEnCours}
+                        onClick={handleEnregistrerMetierInline}
+                        className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                      >
+                        {enregistrementMetierEnCours ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditionMetierOuverte(false)}
+                        className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm font-black text-blue-700 dark:text-blue-300">
+                      {boutique?.metier || "Non renseigné"}
+                    </p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                      {boutique?.description_prestation || description || "Prestation de service sur mesure avec déplacement direct et intervention qualifiée."}
+                    </p>
+                  </>
+                )}
               </div>
 
               {estProprietaire && (
@@ -6964,12 +7381,12 @@ function ModalFicheBoutique({
                     <i className="fa-solid fa-building text-emerald-600"></i>
                     Informations de l&apos;Établissement
                   </h4>
-                  {estProprietaire && (
+                  {estProprietaire && !editionCategorieOuverte && (
                     <button
                       type="button"
                       onClick={() => {
-                        setSectionReglagesInitiale("details_entreprise");
-                        setOngletActif("parametres");
+                        setCategorieEdition(boutique?.categorie_etablissement || "point_wave");
+                        setEditionCategorieOuverte(true);
                       }}
                       className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black hover:bg-emerald-200 dark:hover:bg-emerald-800/60 transition cursor-pointer"
                     >
@@ -6981,12 +7398,52 @@ function ModalFicheBoutique({
                 <p className="text-xs text-zinc-600 dark:text-zinc-300">
                   {description || `Établissement et local physique situé à ${ville || "Dakar"}.`}
                 </p>
-                <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-                  <span className="font-bold text-zinc-500">Catégorie :</span>
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold uppercase text-[10px]">
-                    {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Non renseignée"}
-                  </span>
-                </div>
+
+                {editionCategorieOuverte ? (
+                  <div className="space-y-2">
+                    <select
+                      value={categorieEdition}
+                      onChange={(e) => setCategorieEdition(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
+                    >
+                      <option value="point_wave">Point Wave (agent Wave/Orange Money...)</option>
+                      <option value="pharmacie">Pharmacie</option>
+                      <option value="clinique">Clinique</option>
+                      <option value="autre">Autre établissement</option>
+                    </select>
+                    {["point_wave", "pharmacie", "clinique"].includes(categorieEdition) && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
+                        <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                        <span>Catégorie sensible : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={enregistrementCategorieEnCours}
+                        onClick={handleEnregistrerCategorieInline}
+                        className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
+                      >
+                        {enregistrementCategorieEnCours ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditionCategorieOuverte(false)}
+                        className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                    <span className="font-bold text-zinc-500">Catégorie :</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold uppercase text-[10px]">
+                      {LIBELLES_CATEGORIE_ETABLISSEMENT[boutique?.categorie_etablissement] || "Non renseignée"}
+                    </span>
+                  </div>
+                )}
+
                 <div className="text-xs text-zinc-500 pt-1">
                   <span>📍 Adresse : {quartier ? `${quartier}, ` : ""}{ville || "Dakar"}</span>
                 </div>
