@@ -89,7 +89,8 @@
 // v89 (17/09/2026) : edition du metier/categorie directement dans la carte, plus de fenetre avec fond assombri
 // v90 (17/09/2026) : le metier/categorie enregistre s'affiche enfin apres sauvegarde (fiche mobile ne restait plus figee)
 // v91 (17/09/2026) : le metier/categorie enregistre depuis la carte inline force enfin le vrai type de boutique (etait silencieusement ignore avant)
-const VERSION_CACHE = "facilite-v91";
+// v92 (17/09/2026) : clic sur marqueurs superposes (carte Autour de moi) zoome pour les separer au lieu de rester sans effet
+const VERSION_CACHE = "facilite-v92";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
