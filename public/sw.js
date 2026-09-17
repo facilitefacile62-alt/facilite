@@ -76,7 +76,8 @@
 // v76 (17/09/2026) : ajout du positionnement GPS obligatoire sur Informations Vendeur (manquant)
 // v77 (17/09/2026) : "Publier un article" sans vraie boutique devient "Devenir Vendeur" et mene au vrai formulaire
 // v78 (17/09/2026) : meme correctif sur la carte de profil du catalogue Acheteur
-const VERSION_CACHE = "facilite-v78";
+// v79 (17/09/2026) : badge "Visiteur" tant qu'aucune vraie boutique n'existe
+const VERSION_CACHE = "facilite-v79";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
