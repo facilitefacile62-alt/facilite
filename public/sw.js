@@ -88,7 +88,8 @@
 // v88 (17/09/2026) : possibilite de changer le type de boutique existante (Produit/Service/Etablissement) dans Details de l'entreprise
 // v89 (17/09/2026) : edition du metier/categorie directement dans la carte, plus de fenetre avec fond assombri
 // v90 (17/09/2026) : le metier/categorie enregistre s'affiche enfin apres sauvegarde (fiche mobile ne restait plus figee)
-const VERSION_CACHE = "facilite-v90";
+// v91 (17/09/2026) : le metier/categorie enregistre depuis la carte inline force enfin le vrai type de boutique (etait silencieusement ignore avant)
+const VERSION_CACHE = "facilite-v91";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
