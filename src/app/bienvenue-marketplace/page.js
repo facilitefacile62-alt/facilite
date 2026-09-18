@@ -49,38 +49,38 @@ function BienvenueMarketplaceContent() {
           </div>
 
           <div className="space-y-3.5 pt-1">
-            {/* Option Visiteur - Style Pilule avec bordure orange inspiré de Capture 1 */}
+            {/* Option Visiteur - Fond Blanc & Bordure Noire avec forme Pilule */}
             <button
               type="button"
               onClick={choisirVisiteur}
               disabled={enCours}
-              className="group relative w-full px-5 py-3.5 sm:py-4 bg-zinc-950 dark:bg-black border-2 border-[#FF7A00] hover:border-[#FF9500] active:scale-[0.98] rounded-full transition-all duration-300 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-[0_0_16px_-3px_rgba(255,122,0,0.3)] hover:shadow-[0_0_24px_-2px_rgba(255,122,0,0.5)] hover:bg-zinc-900"
+              className="group relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white dark:bg-zinc-800/90 border-2 border-gray-900 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 active:scale-[0.98] rounded-full transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-xs hover:shadow-md"
             >
-              <div className="w-10 h-10 shrink-0 rounded-full bg-[#FF7A00]/15 border border-[#FF7A00]/30 flex items-center justify-center text-[#FF7A00] text-lg group-hover:scale-110 transition-transform duration-200">
+              <div className="w-10 h-10 shrink-0 rounded-full bg-gray-100 dark:bg-zinc-700/60 flex items-center justify-center text-gray-900 dark:text-white text-base group-hover:scale-105 transition-transform">
                 <i className="fa-solid fa-bag-shopping"></i>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-[15px] sm:text-base text-white tracking-tight leading-snug">Visiteur</p>
-                <p className="text-xs text-zinc-300 dark:text-zinc-400 font-medium line-clamp-1">Je veux acheter et découvrir les offres</p>
+                <p className="font-black text-[15px] text-gray-900 dark:text-white tracking-tight">Visiteur</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium line-clamp-1">Je veux acheter et découvrir les offres</p>
               </div>
-              <i className="fa-solid fa-chevron-right text-[#FF7A00]/80 text-xs group-hover:translate-x-1 group-hover:text-[#FF7A00] transition-all"></i>
+              <i className="fa-solid fa-chevron-right text-gray-300 dark:text-zinc-600 text-xs group-hover:translate-x-0.5 group-hover:text-gray-500 transition-all"></i>
             </button>
 
-            {/* Option Vendeur - Style Pilule avec bordure argentée inspiré de Capture 1 */}
+            {/* Option Vendeur - Vert Fluo avec forme Pilule */}
             <button
               type="button"
               onClick={choisirVendeur}
               disabled={enCours}
-              className="group relative w-full px-5 py-3.5 sm:py-4 bg-zinc-950 dark:bg-black border-2 border-zinc-600 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 active:scale-[0.98] rounded-full transition-all duration-300 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left shadow-xs hover:shadow-[0_0_18px_rgba(255,255,255,0.1)] hover:bg-zinc-900"
+              className="group relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-[#10E688] hover:bg-[#0fd67e] active:scale-[0.98] rounded-full shadow-[0_8px_20px_-4px_rgba(16,230,136,0.4)] hover:shadow-[0_10px_25px_-3px_rgba(16,230,136,0.5)] transition-all duration-200 cursor-pointer disabled:opacity-60 flex items-center gap-3.5 text-left border border-emerald-300/40"
             >
-              <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-300 text-lg group-hover:scale-110 transition-transform duration-200">
+              <div className="w-10 h-10 shrink-0 rounded-full bg-gray-950/10 dark:bg-black/15 flex items-center justify-center text-gray-950 text-base group-hover:scale-105 transition-transform">
                 <i className="fa-solid fa-store"></i>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-[15px] sm:text-base text-white tracking-tight leading-snug">Vendeur</p>
-                <p className="text-xs text-zinc-400 font-medium line-clamp-1">Je veux vendre et ouvrir ma boutique</p>
+                <p className="font-black text-[15px] text-gray-950 tracking-tight">Vendeur</p>
+                <p className="text-xs text-gray-950/75 font-semibold line-clamp-1">Je veux vendre et ouvrir ma boutique</p>
               </div>
-              <i className="fa-solid fa-chevron-right text-zinc-500 text-xs group-hover:translate-x-1 group-hover:text-zinc-300 transition-all"></i>
+              <i className="fa-solid fa-chevron-right text-gray-950/40 text-xs group-hover:translate-x-0.5 group-hover:text-gray-950/70 transition-all"></i>
             </button>
           </div>
 
