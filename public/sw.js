@@ -104,7 +104,8 @@
 // v104 (18/09/2026) : selecteur de metier organise par domaine sur /profil (remplace le champ texte libre)
 // v105 (18/09/2026) : liste de metiers etendue a 207 entrees / 14 categories (etait incomplete)
 // v106 (18/09/2026) : apercu d'article robuste face a une photo qui echoue au chargement (fond sombre + repli icone)
-const VERSION_CACHE = "facilite-v106";
+// v107 (18/09/2026) : "Vous etes ici" ne bloque plus le survol des boutiques superposees (pane Leaflet dedie, z-index sous overlayPane/markerPane)
+const VERSION_CACHE = "facilite-v107";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
