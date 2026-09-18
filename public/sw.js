@@ -107,7 +107,8 @@
 // v107 (18/09/2026) : "Vous etes ici" ne bloque plus le survol des boutiques superposees (pane Leaflet dedie, z-index sous overlayPane/markerPane)
 // v108 (18/09/2026) : carte de bienvenue (choix d'univers) centree verticalement au lieu d'alignee en haut
 // v109 (18/09/2026) : carrousel Snapchat lenses circulaire avec anneau blanc sur la boutique active et produits au survol
-const VERSION_CACHE = "facilite-v109";
+// v110 (18/09/2026) : synchronisation du carrousel Snapchat circulaire sur CarteBoutiques et GlobeExplorateurBoutiques avec premier element actif
+const VERSION_CACHE = "facilite-v110";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

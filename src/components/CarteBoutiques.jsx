@@ -68,6 +68,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const leafletRef = useRef(null);
   const menuFiltresRef = useRef(null);
   const popupsBoutiquesRef = useRef(new Map());
+  const [boutiqueActiveId, setBoutiqueActiveId] = useState(null);
   const [echec, setEchec] = useState(false);
 
   // Cadre de sélection déplaçable/redimensionnable ("voir tout ce qu'il y a
@@ -892,46 +893,73 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               réduction (28px) avait déjà été faite mais jugée insuffisante
               par l'utilisateur — confirmé qu'il veut rester sur ce même
               principe (flottant sur la carte), juste poussé plus loin. */}
-          <div className="absolute inset-x-0 bottom-0 z-[400] pt-6 bg-gradient-to-t from-black/75 via-black/40 to-transparent pointer-events-none">
+          <div className="absolute inset-x-0 bottom-2 z-[400] px-2 flex justify-center pointer-events-none">
             {!modeCompact && boutiquesAffichees.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pb-0.5 pointer-events-auto">
-                {boutiquesAffichees.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => {
-                      carteRef.current?.flyTo(b.position, 15, { duration: 1 });
-                      onChoisirBoutique?.(b.id);
-                    }}
-                    className="flex flex-col items-center gap-0 shrink-0 rounded-xl hover:bg-gray-800/80 transition cursor-pointer"
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full overflow-hidden border-2 bg-gray-800 flex items-center justify-center ${
-                        b.estPremium ? "border-amber-400" : "border-gray-700"
-                      }`}
+              <div className="pointer-events-auto w-full max-w-lg bg-black/40 backdrop-blur-xl rounded-full py-1.5 px-3 sm:px-6 border border-white/15 shadow-[0_8px_30px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-2.5 sm:gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory">
+                {boutiquesAffichees.map((b, idx) => {
+                  const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={(e) => {
+                        setBoutiqueActiveId(b.id);
+                        carteRef.current?.flyTo(b.position, 15.5, { duration: 0.8 });
+                        const handler = popupsBoutiquesRef.current.get(b.id);
+                        if (handler?.ouvrir) handler.ouvrir();
+                        onChoisirBoutique?.(b.id);
+                        e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                      }}
+                      onMouseEnter={() => {
+                        const handler = popupsBoutiquesRef.current.get(b.id);
+                        if (handler?.ouvrir) handler.ouvrir();
+                      }}
+                      onMouseLeave={() => {
+                        const handler = popupsBoutiquesRef.current.get(b.id);
+                        if (handler?.fermer) handler.fermer();
+                      }}
+                      className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
                     >
-                      {b.avatar_config ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={dataUriAvatarBoutique(b.avatar_config, 24)}
-                          alt={b.nom}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-white text-[8px] font-black">
-                          {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[8px] font-bold text-gray-300 max-w-[52px] truncate leading-tight">
-                      {b.estPremium && <span className="text-amber-400">★ </span>}
-                      {b.nom}
-                    </span>
-                  </button>
-                ))}
+                      <div
+                        className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
+                          estSelectionne
+                            ? "w-13 h-13 sm:w-14 sm:h-14 p-[3.5px] bg-white shadow-[0_0_24px_rgba(255,255,255,0.9),0_6px_20px_rgba(0,0,0,0.7)] ring-3 ring-black/50 scale-110 z-10"
+                            : "w-8 h-8 sm:w-9 sm:h-9 p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 opacity-75 hover:opacity-100 hover:scale-105 shadow-md"
+                        }`}
+                      >
+                        <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
+                          {b.avatar_config ? (
+                            <img
+                              src={dataUriAvatarBoutique(b.avatar_config, 48)}
+                              alt={b.nom}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-white text-[9px] font-black">
+                              {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
+                            </span>
+                          )}
+                        </div>
+                        {b.estPremium && (
+                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[7px] font-black border border-white shadow-xs">
+                            👑
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`transition-all duration-200 truncate ${
+                          estSelectionne
+                            ? "mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] border border-gray-200"
+                            : "mt-0.5 text-[8px] font-extrabold text-gray-300 max-w-[50px] drop-shadow-md group-hover:text-white"
+                        }`}
+                      >
+                        {b.nom}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
-
           </div>
         </div>
       ) : (

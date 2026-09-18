@@ -191,6 +191,13 @@ export default function GlobeExplorateurBoutiques({
     );
   }, [boutiques]);
 
+  // Sélectionne par défaut la 1ère boutique pour activer immédiatement l'anneau blanc façon Lens Snapchat (Capture 1)
+  useEffect(() => {
+    if (!boutiqueSelectionnee && marqueurs.length > 0) {
+      setBoutiqueSelectionnee(marqueurs[0]);
+    }
+  }, [marqueurs, boutiqueSelectionnee]);
+
   const selectionnerBoutiqueCarousel = (b, element = null) => {
     setBoutiqueSelectionnee(b);
     const handler = popupsBoutiquesRef.current.get(b.id);
@@ -1437,7 +1444,7 @@ export default function GlobeExplorateurBoutiques({
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
                   const aPhoto = b.photo ? urlPhoto(b.photo) : null;
-                  const estSelectionne = boutiqueSelectionnee?.id === b.id;
+                  const estSelectionne = boutiqueSelectionnee ? boutiqueSelectionnee.id === b.id : idx === 0;
 
                   return (
                     <button
@@ -1460,14 +1467,14 @@ export default function GlobeExplorateurBoutiques({
                       <div
                         className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                           estSelectionne
-                            ? "w-15 h-15 sm:w-16 sm:h-16 p-[3.5px] bg-white shadow-[0_0_24px_rgba(255,255,255,0.7),0_10px_25px_rgba(0,0,0,0.6)] ring-4 ring-black/40 scale-110 z-10"
-                            : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 opacity-80 hover:opacity-100 hover:scale-105 shadow-md"
+                            ? "w-16 h-16 sm:w-18 sm:h-18 p-[4px] bg-white shadow-[0_0_32px_rgba(255,255,255,0.95),0_10px_30px_rgba(0,0,0,0.8)] ring-4 ring-black/60 scale-115 z-20"
+                            : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 opacity-75 hover:opacity-100 hover:scale-105 shadow-md"
                         }`}
                       >
-                        <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-black">
                           {b.avatar_config ? (
                             <img
-                              src={dataUriAvatarBoutique(b.avatar_config, 56)}
+                              src={dataUriAvatarBoutique(b.avatar_config, 64)}
                               alt={b.nom}
                               className="w-full h-full object-cover"
                             />
