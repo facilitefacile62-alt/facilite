@@ -610,7 +610,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 className="absolute -bottom-6 left-1/2 -translate-x-1/2 translate-y-full mt-2 w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-2xl active:scale-95 shadow-orange-500/50 cursor-pointer"
                 title="Voir les boutiques dans ce cadre"
               >
-                <i className="fa-solid fa-camera-retro text-base"></i>
+                <i className="fa-solid fa-magnifying-glass text-base"></i>
               </button>
             </div>
           )}
@@ -712,7 +712,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                   }`}
                   title="Voir toutes les boutiques d'une zone"
                 >
-                  <i className="fa-solid fa-camera-retro text-xs"></i>
+                  <i className="fa-solid fa-magnifying-glass text-xs"></i>
                 </button>
 
                 <button
