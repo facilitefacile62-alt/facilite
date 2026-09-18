@@ -90,7 +90,8 @@
 // v90 (17/09/2026) : le metier/categorie enregistre s'affiche enfin apres sauvegarde (fiche mobile ne restait plus figee)
 // v91 (17/09/2026) : le metier/categorie enregistre depuis la carte inline force enfin le vrai type de boutique (etait silencieusement ignore avant)
 // v92 (17/09/2026) : clic sur marqueurs superposes (carte Autour de moi) zoome pour les separer au lieu de rester sans effet
-const VERSION_CACHE = "facilite-v92";
+// v93 (18/09/2026) : bouton flottant "Lens" sur la fiche boutique, raccourci vers le scan IA Zero Saisie
+const VERSION_CACHE = "facilite-v93";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
