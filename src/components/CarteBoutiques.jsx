@@ -23,7 +23,7 @@
 // écran : ce composant reste dans son cadre compact, intégré à côté de la
 // liste de résultats, c'est la différence assumée avec le Globe.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { echapperHtml, calculerStatutOuverture } from "@/lib/marketplaceData";
+import { echapperHtml, calculerStatutOuverture, urlPhoto } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
 const COULEUR = "#1877F2";
@@ -500,8 +500,31 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               ? echapperHtml(LIBELLES_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "Établissement")
               : `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`;
 
+          // Aperçu des articles en vignettes — permet de voir ce que vend la
+          // boutique directement au survol, sans avoir à l'ouvrir. Demande
+          // explicite de l'utilisateur. N'apparaît que pour les boutiques
+          // 'produit' qui ont de vraies photos (service/établissement n'ont
+          // jamais d'article, b.articles reste vide pour elles).
+          const photosApercu = b.articles
+            .map((a) => a.photos?.[0])
+            .filter(Boolean)
+            .slice(0, 5);
+          const vignettesHtml = photosApercu.length
+            ? `<div style="display:flex;gap:4px;margin-bottom:6px;">
+                ${photosApercu
+                  .map(
+                    (chemin) => `
+                  <div style="width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid rgba(255,255,255,0.18);">
+                    <img src="${urlPhoto(chemin)}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                  </div>`
+                  )
+                  .join("")}
+              </div>`
+            : "";
+
           const contenuBulle = `
             <div style="min-width:140px;padding:2px 0;color:#fff;font-family:inherit;">
+              ${vignettesHtml}
               <div style="font-size:12px;font-weight:900;color:#ffffff;line-height:1.2;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(b.nom)}</div>
               ${alarmeBadgeHtml}
               <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;font-size:10px;">
