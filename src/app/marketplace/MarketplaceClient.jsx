@@ -5529,6 +5529,14 @@ function ModalFicheBoutique({
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [ongletMobile, setOngletMobile] = useState("article"); // Articles par défaut : c'est ce qu'on vient voir en ouvrant une boutique
 
+  // Jeton incrémenté par le bouton flottant "Lens" (scan IA) : passé à
+  // FormulaireArticle pour déclencher automatiquement l'appareil photo dès
+  // l'arrivée sur "Publier un article", sans repasser par son propre bouton
+  // "Scanner le produit avec l'IA". Remis à zéro par FormulaireArticle une
+  // fois consommé (onAutoScanDeclenche) : sans ça, une navigation normale et
+  // non liée vers "Publier un article" ré-ouvrirait la caméra à tort.
+  const [jetonAutoScan, setJetonAutoScan] = useState(0);
+
   // Édition du métier directement dans la carte "Métier / Prestation"
   // (Service) et de la catégorie directement dans la carte établissement —
   // remplace l'ouverture d'une fenêtre "Détails de l'entreprise" séparée
@@ -5917,6 +5925,8 @@ function ModalFicheBoutique({
             <FormulaireArticle
               userId={userId}
               storeId={boutique?.id || "facilite_shop"}
+              jetonAutoScan={jetonAutoScan}
+              onAutoScanDeclenche={() => setJetonAutoScan(0)}
               onPublie={async () => {
                 if (boutique?.id && boutique?.id !== "facilite_shop") {
                   try {
@@ -6486,6 +6496,24 @@ function ModalFicheBoutique({
             title="Publier un nouvel article"
           >
             <i className="fa-solid fa-plus"></i>
+          </button>
+        )}
+
+        {/* Bouton flottant "Lens" — raccourci vers le scan IA (Zéro Saisie,
+            déjà présent dans "Publier un article") directement depuis la
+            fiche, sans devoir d'abord y naviguer manuellement. Demandé par
+            l'utilisateur, inspiré d'un bouton flottant de scan vu ailleurs. */}
+        {estProprietaire && ongletActif !== "publier" && ongletActif !== "parametres" && (
+          <button
+            type="button"
+            onClick={() => {
+              setJetonAutoScan((j) => j + 1);
+              setOngletActif("publier");
+            }}
+            className="fixed bottom-24 right-5 z-40 w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-2xl active:scale-95 shadow-orange-500/40 cursor-pointer"
+            title="Scanner un produit avec l'IA (Lens)"
+          >
+            <i className="fa-solid fa-wand-magic-sparkles text-lg"></i>
           </button>
         )}
 
@@ -8607,7 +8635,7 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
   );
 }
 
-function FormulaireArticle({ userId, storeId, onPublie }) {
+function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoScanDeclenche }) {
   const { session } = useAuth();
   const [champs, setChamps] = useState({
     titre: "",
@@ -8628,6 +8656,17 @@ function FormulaireArticle({ userId, storeId, onPublie }) {
   const [motsCles, setMotsCles] = useState([]);
   const champFichier = useRef(null);
   const champScanCamera = useRef(null);
+
+  // Bouton flottant "Lens" (ModalFicheBoutique) : ouvre directement
+  // l'appareil photo dès l'arrivée sur ce formulaire au lieu de forcer un
+  // second clic sur "Scanner le produit avec l'IA" ci-dessous.
+  useEffect(() => {
+    if (jetonAutoScan) {
+      champScanCamera.current?.click();
+      onAutoScanDeclenche?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jetonAutoScan]);
 
   // Animation et étapes dynamiques pendant le scan IA
   useEffect(() => {
