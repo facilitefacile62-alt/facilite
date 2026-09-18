@@ -22,7 +22,7 @@ function BienvenueContent() {
   };
 
   return (
-    <div className="relative min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-start items-center px-4 pt-4 sm:pt-8 pb-10 overflow-hidden transition-colors selection:bg-[#10E688] selection:text-black">
+    <div className="relative min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-4 py-8 overflow-hidden transition-colors selection:bg-[#10E688] selection:text-black">
       {/* Lueur d'ambiance douce d'origine */}
       <div
         aria-hidden="true"
