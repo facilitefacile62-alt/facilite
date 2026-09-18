@@ -676,6 +676,131 @@ export default function GlobeExplorateurBoutiques({
 
       const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
 
+      // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
+      const articlesBoutique = (b.articles && b.articles.length > 0)
+        ? b.articles
+        : (tousArticles || []).filter((a) => a.boutique_id === b.id);
+      const articlesApercu = articlesBoutique.slice(0, 6);
+
+      const htmlBulleProduits = `
+        <div class="bulle-produits-container" style="position:relative; width:210px; max-width:240px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+          <!-- Bouton Fermer X -->
+          <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
+
+          <!-- En-tête : Nom boutique + quartier -->
+          <div class="btn-ouvrir-boutique-header" style="cursor:pointer; margin-bottom:8px; padding-right:22px;">
+            <div style="font-size:12px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${nomCourt}</div>
+            <div style="font-size:9.5px; font-weight:600; color:#64748b; display:flex; align-items:center; gap:3px; margin-top:2px;">
+              <span style="color:#0284c7;">📍</span> <span>${quartier}</span>
+              ${b.distance_km ? `<span style="color:#94a3b8;">· ${distanceLisible(b.distance_km)}</span>` : ""}
+            </div>
+          </div>
+
+          <!-- Carrousel des produits -->
+          ${
+            articlesApercu.length > 0
+              ? `
+                <div style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch;">
+                  ${articlesApercu
+                    .map((art) => {
+                      const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : "");
+                      const prixTxt = art.prix_xof || art.prix;
+                      return `
+                        <div data-article-id="${art.id}" style="flex-shrink:0; width:84px; height:110px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
+                          ${
+                            photoUrl
+                              ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.replaceWith(Object.assign(document.createElement('div'),{style:'width:100%;height:100%;background:#c4a4b8;display:flex;align-items:center;justify-content:center;font-size:22px;',textContent:'🛍️'}))" />`
+                              : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
+                          }
+                          <div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;">
+                            <div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>
+                            ${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}
+                          </div>
+                        </div>
+                      `;
+                    })
+                    .join("")}
+                </div>
+              `
+              : `
+                <div class="btn-ouvrir-boutique-header" style="width:100%; padding:14px 8px; text-align:center; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1; cursor:pointer;">
+                  <div style="font-size:18px; margin-bottom:2px;">🏪</div>
+                  <div style="font-size:10px; font-weight:700; color:#64748b;">Découvrir la boutique</div>
+                </div>
+              `
+          }
+        </div>
+      `;
+
+      const popup = L.popup({
+        className: "carte-bulle-produits-popup",
+        closeButton: false,
+        offset: [0, -38],
+        autoPan: false,
+        closeOnClick: false,
+      }).setContent(htmlBulleProduits);
+
+      let timerSurvol = null;
+
+      const attacherEcouteursPopup = () => {
+        setTimeout(() => {
+          const el = popup.getElement();
+          if (!el) return;
+
+          el.addEventListener("mouseenter", () => {
+            if (timerSurvol) clearTimeout(timerSurvol);
+          });
+          el.addEventListener("mouseleave", () => {
+            timerSurvol = setTimeout(() => {
+              carte.closePopup(popup);
+            }, 300);
+          });
+
+          const btnFermer = el.querySelector(".btn-fermer-bulle");
+          if (btnFermer) {
+            btnFermer.onclick = (e) => {
+              e.stopPropagation();
+              carte.closePopup(popup);
+            };
+          }
+
+          el.querySelectorAll(".btn-ouvrir-boutique-header").forEach((btn) => {
+            btn.onclick = (e) => {
+              e.stopPropagation();
+              carte.closePopup(popup);
+              setBoutiqueSelectionnee(b);
+              setVueBoutiqueDetails(true);
+            };
+          });
+
+          el.querySelectorAll("[data-article-id]").forEach((card) => {
+            card.onclick = (e) => {
+              e.stopPropagation();
+              carte.closePopup(popup);
+              const artId = card.getAttribute("data-article-id");
+              if (typeof onVoirArticle === "function") {
+                onVoirArticle(artId);
+              } else {
+                setBoutiqueSelectionnee(b);
+                setVueBoutiqueDetails(true);
+              }
+            };
+          });
+        }, 10);
+      };
+
+      marqueur.on("mouseover", () => {
+        if (timerSurvol) clearTimeout(timerSurvol);
+        popup.setLatLng([b.lat, b.lng]).openOn(carte);
+        attacherEcouteursPopup();
+      });
+
+      marqueur.on("mouseout", () => {
+        timerSurvol = setTimeout(() => {
+          carte.closePopup(popup);
+        }, 300);
+      });
+
       marqueur.on("click", () => {
         gererClicPointCluster([b.lat, b.lng], () => {
           setBoutiqueSelectionnee(b);
