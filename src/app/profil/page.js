@@ -21,6 +21,7 @@ import SecurityTabContent from "@/components/SecurityTabContent";
 import InformationsPersonnellesContent from "@/components/InformationsPersonnellesContent";
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { chargerNiveauxEtudes, trouverNiveau, deduireNiveauDepuisFormations } from "@/lib/niveauxEtudes";
+import SelecteurMetier from "@/components/SelecteurMetier";
 
 /**
  * Convertit une data URI base64 (sortie de canvas.toDataURL) en Blob, sans
@@ -143,6 +144,7 @@ export default function ProfilPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
+  const [selecteurMetierOuvert, setSelecteurMetierOuvert] = useState(false);
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [quartier, setQuartier] = useState("");
@@ -3393,14 +3395,17 @@ export default function ProfilPage() {
                               </div>
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Titre professionnel</label>
-                                <input
+                                <button
+                                  type="button"
                                   id="profil-job-title"
-                                  name="profil-job-title"
-                                  type="text"
-                                  value={jobTitle}
-                                  onChange={(e) => setJobTitle(e.target.value)}
-                                  className="w-full p-2 bg-gray-50 border border-gray-300 rounded-xl font-medium text-gray-900"
-                                />
+                                  onClick={() => setSelecteurMetierOuvert(true)}
+                                  className="w-full p-2 bg-gray-50 border border-gray-300 rounded-xl font-medium text-left flex items-center justify-between gap-2 cursor-pointer hover:bg-gray-100 transition"
+                                >
+                                  <span className={jobTitle ? "text-gray-900" : "text-gray-400"}>
+                                    {jobTitle || "Ton métier ou ta situation actuelle"}
+                                  </span>
+                                  <i className="fa-solid fa-chevron-down text-xs text-gray-400 shrink-0"></i>
+                                </button>
                               </div>
                               <div>
                                 <label className="block font-bold text-gray-700 mb-1">Ville</label>
@@ -5799,6 +5804,17 @@ export default function ProfilPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {selecteurMetierOuvert && (
+        <SelecteurMetier
+          valeurActuelle={jobTitle}
+          onChoisir={(metier) => {
+            setJobTitle(metier);
+            setSelecteurMetierOuvert(false);
+          }}
+          onFermer={() => setSelecteurMetierOuvert(false)}
+        />
       )}
     </>
   );
