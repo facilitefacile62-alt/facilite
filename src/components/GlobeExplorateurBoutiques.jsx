@@ -271,7 +271,10 @@ export default function GlobeExplorateurBoutiques({
           </div>
         </div>
       `;
-      const popup = L.popup({ closeButton: true, offset: [0, -10] }).setLatLng(position).setContent(html).openOn(carte);
+      const popup = L.popup({ className: "carte-boutique-bulle-custom", closeButton: true, offset: [0, -10] })
+        .setLatLng(position)
+        .setContent(html)
+        .openOn(carte);
       setTimeout(() => {
         const el = popup.getElement();
         if (!el) return;
