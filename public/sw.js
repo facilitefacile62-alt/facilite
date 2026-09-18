@@ -96,7 +96,8 @@
 // v96 (18/09/2026) : clic anti-superposition + cadre de selection portes sur la vue plein ecran Explorer
 // v97 (18/09/2026) : icone loupe pour l'outil de cadre de selection (au lieu d'un appareil photo)
 // v98 (18/09/2026) : popup de liste (Explorer) enfin lisible, fond sombre manquant faisait du texte blanc sur blanc
-const VERSION_CACHE = "facilite-v98";
+// v99 (18/09/2026) : la liste de lieux prend l'apparence du carrousel d'avatars existant
+const VERSION_CACHE = "facilite-v99";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
