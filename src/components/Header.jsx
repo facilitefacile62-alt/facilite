@@ -208,6 +208,16 @@ export default function Header() {
   // chargement ou en cas d'erreur réseau.
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Reste true après la première ouverture : le tiroir menu (des centaines
+  // de nœuds — raccourcis, espaces, diagnostic CV...) n'est alors plus
+  // démonté à la fermeture, seulement masqué en CSS (voir plus bas) — évite
+  // de reconstruire tout cet arbre à chaque ouverture/fermeture, mesuré à
+  // plus d'1s de délai sur un mobile milieu de gamme. Faux par défaut : les
+  // visiteurs qui n'ouvrent jamais le menu ne paient jamais ce coût.
+  const [menuOuvertUneFois, setMenuOuvertUneFois] = useState(false);
+  useEffect(() => {
+    if (mobileMenuOpen) setMenuOuvertUneFois(true);
+  }, [mobileMenuOpen]);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [plusDropdownOpen, setPlusDropdownOpen] = useState(false);
   const [fonctionnalitesExpanded, setFonctionnalitesExpanded] = useState(true);
@@ -2092,8 +2102,20 @@ export default function Header() {
       )}
 
       {/* Mobile Drawer Menu (Menu Hub Facebook 1:1 via React Portal pour mobile < 768px) */}
-      {mounted && mobileMenuOpen && typeof document !== "undefined" && createPortal(
-        <div className="md:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden animate-in fade-in duration-200">
+      {/* Reste monté après la première ouverture (menuOuvertUneFois) : la
+          visibilité bascule en CSS (opacité + pointer-events) plutôt qu'en
+          montage/démontage React, qui reconstruisait tout cet arbre à
+          chaque clic — mesuré à plus d'1s de délai à la fermeture et près
+          de 6s pour naviguer vers une page depuis ce menu, sur un mobile
+          milieu de gamme (CPU x4, réseau lent). Signalé par l'utilisateur
+          ("ça prend du temps"). */}
+      {mounted && menuOuvertUneFois && typeof document !== "undefined" && createPortal(
+        <div
+          className={`md:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden transition-opacity duration-150 ${
+            mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+          aria-hidden={!mobileMenuOpen}
+        >
           
           {/* 1. Header fixe du Menu (Style Facebook : < Menu + Recherche rapide + Fermer) */}
           <div className="bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0 shadow-2xs z-10">
