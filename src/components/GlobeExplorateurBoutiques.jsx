@@ -241,6 +241,8 @@ export default function GlobeExplorateurBoutiques({
       type: "boutique",
       id: b.id,
       nom: b.nom || "Boutique",
+      avatarConfig: b.avatar_config,
+      photo: b.photo ? urlPhoto(b.photo) : null,
     }));
     const ici = marqueurMoiRef.current?.getLatLng();
     if (ici) membres.push({ position: [ici.lat, ici.lng], type: "ici" });
@@ -255,18 +257,34 @@ export default function GlobeExplorateurBoutiques({
       const carte = carteRef.current;
       if (!carte || membres.length === 0) return;
       const L = (await import("leaflet")).default;
+      // Carrousel d'avatars (même présentation que le dock du bas, voir
+      // vueCarrousel "boutiques" plus bas) plutôt qu'une simple liste de
+      // texte — demande explicite de l'utilisateur.
       const html = `
-        <div style="min-width:170px;padding:2px 0;">
-          <div style="font-size:11px;font-weight:900;color:#fff;margin-bottom:6px;">${membres.length} lieu${membres.length > 1 ? "x" : ""} à cet endroit</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="padding:2px 0;">
+          <div style="font-size:10px;font-weight:900;color:#fff;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.02em;">${membres.length} lieu${membres.length > 1 ? "x" : ""} à cet endroit</div>
+          <div style="display:flex;gap:10px;overflow-x:auto;max-width:260px;">
             ${membres
-              .map(
-                (m, i) => `
-              <button type="button" data-cluster-index="${i}" style="all:unset;cursor:pointer;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
-                <span>${m.type === "ici" ? "🧑🏾" : "📍"}</span>
-                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.type === "ici" ? "Vous êtes ici" : echapperHtml(m.nom)}</span>
-              </button>`
-              )
+              .map((m, i) => {
+                const avatarUri = m.type === "boutique" && m.avatarConfig ? dataUriAvatarBoutique(m.avatarConfig, 44) : null;
+                const bordure = m.type === "ici" ? "linear-gradient(135deg,#38bdf8,#2563eb)" : "linear-gradient(135deg,#10B981,#34d399)";
+                const contenu = m.type === "ici"
+                  ? `<span style="font-size:20px;">🧑🏾</span>`
+                  : avatarUri
+                  ? `<img src="${avatarUri}" style="width:100%;height:100%;object-fit:cover;" />`
+                  : m.photo
+                  ? `<img src="${m.photo}" style="width:100%;height:100%;object-fit:cover;" />`
+                  : `<span style="font-size:20px;">📍</span>`;
+                return `
+              <button type="button" data-cluster-index="${i}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;width:56px;">
+                <div style="width:44px;height:44px;border-radius:9999px;padding:2px;background:${bordure};">
+                  <div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;display:flex;align-items:center;justify-content:center;">
+                    ${contenu}
+                  </div>
+                </div>
+                <span style="font-size:9px;font-weight:800;color:#fff;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.type === "ici" ? "Vous êtes ici" : echapperHtml(m.nom)}</span>
+              </button>`;
+              })
               .join("")}
           </div>
         </div>
