@@ -175,6 +175,14 @@ export default function GlobeExplorateurBoutiques({
   // ou nouvelle liste d'articles individuels (Point C) — deux vues
   // distinctes dans le même espace, pas de carrousel supplémentaire empilé.
   const [vueCarrousel, setVueCarrousel] = useState("boutiques"); // 'boutiques' | 'articles'
+  const carouselContainerRef = useRef(null);
+
+  const defilerCarrousel = (direction) => {
+    if (carouselContainerRef.current) {
+      const decallage = direction === "gauche" ? -180 : 180;
+      carouselContainerRef.current.scrollBy({ left: decallage, behavior: "smooth" });
+    }
+  };
 
   // Filtrer les boutiques avec coordonnées valides
   const marqueurs = useMemo(() => {
@@ -182,6 +190,29 @@ export default function GlobeExplorateurBoutiques({
       (b) => Number.isFinite(b.lat) && Number.isFinite(b.lng) && (b.lat !== 0 || b.lng !== 0)
     );
   }, [boutiques]);
+
+  const selectionnerBoutiqueCarousel = (b, element = null) => {
+    setBoutiqueSelectionnee(b);
+    const handler = popupsBoutiquesRef.current.get(b.id);
+    if (handler?.ouvrir) {
+      handler.ouvrir();
+    }
+    carteRef.current?.flyTo([b.lat, b.lng], 15.5, { duration: 0.8 });
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  };
+
+  const selectionnerArticleCarousel = (a, element = null) => {
+    const bId = a.boutique_id || a.boutiqueId || a.boutique?.id;
+    const bNom = (a.boutique_nom || a.boutiqueNom || a.boutique?.nom || "").trim().toLowerCase();
+    const boutiqueAssociee = marqueurs.find(
+      (b) => (bId && String(b.id) === String(bId)) || (bNom && (b.nom || "").trim().toLowerCase() === bNom)
+    );
+    if (boutiqueAssociee) {
+      selectionnerBoutiqueCarousel(boutiqueAssociee, element);
+    }
+  };
 
   const rechercheNormalisee = rechercheCarte.trim().toLowerCase();
 
@@ -1007,21 +1038,6 @@ export default function GlobeExplorateurBoutiques({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [positionInitiale, cartePrete]);
 
-  // Sélection rapide depuis le carrousel
-  const selectionnerBoutiqueCarousel = (b) => {
-    setBoutiqueSelectionnee(b);
-    setVueBoutiqueDetails(true);
-    carteRef.current?.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
-  };
-
-  // Sélection depuis la nouvelle liste d'articles (Point C) — retrouve la
-  // boutique correspondante et réutilise TEL QUEL selectionnerBoutiqueCarousel
-  // (flyTo + mise en avant du marqueur) plutôt que de dupliquer ce mécanisme.
-  const selectionnerArticleCarousel = (article) => {
-    const boutique = marqueurs.find((b) => b.id === article.boutique_id);
-    if (boutique) selectionnerBoutiqueCarousel(boutique);
-  };
-
   // Basculer le style de carte (Dark Matter / Pastel / Satellite)
   const changerStyle = () => {
     const suivant = styleActif === "dark" ? "voyager" : styleActif === "voyager" ? "satellite" : "dark";
@@ -1394,105 +1410,166 @@ export default function GlobeExplorateurBoutiques({
             </button>
           </div>
 
-          {vueCarrousel === "boutiques" ? (
-            /* Barre des Avatars Snap Map Défilable Horizontalement */
-            <div className="pointer-events-auto w-full max-w-lg bg-gray-950/90 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-800 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
-              {marqueurs.map((b, idx) => {
-                const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
-                const aPhoto = b.photo ? urlPhoto(b.photo) : null;
-                const estSelectionne = boutiqueSelectionnee?.id === b.id;
+          {/* Carrousel Circulaire Interactif façon Snapchat / Stories Lens (Inspiré de la capture 1) */}
+          <div className="pointer-events-auto relative w-full max-w-xl flex items-center justify-center px-1">
+            {/* Bouton Défilement Gauche */}
+            {marqueurs.length > 4 && (
+              <button
+                type="button"
+                onClick={() => defilerCarrousel("gauche")}
+                className="hidden sm:flex absolute left-1 z-30 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 items-center justify-center text-xs backdrop-blur-md shadow-xl transition cursor-pointer"
+                aria-label="Précédent"
+              >
+                ❮
+              </button>
+            )}
 
-                return (
-                  <button
-                    key={b.id || idx}
-                    type="button"
-                    onClick={() => selectionnerBoutiqueCarousel(b)}
-                    onMouseEnter={() => {
-                      const handler = popupsBoutiquesRef.current.get(b.id);
-                      if (handler) {
-                        handler.ouvrir();
-                        carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.4 });
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      popupsBoutiquesRef.current.get(b.id)?.fermer();
-                    }}
-                    className={`flex flex-col items-center gap-1 shrink-0 p-1.5 rounded-2xl transition-all cursor-pointer group ${
-                      estSelectionne
-                        ? "bg-blue-950/70 border border-blue-600 scale-105"
-                        : "hover:bg-gray-800/80"
-                    }`}
-                  >
-                    {/* Cercle Avatar avec contour Vert Menthe ou Bleu Roi */}
-                    <div className="relative w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 shadow-md flex items-center justify-center">
-                      <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
-                        {b.avatar_config ? (
-                          <img
-                            src={dataUriAvatarBoutique(b.avatar_config, 48)}
-                            alt={b.nom}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : aPhoto ? (
-                          <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-xl">{avatar.emoji}</span>
-                        )}
-                      </div>
-                      {estSelectionne && (
-                        <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] border-2 border-gray-900">
-                          ✓
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-black text-gray-200 max-w-[65px] truncate">
-                      {b.nom}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            /* Nouvelle liste d'articles individuels (Point C) — distincte du
-               carrousel de boutiques ci-dessus : sélectionner un article
-               retrouve sa boutique et réutilise le mécanisme flyTo existant
-               (selectionnerArticleCarousel → selectionnerBoutiqueCarousel). */
-            <div className="pointer-events-auto w-full max-w-lg bg-gray-950/90 rounded-3xl p-2 sm:p-2.5 shadow-2xl border border-gray-800 backdrop-blur-md flex items-center gap-3 overflow-x-auto no-scrollbar">
-              {articlesFiltres.length === 0 ? (
-                <p className="text-[11px] text-gray-400 font-bold px-2 py-2.5">
-                  Aucun article ne correspond à cette recherche.
-                </p>
-              ) : (
-                articlesFiltres.map((a) => {
-                  const photo = a.photos?.[0] || null;
-                  const estSelectionne = boutiqueSelectionnee?.id === a.boutique_id;
+            {vueCarrousel === "boutiques" ? (
+              <div
+                ref={carouselContainerRef}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && carouselContainerRef.current) {
+                    carouselContainerRef.current.scrollLeft += e.deltaY;
+                  }
+                }}
+                className="w-full bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-8 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+              >
+                {marqueurs.map((b, idx) => {
+                  const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
+                  const aPhoto = b.photo ? urlPhoto(b.photo) : null;
+                  const estSelectionne = boutiqueSelectionnee?.id === b.id;
+
                   return (
                     <button
-                      key={a.id}
+                      key={b.id || idx}
                       type="button"
-                      onClick={() => selectionnerArticleCarousel(a)}
-                      className={`flex flex-col items-center gap-1 shrink-0 p-1.5 rounded-2xl transition-all cursor-pointer group w-16 ${
-                        estSelectionne ? "bg-blue-950/70 border border-blue-600 scale-105" : "hover:bg-gray-800/80"
-                      }`}
+                      onClick={(e) => selectionnerBoutiqueCarousel(b, e.currentTarget)}
+                      onMouseEnter={() => {
+                        const handler = popupsBoutiquesRef.current.get(b.id);
+                        if (handler) {
+                          handler.ouvrir();
+                          carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.4 });
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        popupsBoutiquesRef.current.get(b.id)?.fermer();
+                      }}
+                      className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
                     >
-                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-gray-800 border border-gray-700 flex items-center justify-center">
-                        {photo ? (
-                          <img src={photo} alt={a.titre} className="w-full h-full object-cover" />
-                        ) : (
-                          <i className="fa-solid fa-tag text-gray-500 text-sm"></i>
+                      {/* Cercle Avatar façon Lens Snapchat (Capture 1) */}
+                      <div
+                        className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
+                          estSelectionne
+                            ? "w-15 h-15 sm:w-16 sm:h-16 p-[3.5px] bg-white shadow-[0_0_24px_rgba(255,255,255,0.7),0_10px_25px_rgba(0,0,0,0.6)] ring-4 ring-black/40 scale-110 z-10"
+                            : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 opacity-80 hover:opacity-100 hover:scale-105 shadow-md"
+                        }`}
+                      >
+                        <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
+                          {b.avatar_config ? (
+                            <img
+                              src={dataUriAvatarBoutique(b.avatar_config, 56)}
+                              alt={b.nom}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : aPhoto ? (
+                            <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className={estSelectionne ? "text-2xl" : "text-xl"}>{avatar.emoji}</span>
+                          )}
+                        </div>
+
+                        {b.estPremium && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[8px] font-black border border-white shadow-xs">
+                            👑
+                          </span>
                         )}
                       </div>
-                      <span className="text-[9px] font-black text-gray-200 max-w-[65px] truncate">
-                        {a.titre}
-                      </span>
-                      <span className="text-[8px] font-bold text-emerald-400">
-                        {prixLisible(a.prix_xof)} F
+
+                      {/* Libellé Boutique */}
+                      <span
+                        className={`transition-all duration-200 truncate ${
+                          estSelectionne
+                            ? "mt-1.5 px-2.5 py-0.5 bg-white text-gray-950 text-[10px] sm:text-[11px] font-black rounded-full shadow-xl max-w-[80px] sm:max-w-[100px] border border-gray-200"
+                            : "mt-1 text-[9px] font-extrabold text-gray-300 max-w-[60px] drop-shadow-md group-hover:text-white"
+                        }`}
+                      >
+                        {b.nom}
                       </span>
                     </button>
                   );
-                })
-              )}
-            </div>
-          )}
+                })}
+              </div>
+            ) : (
+              <div
+                ref={carouselContainerRef}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && carouselContainerRef.current) {
+                    carouselContainerRef.current.scrollLeft += e.deltaY;
+                  }
+                }}
+                className="w-full bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-8 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+              >
+                {articlesFiltres.length === 0 ? (
+                  <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
+                    Aucun article ne correspond à cette recherche.
+                  </p>
+                ) : (
+                  articlesFiltres.map((a) => {
+                    const photo = a.photos?.[0] || null;
+                    const estSelectionne = boutiqueSelectionnee?.id === a.boutique_id;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={(e) => selectionnerArticleCarousel(a, e.currentTarget)}
+                        className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
+                      >
+                        <div
+                          className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
+                            estSelectionne
+                              ? "w-15 h-15 sm:w-16 sm:h-16 p-[3.5px] bg-white shadow-[0_0_24px_rgba(255,255,255,0.7),0_10px_25px_rgba(0,0,0,0.6)] ring-4 ring-black/40 scale-110 z-10"
+                              : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-sky-400 to-blue-600 opacity-80 hover:opacity-100 hover:scale-105 shadow-md"
+                          }`}
+                        >
+                          <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border border-gray-950 flex items-center justify-center">
+                            {photo ? (
+                              <img src={photo} alt={a.titre} className="w-full h-full object-cover" />
+                            ) : (
+                              <i className="fa-solid fa-tag text-gray-400 text-xs"></i>
+                            )}
+                          </div>
+                        </div>
+                        <span
+                          className={`transition-all duration-200 truncate ${
+                            estSelectionne
+                              ? "mt-1.5 px-2 py-0.5 bg-white text-gray-950 text-[10px] font-black rounded-full shadow-xl max-w-[80px]"
+                              : "mt-1 text-[9px] font-extrabold text-gray-300 max-w-[60px]"
+                          }`}
+                        >
+                          {a.titre}
+                        </span>
+                        <span className="text-[8px] font-black text-emerald-400 drop-shadow-xs">
+                          {prixLisible(a.prix_xof)} F
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* Bouton Défilement Droite */}
+            {marqueurs.length > 4 && (
+              <button
+                type="button"
+                onClick={() => defilerCarrousel("droite")}
+                className="hidden sm:flex absolute right-1 z-30 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 items-center justify-center text-xs backdrop-blur-md shadow-xl transition cursor-pointer"
+                aria-label="Suivant"
+              >
+                ❯
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 5. BOTTOM SHEET / FICHE BOUTIQUE DÉDIÉE (Style Snap Map Modal) */}
