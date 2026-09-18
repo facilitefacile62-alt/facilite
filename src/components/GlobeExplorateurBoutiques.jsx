@@ -89,6 +89,11 @@ export default function GlobeExplorateurBoutiques({
   const groupeMarqueursRef = useRef(null);
   const marqueurMoiRef = useRef(null);
   const echelleZoomCleanupRef = useRef(null);
+  // Cadre de sélection déplaçable/redimensionnable ("voir toutes les
+  // boutiques d'une zone") — même outil que sur la carte compacte
+  // CarteBoutiques.jsx (demande explicite de l'utilisateur), porté ici
+  // pour la vue plein écran Explorer.
+  const dragEtatRef = useRef(null);
   // Toujours la dernière version de rafraichirMarqueurs (assigné à chaque
   // rendu, voir plus bas) — permet à l'effet d'initialisation de la carte
   // de dessiner les marqueurs directement dès que SA PROPRE carte est
@@ -225,6 +230,159 @@ export default function GlobeExplorateurBoutiques({
       (b) => (b.nom || "").toLowerCase().includes(rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
     );
   }, [marqueurs, filtreActif, rechercheNormalisee, idsBoutiquesArticlesFiltres]);
+
+  // Tous les points affichés (boutiques + "Vous êtes ici" si placé) — sert
+  // à la fois à détecter les marqueurs superposés au clic et au cadre de
+  // sélection ci-dessous. Lit la position de "Vous êtes ici" directement
+  // sur son marqueur Leaflet (pas de state dédié pour ça ici).
+  const obtenirMembresConnus = useCallback(() => {
+    const membres = boutiquesAffichees.map((b) => ({
+      position: [b.lat, b.lng],
+      type: "boutique",
+      id: b.id,
+      nom: b.nom || "Boutique",
+    }));
+    const ici = marqueurMoiRef.current?.getLatLng();
+    if (ici) membres.push({ position: [ici.lat, ici.lng], type: "ici" });
+    return membres;
+  }, [boutiquesAffichees]);
+
+  // Popup listant plusieurs lieux à choisir — même mécanisme que
+  // CarteBoutiques.jsx : clic sur des marqueurs superposés, ou validation
+  // du cadre de sélection.
+  const ouvrirListeCluster = useCallback(
+    async (position, membres) => {
+      const carte = carteRef.current;
+      if (!carte || membres.length === 0) return;
+      const L = (await import("leaflet")).default;
+      const html = `
+        <div style="min-width:170px;padding:2px 0;">
+          <div style="font-size:11px;font-weight:900;color:#fff;margin-bottom:6px;">${membres.length} lieu${membres.length > 1 ? "x" : ""} à cet endroit</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            ${membres
+              .map(
+                (m, i) => `
+              <button type="button" data-cluster-index="${i}" style="all:unset;cursor:pointer;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                <span>${m.type === "ici" ? "🧑🏾" : "📍"}</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.type === "ici" ? "Vous êtes ici" : echapperHtml(m.nom)}</span>
+              </button>`
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+      const popup = L.popup({ closeButton: true, offset: [0, -10] }).setLatLng(position).setContent(html).openOn(carte);
+      setTimeout(() => {
+        const el = popup.getElement();
+        if (!el) return;
+        el.querySelectorAll("[data-cluster-index]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const m = membres[Number(btn.getAttribute("data-cluster-index"))];
+            carte.closePopup(popup);
+            if (m.type === "ici") {
+              carte.flyTo(m.position, Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
+            } else {
+              const b = boutiquesAffichees.find((x) => x.id === m.id);
+              if (b) {
+                setBoutiqueSelectionnee(b);
+                setVueBoutiqueDetails(true);
+                carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
+              }
+            }
+          });
+        });
+      }, 0);
+    },
+    [boutiquesAffichees]
+  );
+
+  // Deux marqueurs superposés à l'écran (même position réelle, fréquent :
+  // position de démo = position de sa propre boutique) : le premier clic
+  // zoome pour les séparer (comme Google Maps) ; passé un certain niveau,
+  // aucun zoom ne les sépare jamais, une petite liste remplace le zoom.
+  // Signalé par l'utilisateur, déjà corrigé sur CarteBoutiques.jsx.
+  const gererClicPointCluster = useCallback(
+    (position, actionSiSepare) => {
+      const carte = carteRef.current;
+      if (!carte) {
+        actionSiSepare();
+        return;
+      }
+      const SEUIL_CLUSTER_PX = 26;
+      const p1 = carte.latLngToContainerPoint(position);
+      const membres = obtenirMembresConnus().filter((m) => {
+        const p2 = carte.latLngToContainerPoint(m.position);
+        return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
+      });
+      if (membres.length <= 1) {
+        actionSiSepare();
+        return;
+      }
+      const zoomActuel = carte.getZoom();
+      if (zoomActuel >= 17) {
+        ouvrirListeCluster(position, membres);
+      } else {
+        carte.flyTo(position, Math.min(zoomActuel + 4, 18), { duration: 0.6 });
+      }
+    },
+    [obtenirMembresConnus, ouvrirListeCluster]
+  );
+
+  // Cadre de sélection : état + déplacement/redimensionnement par pointeur.
+  const [modeSelectionActif, setModeSelectionActif] = useState(false);
+  const [cadre, setCadre] = useState({ x: 90, y: 90, largeur: 180, hauteur: 180 });
+
+  const gererPointerDownDeplacer = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragEtatRef.current = { type: "deplacer", depart: { x: e.clientX, y: e.clientY }, cadreDepart: { ...cadre } };
+  };
+  const gererPointerDownRedimensionner = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragEtatRef.current = { type: "redimensionner", depart: { x: e.clientX, y: e.clientY }, cadreDepart: { ...cadre } };
+  };
+
+  useEffect(() => {
+    if (!modeSelectionActif) return;
+    function onMove(e) {
+      if (!dragEtatRef.current) return;
+      const { type, depart, cadreDepart } = dragEtatRef.current;
+      const dx = e.clientX - depart.x;
+      const dy = e.clientY - depart.y;
+      if (type === "deplacer") {
+        setCadre({ ...cadreDepart, x: cadreDepart.x + dx, y: cadreDepart.y + dy });
+      } else {
+        setCadre({
+          ...cadreDepart,
+          largeur: Math.max(70, cadreDepart.largeur + dx),
+          hauteur: Math.max(70, cadreDepart.hauteur + dy),
+        });
+      }
+    }
+    function onUp() {
+      dragEtatRef.current = null;
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [modeSelectionActif]);
+
+  const voirBoutiquesDansLeCadre = useCallback(async () => {
+    const carte = carteRef.current;
+    if (!carte) return;
+    const L = (await import("leaflet")).default;
+    const coinHautGauche = carte.containerPointToLatLng([cadre.x, cadre.y]);
+    const coinBasDroit = carte.containerPointToLatLng([cadre.x + cadre.largeur, cadre.y + cadre.hauteur]);
+    const zone = L.latLngBounds(coinHautGauche, coinBasDroit);
+    const membres = obtenirMembresConnus().filter((m) => zone.contains(m.position));
+    if (membres.length === 0) return;
+    setModeSelectionActif(false);
+    ouvrirListeCluster(zone.getCenter(), membres);
+  }, [cadre, obtenirMembresConnus, ouvrirListeCluster]);
 
   // 1. Initialisation Leaflet robuste & garantie zéro écran blanc
   useEffect(() => {
@@ -498,9 +656,11 @@ export default function GlobeExplorateurBoutiques({
       const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
 
       marqueur.on("click", () => {
-        setBoutiqueSelectionnee(b);
-        setVueBoutiqueDetails(true);
-        carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
+        gererClicPointCluster([b.lat, b.lng], () => {
+          setBoutiqueSelectionnee(b);
+          setVueBoutiqueDetails(true);
+          carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
+        });
       });
     });
 
@@ -512,7 +672,7 @@ export default function GlobeExplorateurBoutiques({
       echelleZoomCleanupRef.current();
     }
     echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
-  }, [boutiquesAffichees, boutiqueSelectionnee]);
+  }, [boutiquesAffichees, boutiqueSelectionnee, gererClicPointCluster]);
   // Mise à jour hors rendu (règle react-hooks/refs) : un effet sans
   // dépendances s'exécute après chaque rendu, donc toujours à temps avant
   // que les timers de forcerTaille (au plus tôt 50 ms plus tard) ne lisent
@@ -526,7 +686,6 @@ export default function GlobeExplorateurBoutiques({
   // carte soit recréée (ex. clic sur une pastille de filtre) — la carte
   // existante reste alors valide, seul son contenu doit se rafraîchir.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     rafraichirMarqueurs();
   }, [rafraichirMarqueurs, cartePrete]);
 
@@ -616,12 +775,20 @@ export default function GlobeExplorateurBoutiques({
     });
 
     marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi }).addTo(carte);
+    // Sans ceci, "Vous êtes ici" ne réagissait jamais au clic — et quand il
+    // se superposait à une boutique (position de démo confondue avec sa
+    // propre boutique), il interceptait le clic sans rien faire à la place.
+    marqueurMoiRef.current.on("click", () => {
+      gererClicPointCluster([pos.latitude, pos.longitude], () => {
+        carte.flyTo([pos.latitude, pos.longitude], Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
+      });
+    });
     if (animer) {
       carte.flyTo([pos.latitude, pos.longitude], 15.5, { duration: 1.2 });
     } else {
       carte.setView([pos.latitude, pos.longitude], 15.5);
     }
-  }, []);
+  }, [gererClicPointCluster]);
   // Même raisonnement que rafraichirMarqueursRef ci-dessus.
   useEffect(() => {
     centrerSurPositionRef.current = centrerSurPosition;
@@ -904,6 +1071,31 @@ export default function GlobeExplorateurBoutiques({
       <div className="relative flex-1 w-full h-full min-h-0 bg-[#0B0F17]">
         <div ref={conteneurRef} className="absolute inset-0 w-full h-full z-0 bg-[#0B0F17]" />
 
+        {/* Cadre de sélection — déplaçable (glisser) et redimensionnable
+            (poignée en bas à droite), validé via le bouton au centre. */}
+        {modeSelectionActif && (
+          <div
+            onPointerDown={gererPointerDownDeplacer}
+            className="absolute z-[410] rounded-2xl border-2 border-white/80 bg-white/10 backdrop-blur-[1px] cursor-move touch-none"
+            style={{ left: cadre.x, top: cadre.y, width: cadre.largeur, height: cadre.hauteur }}
+          >
+            <div
+              onPointerDown={gererPointerDownRedimensionner}
+              className="absolute -bottom-2 -right-2 w-5 h-5 rounded-full bg-white border-2 border-orange-500 cursor-nwse-resize touch-none"
+              title="Redimensionner"
+            />
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={voirBoutiquesDansLeCadre}
+              className="absolute -bottom-6 left-1/2 -translate-x-1/2 translate-y-full mt-2 w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-2xl active:scale-95 shadow-orange-500/50 cursor-pointer"
+              title="Voir les boutiques dans ce cadre"
+            >
+              <i className="fa-solid fa-camera-retro text-base"></i>
+            </button>
+          </div>
+        )}
+
         {/* 3. CONTRÔLES FLOTTANTS SNAP MAP (À droite) */}
         <aside className="absolute right-3.5 top-28 sm:top-24 z-20 flex flex-col gap-2.5">
           {/* Bouton Ma Position */}
@@ -954,6 +1146,23 @@ export default function GlobeExplorateurBoutiques({
             aria-label="Zoom arrière"
           >
             <i className="fa-solid fa-minus text-sm"></i>
+          </button>
+
+          {/* Cadre de sélection "voir toutes les boutiques d'une zone" —
+              même outil que CarteBoutiques.jsx, demandé explicitement par
+              l'utilisateur pour cette vue plein écran aussi. */}
+          <button
+            type="button"
+            onClick={() => setModeSelectionActif(!modeSelectionActif)}
+            className={`w-11 h-11 rounded-full flex items-center justify-center shadow-2xl border transition cursor-pointer hover:scale-105 active:scale-95 backdrop-blur-md ${
+              modeSelectionActif
+                ? "bg-orange-500 border-orange-300 text-white"
+                : "bg-gray-900/90 hover:bg-gray-800 text-white border-gray-700"
+            }`}
+            title="Voir toutes les boutiques d'une zone"
+            aria-label="Cadre de sélection"
+          >
+            <i className="fa-solid fa-camera-retro text-sm"></i>
           </button>
         </aside>
 

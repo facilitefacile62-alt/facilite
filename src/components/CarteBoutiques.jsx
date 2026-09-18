@@ -118,7 +118,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             const m = membres[Number(btn.getAttribute("data-cluster-index"))];
             carte.closePopup(popup);
             if (m.type === "ici") {
-              carte.flyTo(position, Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
+              // La position exacte du membre, pas le centre du groupe/cadre
+              // (potentiellement plus large que quelques mètres avec l'outil
+              // de sélection) — plus précis pour recentrer la carte.
+              carte.flyTo(m.position, Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
             } else if (typeof onChoisirBoutique === "function") {
               onChoisirBoutique(m.id);
             }
