@@ -221,6 +221,22 @@ export default function GlobeExplorateurBoutiques({
     }
   };
 
+  const allerBoutiquePrecedente = () => {
+    if (marqueurs.length === 0) return;
+    const indexActuel = marqueurs.findIndex((b) => b.id === (boutiqueSelectionnee?.id || marqueurs[0]?.id));
+    const indexPrecedent = indexActuel > 0 ? indexActuel - 1 : marqueurs.length - 1;
+    const prevB = marqueurs[indexPrecedent];
+    if (prevB) selectionnerBoutiqueCarousel(prevB);
+  };
+
+  const allerBoutiqueSuivante = () => {
+    if (marqueurs.length === 0) return;
+    const indexActuel = marqueurs.findIndex((b) => b.id === (boutiqueSelectionnee?.id || marqueurs[0]?.id));
+    const indexSuivant = indexActuel < marqueurs.length - 1 ? indexActuel + 1 : 0;
+    const nextB = marqueurs[indexSuivant];
+    if (nextB) selectionnerBoutiqueCarousel(nextB);
+  };
+
   const rechercheNormalisee = rechercheCarte.trim().toLowerCase();
 
   // Articles correspondant à la recherche (Point C) — filtre local sur
@@ -1417,19 +1433,18 @@ export default function GlobeExplorateurBoutiques({
             </button>
           </div>
 
-          {/* Carrousel Circulaire Interactif façon Snapchat / Stories Lens (Inspiré de la capture 1) */}
-          <div className="pointer-events-auto relative w-full max-w-xl flex items-center justify-center px-1">
-            {/* Bouton Défilement Gauche */}
-            {marqueurs.length > 4 && (
-              <button
-                type="button"
-                onClick={() => defilerCarrousel("gauche")}
-                className="hidden sm:flex absolute left-1 z-30 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 items-center justify-center text-xs backdrop-blur-md shadow-xl transition cursor-pointer"
-                aria-label="Précédent"
-              >
-                ❮
-              </button>
-            )}
+          {/* Carrousel Circulaire Interactif façon Snapchat / Stories Lens avec Flèches de Déplacement */}
+          <div className="pointer-events-auto relative w-full max-w-xl flex items-center justify-center gap-1.5 sm:gap-2 px-1">
+            {/* Bouton Flèche Gauche Précédent */}
+            <button
+              type="button"
+              onClick={allerBoutiquePrecedente}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-xl shadow-2xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
+              aria-label="Boutique précédente"
+              title="Boutique précédente"
+            >
+              <i className="fa-solid fa-chevron-left text-xs group-hover:-translate-x-0.5 transition-transform"></i>
+            </button>
 
             {vueCarrousel === "boutiques" ? (
               <div
@@ -1439,7 +1454,7 @@ export default function GlobeExplorateurBoutiques({
                     carouselContainerRef.current.scrollLeft += e.deltaY;
                   }
                 }}
-                className="w-full bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-8 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+                className="flex-1 bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-6 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
               >
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
@@ -1514,7 +1529,7 @@ export default function GlobeExplorateurBoutiques({
                     carouselContainerRef.current.scrollLeft += e.deltaY;
                   }
                 }}
-                className="w-full bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-8 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+                className="flex-1 bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-6 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
@@ -1534,8 +1549,8 @@ export default function GlobeExplorateurBoutiques({
                         <div
                           className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                             estSelectionne
-                              ? "w-15 h-15 sm:w-16 sm:h-16 p-[3.5px] bg-white shadow-[0_0_24px_rgba(255,255,255,0.7),0_10px_25px_rgba(0,0,0,0.6)] ring-4 ring-black/40 scale-110 z-10"
-                              : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-sky-400 to-blue-600 opacity-80 hover:opacity-100 hover:scale-105 shadow-md"
+                              ? "w-16 h-16 sm:w-18 sm:h-18 p-[4px] bg-white shadow-[0_0_32px_rgba(255,255,255,0.95),0_10px_30px_rgba(0,0,0,0.8)] ring-4 ring-black/60 scale-115 z-20"
+                              : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-sky-400 to-blue-600 opacity-75 hover:opacity-100 hover:scale-105 shadow-md"
                           }`}
                         >
                           <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border border-gray-950 flex items-center justify-center">
@@ -1565,17 +1580,16 @@ export default function GlobeExplorateurBoutiques({
               </div>
             )}
 
-            {/* Bouton Défilement Droite */}
-            {marqueurs.length > 4 && (
-              <button
-                type="button"
-                onClick={() => defilerCarrousel("droite")}
-                className="hidden sm:flex absolute right-1 z-30 w-7 h-7 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 items-center justify-center text-xs backdrop-blur-md shadow-xl transition cursor-pointer"
-                aria-label="Suivant"
-              >
-                ❯
-              </button>
-            )}
+            {/* Bouton Flèche Droite Suivant */}
+            <button
+              type="button"
+              onClick={allerBoutiqueSuivante}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-xl shadow-2xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
+              aria-label="Boutique suivante"
+              title="Boutique suivante"
+            >
+              <i className="fa-solid fa-chevron-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
+            </button>
           </div>
         </div>
 
