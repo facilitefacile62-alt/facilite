@@ -306,6 +306,10 @@ export default function GlobeExplorateurBoutiques({
             } else {
               const b = boutiquesAffichees.find((x) => x.id === m.id);
               if (b) {
+                const handler = popupsBoutiquesRef.current.get(b.id);
+                if (handler?.ouvrir) {
+                  handler.ouvrir();
+                }
                 setBoutiqueSelectionnee(b);
                 setVueBoutiqueDetails(true);
                 carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
@@ -678,13 +682,19 @@ export default function GlobeExplorateurBoutiques({
       const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
 
       // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
+      const bId = String(b.id || "");
+      const bNom = (b.nom || "").trim().toLowerCase();
       const articlesBoutique = (b.articles && b.articles.length > 0)
         ? b.articles
-        : (tousArticles || []).filter((a) => a.boutique_id === b.id);
-      const articlesApercu = articlesBoutique.slice(0, 6);
+        : (tousArticles || []).filter((a) => {
+            const aBId = String(a.boutique_id || a.boutiqueId || a.boutique?.id || "");
+            const aBNom = (a.boutique_nom || a.boutiqueNom || a.boutique?.nom || "").trim().toLowerCase();
+            return (bId && aBId && bId === aBId) || (bNom && aBNom && bNom === aBNom);
+          });
+      const articlesApercu = articlesBoutique.slice(0, 8);
 
       const htmlBulleProduits = `
-        <div class="bulle-produits-container" style="position:relative; width:210px; max-width:240px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+        <div class="bulle-produits-container" style="position:relative; width:220px; max-width:250px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
           <!-- Bouton Fermer X -->
           <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
 
@@ -697,23 +707,23 @@ export default function GlobeExplorateurBoutiques({
             </div>
           </div>
 
-          <!-- Carrousel des produits -->
+          <!-- Carrousel des produits de la boutique -->
           ${
             articlesApercu.length > 0
               ? `
                 <div style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch;">
                   ${articlesApercu
                     .map((art) => {
-                      const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : "");
+                      const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
                       const prixTxt = art.prix_xof || art.prix;
                       return `
-                        <div data-article-id="${art.id}" style="flex-shrink:0; width:84px; height:110px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
+                        <div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
                           ${
                             photoUrl
                               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.replaceWith(Object.assign(document.createElement('div'),{style:'width:100%;height:100%;background:#c4a4b8;display:flex;align-items:center;justify-content:center;font-size:22px;',textContent:'🛍️'}))" />`
                               : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
                           }
-                          <div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;">
+                          <div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;">
                             <div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>
                             ${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}
                           </div>
@@ -820,12 +830,12 @@ export default function GlobeExplorateurBoutiques({
         }
       }, 50);
 
-      marqueur.on("click", () => {
-        gererClicPointCluster([b.lat, b.lng], () => {
-          setBoutiqueSelectionnee(b);
-          setVueBoutiqueDetails(true);
-          carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
-        });
+      marqueur.on("click", (e) => {
+        if (e?.originalEvent) e.originalEvent.stopPropagation();
+        ouvrirBulle();
+        setBoutiqueSelectionnee(b);
+        setVueBoutiqueDetails(true);
+        carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
       });
     });
 
