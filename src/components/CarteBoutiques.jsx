@@ -500,22 +500,29 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               ? echapperHtml(LIBELLES_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "Établissement")
               : `${b.articles.length} article${b.articles.length > 1 ? "s" : ""} · ${distanceLisible(b.distance_km)}`;
 
-          // Aperçu des articles en vignettes — permet de voir ce que vend la
-          // boutique directement au survol, sans avoir à l'ouvrir. Demande
-          // explicite de l'utilisateur. N'apparaît que pour les boutiques
-          // 'produit' qui ont de vraies photos (service/établissement n'ont
-          // jamais d'article, b.articles reste vide pour elles).
-          const photosApercu = b.articles
-            .map((a) => a.photos?.[0])
-            .filter(Boolean)
-            .slice(0, 5);
-          const vignettesHtml = photosApercu.length
-            ? `<div style="display:flex;gap:4px;margin-bottom:6px;">
-                ${photosApercu
+          // Aperçu des articles en cartes façon "story" (grande vignette
+          // portrait + prix en légende) — permet de voir ce que vend la
+          // boutique et son prix directement au survol, pour décider d'aller
+          // la visiter, sans avoir à l'ouvrir d'abord. Demande explicite de
+          // l'utilisateur (référence : carrousel de story Snapchat/Instagram).
+          // N'apparaît que pour les boutiques 'produit' qui ont de vraies
+          // photos (service/établissement n'ont jamais d'article, b.articles
+          // reste vide pour elles).
+          const articlesApercu = b.articles.filter((a) => a.photos?.[0]).slice(0, 5);
+          const vignettesHtml = articlesApercu.length
+            ? `<div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;max-width:220px;">
+                ${articlesApercu
                   .map(
-                    (chemin) => `
-                  <div style="width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid rgba(255,255,255,0.18);">
-                    <img src="${urlPhoto(chemin)}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                    (a) => `
+                  <div style="flex-shrink:0;width:56px;">
+                    <div style="width:56px;height:74px;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.4);">
+                      <img src="${urlPhoto(a.photos[0])}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                    </div>
+                    ${
+                      a.prix_xof
+                        ? `<div style="font-size:8px;font-weight:900;color:#34d399;margin-top:3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${Number(a.prix_xof).toLocaleString("fr-FR")} F</div>`
+                        : ""
+                    }
                   </div>`
                   )
                   .join("")}
