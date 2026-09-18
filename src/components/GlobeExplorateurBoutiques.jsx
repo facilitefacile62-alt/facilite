@@ -112,6 +112,7 @@ export default function GlobeExplorateurBoutiques({
   // marqueur "Vous êtes ici" : l'effet réactif [positionInitiale,
   // cartePrete] plus bas peut rater la même fenêtre transitoire.
   const centrerSurPositionRef = useRef(() => {});
+  const popupsBoutiquesRef = useRef(new Map());
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
@@ -735,7 +736,7 @@ export default function GlobeExplorateurBoutiques({
       const popup = L.popup({
         className: "carte-bulle-produits-popup",
         closeButton: false,
-        offset: [0, -38],
+        offset: [0, -88],
         autoPan: false,
         closeOnClick: false,
       }).setContent(htmlBulleProduits);
@@ -789,17 +790,35 @@ export default function GlobeExplorateurBoutiques({
         }, 10);
       };
 
-      marqueur.on("mouseover", () => {
+      const ouvrirBulle = () => {
         if (timerSurvol) clearTimeout(timerSurvol);
         popup.setLatLng([b.lat, b.lng]).openOn(carte);
         attacherEcouteursPopup();
-      });
+      };
 
-      marqueur.on("mouseout", () => {
+      const fermerBulle = () => {
         timerSurvol = setTimeout(() => {
           carte.closePopup(popup);
         }, 300);
+      };
+
+      popupsBoutiquesRef.current.set(b.id, {
+        ouvrir: ouvrirBulle,
+        fermer: fermerBulle,
+        boutique: b,
       });
+
+      marqueur.on("mouseover", ouvrirBulle);
+      marqueur.on("mouseout", fermerBulle);
+
+      // Écouteur direct sur l'élément DOM du marqueur une fois ajouté
+      setTimeout(() => {
+        const elIcon = marqueur.getElement();
+        if (elIcon) {
+          elIcon.addEventListener("mouseenter", ouvrirBulle);
+          elIcon.addEventListener("mouseleave", fermerBulle);
+        }
+      }, 50);
 
       marqueur.on("click", () => {
         gererClicPointCluster([b.lat, b.lng], () => {
@@ -1378,6 +1397,16 @@ export default function GlobeExplorateurBoutiques({
                     key={b.id || idx}
                     type="button"
                     onClick={() => selectionnerBoutiqueCarousel(b)}
+                    onMouseEnter={() => {
+                      const handler = popupsBoutiquesRef.current.get(b.id);
+                      if (handler) {
+                        handler.ouvrir();
+                        carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.4 });
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      popupsBoutiquesRef.current.get(b.id)?.fermer();
+                    }}
                     className={`flex flex-col items-center gap-1 shrink-0 p-1.5 rounded-2xl transition-all cursor-pointer group ${
                       estSelectionne
                         ? "bg-blue-950/70 border border-blue-600 scale-105"
