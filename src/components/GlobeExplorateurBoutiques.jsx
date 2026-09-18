@@ -795,7 +795,18 @@ export default function GlobeExplorateurBoutiques({
       iconAnchor: [50, 70],
     });
 
-    marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi }).addTo(carte);
+    // Pane dédié sous markerPane (600, où vivent les marqueurs boutique) :
+    // quand la position de l'utilisateur coïncide avec une boutique,
+    // "Vous êtes ici" reste EN DESSOUS pour le survol ET le clic, quel que
+    // soit l'ordre de création des marqueurs. Même correctif que
+    // CarteBoutiques.jsx — le clic seul avait été corrigé (v92/v96), pas
+    // le survol.
+    if (!carte.getPane("paneMoi")) {
+      carte.createPane("paneMoi");
+      carte.getPane("paneMoi").style.zIndex = 350;
+    }
+
+    marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
     // Sans ceci, "Vous êtes ici" ne réagissait jamais au clic — et quand il
     // se superposait à une boutique (position de démo confondue avec sa
     // propre boutique), il interceptait le clic sans rien faire à la place.

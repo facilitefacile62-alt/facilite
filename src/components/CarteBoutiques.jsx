@@ -567,6 +567,19 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // remplace l'ancien simple point rouge.
         const ici = iciAvance;
         if (ici) {
+          // Pane dédié, sous overlayPane (400, cercles vectoriels) ET
+          // markerPane (600, marqueurs avatar) : quand la position de
+          // l'utilisateur coïncide avec une boutique, "Vous êtes ici" reste
+          // visuellement ET pour les événements (survol/clic) EN DESSOUS,
+          // quel que soit le type de marqueur boutique (avatar ou cercle —
+          // zIndexOffset seul n'aurait aidé que face à un autre marqueur du
+          // MÊME pane, jamais face à un cercle SVG d'un pane différent).
+          // Sans ça, "Vous êtes ici" interceptait tout, y compris le survol
+          // — le clic avait déjà été corrigé (v92) mais pas le survol.
+          if (!carte.getPane("paneMoi")) {
+            carte.createPane("paneMoi");
+            carte.getPane("paneMoi").style.zIndex = 350;
+          }
           const iconeMoi = L.divIcon({
             className: "carte-boutiques-moi-icon",
             html: `
@@ -579,7 +592,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             iconSize: [70, 50],
             iconAnchor: [35, 25],
           });
-          const marqueurMoi = L.marker(ici, { icon: iconeMoi }).addTo(carte);
+          const marqueurMoi = L.marker(ici, { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
           // Sans ceci, "Vous êtes ici" ne réagissait jamais au clic — et
           // quand il se superposait à une boutique (cas fréquent : la
           // position de démo coïncide avec celle de sa propre boutique), il
