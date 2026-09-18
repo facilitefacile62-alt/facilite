@@ -94,7 +94,8 @@
 // v94 (18/09/2026) : liste cliquable pour les marqueurs superposes a zoom maximal (carte Autour de moi)
 // v95 (18/09/2026) : cadre de selection deplacable/redimensionnable pour voir toutes les boutiques d'une zone
 // v96 (18/09/2026) : clic anti-superposition + cadre de selection portes sur la vue plein ecran Explorer
-const VERSION_CACHE = "facilite-v96";
+// v97 (18/09/2026) : icone loupe pour l'outil de cadre de selection (au lieu d'un appareil photo)
+const VERSION_CACHE = "facilite-v97";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
