@@ -22,7 +22,7 @@
 // "Vous êtes ici" animé, même carrousel d'avatars — mais SANS passer en plein
 // écran : ce composant reste dans son cadre compact, intégré à côté de la
 // liste de résultats, c'est la différence assumée avec le Globe.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, calculerStatutOuverture } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 
@@ -65,8 +65,69 @@ const distanceLisible = (km) =>
 export default function CarteBoutiques({ articles, boutiquesSansArticles = [], storeIdsPremium, depart, onChoisirBoutique, onOuvrirExplorer, onReinitialiserPosition }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
+  const leafletRef = useRef(null);
   const menuFiltresRef = useRef(null);
   const [echec, setEchec] = useState(false);
+
+  // Cadre de sélection déplaçable/redimensionnable ("voir tout ce qu'il y a
+  // là-dedans") — demande explicite de l'utilisateur, complémentaire à la
+  // liste qui s'ouvre au clic sur des marqueurs superposés : ici on choisit
+  // soi-même une zone plutôt que de cliquer précisément sur un point.
+  const [modeSelectionActif, setModeSelectionActif] = useState(false);
+  const [cadre, setCadre] = useState({ x: 70, y: 70, largeur: 150, hauteur: 150 });
+  const dragEtatRef = useRef(null);
+
+  // Popup listant plusieurs lieux (boutiques et/ou "Vous êtes ici") à
+  // choisir — utilisé à la fois par le clic sur des marqueurs superposés
+  // (voir l'effet Leaflet plus bas) et par le cadre de sélection ci-dessous.
+  // Fonction de composant (pas locale à l'effet) : leafletRef/carteRef
+  // restent valides tant que la carte est montée, indépendamment de quel
+  // rendu de l'effet les a créés.
+  const ouvrirListeCluster = useCallback(
+    (position, membres) => {
+      const carte = carteRef.current;
+      const L = leafletRef.current;
+      if (!carte || !L || membres.length === 0) return;
+      const html = `
+        <div style="min-width:170px;padding:2px 0;">
+          <div style="font-size:11px;font-weight:900;color:#fff;margin-bottom:6px;">${membres.length} lieu${membres.length > 1 ? "x" : ""} à cet endroit</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            ${membres
+              .map(
+                (m, i) => `
+              <button type="button" data-cluster-index="${i}" style="all:unset;cursor:pointer;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                <span>${m.type === "ici" ? "🧑🏾" : "📍"}</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.type === "ici" ? "Vous êtes ici" : echapperHtml(m.nom)}</span>
+              </button>`
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+      const popup = L.popup({ className: "carte-boutique-bulle-custom", closeButton: true, offset: [0, -10] })
+        .setLatLng(position)
+        .setContent(html)
+        .openOn(carte);
+      // setContent ne monte le HTML qu'après ce tick — les gestionnaires ne
+      // peuvent être attachés qu'une fois l'élément réellement présent.
+      setTimeout(() => {
+        const el = popup.getElement();
+        if (!el) return;
+        el.querySelectorAll("[data-cluster-index]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const m = membres[Number(btn.getAttribute("data-cluster-index"))];
+            carte.closePopup(popup);
+            if (m.type === "ici") {
+              carte.flyTo(position, Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
+            } else if (typeof onChoisirBoutique === "function") {
+              onChoisirBoutique(m.id);
+            }
+          });
+        });
+      }, 0);
+    },
+    [onChoisirBoutique]
+  );
 
   // États de contrôle : Pliée / Dépliée, Mode Gain d'espace (Compact) et Menu Déroulant des Filtres
   const [estPliee, setEstPliee] = useState(false);
@@ -163,6 +224,70 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
     return boutiques;
   }, [boutiques, filtreActif]);
 
+  const gererPointerDownDeplacer = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragEtatRef.current = { type: "deplacer", depart: { x: e.clientX, y: e.clientY }, cadreDepart: { ...cadre } };
+  };
+  const gererPointerDownRedimensionner = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragEtatRef.current = { type: "redimensionner", depart: { x: e.clientX, y: e.clientY }, cadreDepart: { ...cadre } };
+  };
+
+  useEffect(() => {
+    if (!modeSelectionActif) return;
+    function onMove(e) {
+      if (!dragEtatRef.current) return;
+      const { type, depart, cadreDepart } = dragEtatRef.current;
+      const dx = e.clientX - depart.x;
+      const dy = e.clientY - depart.y;
+      if (type === "deplacer") {
+        setCadre({ ...cadreDepart, x: cadreDepart.x + dx, y: cadreDepart.y + dy });
+      } else {
+        setCadre({
+          ...cadreDepart,
+          largeur: Math.max(70, cadreDepart.largeur + dx),
+          hauteur: Math.max(70, cadreDepart.hauteur + dy),
+        });
+      }
+    }
+    function onUp() {
+      dragEtatRef.current = null;
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [modeSelectionActif]);
+
+  // Convertit le cadre (coordonnées écran, relatives au conteneur de la
+  // carte) en zone géographique, puis liste tout ce qui s'y trouve —
+  // boutiques ET "Vous êtes ici" — via la même popup que le clic sur des
+  // marqueurs superposés. Demande explicite de l'utilisateur : un outil
+  // qu'on positionne pour voir toutes les boutiques d'une zone, plutôt que
+  // de devoir cliquer précisément sur chacune.
+  const voirBoutiquesDansLeCadre = () => {
+    const carte = carteRef.current;
+    const L = leafletRef.current;
+    if (!carte || !L) return;
+    const coinHautGauche = carte.containerPointToLatLng([cadre.x, cadre.y]);
+    const coinBasDroit = carte.containerPointToLatLng([cadre.x + cadre.largeur, cadre.y + cadre.hauteur]);
+    const zone = L.latLngBounds(coinHautGauche, coinBasDroit);
+
+    const membres = boutiquesAffichees
+      .filter((b) => zone.contains(b.position))
+      .map((b) => ({ position: b.position, type: "boutique", id: b.id, nom: b.nom }));
+    const ici = point(depart?.latitude, depart?.longitude);
+    if (ici && zone.contains(ici)) membres.push({ position: ici, type: "ici" });
+
+    if (membres.length === 0) return;
+    setModeSelectionActif(false);
+    ouvrirListeCluster(zone.getCenter(), membres);
+  };
+
   useEffect(() => {
     let annule = false;
     let carte = null;
@@ -179,6 +304,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
       if (!conteneur.current || boutiquesAffichees.length === 0) return;
       try {
         const L = (await import("leaflet")).default;
+        leafletRef.current = L;
         await import("leaflet/dist/leaflet.css");
         if (annule || !conteneur.current) return;
 
@@ -234,45 +360,6 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             const p2 = carte.latLngToContainerPoint(m.position);
             return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
           });
-        }
-        function ouvrirListeCluster(position, membres) {
-          const html = `
-            <div style="min-width:170px;padding:2px 0;">
-              <div style="font-size:11px;font-weight:900;color:#fff;margin-bottom:6px;">${membres.length} lieux à ce point</div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                ${membres
-                  .map(
-                    (m, i) => `
-                  <button type="button" data-cluster-index="${i}" style="all:unset;cursor:pointer;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
-                    <span>${m.type === "ici" ? "🧑🏾" : "📍"}</span>
-                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.type === "ici" ? "Vous êtes ici" : echapperHtml(m.nom)}</span>
-                  </button>`
-                  )
-                  .join("")}
-              </div>
-            </div>
-          `;
-          const popup = L.popup({ className: "carte-boutique-bulle-custom", closeButton: true, offset: [0, -10] })
-            .setLatLng(position)
-            .setContent(html)
-            .openOn(carte);
-          // setContent ne monte le HTML qu'après ce tick — les gestionnaires
-          // ne peuvent être attachés qu'une fois l'élément réellement présent.
-          setTimeout(() => {
-            const el = popup.getElement();
-            if (!el) return;
-            el.querySelectorAll("[data-cluster-index]").forEach((btn) => {
-              btn.addEventListener("click", () => {
-                const m = membres[Number(btn.getAttribute("data-cluster-index"))];
-                carte.closePopup(popup);
-                if (m.type === "ici") {
-                  carte.flyTo(position, Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
-                } else if (typeof onChoisirBoutique === "function") {
-                  onChoisirBoutique(m.id);
-                }
-              });
-            });
-          }, 0);
         }
         function gererClicPoint(position, actionSiSepare) {
           const zoomActuel = carte.getZoom();
@@ -499,6 +586,32 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             aria-label="Carte des boutiques proches"
           />
 
+          {/* Cadre de sélection "voir toutes les boutiques d'une zone" —
+              déplaçable (glisser le cadre) et redimensionnable (poignée en
+              bas à droite), puis validé via le bouton appareil photo. */}
+          {modeSelectionActif && (
+            <div
+              onPointerDown={gererPointerDownDeplacer}
+              className="absolute z-[410] rounded-2xl border-2 border-white/80 bg-white/10 backdrop-blur-[1px] cursor-move touch-none"
+              style={{ left: cadre.x, top: cadre.y, width: cadre.largeur, height: cadre.hauteur }}
+            >
+              <div
+                onPointerDown={gererPointerDownRedimensionner}
+                className="absolute -bottom-2 -right-2 w-5 h-5 rounded-full bg-white border-2 border-orange-500 cursor-nwse-resize touch-none"
+                title="Redimensionner"
+              />
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={voirBoutiquesDansLeCadre}
+                className="absolute -bottom-6 left-1/2 -translate-x-1/2 translate-y-full mt-2 w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-2xl active:scale-95 shadow-orange-500/50 cursor-pointer"
+                title="Voir les boutiques dans ce cadre"
+              >
+                <i className="fa-solid fa-camera-retro text-base"></i>
+              </button>
+            </div>
+          )}
+
           {/* OVERLAY SUPÉRIEUR TRANSPARENT PAR-DESSUS LA CARTE (HUD / Glassmorphism) */}
           <div className="absolute inset-x-0 top-0 z-[400] p-2.5 sm:p-3.5 flex flex-col gap-2 bg-gradient-to-b from-black/85 via-black/40 to-transparent pointer-events-none">
             {/* Ligne 1 : Titre / Menu Déroulant (avec 3 traits ☰) & Actions principales */}
@@ -585,6 +698,19 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                     <span>🌍</span>
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setModeSelectionActif(!modeSelectionActif)}
+                  className={`w-8 h-8 rounded-full text-xs font-black transition cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md border active:scale-95 shrink-0 ${
+                    modeSelectionActif
+                      ? "bg-orange-500 border-orange-300 text-white"
+                      : "bg-black/60 hover:bg-black/80 border-white/15 text-white"
+                  }`}
+                  title="Voir toutes les boutiques d'une zone"
+                >
+                  <i className="fa-solid fa-camera-retro text-xs"></i>
+                </button>
 
                 <button
                   type="button"
