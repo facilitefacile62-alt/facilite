@@ -93,7 +93,8 @@
 // v93 (18/09/2026) : bouton flottant "Lens" sur la fiche boutique, raccourci vers le scan IA Zero Saisie
 // v94 (18/09/2026) : liste cliquable pour les marqueurs superposes a zoom maximal (carte Autour de moi)
 // v95 (18/09/2026) : cadre de selection deplacable/redimensionnable pour voir toutes les boutiques d'une zone
-const VERSION_CACHE = "facilite-v95";
+// v96 (18/09/2026) : clic anti-superposition + cadre de selection portes sur la vue plein ecran Explorer
+const VERSION_CACHE = "facilite-v96";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
