@@ -81,14 +81,14 @@ function BienvenueVisiteurContent() {
   }
 
   return (
-    <div className="relative min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-4 pt-4 pb-12 sm:py-8 overflow-hidden transition-colors selection:bg-[#10E688] selection:text-black">
+    <div className="relative min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-start items-center px-4 pt-4 sm:pt-8 pb-10 overflow-hidden transition-colors selection:bg-[#10E688] selection:text-black">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] bg-emerald-400/10 dark:bg-emerald-500/10 rounded-full blur-3xl"
       ></div>
 
-      <main className="relative w-full max-w-[420px] z-10 animate-fade-in-up -translate-y-4 sm:-translate-y-8">
-        <div className="bg-white dark:bg-zinc-900 rounded-[28px] sm:rounded-[32px] p-7 sm:p-9 shadow-xl border border-gray-100 dark:border-zinc-800 space-y-6 text-center">
+      <main className="relative w-full max-w-[420px] z-10 animate-fade-in-up mt-2 sm:mt-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-zinc-800 space-y-5 text-center">
           
           <div className="relative inline-flex items-center justify-center mx-auto">
             <div className="absolute inset-0 rounded-full bg-[#10E688]/25 dark:bg-[#10E688]/20 blur-lg scale-125"></div>
