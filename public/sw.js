@@ -91,7 +91,8 @@
 // v91 (17/09/2026) : le metier/categorie enregistre depuis la carte inline force enfin le vrai type de boutique (etait silencieusement ignore avant)
 // v92 (17/09/2026) : clic sur marqueurs superposes (carte Autour de moi) zoome pour les separer au lieu de rester sans effet
 // v93 (18/09/2026) : bouton flottant "Lens" sur la fiche boutique, raccourci vers le scan IA Zero Saisie
-const VERSION_CACHE = "facilite-v93";
+// v94 (18/09/2026) : liste cliquable pour les marqueurs superposes a zoom maximal (carte Autour de moi)
+const VERSION_CACHE = "facilite-v94";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
