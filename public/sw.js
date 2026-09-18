@@ -98,7 +98,8 @@
 // v98 (18/09/2026) : popup de liste (Explorer) enfin lisible, fond sombre manquant faisait du texte blanc sur blanc
 // v99 (18/09/2026) : la liste de lieux prend l'apparence du carrousel d'avatars existant
 // v100 (18/09/2026) : apercu des articles en vignettes au survol d'une boutique (Autour de moi)
-const VERSION_CACHE = "facilite-v100";
+// v101 (18/09/2026) : cartes d'apercu articles agrandies avec prix, style story (au lieu de petites vignettes)
+const VERSION_CACHE = "facilite-v101";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
