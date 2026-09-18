@@ -208,7 +208,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // "Vous êtes ici" se superposent silencieusement sans qu'aucun des
         // deux ne réagisse au clic (signalé par l'utilisateur).
         const iciAvance = point(depart?.latitude, depart?.longitude);
-        const positionsConnues = [...boutiquesAffichees.map((b) => b.position), ...(iciAvance ? [iciAvance] : [])];
+        const membresConnus = [
+          ...boutiquesAffichees.map((b) => ({ position: b.position, type: "boutique", id: b.id, nom: b.nom })),
+          ...(iciAvance ? [{ position: iciAvance, type: "ici" }] : []),
+        ];
 
         // Deux marqueurs peuvent se superposer visuellement à l'écran (même
         // point exact, ou juste très proches à ce niveau de zoom) : un clic
@@ -217,26 +220,73 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // au-dessus) intercepte tous les clics sans rien faire. Plutôt qu'un
         // bouton "loupe" séparé, le premier clic sur un point encombré zoome
         // pour les séparer visuellement (comme Google Maps) ; une fois
-        // séparés, le clic déclenche l'action normale.
+        // séparés, le clic déclenche l'action normale. Quand deux points sont
+        // RÉELLEMENT à la même coordonnée (fréquent en démo : position de
+        // l'utilisateur = position de sa propre boutique), aucun zoom ne les
+        // sépare jamais — passé un certain niveau, une petite liste
+        // cliquable remplace le zoom pour choisir lequel ouvrir (demande
+        // explicite de l'utilisateur : "un outil qui me permette de voir
+        // toutes les boutiques qui se trouvent là").
         const SEUIL_CLUSTER_PX = 26;
-        function pointEncombre(position) {
+        function membresEncombres(position) {
           const p1 = carte.latLngToContainerPoint(position);
-          return positionsConnues.some((autre) => {
-            if (autre === position) return false;
-            const p2 = carte.latLngToContainerPoint(autre);
+          return membresConnus.filter((m) => {
+            const p2 = carte.latLngToContainerPoint(m.position);
             return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
           });
         }
+        function ouvrirListeCluster(position, membres) {
+          const html = `
+            <div style="min-width:170px;padding:2px 0;">
+              <div style="font-size:11px;font-weight:900;color:#fff;margin-bottom:6px;">${membres.length} lieux à ce point</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                ${membres
+                  .map(
+                    (m, i) => `
+                  <button type="button" data-cluster-index="${i}" style="all:unset;cursor:pointer;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                    <span>${m.type === "ici" ? "🧑🏾" : "📍"}</span>
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.type === "ici" ? "Vous êtes ici" : echapperHtml(m.nom)}</span>
+                  </button>`
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `;
+          const popup = L.popup({ className: "carte-boutique-bulle-custom", closeButton: true, offset: [0, -10] })
+            .setLatLng(position)
+            .setContent(html)
+            .openOn(carte);
+          // setContent ne monte le HTML qu'après ce tick — les gestionnaires
+          // ne peuvent être attachés qu'une fois l'élément réellement présent.
+          setTimeout(() => {
+            const el = popup.getElement();
+            if (!el) return;
+            el.querySelectorAll("[data-cluster-index]").forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const m = membres[Number(btn.getAttribute("data-cluster-index"))];
+                carte.closePopup(popup);
+                if (m.type === "ici") {
+                  carte.flyTo(position, Math.min(carte.getZoom() + 3, 17), { duration: 0.6 });
+                } else if (typeof onChoisirBoutique === "function") {
+                  onChoisirBoutique(m.id);
+                }
+              });
+            });
+          }, 0);
+        }
         function gererClicPoint(position, actionSiSepare) {
           const zoomActuel = carte.getZoom();
-          // Si les coordonnées sont réellement identiques (pas juste
-          // proches), aucun zoom ne les séparera jamais : au-delà d'un
-          // certain niveau, mieux vaut laisser passer l'action normale que
-          // bloquer le clic indéfiniment.
-          if (pointEncombre(position) && zoomActuel < 17) {
-            carte.flyTo(position, Math.min(zoomActuel + 4, 18), { duration: 0.6 });
-          } else {
+          const membres = membresEncombres(position);
+          if (membres.length <= 1) {
             actionSiSepare();
+            return;
+          }
+          // Coordonnées réellement identiques (le zoom max n'a rien séparé) :
+          // proposer la liste plutôt que de continuer à zoomer pour rien.
+          if (zoomActuel >= 17) {
+            ouvrirListeCluster(position, membres);
+          } else {
+            carte.flyTo(position, Math.min(zoomActuel + 4, 18), { duration: 0.6 });
           }
         }
 
