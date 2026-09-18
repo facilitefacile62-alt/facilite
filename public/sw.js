@@ -100,7 +100,8 @@
 // v100 (18/09/2026) : apercu des articles en vignettes au survol d'une boutique (Autour de moi)
 // v101 (18/09/2026) : cartes d'apercu articles agrandies avec prix, style story (au lieu de petites vignettes)
 // v102 (18/09/2026) : retrait de Mon activite/Etablissements ouverts des raccourcis Facilite/candidat (place naturelle : Marketplace)
-const VERSION_CACHE = "facilite-v102";
+// v103 (18/09/2026) : menu mobile beaucoup plus rapide a ouvrir/fermer/naviguer (plus de demontage complet a chaque clic)
+const VERSION_CACHE = "facilite-v103";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
