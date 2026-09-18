@@ -97,7 +97,8 @@
 // v97 (18/09/2026) : icone loupe pour l'outil de cadre de selection (au lieu d'un appareil photo)
 // v98 (18/09/2026) : popup de liste (Explorer) enfin lisible, fond sombre manquant faisait du texte blanc sur blanc
 // v99 (18/09/2026) : la liste de lieux prend l'apparence du carrousel d'avatars existant
-const VERSION_CACHE = "facilite-v99";
+// v100 (18/09/2026) : apercu des articles en vignettes au survol d'une boutique (Autour de moi)
+const VERSION_CACHE = "facilite-v100";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
