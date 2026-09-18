@@ -108,7 +108,8 @@
 // v108 (18/09/2026) : carte de bienvenue (choix d'univers) centree verticalement au lieu d'alignee en haut
 // v109 (18/09/2026) : carrousel Snapchat lenses circulaire avec anneau blanc sur la boutique active et produits au survol
 // v110 (18/09/2026) : synchronisation du carrousel Snapchat circulaire sur CarteBoutiques et GlobeExplorateurBoutiques avec premier element actif
-const VERSION_CACHE = "facilite-v110";
+// v111 (18/09/2026) : boutons fleches gauche/droite pour faire defiler les boutiques du carrousel circulaire
+const VERSION_CACHE = "facilite-v111";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
