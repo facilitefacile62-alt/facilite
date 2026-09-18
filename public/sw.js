@@ -99,7 +99,8 @@
 // v99 (18/09/2026) : la liste de lieux prend l'apparence du carrousel d'avatars existant
 // v100 (18/09/2026) : apercu des articles en vignettes au survol d'une boutique (Autour de moi)
 // v101 (18/09/2026) : cartes d'apercu articles agrandies avec prix, style story (au lieu de petites vignettes)
-const VERSION_CACHE = "facilite-v101";
+// v102 (18/09/2026) : retrait de Mon activite/Etablissements ouverts des raccourcis Facilite/candidat (place naturelle : Marketplace)
+const VERSION_CACHE = "facilite-v102";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
