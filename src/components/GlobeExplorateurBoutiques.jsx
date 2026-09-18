@@ -184,6 +184,32 @@ export default function GlobeExplorateurBoutiques({
     }
   };
 
+  // Gestion du glissement à la souris et au toucher (Drag to scroll)
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
+
+  const onMouseDownCarousel = (e) => {
+    if (!carouselContainerRef.current) return;
+    dragRef.current.isDown = true;
+    dragRef.current.startX = e.pageX - carouselContainerRef.current.offsetLeft;
+    dragRef.current.scrollLeft = carouselContainerRef.current.scrollLeft;
+    dragRef.current.hasMoved = false;
+  };
+
+  const onMouseMoveCarousel = (e) => {
+    if (!dragRef.current.isDown || !carouselContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - carouselContainerRef.current.offsetLeft;
+    const walk = (x - dragRef.current.startX) * 1.5;
+    if (Math.abs(walk) > 4) {
+      dragRef.current.hasMoved = true;
+    }
+    carouselContainerRef.current.scrollLeft = dragRef.current.scrollLeft - walk;
+  };
+
+  const onMouseUpCarousel = () => {
+    dragRef.current.isDown = false;
+  };
+
   // Filtrer les boutiques avec coordonnées valides
   const marqueurs = useMemo(() => {
     return boutiques.filter(
@@ -199,6 +225,7 @@ export default function GlobeExplorateurBoutiques({
   }, [marqueurs, boutiqueSelectionnee]);
 
   const selectionnerBoutiqueCarousel = (b, element = null) => {
+    if (dragRef.current.hasMoved) return;
     setBoutiqueSelectionnee(b);
     const handler = popupsBoutiquesRef.current.get(b.id);
     if (handler?.ouvrir) {
@@ -211,6 +238,7 @@ export default function GlobeExplorateurBoutiques({
   };
 
   const selectionnerArticleCarousel = (a, element = null) => {
+    if (dragRef.current.hasMoved) return;
     const bId = a.boutique_id || a.boutiqueId || a.boutique?.id;
     const bNom = (a.boutique_nom || a.boutiqueNom || a.boutique?.nom || "").trim().toLowerCase();
     const boutiqueAssociee = marqueurs.find(
@@ -1434,12 +1462,12 @@ export default function GlobeExplorateurBoutiques({
           </div>
 
           {/* Carrousel Circulaire Interactif façon Snapchat / Stories Lens avec Flèches de Déplacement */}
-          <div className="pointer-events-auto relative w-full max-w-xl flex items-center justify-center gap-1.5 sm:gap-2 px-1">
+          <div className="pointer-events-auto relative w-full max-w-xl flex items-center justify-center gap-1.5 sm:gap-2 px-1 select-none">
             {/* Bouton Flèche Gauche Précédent */}
             <button
               type="button"
               onClick={allerBoutiquePrecedente}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-xl shadow-2xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
               aria-label="Boutique précédente"
               title="Boutique précédente"
             >
@@ -1449,12 +1477,20 @@ export default function GlobeExplorateurBoutiques({
             {vueCarrousel === "boutiques" ? (
               <div
                 ref={carouselContainerRef}
+                onMouseDown={onMouseDownCarousel}
+                onMouseMove={onMouseMoveCarousel}
+                onMouseUp={onMouseUpCarousel}
+                onMouseLeave={onMouseUpCarousel}
                 onWheel={(e) => {
-                  if (e.deltaY !== 0 && carouselContainerRef.current) {
-                    carouselContainerRef.current.scrollLeft += e.deltaY;
+                  e.stopPropagation();
+                  if (carouselContainerRef.current) {
+                    const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                    if (delta !== 0) {
+                      carouselContainerRef.current.scrollLeft += delta * 1.1;
+                    }
                   }
                 }}
-                className="flex-1 bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-6 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-2 px-3 sm:px-6 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
@@ -1491,10 +1527,10 @@ export default function GlobeExplorateurBoutiques({
                             <img
                               src={dataUriAvatarBoutique(b.avatar_config, 64)}
                               alt={b.nom}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover pointer-events-none"
                             />
                           ) : aPhoto ? (
-                            <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover" />
+                            <img src={aPhoto} alt={b.nom} className="w-full h-full object-cover pointer-events-none" />
                           ) : (
                             <span className={estSelectionne ? "text-2xl" : "text-xl"}>{avatar.emoji}</span>
                           )}
@@ -1512,7 +1548,7 @@ export default function GlobeExplorateurBoutiques({
                         className={`transition-all duration-200 truncate ${
                           estSelectionne
                             ? "mt-1.5 px-2.5 py-0.5 bg-white text-gray-950 text-[10px] sm:text-[11px] font-black rounded-full shadow-xl max-w-[80px] sm:max-w-[100px] border border-gray-200"
-                            : "mt-1 text-[9px] font-extrabold text-gray-300 max-w-[60px] drop-shadow-md group-hover:text-white"
+                            : "mt-1 text-[9px] font-extrabold text-white max-w-[60px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] group-hover:text-emerald-300"
                         }`}
                       >
                         {b.nom}
@@ -1524,12 +1560,20 @@ export default function GlobeExplorateurBoutiques({
             ) : (
               <div
                 ref={carouselContainerRef}
+                onMouseDown={onMouseDownCarousel}
+                onMouseMove={onMouseMoveCarousel}
+                onMouseUp={onMouseUpCarousel}
+                onMouseLeave={onMouseUpCarousel}
                 onWheel={(e) => {
-                  if (e.deltaY !== 0 && carouselContainerRef.current) {
-                    carouselContainerRef.current.scrollLeft += e.deltaY;
+                  e.stopPropagation();
+                  if (carouselContainerRef.current) {
+                    const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                    if (delta !== 0) {
+                      carouselContainerRef.current.scrollLeft += delta * 1.1;
+                    }
                   }
                 }}
-                className="flex-1 bg-black/40 backdrop-blur-xl rounded-full py-2 px-3 sm:px-6 border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-2 px-3 sm:px-6 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
@@ -1555,7 +1599,7 @@ export default function GlobeExplorateurBoutiques({
                         >
                           <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border border-gray-950 flex items-center justify-center">
                             {photo ? (
-                              <img src={photo} alt={a.titre} className="w-full h-full object-cover" />
+                              <img src={photo} alt={a.titre} className="w-full h-full object-cover pointer-events-none" />
                             ) : (
                               <i className="fa-solid fa-tag text-gray-400 text-xs"></i>
                             )}
@@ -1565,12 +1609,12 @@ export default function GlobeExplorateurBoutiques({
                           className={`transition-all duration-200 truncate ${
                             estSelectionne
                               ? "mt-1.5 px-2 py-0.5 bg-white text-gray-950 text-[10px] font-black rounded-full shadow-xl max-w-[80px]"
-                              : "mt-1 text-[9px] font-extrabold text-gray-300 max-w-[60px]"
+                              : "mt-1 text-[9px] font-extrabold text-white max-w-[60px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
                           }`}
                         >
                           {a.titre}
                         </span>
-                        <span className="text-[8px] font-black text-emerald-400 drop-shadow-xs">
+                        <span className="text-[8px] font-black text-emerald-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                           {prixLisible(a.prix_xof)} F
                         </span>
                       </button>
@@ -1584,7 +1628,7 @@ export default function GlobeExplorateurBoutiques({
             <button
               type="button"
               onClick={allerBoutiqueSuivante}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-xl shadow-2xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
               aria-label="Boutique suivante"
               title="Boutique suivante"
             >

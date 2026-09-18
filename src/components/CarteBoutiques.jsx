@@ -67,9 +67,34 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
   const menuFiltresRef = useRef(null);
+  const carouselContainerRef = useRef(null);
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
   const popupsBoutiquesRef = useRef(new Map());
   const [boutiqueActiveId, setBoutiqueActiveId] = useState(null);
   const [echec, setEchec] = useState(false);
+
+  const onMouseDownCarousel = (e) => {
+    if (!carouselContainerRef.current) return;
+    dragRef.current.isDown = true;
+    dragRef.current.startX = e.pageX - carouselContainerRef.current.offsetLeft;
+    dragRef.current.scrollLeft = carouselContainerRef.current.scrollLeft;
+    dragRef.current.hasMoved = false;
+  };
+
+  const onMouseMoveCarousel = (e) => {
+    if (!dragRef.current.isDown || !carouselContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - carouselContainerRef.current.offsetLeft;
+    const walk = (x - dragRef.current.startX) * 1.5;
+    if (Math.abs(walk) > 4) {
+      dragRef.current.hasMoved = true;
+    }
+    carouselContainerRef.current.scrollLeft = dragRef.current.scrollLeft - walk;
+  };
+
+  const onMouseUpCarousel = () => {
+    dragRef.current.isDown = false;
+  };
 
   // Cadre de sélection déplaçable/redimensionnable ("voir tout ce qu'il y a
   // là-dedans") — demande explicite de l'utilisateur, complémentaire à la
@@ -895,7 +920,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               principe (flottant sur la carte), juste poussé plus loin. */}
           <div className="absolute inset-x-0 bottom-2 z-[400] px-2 flex justify-center pointer-events-none">
             {!modeCompact && boutiquesAffichees.length > 0 && (
-              <div className="pointer-events-auto w-full max-w-lg flex items-center justify-center gap-1.5 px-1">
+              <div className="pointer-events-auto w-full max-w-lg flex items-center justify-center gap-1.5 px-1 select-none">
                 {/* Flèche Gauche */}
                 <button
                   type="button"
@@ -911,13 +936,29 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       onChoisirBoutique?.(prevB.id);
                     }
                   }}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-xl shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label="Précédent"
                 >
                   <i className="fa-solid fa-chevron-left text-[10px]"></i>
                 </button>
 
-                <div className="flex-1 bg-black/40 backdrop-blur-xl rounded-full py-1.5 px-3 sm:px-6 border border-white/15 shadow-[0_8px_30px_rgba(0,0,0,0.6)] flex items-center justify-start sm:justify-center gap-2.5 sm:gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory">
+                <div
+                  ref={carouselContainerRef}
+                  onMouseDown={onMouseDownCarousel}
+                  onMouseMove={onMouseMoveCarousel}
+                  onMouseUp={onMouseUpCarousel}
+                  onMouseLeave={onMouseUpCarousel}
+                  onWheel={(e) => {
+                    e.stopPropagation();
+                    if (carouselContainerRef.current) {
+                      const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                      if (delta !== 0) {
+                        carouselContainerRef.current.scrollLeft += delta * 1.1;
+                      }
+                    }
+                  }}
+                  className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-6 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-2.5 sm:gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                >
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
                     return (
@@ -925,6 +966,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                         key={b.id}
                         type="button"
                         onClick={(e) => {
+                          if (dragRef.current.hasMoved) return;
                           setBoutiqueActiveId(b.id);
                           carteRef.current?.flyTo(b.position, 15.5, { duration: 0.8 });
                           const handler = popupsBoutiquesRef.current.get(b.id);
@@ -954,10 +996,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                               <img
                                 src={dataUriAvatarBoutique(b.avatar_config, 48)}
                                 alt={b.nom}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover pointer-events-none"
                               />
                             ) : (
-                              <span className="text-white text-[9px] font-black">
+                              <span className="text-white text-[9px] font-black pointer-events-none">
                                 {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
                               </span>
                             )}
@@ -972,7 +1014,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                           className={`transition-all duration-200 truncate ${
                             estSelectionne
                               ? "mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] border border-gray-200"
-                              : "mt-0.5 text-[8px] font-extrabold text-gray-300 max-w-[50px] drop-shadow-md group-hover:text-white"
+                              : "mt-0.5 text-[8px] font-extrabold text-white max-w-[50px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] group-hover:text-emerald-300"
                           }`}
                         >
                           {b.nom}
@@ -997,7 +1039,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       onChoisirBoutique?.(nextB.id);
                     }
                   }}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-xl shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label="Suivant"
                 >
                   <i className="fa-solid fa-chevron-right text-[10px]"></i>
