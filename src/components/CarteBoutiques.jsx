@@ -515,8 +515,12 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                   .map(
                     (a) => `
                   <div style="flex-shrink:0;width:56px;">
-                    <div style="width:56px;height:74px;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.4);">
-                      <img src="${urlPhoto(a.photos[0])}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                    <div style="width:56px;height:74px;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.4);background:#1f2937;display:flex;align-items:center;justify-content:center;">
+                      <img
+                        src="${urlPhoto(a.photos[0])}"
+                        style="width:100%;height:100%;object-fit:cover;display:block;"
+                        onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📦',style:'font-size:20px;'}))"
+                      />
                     </div>
                     ${
                       a.prix_xof
