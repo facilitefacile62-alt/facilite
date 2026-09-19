@@ -957,7 +957,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       }
                     }
                   }}
-                  className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-6 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-2.5 sm:gap-3.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                  className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
                 >
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
@@ -987,8 +987,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                         <div
                           className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                             estSelectionne
-                              ? "w-13 h-13 sm:w-14 sm:h-14 p-[3.5px] bg-white shadow-[0_0_24px_rgba(255,255,255,0.9),0_6px_20px_rgba(0,0,0,0.7)] ring-3 ring-black/50 scale-110 z-10"
-                              : "w-8 h-8 sm:w-9 sm:h-9 p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 opacity-75 hover:opacity-100 hover:scale-105 shadow-md"
+                              ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
+                              : "w-11 h-11 sm:w-12 sm:h-12 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                           }`}
                         >
                           <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
@@ -1010,15 +1010,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                             </span>
                           )}
                         </div>
-                        <span
-                          className={`transition-all duration-200 truncate ${
-                            estSelectionne
-                              ? "mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] border border-gray-200"
-                              : "mt-0.5 text-[8px] font-extrabold text-white max-w-[50px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] group-hover:text-emerald-300"
-                          }`}
-                        >
-                          {b.nom}
-                        </span>
+                        {estSelectionne && (
+                          <span className="mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] truncate border border-gray-200 transition-all duration-200">
+                            {b.nom}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

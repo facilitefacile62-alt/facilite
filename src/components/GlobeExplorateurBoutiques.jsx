@@ -1490,7 +1490,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-2 px-3 sm:px-6 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
@@ -1518,8 +1518,8 @@ export default function GlobeExplorateurBoutiques({
                       <div
                         className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                           estSelectionne
-                            ? "w-16 h-16 sm:w-18 sm:h-18 p-[4px] bg-white shadow-[0_0_32px_rgba(255,255,255,0.95),0_10px_30px_rgba(0,0,0,0.8)] ring-4 ring-black/60 scale-115 z-20"
-                            : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-[#10B981] to-emerald-400 opacity-75 hover:opacity-100 hover:scale-105 shadow-md"
+                            ? "w-13 h-13 sm:w-14 sm:h-14 p-[3px] bg-white shadow-[0_0_22px_rgba(255,255,255,0.9),0_8px_22px_rgba(0,0,0,0.75)] ring-2 ring-black/50 scale-105 z-20"
+                            : "w-12 h-12 sm:w-13 sm:h-13 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                         }`}
                       >
                         <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-black">
@@ -1543,16 +1543,14 @@ export default function GlobeExplorateurBoutiques({
                         )}
                       </div>
 
-                      {/* Libellé Boutique */}
-                      <span
-                        className={`transition-all duration-200 truncate ${
-                          estSelectionne
-                            ? "mt-1.5 px-2.5 py-0.5 bg-white text-gray-950 text-[10px] sm:text-[11px] font-black rounded-full shadow-xl max-w-[80px] sm:max-w-[100px] border border-gray-200"
-                            : "mt-1 text-[9px] font-extrabold text-white max-w-[60px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] group-hover:text-emerald-300"
-                        }`}
-                      >
-                        {b.nom}
-                      </span>
+                      {/* Libellé Boutique — seulement pour l'élément sélectionné,
+                          façon Snapchat Lenses (référence utilisateur) : une
+                          rangée dense de cercles, pas une légende sous chacun. */}
+                      {estSelectionne && (
+                        <span className="mt-1.5 px-2.5 py-0.5 bg-white text-gray-950 text-[10px] sm:text-[11px] font-black rounded-full shadow-xl max-w-[80px] sm:max-w-[100px] truncate border border-gray-200 transition-all duration-200">
+                          {b.nom}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -1573,7 +1571,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-2 px-3 sm:px-6 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-3 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
@@ -1593,8 +1591,8 @@ export default function GlobeExplorateurBoutiques({
                         <div
                           className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                             estSelectionne
-                              ? "w-16 h-16 sm:w-18 sm:h-18 p-[4px] bg-white shadow-[0_0_32px_rgba(255,255,255,0.95),0_10px_30px_rgba(0,0,0,0.8)] ring-4 ring-black/60 scale-115 z-20"
-                              : "w-11 h-11 sm:w-12 sm:h-12 p-0.5 bg-gradient-to-tr from-sky-400 to-blue-600 opacity-75 hover:opacity-100 hover:scale-105 shadow-md"
+                              ? "w-13 h-13 sm:w-14 sm:h-14 p-[3px] bg-white shadow-[0_0_22px_rgba(255,255,255,0.9),0_8px_22px_rgba(0,0,0,0.75)] ring-2 ring-black/50 scale-105 z-20"
+                              : "w-12 h-12 sm:w-13 sm:h-13 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                           }`}
                         >
                           <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border border-gray-950 flex items-center justify-center">
@@ -1605,18 +1603,16 @@ export default function GlobeExplorateurBoutiques({
                             )}
                           </div>
                         </div>
-                        <span
-                          className={`transition-all duration-200 truncate ${
-                            estSelectionne
-                              ? "mt-1.5 px-2 py-0.5 bg-white text-gray-950 text-[10px] font-black rounded-full shadow-xl max-w-[80px]"
-                              : "mt-1 text-[9px] font-extrabold text-white max-w-[60px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
-                          }`}
-                        >
-                          {a.titre}
-                        </span>
-                        <span className="text-[8px] font-black text-emerald-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                          {prixLisible(a.prix_xof)} F
-                        </span>
+                        {estSelectionne && (
+                          <>
+                            <span className="mt-1.5 px-2 py-0.5 bg-white text-gray-950 text-[10px] font-black rounded-full shadow-xl max-w-[80px] truncate transition-all duration-200">
+                              {a.titre}
+                            </span>
+                            <span className="text-[8px] font-black text-emerald-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                              {prixLisible(a.prix_xof)} F
+                            </span>
+                          </>
+                        )}
                       </button>
                     );
                   })
