@@ -112,7 +112,8 @@
 // v112 (18/09/2026) : carrousel circulaire transparent avec defilement fluide a la molette souris et glissement tactile/drag
 // v113 (19/09/2026) : dock des boutiques resserre, plus proche des lenses Snapchat (espacement, tailles, legendes uniquement sur la selection)
 // v114 (19/09/2026) : carrousel du dock suit visuellement la selection quand elle boucle (fleches), et clic sur des boutiques a la meme position les dissocie legerement
-const VERSION_CACHE = "facilite-v114";
+// v115 (19/09/2026) : Explorer (globe) - clic boutique recentre sans forcer un zoom fixe, dissociation persiste au lieu d'etre annulee au clic suivant, fleches/anneau actif corriges sur le dock Articles
+const VERSION_CACHE = "facilite-v115";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

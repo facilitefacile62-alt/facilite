@@ -113,6 +113,12 @@ export default function GlobeExplorateurBoutiques({
   // cartePrete] plus bas peut rater la même fenêtre transitoire.
   const centrerSurPositionRef = useRef(() => {});
   const popupsBoutiquesRef = useRef(new Map());
+  // Groupes de boutiques superposées déjà dissociés au clic (clé = ids
+  // triés joints par "|") — une ref, pas un state local à
+  // rafraichirMarqueurs : ce callback est reconstruit (donc son état
+  // interne perdu) à chaque clic puisqu'il dépend de boutiqueSelectionnee,
+  // ce qui annulait la dissociation dans la même frame que le clic.
+  const groupesDissociesRef = useRef(new Set());
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
@@ -175,6 +181,12 @@ export default function GlobeExplorateurBoutiques({
   // ou nouvelle liste d'articles individuels (Point C) — deux vues
   // distinctes dans le même espace, pas de carrousel supplémentaire empilé.
   const [vueCarrousel, setVueCarrousel] = useState("boutiques"); // 'boutiques' | 'articles'
+  // Article individuellement actif dans le dock "Articles" — distinct de
+  // boutiqueSelectionnee (qui ne retient que la boutique) : sans état
+  // dédié, deux articles d'une même boutique s'affichaient tous les deux
+  // comme "sélectionnés" et les flèches n'avaient aucun élément précis à
+  // faire défiler jusqu'au centre.
+  const [articleActif, setArticleActif] = useState(null);
   const carouselContainerRef = useRef(null);
 
   const defilerCarrousel = (direction) => {
@@ -224,14 +236,26 @@ export default function GlobeExplorateurBoutiques({
     }
   }, [marqueurs, boutiqueSelectionnee]);
 
-  const selectionnerBoutiqueCarousel = (b, element = null) => {
+  const selectionnerBoutiqueCarousel = (b, element = null, { flyToZoom = null } = {}) => {
     if (dragRef.current.hasMoved) return;
     setBoutiqueSelectionnee(b);
     const handler = popupsBoutiquesRef.current.get(b.id);
     if (handler?.ouvrir) {
       handler.ouvrir();
     }
-    carteRef.current?.flyTo([b.lat, b.lng], 15.5, { duration: 0.8 });
+    // Sélectionner une boutique directement (dock ou flèches) ne fait que
+    // recentrer, sans imposer de niveau de zoom précis — un flyTo à un
+    // zoom fixe à chaque clic dé-zoomait si on avait zoomé plus, ou
+    // zoomait fort si on était dé-zoomé. Demande explicite de
+    // l'utilisateur. Sélectionner un ARTICLE garde, lui, le comportement
+    // "vole et zoome" existant (flyToZoom fourni par
+    // selectionnerArticleCarousel) : signalé comme fonctionnant bien tel
+    // quel, volontairement pas touché.
+    if (flyToZoom != null) {
+      carteRef.current?.flyTo([b.lat, b.lng], flyToZoom, { duration: 0.8 });
+    } else {
+      carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.8 });
+    }
     // Les flèches précédent/suivant (allerBoutiquePrecedente/Suivante)
     // n'ont pas d'élément DOM sous la main (pas de clic direct sur un
     // avatar) — sans ce repli, la sélection bouclait bien côté données
@@ -244,14 +268,22 @@ export default function GlobeExplorateurBoutiques({
 
   const selectionnerArticleCarousel = (a, element = null) => {
     if (dragRef.current.hasMoved) return;
+    setArticleActif(a);
     const bId = a.boutique_id || a.boutiqueId || a.boutique?.id;
     const bNom = (a.boutique_nom || a.boutiqueNom || a.boutique?.nom || "").trim().toLowerCase();
     const boutiqueAssociee = marqueurs.find(
       (b) => (bId && String(b.id) === String(bId)) || (bNom && (b.nom || "").trim().toLowerCase() === bNom)
     );
     if (boutiqueAssociee) {
-      selectionnerBoutiqueCarousel(boutiqueAssociee, element);
+      // null pour l'élément boutique : le dock affiché est celui des
+      // articles (carouselContainerRef pointe dessus), pas celui des
+      // boutiques — un data-boutique-id n'y existe pas, la recherche de
+      // repli échoue sans effet de bord. flyToZoom conservé (voir
+      // commentaire de selectionnerBoutiqueCarousel).
+      selectionnerBoutiqueCarousel(boutiqueAssociee, null, { flyToZoom: 15.5 });
     }
+    const cibleArticle = element || carouselContainerRef.current?.querySelector(`[data-article-id="${a.id}"]`);
+    cibleArticle?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   };
 
   const allerBoutiquePrecedente = () => {
@@ -297,6 +329,46 @@ export default function GlobeExplorateurBoutiques({
     () => new Set(articlesFiltres.map((a) => a.boutique_id).filter(Boolean)),
     [articlesFiltres]
   );
+
+  // Article réellement affiché comme actif dans le dock "Articles" : celui
+  // choisi explicitement (articleActif) s'il existe toujours dans la liste
+  // filtrée, sinon le premier — calculé directement au rendu (pas via un
+  // useEffect + setState, qui cassait la mémoisation d'articlesFiltres
+  // pour tout le composant). Même convention que la sélection par défaut
+  // de la 1ère boutique plus haut : sans repli, aucun anneau blanc ne
+  // s'affichait tant qu'aucun clic direct n'avait eu lieu, ni après un
+  // filtre de recherche qui fait disparaître l'article actif.
+  const articleActifEffectif = useMemo(() => {
+    if (articleActif && articlesFiltres.some((a) => a.id === articleActif.id)) {
+      return articleActif;
+    }
+    return articlesFiltres[0] || null;
+  }, [articleActif, articlesFiltres]);
+
+  // Équivalents de allerBoutiquePrecedente/Suivante ci-dessus, mais pour le
+  // dock "Articles" (vueCarrousel === "articles") : les flèches appelaient
+  // jusqu'ici toujours allerBoutique*, qui cherche un [data-boutique-id]
+  // absent de ce dock — la sélection changeait bien côté données mais rien
+  // ne défilait à l'écran. Signalé par l'utilisateur.
+  const allerArticlePrecedent = () => {
+    if (articlesFiltres.length === 0) return;
+    const indexActuel = articlesFiltres.findIndex(
+      (a) => a.id === (articleActifEffectif?.id || articlesFiltres[0]?.id)
+    );
+    const indexPrecedent = indexActuel > 0 ? indexActuel - 1 : articlesFiltres.length - 1;
+    const prevA = articlesFiltres[indexPrecedent];
+    if (prevA) selectionnerArticleCarousel(prevA);
+  };
+
+  const allerArticleSuivant = () => {
+    if (articlesFiltres.length === 0) return;
+    const indexActuel = articlesFiltres.findIndex(
+      (a) => a.id === (articleActifEffectif?.id || articlesFiltres[0]?.id)
+    );
+    const indexSuivant = indexActuel < articlesFiltres.length - 1 ? indexActuel + 1 : 0;
+    const nextA = articlesFiltres[indexSuivant];
+    if (nextA) selectionnerArticleCarousel(nextA);
+  };
 
   // Boutiques filtrées selon l'onglet, puis selon la recherche (Point C) —
   // une boutique reste affichée si son nom correspond, OU si elle vend au
@@ -650,15 +722,52 @@ export default function GlobeExplorateurBoutiques({
     const L = (await import("leaflet")).default;
     groupe.clearLayers();
 
+    // Positions à utiliser pour chaque boutique : décalées en cercle si son
+    // groupe de boutiques superposées (même position réelle) a déjà été
+    // dissocié au clic. Précalculé AVANT de créer les marqueurs (pas via un
+    // setLatLng après coup sur les marqueurs existants) : ce callback est
+    // reconstruit et rappelé à chaque clic (boutiqueSelectionnee change),
+    // donc repartir des seules positions d'origine ici effaçait la
+    // dissociation dans la même frame que le clic qui venait de la
+    // déclencher. groupesDissociesRef (une ref, pas un state local) survit
+    // lui à cette reconstruction.
+    const SEUIL_CLUSTER_PX = 26;
+    const RAYON_DISSOCIATION_PX = 24;
+    const positionsDecalees = new Map();
+    const dejaGroupees = new Set();
+    boutiquesAffichees.forEach((b) => {
+      if (dejaGroupees.has(b.id)) return;
+      const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
+      const membres = boutiquesAffichees.filter((autre) => {
+        const p2 = carte.latLngToContainerPoint([autre.lat, autre.lng]);
+        return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
+      });
+      membres.forEach((m) => dejaGroupees.add(m.id));
+      if (membres.length <= 1) return;
+      const cle = membres.map((m) => m.id).sort().join("|");
+      if (!groupesDissociesRef.current.has(cle)) return;
+      membres.forEach((m, i) => {
+        const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
+        const pOrigine = carte.latLngToContainerPoint([m.lat, m.lng]);
+        const pDecale = L.point(
+          pOrigine.x + RAYON_DISSOCIATION_PX * Math.cos(angle),
+          pOrigine.y + RAYON_DISSOCIATION_PX * Math.sin(angle)
+        );
+        positionsDecalees.set(m.id, carte.containerPointToLatLng(pDecale));
+      });
+    });
+
     // Deux boutiques (pas "Vous êtes ici", déjà gérée par
     // gererClicPointCluster ci-dessus) à la même position : cliquer sur
     // l'une doit permettre de voir l'autre aussi, pas seulement
     // zoomer/lister. Demande explicite de l'utilisateur : "si je clique là,
-    // ça doit les dissocier un peu". Même mécanisme que CarteBoutiques.jsx.
-    const marqueursCreesParId = new Map();
-    const groupesDissocies = new Set();
+    // ça doit les dissocier un peu". Le rebuild complet (plutôt qu'un
+    // setLatLng direct sur les marqueurs déjà en place) garantit que le
+    // nouvel état de groupesDissociesRef est bien pris en compte même si
+    // React ne redéclenche pas ce callback tout seul (ex. reclic sur la
+    // même boutique déjà sélectionnée, où boutiqueSelectionnee ne change
+    // pas de référence).
     function dissocierGroupeAuClic(b) {
-      const SEUIL_CLUSTER_PX = 26;
       const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
       const membres = obtenirMembresConnus().filter((m) => {
         if (m.type !== "boutique") return false;
@@ -667,22 +776,16 @@ export default function GlobeExplorateurBoutiques({
       });
       if (membres.length <= 1) return;
       const cle = membres.map((m) => m.id).sort().join("|");
-      const dejaDissocie = groupesDissocies.has(cle);
-      const rayonPx = 24;
-      membres.forEach((m, i) => {
-        const entree = marqueursCreesParId.get(m.id);
-        if (!entree) return;
-        if (dejaDissocie) {
-          entree.marqueur.setLatLng(entree.positionOrigine);
-        } else {
-          const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
-          const pOrigine = carte.latLngToContainerPoint(entree.positionOrigine);
-          const pDecale = L.point(pOrigine.x + rayonPx * Math.cos(angle), pOrigine.y + rayonPx * Math.sin(angle));
-          entree.marqueur.setLatLng(carte.containerPointToLatLng(pDecale));
-        }
-      });
-      if (dejaDissocie) groupesDissocies.delete(cle);
-      else groupesDissocies.add(cle);
+      if (groupesDissociesRef.current.has(cle)) {
+        groupesDissociesRef.current.delete(cle);
+      } else {
+        groupesDissociesRef.current.add(cle);
+      }
+      // rafraichirMarqueursRef.current (pas rafraichirMarqueurs directement)
+      // : même convention que le reste du fichier pour appeler la version
+      // la plus à jour de ce callback depuis une fonction imbriquée dans
+      // son propre corps, sans avertissement d'accès avant déclaration.
+      rafraichirMarqueursRef.current();
     }
 
     boutiquesAffichees.forEach((b, idx) => {
@@ -801,8 +904,7 @@ export default function GlobeExplorateurBoutiques({
         iconAnchor: [70, 85],
       });
 
-      const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
-      marqueursCreesParId.set(b.id, { marqueur, positionOrigine: [b.lat, b.lng] });
+      const marqueur = L.marker(positionsDecalees.get(b.id) || [b.lat, b.lng], { icon: icone }).addTo(groupe);
 
       // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
       const bId = String(b.id || "");
@@ -962,7 +1064,14 @@ export default function GlobeExplorateurBoutiques({
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
         setVueBoutiqueDetails(true);
-        carte.flyTo([b.lat, b.lng], 15.5, { duration: 1.1 });
+        // panTo, pas flyTo à un zoom fixe : un clic sur une boutique doit
+        // seulement recentrer la carte dessus, pas imposer un niveau de
+        // zoom précis à chaque fois (dé-zoome si on avait zoomé plus,
+        // zoome fort si on était dé-zoomé). Demande explicite de
+        // l'utilisateur. marqueur.getLatLng() (pas b.lat/b.lng) suit la
+        // position réelle, potentiellement dissociée par l'appel
+        // ci-dessus.
+        carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
       });
     });
 
@@ -1511,10 +1620,10 @@ export default function GlobeExplorateurBoutiques({
             {/* Bouton Flèche Gauche Précédent */}
             <button
               type="button"
-              onClick={allerBoutiquePrecedente}
+              onClick={vueCarrousel === "boutiques" ? allerBoutiquePrecedente : allerArticlePrecedent}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
-              aria-label="Boutique précédente"
-              title="Boutique précédente"
+              aria-label={vueCarrousel === "boutiques" ? "Boutique précédente" : "Article précédent"}
+              title={vueCarrousel === "boutiques" ? "Boutique précédente" : "Article précédent"}
             >
               <i className="fa-solid fa-chevron-left text-xs group-hover:-translate-x-0.5 transition-transform"></i>
             </button>
@@ -1626,10 +1735,11 @@ export default function GlobeExplorateurBoutiques({
                 ) : (
                   articlesFiltres.map((a) => {
                     const photo = a.photos?.[0] || null;
-                    const estSelectionne = boutiqueSelectionnee?.id === a.boutique_id;
+                    const estSelectionne = articleActifEffectif ? articleActifEffectif.id === a.id : false;
                     return (
                       <button
                         key={a.id}
+                        data-article-id={a.id}
                         type="button"
                         onClick={(e) => selectionnerArticleCarousel(a, e.currentTarget)}
                         className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
@@ -1669,10 +1779,10 @@ export default function GlobeExplorateurBoutiques({
             {/* Bouton Flèche Droite Suivant */}
             <button
               type="button"
-              onClick={allerBoutiqueSuivante}
+              onClick={vueCarrousel === "boutiques" ? allerBoutiqueSuivante : allerArticleSuivant}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
-              aria-label="Boutique suivante"
-              title="Boutique suivante"
+              aria-label={vueCarrousel === "boutiques" ? "Boutique suivante" : "Article suivant"}
+              title={vueCarrousel === "boutiques" ? "Boutique suivante" : "Article suivant"}
             >
               <i className="fa-solid fa-chevron-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
             </button>
