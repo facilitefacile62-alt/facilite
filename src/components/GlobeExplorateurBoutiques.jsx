@@ -120,6 +120,11 @@ export default function GlobeExplorateurBoutiques({
   // rappelé à chaque clic/changement de sélection, sans ce nettoyage
   // chaque passage accumulerait un écouteur de plus sur la même carte.
   const dissociationCleanupRef = useRef(null);
+  // Boutique dont la bulle produits est actuellement "épinglée" (ouverte en
+  // permanence suite à un simple clic, jusqu'à un nouveau clic ou un
+  // double-clic) — une ref, pas un state : lue depuis des gestionnaires
+  // d'événements Leaflet posés une fois par marqueur, pas depuis le rendu.
+  const boutiqueEpingleeIdRef = useRef(null);
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
@@ -750,6 +755,7 @@ export default function GlobeExplorateurBoutiques({
           if (!entree) return;
           if (membres.length <= 1) {
             entree.marqueur.setLatLng([m.lat, m.lng]);
+            entree.decalageBas = false;
             if (entree.ligne) {
               groupe.removeLayer(entree.ligne);
               entree.ligne = null;
@@ -764,6 +770,12 @@ export default function GlobeExplorateurBoutiques({
           );
           const posDecalee = carte.containerPointToLatLng(pDecale);
           entree.marqueur.setLatLng(posDecalee);
+          // Poussé vers le bas (sin(angle) > 0, l'axe Y écran croît vers le
+          // bas) : sa bulle par défaut (ouverte vers le haut) recouvrirait
+          // l'autre boutique juste au-dessus — ouvrirBulle la décale sur le
+          // côté à la place. Signalé par l'utilisateur avec une capture
+          // réelle des deux avatars empilés.
+          entree.decalageBas = Math.sin(angle) > 0;
           if (entree.ligne) {
             entree.ligne.setLatLngs([[m.lat, m.lng], posDecalee]);
           } else {
@@ -896,7 +908,11 @@ export default function GlobeExplorateurBoutiques({
       });
 
       const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
-      marqueursCreesParId.set(b.id, { marqueur, ligne: null });
+      // decalageBas : vrai si ce marqueur a été poussé vers le BAS lors de
+      // la dissociation automatique (voir recalculerDissociations) — sa
+      // bulle doit alors s'ouvrir sur le côté plutôt que par-dessus l'autre
+      // boutique juste au-dessus (voir ouvrirBulle plus bas).
+      marqueursCreesParId.set(b.id, { marqueur, ligne: null, decalageBas: false });
 
       // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
       const bId = String(b.id || "");
@@ -979,6 +995,9 @@ export default function GlobeExplorateurBoutiques({
             if (timerSurvol) clearTimeout(timerSurvol);
           });
           el.addEventListener("mouseleave", () => {
+            // Épinglée : reste ouverte (voir fermerBulle plus haut, même
+            // règle).
+            if (boutiqueEpingleeIdRef.current === b.id) return;
             timerSurvol = setTimeout(() => {
               carte.closePopup(popup);
             }, 300);
@@ -988,6 +1007,10 @@ export default function GlobeExplorateurBoutiques({
           if (btnFermer) {
             btnFermer.onclick = (e) => {
               e.stopPropagation();
+              // Fermeture explicite : désépingle aussi, sinon un survol
+              // suivant du même marqueur resterait bloqué "épinglé" sans
+              // bulle visible.
+              if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
               carte.closePopup(popup);
             };
           }
@@ -995,6 +1018,7 @@ export default function GlobeExplorateurBoutiques({
           el.querySelectorAll(".btn-ouvrir-boutique-header").forEach((btn) => {
             btn.onclick = (e) => {
               e.stopPropagation();
+              if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
               carte.closePopup(popup);
               setBoutiqueSelectionnee(b);
               setVueBoutiqueDetails(true);
@@ -1004,6 +1028,7 @@ export default function GlobeExplorateurBoutiques({
           el.querySelectorAll("[data-article-id]").forEach((card) => {
             card.onclick = (e) => {
               e.stopPropagation();
+              if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
               carte.closePopup(popup);
               const artId = card.getAttribute("data-article-id");
               if (typeof onVoirArticle === "function") {
@@ -1019,6 +1044,13 @@ export default function GlobeExplorateurBoutiques({
 
       const ouvrirBulle = () => {
         if (timerSurvol) clearTimeout(timerSurvol);
+        // Poussée vers le bas par la dissociation automatique (voir
+        // recalculerDissociations) : ouvrir la bulle sur le côté plutôt que
+        // par-dessus l'autre boutique juste au-dessus, sinon elle la
+        // recouvre entièrement. Signalé par l'utilisateur avec une capture
+        // réelle des deux avatars empilés.
+        const entree = marqueursCreesParId.get(b.id);
+        popup.options.offset = entree?.decalageBas ? [116, -46] : [0, -88];
         // marqueur.getLatLng() (pas b.lat/b.lng, figés) : après une
         // dissociation, le marqueur a pu être déplacé légèrement, la bulle
         // doit suivre sa position réelle actuelle.
@@ -1027,6 +1059,10 @@ export default function GlobeExplorateurBoutiques({
       };
 
       const fermerBulle = () => {
+        // Épinglée (simple clic confirmé, voir plus bas) : reste ouverte
+        // tant qu'on ne la désépingle pas explicitement (nouveau clic ou
+        // double-clic sur une autre boutique).
+        if (boutiqueEpingleeIdRef.current === b.id) return;
         timerSurvol = setTimeout(() => {
           carte.closePopup(popup);
         }, 300);
@@ -1050,19 +1086,52 @@ export default function GlobeExplorateurBoutiques({
         }
       }, 50);
 
+      // Survol -> bulle temporaire (déjà géré ci-dessus). Simple clic ->
+      // épingle/désépingle la bulle (reste ouverte, articles navigables,
+      // sans quitter la carte). Double-clic -> entre dans la fiche complète
+      // de la boutique. Un simple setTimeout distingue les deux : le
+      // premier clic attend le délai avant d'agir ; un second clic pendant
+      // ce délai annule l'action "simple clic" et déclenche le double-clic
+      // à la place. Nouvelle interaction demandée explicitement par
+      // l'utilisateur, inspirée des cartes façon Snapchat.
+      let clicEnAttente = null;
       marqueur.on("click", (e) => {
         if (e?.originalEvent) e.originalEvent.stopPropagation();
-        ouvrirBulle();
-        setBoutiqueSelectionnee(b);
-        setVueBoutiqueDetails(true);
-        // panTo, pas flyTo à un zoom fixe : un clic sur une boutique doit
-        // seulement recentrer la carte dessus, pas imposer un niveau de
-        // zoom précis à chaque fois (dé-zoome si on avait zoomé plus,
-        // zoome fort si on était dé-zoomé). Demande explicite de
-        // l'utilisateur. marqueur.getLatLng() (pas b.lat/b.lng) suit la
-        // position réelle, potentiellement dissociée automatiquement (voir
-        // recalculerDissociations).
-        carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
+
+        if (clicEnAttente) {
+          clearTimeout(clicEnAttente);
+          clicEnAttente = null;
+          boutiqueEpingleeIdRef.current = null;
+          ouvrirBulle();
+          setBoutiqueSelectionnee(b);
+          setVueBoutiqueDetails(true);
+          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
+          return;
+        }
+
+        clicEnAttente = setTimeout(() => {
+          clicEnAttente = null;
+          if (boutiqueEpingleeIdRef.current === b.id) {
+            boutiqueEpingleeIdRef.current = null;
+            carte.closePopup(popup);
+            return;
+          }
+          // Une seule boutique épinglée à la fois : ferme la précédente
+          // avant d'épingler celle-ci (closePopup sans argument ferme
+          // n'importe quelle bulle actuellement ouverte sur cette carte).
+          carte.closePopup();
+          boutiqueEpingleeIdRef.current = b.id;
+          ouvrirBulle();
+          setBoutiqueSelectionnee(b);
+          // panTo, pas flyTo à un zoom fixe : un clic sur une boutique doit
+          // seulement recentrer la carte dessus, pas imposer un niveau de
+          // zoom précis à chaque fois (dé-zoome si on avait zoomé plus,
+          // zoome fort si on était dé-zoomé). Demande explicite de
+          // l'utilisateur. marqueur.getLatLng() (pas b.lat/b.lng) suit la
+          // position réelle, potentiellement dissociée automatiquement (voir
+          // recalculerDissociations).
+          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
+        }, 260);
       });
     });
 
