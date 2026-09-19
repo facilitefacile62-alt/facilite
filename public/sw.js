@@ -114,7 +114,8 @@
 // v114 (19/09/2026) : carrousel du dock suit visuellement la selection quand elle boucle (fleches), et clic sur des boutiques a la meme position les dissocie legerement
 // v115 (19/09/2026) : Explorer (globe) - clic boutique recentre sans forcer un zoom fixe, dissociation persiste au lieu d'etre annulee au clic suivant, fleches/anneau actif corriges sur le dock Articles
 // v116 (19/09/2026) : dock des boutiques/articles transparent façon lenses Snapchat (fond glassmorphique clair, sans bordure ni ombre de pilule)
-const VERSION_CACHE = "facilite-v116";
+// v117 (19/09/2026) : position centrale de l'avatar actif du dock fixe (espaceurs de centrage), y compris pour le 1er/dernier element de la liste
+const VERSION_CACHE = "facilite-v117";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

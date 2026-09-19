@@ -1644,8 +1644,16 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
+                {/* Espaceurs de centrage : sans eux, le 1er/dernier avatar ne
+                    peut jamais atteindre le centre visuel (rien à faire
+                    défiler après/avant lui) — l'anneau actif se retrouvait
+                    décalé sur les bords au lieu de rester fixe au centre.
+                    Demande explicite de l'utilisateur ("ça doit être fixe
+                    ici"). calc(50% - 27px) ≈ moitié de la largeur d'un
+                    avatar sélectionné (w-13/w-14 ≈ 52-56px). */}
+                <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
                   const aPhoto = b.photo ? urlPhoto(b.photo) : null;
@@ -1709,6 +1717,7 @@ export default function GlobeExplorateurBoutiques({
                     </button>
                   );
                 })}
+                <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
               </div>
             ) : (
               <div
@@ -1726,14 +1735,16 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
                     Aucun article ne correspond à cette recherche.
                   </p>
                 ) : (
-                  articlesFiltres.map((a) => {
+                  <>
+                    <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                    {articlesFiltres.map((a) => {
                     const photo = a.photos?.[0] || null;
                     const estSelectionne = articleActifEffectif ? articleActifEffectif.id === a.id : false;
                     return (
@@ -1771,7 +1782,9 @@ export default function GlobeExplorateurBoutiques({
                         )}
                       </button>
                     );
-                  })
+                    })}
+                    <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                  </>
                 )}
               </div>
             )}

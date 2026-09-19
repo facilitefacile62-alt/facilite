@@ -1008,8 +1008,14 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       }
                     }
                   }}
-                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
                 >
+                  {/* Espaceurs de centrage : sans eux, le 1er/dernier avatar
+                      ne peut jamais atteindre le centre visuel — l'anneau
+                      actif se retrouvait décalé sur les bords au lieu de
+                      rester fixe au centre. Demande explicite de
+                      l'utilisateur ("ça doit être fixe ici"). */}
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
                     return (
@@ -1070,6 +1076,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       </button>
                     );
                   })}
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
                 </div>
 
                 {/* Flèche Droite */}
