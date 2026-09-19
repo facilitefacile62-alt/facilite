@@ -1738,9 +1738,12 @@ export default function GlobeExplorateurBoutiques({
                     défiler après/avant lui) — l'anneau actif se retrouvait
                     décalé sur les bords au lieu de rester fixe au centre.
                     Demande explicite de l'utilisateur ("ça doit être fixe
-                    ici"). calc(50% - 27px) ≈ moitié de la largeur d'un
-                    avatar sélectionné (w-13/w-14 ≈ 52-56px). */}
-                <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                    ici"). Plafonnés à 56px (≈ largeur d'un avatar
+                    sélectionné) : sans plafond, calc(50% - 27px) pouvait
+                    dépasser 100px avec peu de boutiques dans un dock large,
+                    laissant une zone transparente immense de chaque côté —
+                    signalé par l'utilisateur. */}
+                <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
                   const aPhoto = b.photo ? urlPhoto(b.photo) : null;
@@ -1804,7 +1807,7 @@ export default function GlobeExplorateurBoutiques({
                     </button>
                   );
                 })}
-                <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
               </div>
             ) : (
               <div
@@ -1830,7 +1833,7 @@ export default function GlobeExplorateurBoutiques({
                   </p>
                 ) : (
                   <>
-                    <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                    <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
                     {articlesFiltres.map((a) => {
                     const photo = a.photos?.[0] || null;
                     const estSelectionne = articleActifEffectif ? articleActifEffectif.id === a.id : false;
@@ -1870,7 +1873,7 @@ export default function GlobeExplorateurBoutiques({
                       </button>
                     );
                     })}
-                    <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                    <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
                   </>
                 )}
               </div>

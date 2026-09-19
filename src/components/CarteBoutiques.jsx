@@ -70,6 +70,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const carouselContainerRef = useRef(null);
   const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
   const popupsBoutiquesRef = useRef(new Map());
+  // Boutique dont la bulle produits est actuellement "épinglée" (ouverte en
+  // permanence suite à un simple clic, jusqu'à un nouveau clic ou un
+  // double-clic) — même mécanisme que GlobeExplorateurBoutiques.jsx.
+  const boutiqueEpingleeIdRef = useRef(null);
   const [boutiqueActiveId, setBoutiqueActiveId] = useState(null);
   const [echec, setEchec] = useState(false);
 
@@ -467,6 +471,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               if (!entree) return;
               if (membres.length <= 1) {
                 entree.marqueur.setLatLng(m.position);
+                entree.decalageBas = false;
                 if (entree.ligne) {
                   carte.removeLayer(entree.ligne);
                   entree.ligne = null;
@@ -481,6 +486,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               );
               const posDecalee = carte.containerPointToLatLng(pDecale);
               entree.marqueur.setLatLng(posDecalee);
+              // Poussé vers le bas (sin(angle) > 0) : sa bulle par défaut
+              // (ouverte vers le haut) recouvrirait l'autre boutique juste
+              // au-dessus — ouvrirBulle la décale sur le côté à la place.
+              entree.decalageBas = Math.sin(angle) > 0;
               if (entree.ligne) {
                 entree.ligne.setLatLngs([m.position, posDecalee]);
               } else {
@@ -598,7 +607,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 fillOpacity: 0.85,
               }).addTo(carte);
 
-          marqueursCreesParId.set(b.id, { marqueur, ligne: null });
+          marqueursCreesParId.set(b.id, { marqueur, ligne: null, decalageBas: false });
 
           const ligneDetail =
             b.type_boutique === "service"
@@ -683,6 +692,9 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 if (timerSurvol) clearTimeout(timerSurvol);
               });
               el.addEventListener("mouseleave", () => {
+                // Épinglée (simple clic confirmé, voir plus bas) : reste
+                // ouverte tant qu'on ne la désépingle pas explicitement.
+                if (boutiqueEpingleeIdRef.current === b.id) return;
                 timerSurvol = setTimeout(() => {
                   carte.closePopup(popup);
                 }, 300);
@@ -691,12 +703,14 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               if (btnFermer) {
                 btnFermer.onclick = (e) => {
                   e.stopPropagation();
+                  if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
                   carte.closePopup(popup);
                 };
               }
               el.querySelectorAll(".btn-ouvrir-boutique-header").forEach((btn) => {
                 btn.onclick = (e) => {
                   e.stopPropagation();
+                  if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
                   carte.closePopup(popup);
                   if (typeof onChoisirBoutique === "function") onChoisirBoutique(b.id);
                 };
@@ -704,6 +718,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               el.querySelectorAll("[data-article-id]").forEach((card) => {
                 card.onclick = (e) => {
                   e.stopPropagation();
+                  if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
                   carte.closePopup(popup);
                   if (typeof onChoisirBoutique === "function") onChoisirBoutique(b.id);
                 };
@@ -713,6 +728,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
           const ouvrirBulle = () => {
             if (timerSurvol) clearTimeout(timerSurvol);
+            // Poussée vers le bas par la dissociation automatique : ouvrir
+            // la bulle sur le côté plutôt que par-dessus l'autre boutique
+            // juste au-dessus, sinon elle la recouvre entièrement.
+            const entree = marqueursCreesParId.get(b.id);
+            popup.options.offset = entree?.decalageBas ? [86, -14] : [0, -28];
             // marqueur.getLatLng() (pas b.position, figé) : après une
             // dissociation, le marqueur a pu être déplacé légèrement, la
             // bulle doit suivre sa position réelle actuelle.
@@ -721,6 +741,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           };
 
           const fermerBulle = () => {
+            if (boutiqueEpingleeIdRef.current === b.id) return;
             timerSurvol = setTimeout(() => {
               carte.closePopup(popup);
             }, 300);
@@ -735,12 +756,37 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           marqueur.on("mouseover", ouvrirBulle);
           marqueur.on("mouseout", fermerBulle);
 
+          // Survol -> bulle temporaire (déjà géré ci-dessus). Simple clic ->
+          // épingle/désépingle la bulle (reste ouverte, sans quitter la
+          // carte). Double-clic -> entre dans la fiche complète de la
+          // boutique (onChoisirBoutique). Même mécanisme que
+          // GlobeExplorateurBoutiques.jsx — demande explicite de
+          // l'utilisateur, appliquée ici aussi pour la cohérence entre les
+          // deux cartes.
+          let clicEnAttente = null;
           marqueur.on("click", (e) => {
             if (e?.originalEvent) e.originalEvent.stopPropagation();
-            ouvrirBulle();
-            if (typeof onChoisirBoutique === "function") {
-              onChoisirBoutique(b.id);
+
+            if (clicEnAttente) {
+              clearTimeout(clicEnAttente);
+              clicEnAttente = null;
+              boutiqueEpingleeIdRef.current = null;
+              ouvrirBulle();
+              if (typeof onChoisirBoutique === "function") onChoisirBoutique(b.id);
+              return;
             }
+
+            clicEnAttente = setTimeout(() => {
+              clicEnAttente = null;
+              if (boutiqueEpingleeIdRef.current === b.id) {
+                boutiqueEpingleeIdRef.current = null;
+                carte.closePopup(popup);
+                return;
+              }
+              carte.closePopup();
+              boutiqueEpingleeIdRef.current = b.id;
+              ouvrirBulle();
+            }, 260);
           });
           points.push(b.position);
         }
@@ -1076,8 +1122,13 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       ne peut jamais atteindre le centre visuel — l'anneau
                       actif se retrouvait décalé sur les bords au lieu de
                       rester fixe au centre. Demande explicite de
-                      l'utilisateur ("ça doit être fixe ici"). */}
-                  <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                      l'utilisateur ("ça doit être fixe ici"). Plafonnés à
+                      56px (min(...)) : sans plafond, calc(50% - 27px)
+                      pouvait dépasser 100px avec seulement 2-3 boutiques
+                      dans un dock large, laissant une zone transparente
+                      immense de chaque côté — signalé par l'utilisateur
+                      ("la partie transparente prend beaucoup de place"). */}
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
                     return (
@@ -1138,7 +1189,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       </button>
                     );
                   })}
-                  <div aria-hidden="true" className="shrink-0" style={{ width: "calc(50% - 27px)" }} />
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
                 </div>
 
                 {/* Flèche Droite */}
