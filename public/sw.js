@@ -110,7 +110,8 @@
 // v110 (18/09/2026) : synchronisation du carrousel Snapchat circulaire sur CarteBoutiques et GlobeExplorateurBoutiques avec premier element actif
 // v111 (18/09/2026) : boutons fleches gauche/droite pour faire defiler les boutiques du carrousel circulaire
 // v112 (18/09/2026) : carrousel circulaire transparent avec defilement fluide a la molette souris et glissement tactile/drag
-const VERSION_CACHE = "facilite-v112";
+// v113 (19/09/2026) : dock des boutiques resserre, plus proche des lenses Snapchat (espacement, tailles, legendes uniquement sur la selection)
+const VERSION_CACHE = "facilite-v113";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
