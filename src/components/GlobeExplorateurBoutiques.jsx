@@ -232,9 +232,14 @@ export default function GlobeExplorateurBoutiques({
       handler.ouvrir();
     }
     carteRef.current?.flyTo([b.lat, b.lng], 15.5, { duration: 0.8 });
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    }
+    // Les flèches précédent/suivant (allerBoutiquePrecedente/Suivante)
+    // n'ont pas d'élément DOM sous la main (pas de clic direct sur un
+    // avatar) — sans ce repli, la sélection bouclait bien côté données
+    // (carte, popup) mais le dock restait scrollé où il était, donnant
+    // l'impression que le bouclage n'existait pas. Signalé par
+    // l'utilisateur ("ça doit faire le tour").
+    const cible = element || carouselContainerRef.current?.querySelector(`[data-boutique-id="${b.id}"]`);
+    cible?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   };
 
   const selectionnerArticleCarousel = (a, element = null) => {
@@ -645,6 +650,41 @@ export default function GlobeExplorateurBoutiques({
     const L = (await import("leaflet")).default;
     groupe.clearLayers();
 
+    // Deux boutiques (pas "Vous êtes ici", déjà gérée par
+    // gererClicPointCluster ci-dessus) à la même position : cliquer sur
+    // l'une doit permettre de voir l'autre aussi, pas seulement
+    // zoomer/lister. Demande explicite de l'utilisateur : "si je clique là,
+    // ça doit les dissocier un peu". Même mécanisme que CarteBoutiques.jsx.
+    const marqueursCreesParId = new Map();
+    const groupesDissocies = new Set();
+    function dissocierGroupeAuClic(b) {
+      const SEUIL_CLUSTER_PX = 26;
+      const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
+      const membres = obtenirMembresConnus().filter((m) => {
+        if (m.type !== "boutique") return false;
+        const p2 = carte.latLngToContainerPoint(m.position);
+        return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
+      });
+      if (membres.length <= 1) return;
+      const cle = membres.map((m) => m.id).sort().join("|");
+      const dejaDissocie = groupesDissocies.has(cle);
+      const rayonPx = 24;
+      membres.forEach((m, i) => {
+        const entree = marqueursCreesParId.get(m.id);
+        if (!entree) return;
+        if (dejaDissocie) {
+          entree.marqueur.setLatLng(entree.positionOrigine);
+        } else {
+          const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
+          const pOrigine = carte.latLngToContainerPoint(entree.positionOrigine);
+          const pDecale = L.point(pOrigine.x + rayonPx * Math.cos(angle), pOrigine.y + rayonPx * Math.sin(angle));
+          entree.marqueur.setLatLng(carte.containerPointToLatLng(pDecale));
+        }
+      });
+      if (dejaDissocie) groupesDissocies.delete(cle);
+      else groupesDissocies.add(cle);
+    }
+
     boutiquesAffichees.forEach((b, idx) => {
       const avatarInfo = AVATARS_SNAP[idx % AVATARS_SNAP.length];
       const aPhoto = b.photo ? urlPhoto(b.photo) : null;
@@ -762,6 +802,7 @@ export default function GlobeExplorateurBoutiques({
       });
 
       const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
+      marqueursCreesParId.set(b.id, { marqueur, positionOrigine: [b.lat, b.lng] });
 
       // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
       const bId = String(b.id || "");
@@ -884,7 +925,10 @@ export default function GlobeExplorateurBoutiques({
 
       const ouvrirBulle = () => {
         if (timerSurvol) clearTimeout(timerSurvol);
-        popup.setLatLng([b.lat, b.lng]).openOn(carte);
+        // marqueur.getLatLng() (pas b.lat/b.lng, figés) : après une
+        // dissociation, le marqueur a pu être déplacé légèrement, la bulle
+        // doit suivre sa position réelle actuelle.
+        popup.setLatLng(marqueur.getLatLng()).openOn(carte);
         attacherEcouteursPopup();
       };
 
@@ -914,6 +958,7 @@ export default function GlobeExplorateurBoutiques({
 
       marqueur.on("click", (e) => {
         if (e?.originalEvent) e.originalEvent.stopPropagation();
+        dissocierGroupeAuClic(b);
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
         setVueBoutiqueDetails(true);
@@ -929,7 +974,7 @@ export default function GlobeExplorateurBoutiques({
       echelleZoomCleanupRef.current();
     }
     echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
-  }, [boutiquesAffichees, boutiqueSelectionnee, gererClicPointCluster]);
+  }, [boutiquesAffichees, boutiqueSelectionnee, gererClicPointCluster, obtenirMembresConnus]);
   // Mise à jour hors rendu (règle react-hooks/refs) : un effet sans
   // dépendances s'exécute après chaque rendu, donc toujours à temps avant
   // que les timers de forcerTaille (au plus tôt 50 ms plus tard) ne lisent
@@ -1500,6 +1545,7 @@ export default function GlobeExplorateurBoutiques({
                   return (
                     <button
                       key={b.id || idx}
+                      data-boutique-id={b.id}
                       type="button"
                       onClick={(e) => selectionnerBoutiqueCarousel(b, e.currentTarget)}
                       onMouseEnter={() => {

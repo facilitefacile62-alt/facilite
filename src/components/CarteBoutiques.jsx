@@ -73,6 +73,18 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const [boutiqueActiveId, setBoutiqueActiveId] = useState(null);
   const [echec, setEchec] = useState(false);
 
+  // Fait suivre visuellement le dock quand la sélection change par les
+  // flèches (qui bouclent déjà sur les index : dernier -> premier et
+  // inversement) — sans ceci, la sélection "bouclait" bien côté données
+  // (carte, popup) mais le dock restait scrollé où il était, donnant
+  // l'impression que le bouclage n'existait pas. Signalé par l'utilisateur
+  // ("ça doit faire le tour").
+  useEffect(() => {
+    if (!boutiqueActiveId || !carouselContainerRef.current) return;
+    const el = carouselContainerRef.current.querySelector(`[data-boutique-id="${boutiqueActiveId}"]`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [boutiqueActiveId]);
+
   const onMouseDownCarousel = (e) => {
     if (!carouselContainerRef.current) return;
     dragRef.current.isDown = true;
@@ -424,6 +436,39 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           }
         }
 
+        // Deux boutiques (pas "Vous êtes ici", déjà géré ci-dessus) à la
+        // même position : cliquer sur l'une doit permettre de voir l'autre
+        // aussi, pas seulement zoomer/lister. Demande explicite de
+        // l'utilisateur : "si je clique là, ça doit les dissocier un peu".
+        // marqueursCreesParId retient l'instance Leaflet + la position
+        // géographique d'origine de chaque marqueur boutique, remplie au
+        // fil de la boucle ci-dessous (le marqueur cliqué existe déjà, ceux
+        // pas encore créés seront rattrapés par l'ordre naturel de la
+        // boucle vu que le groupe entier est recalculé à chaque clic).
+        const marqueursCreesParId = new Map();
+        const groupesDissocies = new Set();
+        function dissocierGroupeAuClic(b) {
+          const membres = membresEncombres(b.position).filter((m) => m.type === "boutique");
+          if (membres.length <= 1) return;
+          const cle = membres.map((m) => m.id).sort().join("|");
+          const dejaDissocie = groupesDissocies.has(cle);
+          const rayonPx = 24;
+          membres.forEach((m, i) => {
+            const entree = marqueursCreesParId.get(m.id);
+            if (!entree) return;
+            if (dejaDissocie) {
+              entree.marqueur.setLatLng(entree.positionOrigine);
+            } else {
+              const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
+              const pOrigine = carte.latLngToContainerPoint(entree.positionOrigine);
+              const pDecale = L.point(pOrigine.x + rayonPx * Math.cos(angle), pOrigine.y + rayonPx * Math.sin(angle));
+              entree.marqueur.setLatLng(carte.containerPointToLatLng(pDecale));
+            }
+          });
+          if (dejaDissocie) groupesDissocies.delete(cle);
+          else groupesDissocies.add(cle);
+        }
+
         for (const b of boutiquesAffichees) {
           let couleur = COULEUR;
           if (b.type_boutique === "service") {
@@ -522,6 +567,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 fillColor: couleur,
                 fillOpacity: 0.85,
               }).addTo(carte);
+
+          marqueursCreesParId.set(b.id, { marqueur, positionOrigine: b.position });
 
           const ligneDetail =
             b.type_boutique === "service"
@@ -636,7 +683,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
           const ouvrirBulle = () => {
             if (timerSurvol) clearTimeout(timerSurvol);
-            popup.setLatLng(b.position).openOn(carte);
+            // marqueur.getLatLng() (pas b.position, figé) : après une
+            // dissociation, le marqueur a pu être déplacé légèrement, la
+            // bulle doit suivre sa position réelle actuelle.
+            popup.setLatLng(marqueur.getLatLng()).openOn(carte);
             attacherEcouteursPopup();
           };
 
@@ -657,6 +707,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
           marqueur.on("click", (e) => {
             if (e?.originalEvent) e.originalEvent.stopPropagation();
+            dissocierGroupeAuClic(b);
             ouvrirBulle();
             if (typeof onChoisirBoutique === "function") {
               onChoisirBoutique(b.id);
@@ -964,6 +1015,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                     return (
                       <button
                         key={b.id}
+                        data-boutique-id={b.id}
                         type="button"
                         onClick={(e) => {
                           if (dragRef.current.hasMoved) return;
