@@ -987,7 +987,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       onChoisirBoutique?.(prevB.id);
                     }
                   }}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label="Précédent"
                 >
                   <i className="fa-solid fa-chevron-left text-[10px]"></i>
@@ -1008,7 +1008,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       }
                     }
                   }}
-                  className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
                 >
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
@@ -1087,7 +1087,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       onChoisirBoutique?.(nextB.id);
                     }
                   }}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label="Suivant"
                 >
                   <i className="fa-solid fa-chevron-right text-[10px]"></i>

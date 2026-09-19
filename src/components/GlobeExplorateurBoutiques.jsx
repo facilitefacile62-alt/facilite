@@ -1621,7 +1621,7 @@ export default function GlobeExplorateurBoutiques({
             <button
               type="button"
               onClick={vueCarrousel === "boutiques" ? allerBoutiquePrecedente : allerArticlePrecedent}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30 group"
               aria-label={vueCarrousel === "boutiques" ? "Boutique précédente" : "Article précédent"}
               title={vueCarrousel === "boutiques" ? "Boutique précédente" : "Article précédent"}
             >
@@ -1644,7 +1644,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
@@ -1726,7 +1726,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
@@ -1780,7 +1780,7 @@ export default function GlobeExplorateurBoutiques({
             <button
               type="button"
               onClick={vueCarrousel === "boutiques" ? allerBoutiqueSuivante : allerArticleSuivant}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/35 hover:bg-black/70 text-white border border-white/25 flex items-center justify-center text-xs backdrop-blur-md shadow-xl active:scale-90 transition cursor-pointer shrink-0 z-30 group"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30 group"
               aria-label={vueCarrousel === "boutiques" ? "Boutique suivante" : "Article suivant"}
               title={vueCarrousel === "boutiques" ? "Boutique suivante" : "Article suivant"}
             >
