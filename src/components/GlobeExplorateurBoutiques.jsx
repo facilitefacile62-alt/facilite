@@ -236,26 +236,20 @@ export default function GlobeExplorateurBoutiques({
     }
   }, [marqueurs, boutiqueSelectionnee]);
 
-  const selectionnerBoutiqueCarousel = (b, element = null, { flyToZoom = null } = {}) => {
+  const selectionnerBoutiqueCarousel = (b, element = null) => {
     if (dragRef.current.hasMoved) return;
     setBoutiqueSelectionnee(b);
     const handler = popupsBoutiquesRef.current.get(b.id);
     if (handler?.ouvrir) {
       handler.ouvrir();
     }
-    // Sélectionner une boutique directement (dock ou flèches) ne fait que
-    // recentrer, sans imposer de niveau de zoom précis — un flyTo à un
-    // zoom fixe à chaque clic dé-zoomait si on avait zoomé plus, ou
-    // zoomait fort si on était dé-zoomé. Demande explicite de
-    // l'utilisateur. Sélectionner un ARTICLE garde, lui, le comportement
-    // "vole et zoome" existant (flyToZoom fourni par
-    // selectionnerArticleCarousel) : signalé comme fonctionnant bien tel
-    // quel, volontairement pas touché.
-    if (flyToZoom != null) {
-      carteRef.current?.flyTo([b.lat, b.lng], flyToZoom, { duration: 0.8 });
-    } else {
-      carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.8 });
-    }
+    // Recentre sans imposer de niveau de zoom précis — un flyTo à un zoom
+    // fixe à chaque sélection (boutique OU article) dé-zoomait si on avait
+    // zoomé plus, zoomait fort si on était dé-zoomé, et donnait une
+    // impression de saccade/zoom à chaque déplacement dans le carrousel
+    // d'articles. Demande explicite de l'utilisateur ("ça devrait être
+    // comme Snap[chat]", pas de mouvement de caméra à chaque changement).
+    carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.8 });
     // Les flèches précédent/suivant (allerBoutiquePrecedente/Suivante)
     // n'ont pas d'élément DOM sous la main (pas de clic direct sur un
     // avatar) — sans ce repli, la sélection bouclait bien côté données
@@ -278,9 +272,8 @@ export default function GlobeExplorateurBoutiques({
       // null pour l'élément boutique : le dock affiché est celui des
       // articles (carouselContainerRef pointe dessus), pas celui des
       // boutiques — un data-boutique-id n'y existe pas, la recherche de
-      // repli échoue sans effet de bord. flyToZoom conservé (voir
-      // commentaire de selectionnerBoutiqueCarousel).
-      selectionnerBoutiqueCarousel(boutiqueAssociee, null, { flyToZoom: 15.5 });
+      // repli échoue sans effet de bord.
+      selectionnerBoutiqueCarousel(boutiqueAssociee, null);
     }
     const cibleArticle = element || carouselContainerRef.current?.querySelector(`[data-article-id="${a.id}"]`);
     cibleArticle?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
