@@ -728,7 +728,10 @@ export default function GlobeExplorateurBoutiques({
     // clic" — demande explicite de l'utilisateur, plus fiable qu'un geste
     // à découvrir soi-même.
     const SEUIL_CLUSTER_PX = 26;
-    const RAYON_DISSOCIATION_PX = 22;
+    // 30px et pas moins : les avatars font ~50-56px de diamètre, un rayon
+    // plus petit laissait leurs bords se chevaucher encore un peu (vérifié
+    // visuellement en production après un premier essai à 22px).
+    const RAYON_DISSOCIATION_PX = 30;
     const marqueursCreesParId = new Map();
 
     function recalculerDissociations() {

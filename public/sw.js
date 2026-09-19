@@ -117,7 +117,8 @@
 // v117 (19/09/2026) : position centrale de l'avatar actif du dock fixe (espaceurs de centrage), y compris pour le 1er/dernier element de la liste
 // v118 (19/09/2026) : Explorer - navigation dans le dock Articles ne force plus de zoom/deplacement brusque de la carte (recentrage doux uniforme, comme les boutiques)
 // v119 (19/09/2026) : boutiques trop proches dissociees automatiquement (cercle + trait fin vers la position reelle) sur Carte et Explorer ; fleches du dock (Carte) ne forcent plus de zoom ni n'ouvrent la fiche complete de la boutique
-const VERSION_CACHE = "facilite-v119";
+// v120 (19/09/2026) : rayon de dissociation augmente (22 -> 30px) pour eviter que les avatars ecartes se chevauchent encore un peu sur les bords
+const VERSION_CACHE = "facilite-v120";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

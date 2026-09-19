@@ -450,7 +450,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // Leaflet + le trait de chaque marqueur boutique, rempli au fil de
         // la boucle ci-dessous.
         const marqueursCreesParId = new Map();
-        const RAYON_DISSOCIATION_PX = 22;
+        // 30px et pas moins : les avatars font ~50-56px de diamètre, un
+        // rayon plus petit laissait leurs bords se chevaucher encore un peu
+        // (vérifié visuellement en production après un premier essai à
+        // 22px).
+        const RAYON_DISSOCIATION_PX = 30;
         function recalculerDissociations() {
           const dejaGroupees = new Set();
           boutiquesAffichees.forEach((b) => {
