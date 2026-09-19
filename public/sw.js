@@ -116,7 +116,8 @@
 // v116 (19/09/2026) : dock des boutiques/articles transparent façon lenses Snapchat (fond glassmorphique clair, sans bordure ni ombre de pilule)
 // v117 (19/09/2026) : position centrale de l'avatar actif du dock fixe (espaceurs de centrage), y compris pour le 1er/dernier element de la liste
 // v118 (19/09/2026) : Explorer - navigation dans le dock Articles ne force plus de zoom/deplacement brusque de la carte (recentrage doux uniforme, comme les boutiques)
-const VERSION_CACHE = "facilite-v118";
+// v119 (19/09/2026) : boutiques trop proches dissociees automatiquement (cercle + trait fin vers la position reelle) sur Carte et Explorer ; fleches du dock (Carte) ne forcent plus de zoom ni n'ouvrent la fiche complete de la boutique
+const VERSION_CACHE = "facilite-v119";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

@@ -113,12 +113,13 @@ export default function GlobeExplorateurBoutiques({
   // cartePrete] plus bas peut rater la même fenêtre transitoire.
   const centrerSurPositionRef = useRef(() => {});
   const popupsBoutiquesRef = useRef(new Map());
-  // Groupes de boutiques superposées déjà dissociés au clic (clé = ids
-  // triés joints par "|") — une ref, pas un state local à
-  // rafraichirMarqueurs : ce callback est reconstruit (donc son état
-  // interne perdu) à chaque clic puisqu'il dépend de boutiqueSelectionnee,
-  // ce qui annulait la dissociation dans la même frame que le clic.
-  const groupesDissociesRef = useRef(new Set());
+  // Nettoyage de l'écouteur zoomend/moveend qui recalcule la dissociation
+  // automatique des boutiques superposées (voir recalculerDissociations
+  // dans rafraichirMarqueurs) — même raisonnement que
+  // echelleZoomCleanupRef juste en dessous : rafraichirMarqueurs est
+  // rappelé à chaque clic/changement de sélection, sans ce nettoyage
+  // chaque passage accumulerait un écouteur de plus sur la même carte.
+  const dissociationCleanupRef = useRef(null);
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
@@ -715,70 +716,64 @@ export default function GlobeExplorateurBoutiques({
     const L = (await import("leaflet")).default;
     groupe.clearLayers();
 
-    // Positions à utiliser pour chaque boutique : décalées en cercle si son
-    // groupe de boutiques superposées (même position réelle) a déjà été
-    // dissocié au clic. Précalculé AVANT de créer les marqueurs (pas via un
-    // setLatLng après coup sur les marqueurs existants) : ce callback est
-    // reconstruit et rappelé à chaque clic (boutiqueSelectionnee change),
-    // donc repartir des seules positions d'origine ici effaçait la
-    // dissociation dans la même frame que le clic qui venait de la
-    // déclencher. groupesDissociesRef (une ref, pas un state local) survit
-    // lui à cette reconstruction.
+    // Boutiques à la même position réelle (ou trop proches à l'écran) :
+    // dissociées AUTOMATIQUEMENT en cercle autour de leur point d'origine,
+    // reliées chacune par un trait fin à leur position géographique réelle
+    // — pattern "marqueur éclaté relié par une ligne", nécessaire pour
+    // rester lisible (avatars/étiquettes/bouton d'action superposés sinon
+    // — confirmé par capture d'écran réelle à Guinaw Rail Nord). L'écart en
+    // pixels dépend du zoom courant, donc recalculé au premier rendu ET à
+    // chaque pan/zoom (écouteur posé plus bas), pas seulement à la
+    // création des marqueurs. Remplace l'ancienne version "dissociation au
+    // clic" — demande explicite de l'utilisateur, plus fiable qu'un geste
+    // à découvrir soi-même.
     const SEUIL_CLUSTER_PX = 26;
-    const RAYON_DISSOCIATION_PX = 24;
-    const positionsDecalees = new Map();
-    const dejaGroupees = new Set();
-    boutiquesAffichees.forEach((b) => {
-      if (dejaGroupees.has(b.id)) return;
-      const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
-      const membres = boutiquesAffichees.filter((autre) => {
-        const p2 = carte.latLngToContainerPoint([autre.lat, autre.lng]);
-        return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
-      });
-      membres.forEach((m) => dejaGroupees.add(m.id));
-      if (membres.length <= 1) return;
-      const cle = membres.map((m) => m.id).sort().join("|");
-      if (!groupesDissociesRef.current.has(cle)) return;
-      membres.forEach((m, i) => {
-        const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
-        const pOrigine = carte.latLngToContainerPoint([m.lat, m.lng]);
-        const pDecale = L.point(
-          pOrigine.x + RAYON_DISSOCIATION_PX * Math.cos(angle),
-          pOrigine.y + RAYON_DISSOCIATION_PX * Math.sin(angle)
-        );
-        positionsDecalees.set(m.id, carte.containerPointToLatLng(pDecale));
-      });
-    });
+    const RAYON_DISSOCIATION_PX = 22;
+    const marqueursCreesParId = new Map();
 
-    // Deux boutiques (pas "Vous êtes ici", déjà gérée par
-    // gererClicPointCluster ci-dessus) à la même position : cliquer sur
-    // l'une doit permettre de voir l'autre aussi, pas seulement
-    // zoomer/lister. Demande explicite de l'utilisateur : "si je clique là,
-    // ça doit les dissocier un peu". Le rebuild complet (plutôt qu'un
-    // setLatLng direct sur les marqueurs déjà en place) garantit que le
-    // nouvel état de groupesDissociesRef est bien pris en compte même si
-    // React ne redéclenche pas ce callback tout seul (ex. reclic sur la
-    // même boutique déjà sélectionnée, où boutiqueSelectionnee ne change
-    // pas de référence).
-    function dissocierGroupeAuClic(b) {
-      const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
-      const membres = obtenirMembresConnus().filter((m) => {
-        if (m.type !== "boutique") return false;
-        const p2 = carte.latLngToContainerPoint(m.position);
-        return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
+    function recalculerDissociations() {
+      const dejaGroupees = new Set();
+      boutiquesAffichees.forEach((b) => {
+        if (dejaGroupees.has(b.id)) return;
+        const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
+        const membres = boutiquesAffichees.filter((autre) => {
+          const p2 = carte.latLngToContainerPoint([autre.lat, autre.lng]);
+          return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
+        });
+        membres.forEach((m) => dejaGroupees.add(m.id));
+
+        membres.forEach((m, i) => {
+          const entree = marqueursCreesParId.get(m.id);
+          if (!entree) return;
+          if (membres.length <= 1) {
+            entree.marqueur.setLatLng([m.lat, m.lng]);
+            if (entree.ligne) {
+              groupe.removeLayer(entree.ligne);
+              entree.ligne = null;
+            }
+            return;
+          }
+          const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
+          const pOrigine = carte.latLngToContainerPoint([m.lat, m.lng]);
+          const pDecale = L.point(
+            pOrigine.x + RAYON_DISSOCIATION_PX * Math.cos(angle),
+            pOrigine.y + RAYON_DISSOCIATION_PX * Math.sin(angle)
+          );
+          const posDecalee = carte.containerPointToLatLng(pDecale);
+          entree.marqueur.setLatLng(posDecalee);
+          if (entree.ligne) {
+            entree.ligne.setLatLngs([[m.lat, m.lng], posDecalee]);
+          } else {
+            entree.ligne = L.polyline([[m.lat, m.lng], posDecalee], {
+              color: "#ffffff",
+              weight: 1.5,
+              opacity: 0.7,
+              dashArray: "2,4",
+              interactive: false,
+            }).addTo(groupe);
+          }
+        });
       });
-      if (membres.length <= 1) return;
-      const cle = membres.map((m) => m.id).sort().join("|");
-      if (groupesDissociesRef.current.has(cle)) {
-        groupesDissociesRef.current.delete(cle);
-      } else {
-        groupesDissociesRef.current.add(cle);
-      }
-      // rafraichirMarqueursRef.current (pas rafraichirMarqueurs directement)
-      // : même convention que le reste du fichier pour appeler la version
-      // la plus à jour de ce callback depuis une fonction imbriquée dans
-      // son propre corps, sans avertissement d'accès avant déclaration.
-      rafraichirMarqueursRef.current();
     }
 
     boutiquesAffichees.forEach((b, idx) => {
@@ -897,7 +892,8 @@ export default function GlobeExplorateurBoutiques({
         iconAnchor: [70, 85],
       });
 
-      const marqueur = L.marker(positionsDecalees.get(b.id) || [b.lat, b.lng], { icon: icone }).addTo(groupe);
+      const marqueur = L.marker([b.lat, b.lng], { icon: icone }).addTo(groupe);
+      marqueursCreesParId.set(b.id, { marqueur, ligne: null });
 
       // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
       const bId = String(b.id || "");
@@ -1053,7 +1049,6 @@ export default function GlobeExplorateurBoutiques({
 
       marqueur.on("click", (e) => {
         if (e?.originalEvent) e.originalEvent.stopPropagation();
-        dissocierGroupeAuClic(b);
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
         setVueBoutiqueDetails(true);
@@ -1062,13 +1057,32 @@ export default function GlobeExplorateurBoutiques({
         // zoom précis à chaque fois (dé-zoome si on avait zoomé plus,
         // zoome fort si on était dé-zoomé). Demande explicite de
         // l'utilisateur. marqueur.getLatLng() (pas b.lat/b.lng) suit la
-        // position réelle, potentiellement dissociée par l'appel
-        // ci-dessus.
+        // position réelle, potentiellement dissociée automatiquement (voir
+        // recalculerDissociations).
         carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
       });
     });
 
-    // Détache l'écouteur précédent avant d'en reposer un : ce callback est
+    // Application initiale de la dissociation automatique, puis recalcul à
+    // chaque pan/zoom (l'écart en pixels dépend du niveau de zoom courant —
+    // des boutiques superposées à un zoom peuvent ne plus l'être à un
+    // autre, et inversement). Différé via setTimeout(...,0) : "moveend"
+    // peut se déclencher de façon SYNCHRONE en plein milieu d'un
+    // setView/fitBounds, avant que Leaflet ait fini de réinitialiser ses
+    // bounds internes — ajouter/déplacer une polyline à cet instant précis
+    // fait planter le rendu interne de Leaflet (bounds encore incomplets).
+    // carteRef.current === carte évite d'agir si la carte a été recréée
+    // entre-temps (rafraichirMarqueurs peut être rappelé avant que ce
+    // timer ne se déclenche).
+    const gestionnaireDissociation = () =>
+      setTimeout(() => {
+        if (carteRef.current === carte) recalculerDissociations();
+      }, 0);
+    gestionnaireDissociation();
+    carte.on("zoomend", gestionnaireDissociation);
+    carte.on("moveend", gestionnaireDissociation);
+
+    // Détache les écouteurs précédents avant d'en reposer : ce callback est
     // rappelé à chaque rafraîchissement des marqueurs (pas seulement à la
     // création de la carte), sans ça chaque passage en accumulerait un de
     // plus sur le même objet carte.
@@ -1076,6 +1090,14 @@ export default function GlobeExplorateurBoutiques({
       echelleZoomCleanupRef.current();
     }
     echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
+
+    if (dissociationCleanupRef.current) {
+      dissociationCleanupRef.current();
+    }
+    dissociationCleanupRef.current = () => {
+      carte.off("zoomend", gestionnaireDissociation);
+      carte.off("moveend", gestionnaireDissociation);
+    };
   }, [boutiquesAffichees, boutiqueSelectionnee, gererClicPointCluster, obtenirMembresConnus]);
   // Mise à jour hors rendu (règle react-hooks/refs) : un effet sans
   // dépendances s'exécute après chaque rendu, donc toujours à temps avant

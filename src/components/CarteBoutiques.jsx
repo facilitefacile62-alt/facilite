@@ -436,37 +436,63 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           }
         }
 
-        // Deux boutiques (pas "Vous êtes ici", déjà géré ci-dessus) à la
-        // même position : cliquer sur l'une doit permettre de voir l'autre
-        // aussi, pas seulement zoomer/lister. Demande explicite de
-        // l'utilisateur : "si je clique là, ça doit les dissocier un peu".
-        // marqueursCreesParId retient l'instance Leaflet + la position
-        // géographique d'origine de chaque marqueur boutique, remplie au
-        // fil de la boucle ci-dessous (le marqueur cliqué existe déjà, ceux
-        // pas encore créés seront rattrapés par l'ordre naturel de la
-        // boucle vu que le groupe entier est recalculé à chaque clic).
+        // Boutiques à la même position réelle (ou trop proches à l'écran) :
+        // dissociées AUTOMATIQUEMENT en cercle autour de leur point
+        // d'origine, reliées chacune par un trait fin à leur position
+        // géographique réelle — pattern "marqueur éclaté relié par une
+        // ligne", nécessaire pour rester lisible (avatars/étiquettes/bouton
+        // d'action superposés sinon — confirmé par capture d'écran réelle à
+        // Guinaw Rail Nord). L'écart en pixels dépend du zoom courant, donc
+        // recalculé au premier rendu ET à chaque pan/zoom (écouteur posé
+        // plus bas). Remplace l'ancienne version "dissociation au clic" —
+        // demande explicite de l'utilisateur, plus fiable qu'un geste à
+        // découvrir soi-même. marqueursCreesParId retient l'instance
+        // Leaflet + le trait de chaque marqueur boutique, rempli au fil de
+        // la boucle ci-dessous.
         const marqueursCreesParId = new Map();
-        const groupesDissocies = new Set();
-        function dissocierGroupeAuClic(b) {
-          const membres = membresEncombres(b.position).filter((m) => m.type === "boutique");
-          if (membres.length <= 1) return;
-          const cle = membres.map((m) => m.id).sort().join("|");
-          const dejaDissocie = groupesDissocies.has(cle);
-          const rayonPx = 24;
-          membres.forEach((m, i) => {
-            const entree = marqueursCreesParId.get(m.id);
-            if (!entree) return;
-            if (dejaDissocie) {
-              entree.marqueur.setLatLng(entree.positionOrigine);
-            } else {
+        const RAYON_DISSOCIATION_PX = 22;
+        function recalculerDissociations() {
+          const dejaGroupees = new Set();
+          boutiquesAffichees.forEach((b) => {
+            if (dejaGroupees.has(b.id)) return;
+            const membres = membresEncombres(b.position).filter((m) => m.type === "boutique");
+            membres.forEach((m) => dejaGroupees.add(m.id));
+
+            membres.forEach((m, i) => {
+              const entree = marqueursCreesParId.get(m.id);
+              if (!entree) return;
+              if (membres.length <= 1) {
+                entree.marqueur.setLatLng(m.position);
+                if (entree.ligne) {
+                  carte.removeLayer(entree.ligne);
+                  entree.ligne = null;
+                }
+                return;
+              }
               const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
-              const pOrigine = carte.latLngToContainerPoint(entree.positionOrigine);
-              const pDecale = L.point(pOrigine.x + rayonPx * Math.cos(angle), pOrigine.y + rayonPx * Math.sin(angle));
-              entree.marqueur.setLatLng(carte.containerPointToLatLng(pDecale));
-            }
+              const pOrigine = carte.latLngToContainerPoint(m.position);
+              const pDecale = L.point(
+                pOrigine.x + RAYON_DISSOCIATION_PX * Math.cos(angle),
+                pOrigine.y + RAYON_DISSOCIATION_PX * Math.sin(angle)
+              );
+              const posDecalee = carte.containerPointToLatLng(pDecale);
+              entree.marqueur.setLatLng(posDecalee);
+              if (entree.ligne) {
+                entree.ligne.setLatLngs([m.position, posDecalee]);
+              } else {
+                // Blanc, pas noir : le fond de tuiles est assombri
+                // (FILTRE_TUILES_SOMBRE, voir plus haut), même thème que
+                // GlobeExplorateurBoutiques.jsx.
+                entree.ligne = L.polyline([m.position, posDecalee], {
+                  color: "#ffffff",
+                  weight: 1.5,
+                  opacity: 0.7,
+                  dashArray: "2,4",
+                  interactive: false,
+                }).addTo(carte);
+              }
+            });
           });
-          if (dejaDissocie) groupesDissocies.delete(cle);
-          else groupesDissocies.add(cle);
         }
 
         for (const b of boutiquesAffichees) {
@@ -568,7 +594,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 fillOpacity: 0.85,
               }).addTo(carte);
 
-          marqueursCreesParId.set(b.id, { marqueur, positionOrigine: b.position });
+          marqueursCreesParId.set(b.id, { marqueur, ligne: null });
 
           const ligneDetail =
             b.type_boutique === "service"
@@ -707,7 +733,6 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
           marqueur.on("click", (e) => {
             if (e?.originalEvent) e.originalEvent.stopPropagation();
-            dissocierGroupeAuClic(b);
             ouvrirBulle();
             if (typeof onChoisirBoutique === "function") {
               onChoisirBoutique(b.id);
@@ -756,7 +781,32 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
         brancherEchelleZoomAvatars(carte);
 
+        // Recalcul à chaque pan/zoom (l'écart en pixels dépend du niveau de
+        // zoom courant). Différé via setTimeout(...,0) : "moveend" peut se
+        // déclencher de façon SYNCHRONE en plein milieu de fitBounds/setView
+        // (avant que Leaflet ait fini de réinitialiser ses bounds internes)
+        // — ajouter une polyline à cet instant précis fait planter
+        // Bounds.intersects (accès à des bounds encore incomplets). Un
+        // setTimeout(...,0) repousse l'appel après la fin du cycle de reset
+        // en cours. Pas besoin de retirer cet écouteur explicitement :
+        // carte.remove() (voir le nettoyage de cet effet, et le début de
+        // chaque nouvelle exécution) détruit la carte entière avec tous ses
+        // écouteurs.
+        // annule (fermé par cette IIFE, voir plus haut) évite d'agir sur
+        // une carte déjà détruite si ce timer se déclenche après un
+        // démontage/ré-exécution de l'effet.
+        const declencherRecalculerDissociations = () =>
+          setTimeout(() => {
+            if (!annule) recalculerDissociations();
+          }, 0);
+        carte.on("zoomend", declencherRecalculerDissociations);
+        carte.on("moveend", declencherRecalculerDissociations);
+
         carte.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 15 });
+        // Application initiale, une fois la carte réellement centrée/zoomée
+        // — également différée pour la même raison que ci-dessus (fitBounds
+        // ci-dessus a pu redéclencher "moveend" de façon encore en cours).
+        declencherRecalculerDissociations();
 
         setTimeout(() => {
           if (!annule && carteRef.current) carteRef.current.invalidateSize();
@@ -981,10 +1031,18 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                     const prevB = boutiquesAffichees[prevIdx];
                     if (prevB) {
                       setBoutiqueActiveId(prevB.id);
-                      carteRef.current?.flyTo(prevB.position, 15.5, { duration: 0.8 });
+                      // panTo (pas flyTo à zoom fixe) et pas d'appel à
+                      // onChoisirBoutique : la flèche ne fait que parcourir
+                      // l'aperçu du dock, elle ne doit ni imposer un zoom
+                      // précis ni ouvrir la fiche complète de la boutique
+                      // (onChoisirBoutique → onVoirBoutique → modal plein
+                      // écran) comme le ferait un clic direct sur l'avatar.
+                      // Signalé par l'utilisateur : cliquer sur la flèche
+                      // ouvrait la fiche d'une autre boutique sans clic
+                      // volontaire dessus.
+                      carteRef.current?.panTo(prevB.position, { animate: true, duration: 0.8 });
                       const handler = popupsBoutiquesRef.current.get(prevB.id);
                       if (handler?.ouvrir) handler.ouvrir();
-                      onChoisirBoutique?.(prevB.id);
                     }
                   }}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
@@ -1026,7 +1084,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                         onClick={(e) => {
                           if (dragRef.current.hasMoved) return;
                           setBoutiqueActiveId(b.id);
-                          carteRef.current?.flyTo(b.position, 15.5, { duration: 0.8 });
+                          carteRef.current?.panTo(b.position, { animate: true, duration: 0.8 });
                           const handler = popupsBoutiquesRef.current.get(b.id);
                           if (handler?.ouvrir) handler.ouvrir();
                           onChoisirBoutique?.(b.id);
@@ -1088,10 +1146,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                     const nextB = boutiquesAffichees[nextIdx];
                     if (nextB) {
                       setBoutiqueActiveId(nextB.id);
-                      carteRef.current?.flyTo(nextB.position, 15.5, { duration: 0.8 });
+                      // Voir le commentaire de la flèche gauche : panTo, pas
+                      // de flyTo à zoom fixe, pas d'appel à onChoisirBoutique.
+                      carteRef.current?.panTo(nextB.position, { animate: true, duration: 0.8 });
                       const handler = popupsBoutiquesRef.current.get(nextB.id);
                       if (handler?.ouvrir) handler.ouvrir();
-                      onChoisirBoutique?.(nextB.id);
                     }
                   }}
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
