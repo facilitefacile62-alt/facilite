@@ -13,7 +13,7 @@ import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import BoutonInstallerApp from "@/components/BoutonInstallerApp";
-import { chargerTousLesArticles } from "@/lib/marketplaceData";
+import { chargerTousLesArticles, urlPhoto } from "@/lib/marketplaceData";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -789,6 +789,7 @@ export default function Header() {
                 targetUrl: `/marketplace?q=${encodeURIComponent(art.titre || q)}`,
                 icon: "fa-bag-shopping",
                 badgeColor: "emerald",
+                photo: art.photos?.[0] || null,
               });
             });
           } catch (err) {
@@ -817,6 +818,71 @@ export default function Header() {
             }
           } catch (err) {
             console.warn("Recherche Marketplace (boutiques) ignorée:", err.message);
+          }
+
+          // Rien trouvé du tout sur le titre exact : élargit la recherche à
+          // la description et à la catégorie avant d'abandonner (ex.
+          // "hydratant" ne matche aucun titre mais figure dans la
+          // description de plusieurs crèmes). Demande explicite de
+          // l'utilisateur : suggérer des produits similaires plutôt qu'un
+          // simple "aucun résultat".
+          if (combinedResults.length === 0) {
+            try {
+              const { data: elargi } = await supabase
+                .from("marketplace_items")
+                .select("id, titre, prix_xof, photos, store:marketplace_stores!inner(id, nom, actif)")
+                .eq("actif", true)
+                .eq("store.actif", true)
+                .or(`description.ilike.%${q}%,categorie.ilike.%${q}%`)
+                .limit(6);
+              (elargi || []).forEach((art) => {
+                addResult({
+                  id: `mkt_similaire_${art.id}`,
+                  title: art.titre || "Article",
+                  type: "Produit similaire",
+                  subtitle: `${art.store?.nom || "Boutique"} • ${
+                    art.prix_xof ? `${Number(art.prix_xof).toLocaleString("fr-FR")} F` : "Sénégal"
+                  }`,
+                  targetUrl: `/marketplace?q=${encodeURIComponent(art.titre || q)}`,
+                  icon: "fa-bag-shopping",
+                  badgeColor: "purple",
+                  photo: Array.isArray(art.photos) && art.photos[0] ? urlPhoto(art.photos[0]) : null,
+                });
+              });
+            } catch (err) {
+              console.warn("Recherche Marketplace (produits similaires) ignorée:", err.message);
+            }
+          }
+
+          // Toujours rien : dernier repli, quelques articles récents de la
+          // Marketplace en général, clairement étiquetés "Suggestion" (pas
+          // présentés comme une correspondance).
+          if (combinedResults.length === 0) {
+            try {
+              const { data: recents } = await supabase
+                .from("marketplace_items")
+                .select("id, titre, prix_xof, photos, store:marketplace_stores!inner(id, nom, actif)")
+                .eq("actif", true)
+                .eq("store.actif", true)
+                .order("updated_at", { ascending: false })
+                .limit(5);
+              (recents || []).forEach((art) => {
+                addResult({
+                  id: `mkt_suggestion_${art.id}`,
+                  title: art.titre || "Article",
+                  type: "Suggestion",
+                  subtitle: `${art.store?.nom || "Boutique"} • ${
+                    art.prix_xof ? `${Number(art.prix_xof).toLocaleString("fr-FR")} F` : "Sénégal"
+                  }`,
+                  targetUrl: `/marketplace?q=${encodeURIComponent(art.titre || "")}`,
+                  icon: "fa-bag-shopping",
+                  badgeColor: "purple",
+                  photo: Array.isArray(art.photos) && art.photos[0] ? urlPhoto(art.photos[0]) : null,
+                });
+              });
+            } catch (err) {
+              console.warn("Recherche Marketplace (suggestions) ignorée:", err.message);
+            }
           }
 
           if (isMounted) {
@@ -1025,7 +1091,15 @@ export default function Header() {
     if (targetUrl) {
       router.push(targetUrl);
     } else if (queryText.trim()) {
-      router.push(`/recherche?q=${encodeURIComponent(queryText.trim())}`);
+      // /recherche est la page de résultats Emploi (offres/candidats) —
+      // sur la Marketplace, "Rechercher"/Entrée sans choisir un résultat
+      // précis y envoyait quand même, faisant quitter la Marketplace au
+      // moment même où l'utilisateur valide sa recherche.
+      router.push(
+        isBusinessActive
+          ? `/marketplace?q=${encodeURIComponent(queryText.trim())}`
+          : `/recherche?q=${encodeURIComponent(queryText.trim())}`
+      );
     }
   };
 
@@ -1307,11 +1381,18 @@ export default function Header() {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-[60%] overflow-hidden flex-1">
-                          {/* Icône de l'item fournie par l'API dans un macaron élégant */}
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          {/* Photo du produit si disponible (résultats Marketplace) — sinon
+                              l'icône habituelle dans un macaron. Demande explicite de
+                              l'utilisateur : reconnaître le produit visuellement, pas
+                              seulement par son titre. */}
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${
                             isSelected ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                           } transition-colors`}>
-                            <i className={`fa-solid ${item.icon || "fa-magnifying-glass"} text-xs`}></i>
+                            {item.photo ? (
+                              <img src={item.photo} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <i className={`fa-solid ${item.icon || "fa-magnifying-glass"} text-xs`}></i>
+                            )}
                           </div>
                           
                           <div className="truncate flex-1">

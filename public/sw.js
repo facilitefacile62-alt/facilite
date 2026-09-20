@@ -125,7 +125,8 @@
 // v125 (20/09/2026) : navigation clavier fleches gauche/droite pour le dock (ignoree si focus dans un champ texte) ; "Vous etes ici" inclus dans la dissociation automatique (Carte + Explorer) pour ne plus jamais rester cache derriere une boutique superposee
 // v126 (20/09/2026) : le header reste en mode Marketplace sur /messagerie?contexte=marketplace au lieu de basculer vers l'univers Emploi (cause du bug "cliquer sur Messagerie depuis la Marketplace change toute la navigation") ; suppression d'une barre de navigation dupliquee jamais affichee dans la messagerie
 // v127 (20/09/2026) : la barre de recherche globale du header ne cherche plus que des boutiques/articles Marketplace quand on est sur la Marketplace (au lieu d'offres d'emploi) ; recherche Emploi inchangee et ne renvoie jamais de produit Marketplace
-const VERSION_CACHE = "facilite-v127";
+// v128 (20/09/2026) : resultats de recherche Marketplace affichent la photo du produit ; si rien ne correspond exactement, suggere des produits similaires (description/categorie) puis des articles recents plutot qu'un simple "aucun resultat" ; "Rechercher"/Entree sans choisir un resultat reste aussi sur la Marketplace au lieu d'aller vers la recherche d'offres d'emploi
+const VERSION_CACHE = "facilite-v128";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
