@@ -118,6 +118,25 @@ export default function GlobeExplorateurBoutiques({
   // marqueur "Vous êtes ici" : l'effet réactif [positionInitiale,
   // cartePrete] plus bas peut rater la même fenêtre transitoire.
   const centrerSurPositionRef = useRef(() => {});
+  // Clé "lat,lng" de la dernière position auto-centrée pour la carte
+  // ACTUELLE (remise à null quand une nouvelle carte est créée, voir
+  // l'effet d'initialisation) — évite que les rafales de recentrage
+  // automatique (forcerTaille à 50/150/300/600/1200ms + l'effet
+  // [positionInitiale, cartePrete] juste en dessous) déclenchent chacune
+  // leur propre setView vers la MÊME cible pendant que l'animation de zoom
+  // de la précédente est encore en cours. Ces recentrages en cascade
+  // faisaient planter Leaflet en interne (TypeError sur _leaflet_pos dans
+  // _onZoomTransitionEnd, reproduit en systématique dès l'ouverture
+  // d'Explorer avec une position déjà connue) sans jamais casser le rendu
+  // React — d'où l'absence de symptôme visible signalé jusqu'ici.
+  const dernierePositionAutoRef = useRef(null);
+  // true pendant qu'une animation de zoom Leaflet (flyTo/setView) est en
+  // cours sur la carte actuelle — posé/retiré via les événements
+  // zoomstart/zoomend (voir l'effet d'initialisation). invalidateSize()
+  // appelé PENDANT cette fenêtre perturbait l'état interne du pane que
+  // Leaflet consulte à la fin de la transition (voir dernierePositionAutoRef
+  // ci-dessus pour le contexte complet du correctif).
+  const zoomAnimationEnCoursRef = useRef(false);
   const popupsBoutiquesRef = useRef(new Map());
   // Nettoyage de l'écouteur zoomend/moveend qui recalcule la dissociation
   // automatique des boutiques superposées (voir recalculerDissociations
@@ -656,6 +675,9 @@ export default function GlobeExplorateurBoutiques({
     // style ou après un rechargement de page.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCartePrete(false);
+    // Nouvelle carte à venir : aucun recentrage auto n'a encore eu lieu
+    // pour elle (voir dernierePositionAutoRef plus haut).
+    dernierePositionAutoRef.current = null;
 
     (async () => {
       if (!conteneurRef.current) return;
@@ -663,8 +685,21 @@ export default function GlobeExplorateurBoutiques({
         const L = (await import("leaflet")).default;
         if (annule || !conteneurRef.current) return;
 
-        // Détruire ancienne carte si existante
+        // Détruire ancienne carte si existante. Cause racine confirmée en
+        // lisant node_modules/leaflet/dist/leaflet-src.js : une animation de
+        // zoom (déclenchée par setView, ex. l'auto-centrage sur "Vous êtes
+        // ici" juste avant que `marqueurs` ne change et ne redéclenche cet
+        // effet) programme un setTimeout de secours de 250ms qui rappelle
+        // _onZoomTransitionEnd quoi qu'il arrive ; ce handler ne vérifie que
+        // `_animatingZoom`, jamais `_mapPane` avant d'appeler _move(). Or
+        // remove() supprime _mapPane SANS repasser _animatingZoom à false
+        // ni annuler ce timer — 250ms plus tard, le rappel s'exécute sur un
+        // pane déjà détruit (TypeError _leaflet_pos, reproduit de façon
+        // fiable). stop() (flyTo/panTo) ne couvre pas ce cas ; on neutralise
+        // donc directement le drapeau avant remove().
         if (carteRef.current) {
+          carteRef.current.stop();
+          carteRef.current._animatingZoom = false;
           carteRef.current.remove();
           carteRef.current = null;
         }
@@ -682,6 +717,12 @@ export default function GlobeExplorateurBoutiques({
         });
 
         carteRef.current = carte;
+        carte.on("zoomstart", () => {
+          zoomAnimationEnCoursRef.current = true;
+        });
+        carte.on("zoomend", () => {
+          zoomAnimationEnCoursRef.current = false;
+        });
 
         // URL de tuiles propre sans paramètre erroné
         const urlTuiles = styleActif === "satellite" ? TUILES_SATELLITE : TUILES_OSM;
@@ -721,11 +762,17 @@ export default function GlobeExplorateurBoutiques({
         // être regaranti de se redéclencher ensuite.
         forcerTaille = () => {
           if (carteRef.current === carte) {
-            carte.invalidateSize({ pan: false });
+            if (!zoomAnimationEnCoursRef.current) {
+              carte.invalidateSize({ pan: false });
+            }
             setCartePrete(true);
             rafraichirMarqueursRef.current();
             if (positionInitiale) {
-              centrerSurPositionRef.current(positionInitiale, { animer: false });
+              const cle = `${positionInitiale.latitude},${positionInitiale.longitude}`;
+              if (dernierePositionAutoRef.current !== cle) {
+                dernierePositionAutoRef.current = cle;
+                centrerSurPositionRef.current(positionInitiale, { animer: false });
+              }
             }
           }
         };
@@ -760,6 +807,14 @@ export default function GlobeExplorateurBoutiques({
       // Marketplace le 2026-09-08.
       if (forcerTaille) window.removeEventListener("resize", forcerTaille);
       if (carteRef.current) {
+        // stop() + _animatingZoom=false avant remove() : voir le
+        // commentaire détaillé plus haut (destruction de l'ancienne carte)
+        // — c'est CETTE fonction de nettoyage, pas le bloc "détruire
+        // ancienne carte" du corps de l'effet, qui s'exécute réellement
+        // quand `marqueurs`/`styleActif` changent (React nettoie
+        // l'exécution précédente avant de relancer le corps de l'effet).
+        carteRef.current.stop();
+        carteRef.current._animatingZoom = false;
         carteRef.current.remove();
         carteRef.current = null;
       }
@@ -1428,7 +1483,11 @@ export default function GlobeExplorateurBoutiques({
   // déjà (rare, mais possible).
   useEffect(() => {
     if (positionInitiale && cartePrete) {
-      centrerSurPosition(positionInitiale, { animer: false });
+      const cle = `${positionInitiale.latitude},${positionInitiale.longitude}`;
+      if (dernierePositionAutoRef.current !== cle) {
+        dernierePositionAutoRef.current = cle;
+        centrerSurPosition(positionInitiale, { animer: false });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [positionInitiale, cartePrete]);
