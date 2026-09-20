@@ -293,7 +293,20 @@ export default async function proxy(req) {
 
     if (!isAuthorized) {
       const url = req.nextUrl.clone();
-      url.pathname = roleHomePath(userRole);
+      const homePath = roleHomePath(userRole);
+      url.pathname = homePath;
+      url.search = "";
+      // Sans ça, un utilisateur qui tapait/cliquait une route non autorisée
+      // depuis la Marketplace atterrissait sur /messagerie nu, qui bascule le
+      // header en mode Emploi (même bug que la Messagerie corrigé ailleurs).
+      // Aucun état d'espace n'est persisté côté serveur (architecture pilotée
+      // par l'URL) : le Referer est le seul signal disponible ici.
+      if (homePath === "/messagerie") {
+        const referer = req.headers.get("referer") || "";
+        if (referer.includes("/marketplace") || referer.includes("contexte=marketplace")) {
+          url.searchParams.set("contexte", "marketplace");
+        }
+      }
       return NextResponse.redirect(url);
     }
   }
