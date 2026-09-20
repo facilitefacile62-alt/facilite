@@ -200,6 +200,22 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Lit ?contexte=marketplace sur /messagerie sans useSearchParams() :
+  // Header est monté une seule fois dans le layout racine (src/app/
+  // layout.js), pour TOUTES les pages — useSearchParams() y forcerait une
+  // limite de Suspense au niveau du layout entier (Next.js désactive le
+  // rendu statique de toute page tant qu'un de ses ascendants l'utilise
+  // sans ça), un changement bien plus large que ce correctif ciblé.
+  // window.location.search lu ici évite ce problème ; se resynchronise à
+  // chaque changement de route (y compris le rechargement complet que
+  // handleNavClick déclenche exprès plus bas quand seul ?contexte change
+  // sur /messagerie — un nouveau montage relit alors cette valeur).
+  const [contexteMarketplaceMessagerie, setContexteMarketplaceMessagerie] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setContexteMarketplaceMessagerie(new URLSearchParams(window.location.search).get("contexte") === "marketplace");
+  }, [pathname]);
+
   // Session/rôle/profil chargés une seule fois pour toute l'app par AuthContext
   const { session: userSession, profile: authProfile, loading: authLoading, signOut, isAdmin, isRecruiter } = useAuth();
   // Arbre des indicateurs de fonctionnalités (panneau admin /admin) — chargé
@@ -232,7 +248,18 @@ export default function Header() {
   const [headerScanPhotoEnCours, setHeaderScanPhotoEnCours] = useState(false);
   const headerFileInputPhotoRef = useRef(null);
 
-  const isBusinessActive = pathname?.startsWith("/marketplace");
+  // /marketplace* est l'essentiel du signal, mais /messagerie?contexte=
+  // marketplace doit AUSSI garder l'habillage Marketplace : sans ça,
+  // cliquer sur "Messagerie" depuis la Marketplace bascule tout le header
+  // (Accueil, Offres/Extracteur, "Plus", bouton "Autour de moi"...) sur
+  // l'univers Emploi dès l'arrivée sur /messagerie, alors que le contenu
+  // de la page reste bien filtré sur les échanges Marketplace — confirmé
+  // par capture d'écran réelle. Toute future page hors /marketplace* qui
+  // doit rester "dans" la Marketplace (même convention ?contexte=
+  // marketplace) doit étendre cette même condition, pas en créer une
+  // séparée.
+  const isBusinessActive =
+    pathname?.startsWith("/marketplace") || (pathname === "/messagerie" && contexteMarketplaceMessagerie);
 
   // Pour les visiteurs (non connectés), le logo et le bouton Accueil ramènent
   // TOUJOURS à l'accueil principal de Facilité ("/") Carrière & Emploi.
