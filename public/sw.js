@@ -120,7 +120,8 @@
 // v120 (19/09/2026) : rayon de dissociation augmente (22 -> 30px) pour eviter que les avatars ecartes se chevauchent encore un peu sur les bords
 // v121 (19/09/2026) : Explorer - bulle produits ouverte sur le cote pour la boutique poussee vers le bas (evite de recouvrir l'autre) ; nouvelle interaction survol=apercu, simple clic=epingle/desepingle la bulle, double-clic=ouvre la fiche complete
 // v122 (19/09/2026) : meme interaction survol/clic/double-clic + bulle sur le cote portee sur la Carte (mini-widget Autour de moi) ; espaceurs de centrage du dock plafonnes a 56px pour eviter une zone transparente excessive avec peu de boutiques
-const VERSION_CACHE = "facilite-v122";
+// v123 (20/09/2026) : Explorer - barre de recherche isolee des gestes Leaflet (disableClickPropagation/disableScrollPropagation) pour eviter un zoom de la carte au lieu du focus clavier
+const VERSION_CACHE = "facilite-v123";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

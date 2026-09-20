@@ -142,6 +142,30 @@ export default function GlobeExplorateurBoutiques({
   const [scanPhotoEnCours, setScanPhotoEnCours] = useState(false);
   const inputRechercheRef = useRef(null);
   const fileInputPhotoRef = useRef(null);
+  const barreRechercheRef = useRef(null);
+
+  // Isole la barre de recherche des gestes Leaflet — même si elle n'est pas
+  // un descendant DOM de la carte (elle est un frère du conteneur Leaflet,
+  // pas un enfant), un clic/molette dessus reste un geste posé au-dessus
+  // de la carte à l'écran, et Leaflet écoute certains événements (tap
+  // tactile, molette) au niveau du document plutôt que du seul conteneur
+  // carte sur certains navigateurs mobiles. disableClickPropagation +
+  // disableScrollPropagation sont le garde-fou standard Leaflet pour tout
+  // contrôle HTML posé par-dessus une carte. Signalé par l'utilisateur :
+  // cliquer sur la barre déclenchait un zoom au lieu du focus clavier.
+  useEffect(() => {
+    if (!barreRechercheRef.current) return;
+    let annule = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (annule || !barreRechercheRef.current) return;
+      L.DomEvent.disableClickPropagation(barreRechercheRef.current);
+      L.DomEvent.disableScrollPropagation(barreRechercheRef.current);
+    })();
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   // Recherche par photo (IA Scanner Vision)
   const handleScanPhotoRecherche = async (e) => {
@@ -1391,7 +1415,7 @@ export default function GlobeExplorateurBoutiques({
         {/* Recherche mot-clé haute-fidélité (Inspiration E-Commerce / AliExpress) :
             Contour orange vif (#FF5500), scan photo IA par caméra, bouton dégradé chaud "Rechercher",
             filtre instantané des marqueurs carte et dock articles. */}
-        <div className="pointer-events-auto relative w-full">
+        <div ref={barreRechercheRef} className="pointer-events-auto relative w-full">
           <form
             onSubmit={(e) => {
               e.preventDefault();
