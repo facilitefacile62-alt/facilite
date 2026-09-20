@@ -10,7 +10,7 @@ import {
   obtenirDateHeureDakar,
   JOURS_SEMAINE,
 } from "@/lib/marketplaceData";
-import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -144,23 +144,32 @@ export default function GlobeExplorateurBoutiques({
   const fileInputPhotoRef = useRef(null);
   const barreRechercheRef = useRef(null);
 
-  // Isole la barre de recherche des gestes Leaflet — même si elle n'est pas
-  // un descendant DOM de la carte (elle est un frère du conteneur Leaflet,
-  // pas un enfant), un clic/molette dessus reste un geste posé au-dessus
-  // de la carte à l'écran, et Leaflet écoute certains événements (tap
-  // tactile, molette) au niveau du document plutôt que du seul conteneur
-  // carte sur certains navigateurs mobiles. disableClickPropagation +
-  // disableScrollPropagation sont le garde-fou standard Leaflet pour tout
-  // contrôle HTML posé par-dessus une carte. Signalé par l'utilisateur :
-  // cliquer sur la barre déclenchait un zoom au lieu du focus clavier.
+  // Isole la barre de recherche des gestes Leaflet — même si elle n'est
+  // pas un descendant DOM de la carte (elle est un frère du conteneur
+  // Leaflet, pas un enfant — comme le dock du carrousel plus bas), un clic
+  // dessus reste un geste posé au-dessus de la carte à l'écran, et
+  // certains navigateurs mobiles peuvent poser des écouteurs Leaflet plus
+  // haut (document) que le seul conteneur carte. disableClickPropagation +
+  // disableScrollPropagation sont le garde-fou standard Leaflet pour un
+  // contrôle HTML sans logique de glissement propre — PAS appliqué au dock
+  // du carrousel : celui-ci a son propre glissement à la souris
+  // (onMouseDownCarousel), qui repose sur l'événement natif "mousedown" —
+  // exactement celui que disableClickPropagation stoppe. Testé : avec ce
+  // garde-fou sur le dock, le glissement à la souris/au doigt ne faisait
+  // plus rien du tout (régression confirmée). Signalé par l'utilisateur :
+  // cliquer sur la barre de recherche déclenchait un zoom au lieu du focus
+  // clavier.
   useEffect(() => {
-    if (!barreRechercheRef.current) return;
+    const cibles = [barreRechercheRef.current].filter(Boolean);
+    if (cibles.length === 0) return;
     let annule = false;
     (async () => {
       const L = (await import("leaflet")).default;
-      if (annule || !barreRechercheRef.current) return;
-      L.DomEvent.disableClickPropagation(barreRechercheRef.current);
-      L.DomEvent.disableScrollPropagation(barreRechercheRef.current);
+      if (annule) return;
+      cibles.forEach((el) => {
+        L.DomEvent.disableClickPropagation(el);
+        L.DomEvent.disableScrollPropagation(el);
+      });
     })();
     return () => {
       annule = true;
@@ -647,8 +656,12 @@ export default function GlobeExplorateurBoutiques({
         // URL de tuiles propre sans paramètre erroné
         const urlTuiles = styleActif === "satellite" ? TUILES_SATELLITE : TUILES_OSM;
 
+        // 18, pas 19 : à ce niveau, la couverture OpenStreetMap de zones
+        // moins densément cartographiées (ex. banlieues de Dakar) peut ne
+        // proposer aucune tuile réelle, laissant un fond gris vide — confirmé
+        // par capture d'écran réelle. Même plafond que CarteBoutiques.jsx.
         const couche = L.tileLayer(urlTuiles, {
-          maxZoom: 19,
+          maxZoom: 18,
           crossOrigin: true,
         }).addTo(carte);
 
@@ -756,14 +769,25 @@ export default function GlobeExplorateurBoutiques({
     // création des marqueurs. Remplace l'ancienne version "dissociation au
     // clic" — demande explicite de l'utilisateur, plus fiable qu'un geste
     // à découvrir soi-même.
-    const SEUIL_CLUSTER_PX = 26;
-    // 30px et pas moins : les avatars font ~50-56px de diamètre, un rayon
-    // plus petit laissait leurs bords se chevaucher encore un peu (vérifié
-    // visuellement en production après un premier essai à 22px).
-    const RAYON_DISSOCIATION_PX = 30;
+    // Base à 26/30px pour un avatar affiché à sa taille de référence
+    // (échelle 1, zoom 14). brancherEchelleZoomAvatars grossit ensuite
+    // l'avatar jusqu'à ×1.4 en zoomant — sans réajuster ces deux seuils en
+    // proportion, un rayon de dissociation fixe restait correct pour la
+    // distance ENTRE LES CENTRES mais les avatars, devenus plus gros,
+    // se remettaient à se chevaucher sur les bords en zoomant fort (confirmé
+    // par capture d'écran réelle : superposition encore visible en "zoom
+    // très fort"). echelleAvatarPourZoom (même formule que
+    // brancherEchelleZoomAvatars, partagée pour ne jamais diverger) donne
+    // le facteur exact à appliquer aux deux seuils à CHAQUE recalcul (le
+    // zoom courant change à chaque appel).
+    const SEUIL_CLUSTER_PX_BASE = 26;
+    const RAYON_DISSOCIATION_PX_BASE = 30;
     const marqueursCreesParId = new Map();
 
     function recalculerDissociations() {
+      const echelle = echelleAvatarPourZoom(carte.getZoom());
+      const SEUIL_CLUSTER_PX = SEUIL_CLUSTER_PX_BASE * echelle;
+      const RAYON_DISSOCIATION_PX = RAYON_DISSOCIATION_PX_BASE * echelle;
       const dejaGroupees = new Set();
       boutiquesAffichees.forEach((b) => {
         if (dejaGroupees.has(b.id)) return;
@@ -1767,7 +1791,7 @@ export default function GlobeExplorateurBoutiques({
                     dépasser 100px avec peu de boutiques dans un dock large,
                     laissant une zone transparente immense de chaque côté —
                     signalé par l'utilisateur. */}
-                <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
+                <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
                 {marqueurs.map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
                   const aPhoto = b.photo ? urlPhoto(b.photo) : null;
@@ -1831,7 +1855,7 @@ export default function GlobeExplorateurBoutiques({
                     </button>
                   );
                 })}
-                <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
+                <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
               </div>
             ) : (
               <div
@@ -1857,7 +1881,7 @@ export default function GlobeExplorateurBoutiques({
                   </p>
                 ) : (
                   <>
-                    <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
+                    <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
                     {articlesFiltres.map((a) => {
                     const photo = a.photos?.[0] || null;
                     const estSelectionne = articleActifEffectif ? articleActifEffectif.id === a.id : false;
@@ -1897,7 +1921,7 @@ export default function GlobeExplorateurBoutiques({
                       </button>
                     );
                     })}
-                    <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
+                    <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
                   </>
                 )}
               </div>

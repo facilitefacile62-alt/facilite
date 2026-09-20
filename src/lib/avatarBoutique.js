@@ -292,6 +292,19 @@ export function dataUriAvatarBoutique(config, taille = 96) {
 }
 
 /**
+ * Facteur d'échelle appliqué aux avatars pour un niveau de zoom donné —
+ * extrait de brancherEchelleZoomAvatars pour que tout code ayant besoin de
+ * connaître la taille RÉELLE (post-CSS-scale) d'un avatar à un zoom donné
+ * (ex. le rayon de dissociation des boutiques superposées, qui doit rester
+ * plus grand que l'avatar affiché sous peine de se chevaucher à nouveau en
+ * zoomant) utilise exactement la même formule, jamais une copie qui
+ * pourrait diverger.
+ */
+export function echelleAvatarPourZoom(zoom, { zoomReference = 14, pas = 0.08, min = 0.7, max = 1.4 } = {}) {
+  return Math.min(max, Math.max(min, 1 + (zoom - zoomReference) * pas));
+}
+
+/**
  * Redimensionne les icônes avatar d'une carte Leaflet selon le zoom — plus
  * grand en zoomant, plus petit en dézoomant, borné pour rester lisible aux
  * niveaux extrêmes. Cible seulement les éléments portant la classe
@@ -303,10 +316,9 @@ export function dataUriAvatarBoutique(config, taille = 96) {
  * appeler puisque carte.remove() détache déjà tous les écouteurs de la
  * carte, mais utile si on veut la débrancher sans détruire la carte.
  */
-export function brancherEchelleZoomAvatars(carte, { zoomReference = 14, pas = 0.08, min = 0.7, max = 1.4 } = {}) {
+export function brancherEchelleZoomAvatars(carte, options = {}) {
   const appliquer = () => {
-    const zoom = carte.getZoom();
-    const echelle = Math.min(max, Math.max(min, 1 + (zoom - zoomReference) * pas));
+    const echelle = echelleAvatarPourZoom(carte.getZoom(), options);
     carte.getContainer().querySelectorAll(".avatar-boutique-zoom-scale").forEach((el) => {
       el.style.transform = `scale(${echelle})`;
     });

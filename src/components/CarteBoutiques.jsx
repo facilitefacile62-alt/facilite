@@ -24,7 +24,7 @@
 // liste de résultats, c'est la différence assumée avec le Globe.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, calculerStatutOuverture, urlPhoto } from "@/lib/marketplaceData";
-import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 
 const COULEUR = "#1877F2";
 const COULEUR_SERVICE = "#F59E0B";
@@ -68,6 +68,16 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const leafletRef = useRef(null);
   const menuFiltresRef = useRef(null);
   const carouselContainerRef = useRef(null);
+  // Pas de garde-fou disableClickPropagation sur le dock du carrousel :
+  // testé sur GlobeExplorateurBoutiques.jsx (même dock), cette fonction
+  // Leaflet stoppe la propagation native de "mousedown" — exactement
+  // l'événement sur lequel repose le glissement à la souris du dock
+  // (onMouseDownCarousel) pour démarrer son propre suivi. Avec le
+  // garde-fou, le glissement ne faisait plus rien du tout (régression
+  // confirmée). De toute façon inutile ici : ce dock est un frère du
+  // conteneur Leaflet dans le DOM, jamais un descendant — un clic dessus
+  // ne peut pas, par simple remontée, atteindre un écouteur posé sur le
+  // conteneur carte lui-même.
   const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
   const popupsBoutiquesRef = useRef(new Map());
   // Boutique dont la bulle produits est actuellement "épinglée" (ouverte en
@@ -416,12 +426,20 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // cliquable remplace le zoom pour choisir lequel ouvrir (demande
         // explicite de l'utilisateur : "un outil qui me permette de voir
         // toutes les boutiques qui se trouvent là").
-        const SEUIL_CLUSTER_PX = 26;
+        // Base pour un avatar à sa taille de référence (échelle 1, zoom
+        // 14) — brancherEchelleZoomAvatars le grossit ensuite jusqu'à ×1.4
+        // en zoomant, donc ce seuil doit croître dans les mêmes
+        // proportions à CHAQUE appel (le zoom courant change), pas rester
+        // figé à sa valeur de création de la carte. echelleAvatarPourZoom
+        // (même formule que brancherEchelleZoomAvatars, partagée pour ne
+        // jamais diverger).
+        const SEUIL_CLUSTER_PX_BASE = 26;
         function membresEncombres(position) {
+          const seuil = SEUIL_CLUSTER_PX_BASE * echelleAvatarPourZoom(carte.getZoom());
           const p1 = carte.latLngToContainerPoint(position);
           return membresConnus.filter((m) => {
             const p2 = carte.latLngToContainerPoint(m.position);
-            return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
+            return Math.hypot(p1.x - p2.x, p1.y - p2.y) < seuil;
           });
         }
         function gererClicPoint(position, actionSiSepare) {
@@ -454,12 +472,14 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // Leaflet + le trait de chaque marqueur boutique, rempli au fil de
         // la boucle ci-dessous.
         const marqueursCreesParId = new Map();
-        // 30px et pas moins : les avatars font ~50-56px de diamètre, un
-        // rayon plus petit laissait leurs bords se chevaucher encore un peu
-        // (vérifié visuellement en production après un premier essai à
-        // 22px).
-        const RAYON_DISSOCIATION_PX = 30;
+        // Base pour un avatar à sa taille de référence — voir le
+        // commentaire de SEUIL_CLUSTER_PX_BASE ci-dessus, même raisonnement
+        // et même formule partagée (echelleAvatarPourZoom), recalculée à
+        // chaque appel de recalculerDissociations plutôt que figée à la
+        // création de la carte.
+        const RAYON_DISSOCIATION_PX_BASE = 30;
         function recalculerDissociations() {
+          const rayonDissociation = RAYON_DISSOCIATION_PX_BASE * echelleAvatarPourZoom(carte.getZoom());
           const dejaGroupees = new Set();
           boutiquesAffichees.forEach((b) => {
             if (dejaGroupees.has(b.id)) return;
@@ -481,8 +501,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
               const pOrigine = carte.latLngToContainerPoint(m.position);
               const pDecale = L.point(
-                pOrigine.x + RAYON_DISSOCIATION_PX * Math.cos(angle),
-                pOrigine.y + RAYON_DISSOCIATION_PX * Math.sin(angle)
+                pOrigine.x + rayonDissociation * Math.cos(angle),
+                pOrigine.y + rayonDissociation * Math.sin(angle)
               );
               const posDecalee = carte.containerPointToLatLng(pDecale);
               entree.marqueur.setLatLng(posDecalee);
@@ -1128,7 +1148,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       dans un dock large, laissant une zone transparente
                       immense de chaque côté — signalé par l'utilisateur
                       ("la partie transparente prend beaucoup de place"). */}
-                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
                     return (
@@ -1189,7 +1209,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       </button>
                     );
                   })}
-                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 56px)" }} />
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
                 </div>
 
                 {/* Flèche Droite */}
