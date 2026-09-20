@@ -88,6 +88,12 @@ export default function GlobeExplorateurBoutiques({
   const coucheTuilesRef = useRef(null);
   const groupeMarqueursRef = useRef(null);
   const marqueurMoiRef = useRef(null);
+  // Position géographique RÉELLE de "Vous êtes ici", séparée de
+  // marqueurMoiRef.getLatLng() qui peut refléter une position décalée par
+  // la dissociation automatique (voir recalculerDissociations) — sans
+  // cette référence à part, impossible de savoir où le replacer une fois
+  // qu'il n'est plus trop proche d'une boutique.
+  const positionOrigineMoiRef = useRef(null);
   const echelleZoomCleanupRef = useRef(null);
   // Cadre de sélection déplaçable/redimensionnable ("voir toutes les
   // boutiques d'une zone") — même outil que sur la carte compacte
@@ -401,6 +407,30 @@ export default function GlobeExplorateurBoutiques({
     const nextA = articlesFiltres[indexSuivant];
     if (nextA) selectionnerArticleCarousel(nextA);
   };
+
+  // Flèches gauche/droite du clavier -> même navigation que les boutons
+  // fléchés du dock. Ignoré si le focus est dans un champ de saisie (la
+  // barre de recherche, notamment) : les flèches y déplacent le curseur
+  // texte, pas le carrousel. Demande explicite de l'utilisateur.
+  useEffect(() => {
+    const gestionnaire = (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const actif = document.activeElement;
+      const focusDansChampTexte =
+        actif && (actif.tagName === "INPUT" || actif.tagName === "TEXTAREA" || actif.isContentEditable);
+      if (focusDansChampTexte) return;
+      e.preventDefault();
+      if (vueCarrousel === "boutiques") {
+        if (e.key === "ArrowLeft") allerBoutiquePrecedente();
+        else allerBoutiqueSuivante();
+      } else {
+        if (e.key === "ArrowLeft") allerArticlePrecedent();
+        else allerArticleSuivant();
+      }
+    };
+    window.addEventListener("keydown", gestionnaire);
+    return () => window.removeEventListener("keydown", gestionnaire);
+  });
 
   // Boutiques filtrées selon l'onglet, puis selon la recherche (Point C) —
   // une boutique reste affichée si son nom correspond, OU si elle vend au
@@ -741,6 +771,7 @@ export default function GlobeExplorateurBoutiques({
       groupeMarqueursRef.current = null;
       coucheTuilesRef.current = null;
       marqueurMoiRef.current = null;
+      positionOrigineMoiRef.current = null;
     };
     // positionInitiale est lu (via forcerTaille) mais volontairement absent
     // des dépendances : la carte ne doit se recréer que sur un changement
@@ -788,11 +819,26 @@ export default function GlobeExplorateurBoutiques({
       const echelle = echelleAvatarPourZoom(carte.getZoom());
       const SEUIL_CLUSTER_PX = SEUIL_CLUSTER_PX_BASE * echelle;
       const RAYON_DISSOCIATION_PX = RAYON_DISSOCIATION_PX_BASE * echelle;
+      // "Vous êtes ici" inclus dans le même regroupement que les boutiques
+      // (pas seulement entre boutiques) : sinon, quand il coïncide avec une
+      // boutique, son badge reste caché derrière elle sans jamais être
+      // écarté — confirmé par capture d'écran réelle. Le pousser dans le
+      // même cercle que les boutiques qu'il chevauche règle ça sans
+      // toucher au pane/z-index (paneMoi doit rester sous markerPane pour
+      // que le survol/clic des boutiques continue de fonctionner).
+      const pointsGroupables = boutiquesAffichees.map((b) => ({ id: b.id, lat: b.lat, lng: b.lng }));
+      if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
+        pointsGroupables.push({
+          id: "__ici__",
+          lat: positionOrigineMoiRef.current[0],
+          lng: positionOrigineMoiRef.current[1],
+        });
+      }
       const dejaGroupees = new Set();
-      boutiquesAffichees.forEach((b) => {
+      pointsGroupables.forEach((b) => {
         if (dejaGroupees.has(b.id)) return;
         const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
-        const membres = boutiquesAffichees.filter((autre) => {
+        const membres = pointsGroupables.filter((autre) => {
           const p2 = carte.latLngToContainerPoint([autre.lat, autre.lng]);
           return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
         });
@@ -1183,6 +1229,14 @@ export default function GlobeExplorateurBoutiques({
       });
     });
 
+    // Enregistre "Vous êtes ici" dans le même registre que les boutiques
+    // (clé dédiée "__ici__") pour que recalculerDissociations puisse aussi
+    // le déplacer/le tracer s'il chevauche une boutique — voir le
+    // commentaire dans recalculerDissociations ci-dessus.
+    if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
+      marqueursCreesParId.set("__ici__", { marqueur: marqueurMoiRef.current, ligne: null, decalageBas: false });
+    }
+
     // Application initiale de la dissociation automatique, puis recalcul à
     // chaque pan/zoom (l'écart en pixels dépend du niveau de zoom courant —
     // des boutiques superposées à un zoom peuvent ne plus l'être à un
@@ -1332,6 +1386,7 @@ export default function GlobeExplorateurBoutiques({
     }
 
     marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
+    positionOrigineMoiRef.current = [pos.latitude, pos.longitude];
     // Sans ceci, "Vous êtes ici" ne réagissait jamais au clic — et quand il
     // se superposait à une boutique (position de démo confondue avec sa
     // propre boutique), il interceptait le clic sans rien faire à la place.

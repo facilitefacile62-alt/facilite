@@ -409,7 +409,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         const iciAvance = point(depart?.latitude, depart?.longitude);
         const membresConnus = [
           ...boutiquesAffichees.map((b) => ({ position: b.position, type: "boutique", id: b.id, nom: b.nom, avatarConfig: b.avatar_config })),
-          ...(iciAvance ? [{ position: iciAvance, type: "ici" }] : []),
+          // id "__ici__" : nécessaire pour que recalculerDissociations
+          // puisse aussi déplacer/tracer ce point s'il chevauche une
+          // boutique (voir ce commentaire plus bas) — sans id, impossible
+          // de le retrouver dans marqueursCreesParId.
+          ...(iciAvance ? [{ position: iciAvance, type: "ici", id: "__ici__" }] : []),
         ];
 
         // Deux marqueurs peuvent se superposer visuellement à l'écran (même
@@ -481,9 +485,16 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         function recalculerDissociations() {
           const rayonDissociation = RAYON_DISSOCIATION_PX_BASE * echelleAvatarPourZoom(carte.getZoom());
           const dejaGroupees = new Set();
-          boutiquesAffichees.forEach((b) => {
+          // membresConnus (pas boutiquesAffichees) : "Vous êtes ici" doit
+          // pouvoir être écarté au même titre qu'une boutique quand il
+          // coïncide avec elle, sinon son badge reste caché derrière sans
+          // jamais être déplacé — confirmé par capture d'écran réelle. Ne
+          // touche pas au pane/z-index (paneMoi doit rester sous
+          // markerPane pour que le survol/clic des boutiques continue de
+          // fonctionner).
+          membresConnus.forEach((b) => {
             if (dejaGroupees.has(b.id)) return;
-            const membres = membresEncombres(b.position).filter((m) => m.type === "boutique");
+            const membres = membresEncombres(b.position);
             membres.forEach((m) => dejaGroupees.add(m.id));
 
             membres.forEach((m, i) => {
@@ -841,6 +852,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             iconAnchor: [35, 25],
           });
           const marqueurMoi = L.marker(ici, { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
+          // Enregistré au même titre qu'une boutique (clé "__ici__") pour
+          // que recalculerDissociations puisse aussi l'écarter s'il
+          // chevauche une boutique — voir ce commentaire plus haut.
+          marqueursCreesParId.set("__ici__", { marqueur: marqueurMoi, ligne: null, decalageBas: false });
           // Sans ceci, "Vous êtes ici" ne réagissait jamais au clic — et
           // quand il se superposait à une boutique (cas fréquent : la
           // position de démo coïncide avec celle de sa propre boutique), il

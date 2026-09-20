@@ -122,7 +122,8 @@
 // v122 (19/09/2026) : meme interaction survol/clic/double-clic + bulle sur le cote portee sur la Carte (mini-widget Autour de moi) ; espaceurs de centrage du dock plafonnes a 56px pour eviter une zone transparente excessive avec peu de boutiques
 // v123 (20/09/2026) : Explorer - barre de recherche isolee des gestes Leaflet (disableClickPropagation/disableScrollPropagation) pour eviter un zoom de la carte au lieu du focus clavier
 // v124 (20/09/2026) : rayon de dissociation et seuil de detection de chevauchement adaptes au zoom (suivent l'agrandissement des avatars jusqu'a x1.4) pour eviter qu'ils se rechevauchent en zoomant fort ; plafond du dock ajuste (56 -> 90px) ; maxZoom des tuiles Explorer reduit (19 -> 18) pour eviter des tuiles vides en zoom extreme
-const VERSION_CACHE = "facilite-v124";
+// v125 (20/09/2026) : navigation clavier fleches gauche/droite pour le dock (ignoree si focus dans un champ texte) ; "Vous etes ici" inclus dans la dissociation automatique (Carte + Explorer) pour ne plus jamais rester cache derriere une boutique superposee
+const VERSION_CACHE = "facilite-v125";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
