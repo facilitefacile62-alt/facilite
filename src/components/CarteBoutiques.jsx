@@ -1103,8 +1103,12 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               dont "Vous êtes ici", s'y superposaient sinon). Une première
               réduction (28px) avait déjà été faite mais jugée insuffisante
               par l'utilisateur — confirmé qu'il veut rester sur ce même
-              principe (flottant sur la carte), juste poussé plus loin. */}
-          <div className="absolute inset-x-0 bottom-2 z-[400] px-2 flex justify-center pointer-events-none">
+              principe (flottant sur la carte), juste poussé plus loin.
+              Deuxième réduction (avatars 44/48px → 32/36px, flèches
+              28/32px → 24/28px, paddings resserrés) : toujours flottant,
+              empreinte encore réduite pour dégager davantage de carte
+              visible au-dessus. */}
+          <div className="absolute inset-x-0 bottom-1 z-[400] px-2 flex justify-center pointer-events-none">
             {!modeCompact && boutiquesAffichees.length > 0 && (
               <div className="pointer-events-auto w-full max-w-lg flex items-center justify-center gap-1.5 px-1 select-none">
                 {/* Flèche Gauche */}
@@ -1130,7 +1134,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       if (handler?.ouvrir) handler.ouvrir();
                     }
                   }}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label="Précédent"
                 >
                   <i className="fa-solid fa-chevron-left text-[10px]"></i>
@@ -1151,7 +1155,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       }
                     }
                   }}
-                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1 px-2 sm:px-3 flex items-center justify-start gap-1 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
                 >
                   {/* Espaceurs de centrage : sans eux, le 1er/dernier avatar
                       ne peut jamais atteindre le centre visuel — l'anneau
@@ -1163,7 +1167,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       dans un dock large, laissant une zone transparente
                       immense de chaque côté — signalé par l'utilisateur
                       ("la partie transparente prend beaucoup de place"). */}
-                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 20px), 70px)" }} />
                   {boutiquesAffichees.map((b, idx) => {
                     const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
                     return (
@@ -1193,38 +1197,38 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                         <div
                           className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                             estSelectionne
-                              ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
-                              : "w-11 h-11 sm:w-12 sm:h-12 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
+                              ? "w-9 h-9 sm:w-10 sm:h-10 p-[2px] bg-white shadow-[0_0_16px_rgba(255,255,255,0.85),0_4px_14px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
+                              : "w-8 h-8 sm:w-9 sm:h-9 p-[1px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                           }`}
                         >
                           <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
                             {b.avatar_config ? (
                               <img
-                                src={dataUriAvatarBoutique(b.avatar_config, 48)}
+                                src={dataUriAvatarBoutique(b.avatar_config, 40)}
                                 alt={b.nom}
                                 className="w-full h-full object-cover pointer-events-none"
                               />
                             ) : (
-                              <span className="text-white text-[9px] font-black pointer-events-none">
+                              <span className="text-white text-[7px] font-black pointer-events-none">
                                 {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
                               </span>
                             )}
                           </div>
                           {b.estPremium && (
-                            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[7px] font-black border border-white shadow-xs">
+                            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[6px] font-black border border-white shadow-xs">
                               👑
                             </span>
                           )}
                         </div>
                         {estSelectionne && (
-                          <span className="mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] truncate border border-gray-200 transition-all duration-200">
+                          <span className="mt-0.5 px-1.5 py-0.2 bg-white text-gray-950 text-[8px] font-black rounded-full shadow-md max-w-[60px] truncate border border-gray-200 transition-all duration-200">
                             {b.nom}
                           </span>
                         )}
                       </button>
                     );
                   })}
-                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 20px), 70px)" }} />
                 </div>
 
                 {/* Flèche Droite */}
@@ -1243,7 +1247,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       if (handler?.ouvrir) handler.ouvrir();
                     }
                   }}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label="Suivant"
                 >
                   <i className="fa-solid fa-chevron-right text-[10px]"></i>
