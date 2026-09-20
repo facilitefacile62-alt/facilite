@@ -13,6 +13,7 @@ import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import BoutonInstallerApp from "@/components/BoutonInstallerApp";
+import { chargerTousLesArticles } from "@/lib/marketplaceData";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
 const QUICK_SECTIONS_INDEX = [
@@ -764,6 +765,71 @@ export default function Header() {
           }
         };
 
+        // Espace actif (Marketplace vs Emploi) : la recherche globale ne
+        // doit JAMAIS mélanger les deux — chercher un produit depuis la
+        // Marketplace ne doit renvoyer que des boutiques/articles
+        // Marketplace, et chercher depuis Facilité Emploi ne doit jamais
+        // renvoyer un produit Marketplace. Signalé par l'utilisateur
+        // (chercher "masque" — un vrai produit de sa boutique — depuis la
+        // Marketplace renvoyait des offres d'emploi, pas son produit).
+        // Retour anticipé : le reste de la fonction (sections A-D
+        // ci-dessous) est exclusivement le moteur Emploi, jamais exécuté
+        // dans ce cas.
+        if (isBusinessActive) {
+          try {
+            const articles = await chargerTousLesArticles({ texte: q, limite: 8 });
+            articles.forEach((art) => {
+              addResult({
+                id: `mkt_art_${art.id}`,
+                title: art.titre || "Article",
+                type: "Article",
+                subtitle: `${art.boutique_nom || "Boutique"} • ${
+                  art.prix_xof ? `${Number(art.prix_xof).toLocaleString("fr-FR")} F` : art.distanceLisible || "Sénégal"
+                }`,
+                targetUrl: `/marketplace?q=${encodeURIComponent(art.titre || q)}`,
+                icon: "fa-bag-shopping",
+                badgeColor: "emerald",
+              });
+            });
+          } catch (err) {
+            console.warn("Recherche Marketplace (articles) ignorée:", err.message);
+          }
+
+          try {
+            const { data: storeData } = await supabase
+              .from("marketplace_stores")
+              .select("id, nom, quartier, ville")
+              .eq("actif", true)
+              .ilike("nom", `%${q}%`)
+              .limit(5);
+            if (storeData && Array.isArray(storeData)) {
+              storeData.forEach((store) => {
+                addResult({
+                  id: `mkt_store_${store.id}`,
+                  title: store.nom || "Boutique",
+                  type: "Boutique",
+                  subtitle: `📍 ${store.quartier ? `${store.quartier}, ` : ""}${store.ville || "Sénégal"}`,
+                  targetUrl: `/marketplace?q=${encodeURIComponent(store.nom || q)}`,
+                  icon: "fa-store",
+                  badgeColor: "emerald",
+                });
+              });
+            }
+          } catch (err) {
+            console.warn("Recherche Marketplace (boutiques) ignorée:", err.message);
+          }
+
+          if (isMounted) {
+            setResults(combinedResults.slice(0, 12));
+            setIsOpen(true);
+            setSelectedIndex(-1);
+          }
+          return;
+        }
+
+        // --- À partir d'ici : moteur de recherche Facilité Emploi, jamais
+        // atteint depuis la Marketplace (retour anticipé ci-dessus). ---
+
         // A. Recherche instantanée dans les sections et rubriques de la plateforme
         QUICK_SECTIONS_INDEX.forEach((sec) => {
           const content = `${sec.title} ${sec.subtitle} ${sec.keywords}`.toLowerCase();
@@ -877,7 +943,10 @@ export default function Header() {
     return () => {
       isMounted = false;
     };
-  }, [debouncedQuery]);
+    // isBusinessActive : sans cette dépendance, changer d'espace
+    // (Marketplace <-> Emploi) sans retaper la recherche laissait les
+    // anciens résultats (du mauvais espace) affichés dans le menu déroulant.
+  }, [debouncedQuery, isBusinessActive]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

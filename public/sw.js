@@ -124,7 +124,8 @@
 // v124 (20/09/2026) : rayon de dissociation et seuil de detection de chevauchement adaptes au zoom (suivent l'agrandissement des avatars jusqu'a x1.4) pour eviter qu'ils se rechevauchent en zoomant fort ; plafond du dock ajuste (56 -> 90px) ; maxZoom des tuiles Explorer reduit (19 -> 18) pour eviter des tuiles vides en zoom extreme
 // v125 (20/09/2026) : navigation clavier fleches gauche/droite pour le dock (ignoree si focus dans un champ texte) ; "Vous etes ici" inclus dans la dissociation automatique (Carte + Explorer) pour ne plus jamais rester cache derriere une boutique superposee
 // v126 (20/09/2026) : le header reste en mode Marketplace sur /messagerie?contexte=marketplace au lieu de basculer vers l'univers Emploi (cause du bug "cliquer sur Messagerie depuis la Marketplace change toute la navigation") ; suppression d'une barre de navigation dupliquee jamais affichee dans la messagerie
-const VERSION_CACHE = "facilite-v126";
+// v127 (20/09/2026) : la barre de recherche globale du header ne cherche plus que des boutiques/articles Marketplace quand on est sur la Marketplace (au lieu d'offres d'emploi) ; recherche Emploi inchangee et ne renvoie jamais de produit Marketplace
+const VERSION_CACHE = "facilite-v127";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
