@@ -67,12 +67,68 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
   const menuFiltresRef = useRef(null);
+  const carouselContainerRef = useRef(null);
+  // Pas de garde-fou disableClickPropagation sur le dock du carrousel :
+  // testé sur GlobeExplorateurBoutiques.jsx (même dock), cette fonction
+  // Leaflet stoppe la propagation native de "mousedown" — exactement
+  // l'événement sur lequel repose le glissement à la souris du dock
+  // (onMouseDownCarousel) pour démarrer son propre suivi. Avec le
+  // garde-fou, le glissement ne faisait plus rien du tout (régression
+  // confirmée). De toute façon inutile ici : ce dock est un frère du
+  // conteneur Leaflet dans le DOM, jamais un descendant — un clic dessus
+  // ne peut pas, par simple remontée, atteindre un écouteur posé sur le
+  // conteneur carte lui-même.
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, hasMoved: false });
   const popupsBoutiquesRef = useRef(new Map());
   // Boutique dont la bulle produits est actuellement "épinglée" (ouverte en
   // permanence suite à un simple clic, jusqu'à un nouveau clic ou un
   // double-clic) — même mécanisme que GlobeExplorateurBoutiques.jsx.
   const boutiqueEpingleeIdRef = useRef(null);
+  const [boutiqueActiveId, setBoutiqueActiveId] = useState(null);
+  // Bascule Boutiques / Articles du dock, même principe que
+  // GlobeExplorateurBoutiques.jsx (vueCarrousel) — demande explicite de
+  // l'utilisateur d'avoir la même bascule ici, pas seulement en plein écran.
+  const [vueCarrousel, setVueCarrousel] = useState("boutiques");
+  const [articleActifId, setArticleActifId] = useState(null);
   const [echec, setEchec] = useState(false);
+
+  // Fait suivre visuellement le dock quand la sélection change par les
+  // flèches (qui bouclent déjà sur les index : dernier -> premier et
+  // inversement) — sans ceci, la sélection "bouclait" bien côté données
+  // (carte, popup) mais le dock restait scrollé où il était, donnant
+  // l'impression que le bouclage n'existait pas. Signalé par l'utilisateur
+  // ("ça doit faire le tour").
+  useEffect(() => {
+    if (!carouselContainerRef.current) return;
+    const idActif = vueCarrousel === "boutiques" ? boutiqueActiveId : articleActifId;
+    if (!idActif) return;
+    const attr = vueCarrousel === "boutiques" ? "data-boutique-id" : "data-article-id";
+    const el = carouselContainerRef.current.querySelector(`[${attr}="${idActif}"]`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [boutiqueActiveId, articleActifId, vueCarrousel]);
+
+  const onMouseDownCarousel = (e) => {
+    if (!carouselContainerRef.current) return;
+    dragRef.current.isDown = true;
+    dragRef.current.startX = e.pageX - carouselContainerRef.current.offsetLeft;
+    dragRef.current.scrollLeft = carouselContainerRef.current.scrollLeft;
+    dragRef.current.hasMoved = false;
+  };
+
+  const onMouseMoveCarousel = (e) => {
+    if (!dragRef.current.isDown || !carouselContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - carouselContainerRef.current.offsetLeft;
+    const walk = (x - dragRef.current.startX) * 1.5;
+    if (Math.abs(walk) > 4) {
+      dragRef.current.hasMoved = true;
+    }
+    carouselContainerRef.current.scrollLeft = dragRef.current.scrollLeft - walk;
+  };
+
+  const onMouseUpCarousel = () => {
+    dragRef.current.isDown = false;
+  };
 
   // Cadre de sélection déplaçable/redimensionnable ("voir tout ce qu'il y a
   // là-dedans") — demande explicite de l'utilisateur, complémentaire à la
@@ -248,6 +304,71 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
     }
     return boutiques;
   }, [boutiques, filtreActif]);
+
+  // Pendant de boutiquesAffichees pour la vue "Articles" du dock (Bascule
+  // Boutiques / Articles) — même logique de filtre par pastille, appliquée
+  // directement aux articles plutôt qu'aux boutiques qui les regroupent.
+  // Ne garde que les articles dont la boutique est encore affichée (une
+  // boutique peut disparaître du regroupement ci-dessus — doublon retiré,
+  // etc. — sans que ses articles soient retirés de la prop `articles`).
+  const articlesAffiches = useMemo(() => {
+    const idsBoutiquesAffichees = new Set(boutiquesAffichees.map((b) => b.id));
+    let liste = (articles || []).filter((a) => idsBoutiquesAffichees.has(a.boutique_id));
+    if (filtreActif === "live") {
+      liste = liste.filter((a) => a.statut === "en_stock");
+    }
+    return liste;
+  }, [articles, boutiquesAffichees, filtreActif]);
+
+  const ouvrirBoutiqueDuDock = useCallback(
+    (b) => {
+      setBoutiqueActiveId(b.id);
+      carteRef.current?.panTo(b.position, { animate: true, duration: 0.8 });
+      const handler = popupsBoutiquesRef.current.get(b.id);
+      if (handler?.ouvrir) handler.ouvrir();
+    },
+    []
+  );
+
+  const allerBoutiquePrecedente = () => {
+    const idxActuel = boutiquesAffichees.findIndex((b) => b.id === (boutiqueActiveId || boutiquesAffichees[0]?.id));
+    const prevIdx = idxActuel > 0 ? idxActuel - 1 : boutiquesAffichees.length - 1;
+    const prevB = boutiquesAffichees[prevIdx];
+    if (prevB) ouvrirBoutiqueDuDock(prevB);
+  };
+
+  const allerBoutiqueSuivante = () => {
+    const idxActuel = boutiquesAffichees.findIndex((b) => b.id === (boutiqueActiveId || boutiquesAffichees[0]?.id));
+    const nextIdx = idxActuel < boutiquesAffichees.length - 1 ? idxActuel + 1 : 0;
+    const nextB = boutiquesAffichees[nextIdx];
+    if (nextB) ouvrirBoutiqueDuDock(nextB);
+  };
+
+  // Un article n'a pas de fiche dédiée sur cette carte compacte (pas de
+  // bottom sheet comme sur GlobeExplorateurBoutiques) : le sélectionner
+  // recentre sur SA boutique et ouvre la même bulle produits que le ferait
+  // un clic sur l'avatar de cette boutique dans la vue "Boutiques".
+  const ouvrirArticleDuDock = useCallback((a) => {
+    setArticleActifId(a.id);
+    const p = point(a.boutique_lat, a.boutique_lng);
+    if (p) carteRef.current?.panTo(p, { animate: true, duration: 0.8 });
+    const handler = popupsBoutiquesRef.current.get(a.boutique_id);
+    if (handler?.ouvrir) handler.ouvrir();
+  }, []);
+
+  const allerArticlePrecedent = () => {
+    const idxActuel = articlesAffiches.findIndex((a) => a.id === (articleActifId || articlesAffiches[0]?.id));
+    const prevIdx = idxActuel > 0 ? idxActuel - 1 : articlesAffiches.length - 1;
+    const prevA = articlesAffiches[prevIdx];
+    if (prevA) ouvrirArticleDuDock(prevA);
+  };
+
+  const allerArticleSuivant = () => {
+    const idxActuel = articlesAffiches.findIndex((a) => a.id === (articleActifId || articlesAffiches[0]?.id));
+    const nextIdx = idxActuel < articlesAffiches.length - 1 ? idxActuel + 1 : 0;
+    const nextA = articlesAffiches[nextIdx];
+    if (nextA) ouvrirArticleDuDock(nextA);
+  };
 
   const gererPointerDownDeplacer = (e) => {
     e.preventDefault();
@@ -1043,6 +1164,169 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             </div>
           </div>
 
+          {/* Carrousel façon Snapchat Lenses + bascule Boutiques/Articles —
+              même dock que GlobeExplorateurBoutiques.jsx (référence explicite
+              de l'utilisateur), porté ici en gardant le principe flottant sur
+              la carte déjà confirmé pour ce composant compact. */}
+          <div className="absolute inset-x-0 bottom-1.5 z-[400] px-2 flex flex-col items-center gap-1.5 pointer-events-none">
+            {(boutiquesAffichees.length > 0 || articlesAffiches.length > 0) && !modeCompact && (
+              <div className="pointer-events-auto flex items-center gap-1 bg-gray-950/80 rounded-full p-1 border border-gray-800 backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setVueCarrousel("boutiques")}
+                  className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                    vueCarrousel === "boutiques" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
+                  }`}
+                >
+                  Boutiques
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVueCarrousel("articles")}
+                  className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                    vueCarrousel === "articles" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
+                  }`}
+                >
+                  Articles
+                </button>
+              </div>
+            )}
+
+            {!modeCompact && (boutiquesAffichees.length > 0 || articlesAffiches.length > 0) && (
+              <div className="pointer-events-auto w-full max-w-lg flex items-center justify-center gap-1.5 px-1 select-none">
+                <button
+                  type="button"
+                  onClick={vueCarrousel === "boutiques" ? allerBoutiquePrecedente : allerArticlePrecedent}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  aria-label={vueCarrousel === "boutiques" ? "Boutique précédente" : "Article précédent"}
+                >
+                  <i className="fa-solid fa-chevron-left text-[10px]"></i>
+                </button>
+
+                <div
+                  ref={carouselContainerRef}
+                  onMouseDown={onMouseDownCarousel}
+                  onMouseMove={onMouseMoveCarousel}
+                  onMouseUp={onMouseUpCarousel}
+                  onMouseLeave={onMouseUpCarousel}
+                  onWheel={(e) => {
+                    e.stopPropagation();
+                    if (carouselContainerRef.current) {
+                      const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                      if (delta !== 0) {
+                        carouselContainerRef.current.scrollLeft += delta * 1.1;
+                      }
+                    }
+                  }}
+                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                >
+                  {/* Espaceurs de centrage : voir GlobeExplorateurBoutiques.jsx
+                      pour le raisonnement complet (même dock). */}
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
+                  {vueCarrousel === "boutiques"
+                    ? boutiquesAffichees.map((b, idx) => {
+                        const estSelectionne = boutiqueActiveId ? boutiqueActiveId === b.id : idx === 0;
+                        return (
+                          <button
+                            key={b.id}
+                            data-boutique-id={b.id}
+                            type="button"
+                            onClick={(e) => {
+                              if (dragRef.current.hasMoved) return;
+                              ouvrirBoutiqueDuDock(b);
+                              onChoisirBoutique?.(b.id);
+                              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                            }}
+                            onMouseEnter={() => popupsBoutiquesRef.current.get(b.id)?.ouvrir?.()}
+                            onMouseLeave={() => popupsBoutiquesRef.current.get(b.id)?.fermer?.()}
+                            className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
+                          >
+                            <div
+                              className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
+                                estSelectionne
+                                  ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
+                                  : "w-11 h-11 sm:w-12 sm:h-12 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
+                              }`}
+                            >
+                              <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
+                                {b.avatar_config ? (
+                                  <img
+                                    src={dataUriAvatarBoutique(b.avatar_config, 48)}
+                                    alt={b.nom}
+                                    className="w-full h-full object-cover pointer-events-none"
+                                  />
+                                ) : (
+                                  <span className="text-white text-[9px] font-black pointer-events-none">
+                                    {b.nom ? b.nom.substring(0, 2).toUpperCase() : "BT"}
+                                  </span>
+                                )}
+                              </div>
+                              {b.estPremium && (
+                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[7px] font-black border border-white shadow-xs">
+                                  👑
+                                </span>
+                              )}
+                            </div>
+                            {estSelectionne && (
+                              <span className="mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] truncate border border-gray-200 transition-all duration-200">
+                                {b.nom}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })
+                    : articlesAffiches.map((a) => {
+                        const photo = a.photos?.[0] ? urlPhoto(a.photos[0]) : null;
+                        const estSelectionne = articleActifId ? articleActifId === a.id : false;
+                        return (
+                          <button
+                            key={a.id}
+                            data-article-id={a.id}
+                            type="button"
+                            onClick={(e) => {
+                              if (dragRef.current.hasMoved) return;
+                              ouvrirArticleDuDock(a);
+                              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                            }}
+                            className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
+                          >
+                            <div
+                              className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
+                                estSelectionne
+                                  ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
+                                  : "w-11 h-11 sm:w-12 sm:h-12 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
+                              }`}
+                            >
+                              <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border border-gray-950 flex items-center justify-center">
+                                {photo ? (
+                                  <img src={photo} alt={a.titre} className="w-full h-full object-cover pointer-events-none" />
+                                ) : (
+                                  <i className="fa-solid fa-tag text-gray-400 text-xs"></i>
+                                )}
+                              </div>
+                            </div>
+                            {estSelectionne && (
+                              <span className="mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] truncate border border-gray-200 transition-all duration-200">
+                                {a.titre}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                  <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={vueCarrousel === "boutiques" ? allerBoutiqueSuivante : allerArticleSuivant}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  aria-label={vueCarrousel === "boutiques" ? "Boutique suivante" : "Article suivant"}
+                >
+                  <i className="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         /* Message d'état quand la carte est pliée */
