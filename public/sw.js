@@ -128,7 +128,8 @@
 // v128 (20/09/2026) : resultats de recherche Marketplace affichent la photo du produit ; si rien ne correspond exactement, suggere des produits similaires (description/categorie) puis des articles recents plutot qu'un simple "aucun resultat" ; "Rechercher"/Entree sans choisir un resultat reste aussi sur la Marketplace au lieu d'aller vers la recherche d'offres d'emploi
 // v129 (21/09/2026) : carte "Autour de moi" - bandeau d'avatars façon Snapchat avec bascule Boutiques/Articles (restaure et complete le dock) ; Explorer ne declenche plus d'erreur Leaflet silencieuse a l'ouverture avec une position connue ; un utilisateur renvoye vers /messagerie apres une route non autorisee garde le contexte Marketplace
 // v130 (21/09/2026) : fiche produit detaillee avec lien direct partageable (/marketplace/produit/<id>) ; "Commander maintenant" envoie desormais reellement la commande au vendeur via WhatsApp (message pre-rempli) au lieu d'afficher une fausse confirmation, avec une erreur claire si le vendeur n'a pas de numero
-const VERSION_CACHE = "facilite-v130";
+// v131 (21/09/2026) : la fiche produit s'affiche en pleine page (barre laterale comprise) sans fond sombre derriere, au lieu d'une fenetre centree ; le bouton micro flottant ne recouvre plus les boutons d'achat
+const VERSION_CACHE = "facilite-v131";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
