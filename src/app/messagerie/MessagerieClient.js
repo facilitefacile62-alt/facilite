@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
+import { classerConversationDirecte } from "@/lib/conversationsDirectes";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import MarkdownLeger from "@/lib/markdownLeger";
@@ -960,7 +961,18 @@ export default function MessagerieClient() {
 
           if (!isActive) return;
 
-          const formattedMsgs = (directMessages || []).map((row) => formatMessageRow(row, session.user.id));
+          const tousLesMessages = (directMessages || []).map((row) => formatMessageRow(row, session.user.id));
+          // Une seule ligne `conversations` par paire : si l'acheteur a déjà une
+          // candidature (OFFRE) chez ce vendeur, elle partage ce fil. Le fil
+          // Marketplace demandé n'affiche que les échanges Marketplace ; la
+          // candidature reste intacte côté Facilité (voir conversationsDirectes.js).
+          const formattedMsgs = estContexteMarketplace
+            ? classerConversationDirecte({
+                messages: tousLesMessages,
+                contexteMarketplace: true,
+                ouvertePourMarketplace: true,
+              }).messages
+            : tousLesMessages;
 
           setDirectRecipientId(recipientParam);
           setDirectConversationId(result.conversationId);
@@ -972,7 +984,11 @@ export default function MessagerieClient() {
               // avait déjà des messages) : ne remplace pas la carte, juste
               // au cas où son étiquetage MARKETPLACE aurait été manqué.
               if (estContexteMarketplace && existing.typeDiscussion !== "MARKETPLACE") {
-                return prev.map((c) => (c.id === recipientParam ? { ...c, typeDiscussion: "MARKETPLACE" } : c));
+                return prev.map((c) =>
+                  c.id === recipientParam
+                    ? { ...c, typeDiscussion: "MARKETPLACE", messages: (c.messages || []).filter((m) => m.typeDiscussion !== "OFFRE") }
+                    : c
+                );
               }
               return prev;
             }
@@ -1153,15 +1169,20 @@ export default function MessagerieClient() {
             // On ne supprime pas la carte pour autant — l'historique réel
             // (candidature + échanges) doit rester visible côté Facilité,
             // juste jamais classé/affiché comme Marketplace.
-            const contientOffre = msgsDeCetteConv.some((m) => m.typeDiscussion === "OFFRE");
             // Le statut de propriétaire de boutique ne sert de repère que pour
             // une conversation toute neuve, sans aucun message étiqueté —
-            // sinon l'étiquette réelle des messages fait foi.
-            const estMarketplace = !contientOffre && (
-              msgsDeCetteConv.length === 0
-                ? boutiqueParId.has(autrePartieId)
-                : msgsDeCetteConv.some((m) => m.typeDiscussion === "MARKETPLACE")
-            );
+            // sinon l'étiquette réelle des messages fait foi. Exception en
+            // contexte Marketplace : une paire qui partage une candidature ET
+            // des échanges Marketplace (ou que l'utilisateur vient d'ouvrir via
+            // "Discuter sur la plateforme") reste un fil Marketplace, sans le
+            // contenu de la candidature (voir conversationsDirectes.js).
+            const classement = classerConversationDirecte({
+              messages: msgsDeCetteConv,
+              aBoutique: boutiqueParId.has(autrePartieId),
+              contexteMarketplace: estContexteMarketplace,
+              ouvertePourMarketplace: estContexteMarketplace && autrePartieId === recipientParam,
+            });
+            const estMarketplace = classement.estMarketplace;
             const boutique = boutiqueParId.get(autrePartieId);
             const recruteur = recruteurParId.get(autrePartieId);
             const profilGeneral = profilParId.get(autrePartieId);
@@ -1184,7 +1205,7 @@ export default function MessagerieClient() {
               logo = profilGeneral.avatar_url || null;
             }
 
-            const dernierMsg = msgsDeCetteConv[msgsDeCetteConv.length - 1];
+            const dernierMsg = classement.messages[classement.messages.length - 1];
             return {
               id: autrePartieId,
               name,
@@ -1198,8 +1219,8 @@ export default function MessagerieClient() {
               unreadCount: 0,
               online: false,
               favorite: false,
-              typeDiscussion: estMarketplace ? "MARKETPLACE" : contientOffre ? "OFFRE" : "ECHANGE",
-              messages: msgsDeCetteConv,
+              typeDiscussion: classement.typeDiscussion,
+              messages: classement.messages,
             };
           });
         }
@@ -1249,6 +1270,14 @@ export default function MessagerieClient() {
             } else if (!next.some((c) => c.id === card.id)) {
               next.push(card);
             }
+          }
+          // Course avec le bloc ?recipient= : au premier contact, la conversation
+          // est créée pendant que cette passe lit la liste. Si le bloc a déjà
+          // posé sa carte mais que la lecture ci-dessus ne l'a pas vue, on la
+          // garde au lieu de la perdre (le panneau resterait alors vide).
+          if (recipientParam && !next.some((c) => c.id === recipientParam)) {
+            const posee = prev.find((c) => c.id === recipientParam);
+            if (posee) next.push(posee);
           }
           return next;
         });

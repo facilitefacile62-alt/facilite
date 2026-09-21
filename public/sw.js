@@ -133,7 +133,8 @@
 // v133 (21/09/2026) : la barre de recherche du header applique enfin la recherche quand on est deja sur la Marketplace (Entree, bouton Rechercher, clic sur une suggestion), y compris depuis l'onglet Vendre
 // v134 (21/09/2026) : docks de boutiques/articles - le balayage horizontal ne se transmet plus au navigateur en bout de dock (overscroll-x-contain) et les fleches font defiler le dock sans faire defiler la page (cause non reproduite cote utilisateur : voir le commit)
 // v135 (21/09/2026) : Explorer - les boutiques quasi confondues sont dissociees en anneau autour du centre du groupe (plus de recouvrement jusqu'a 10 boutiques), traits de rappel toujours affiches, "Vous etes ici" au-dessus des boutiques, et la disposition ne change plus entre le geste de zoom et le relachement
-const VERSION_CACHE = "facilite-v135";
+// v136 (21/09/2026) : "Discuter sur la plateforme" ouvre enfin un vrai fil avec le vendeur dans la messagerie Marketplace, meme quand l'acheteur a deja une candidature avec ce compte (le dossier de candidature en lecture seule ne s'affiche plus a la place)
+const VERSION_CACHE = "facilite-v136";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
