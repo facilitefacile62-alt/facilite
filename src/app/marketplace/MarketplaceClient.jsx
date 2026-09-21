@@ -5220,8 +5220,13 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="relative w-full max-w-6xl bg-white dark:bg-zinc-950 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden my-auto max-h-[96vh] flex flex-col">
+    // Pleine page : la fiche remplace tout l'écran (barre latérale comprise)
+    // au lieu d'une fenêtre centrée sur un fond sombre flouté — demande
+    // explicite de l'utilisateur ("toute la page ... pas d'arrière-plan").
+    // z-[1000] : au-dessus du bouton micro flottant (VoiceAssistant, z-[999])
+    // qui recouvrait sinon les boutons d'achat en bas à droite.
+    <div className="fixed inset-0 z-[1000] bg-white dark:bg-zinc-950 animate-fadeIn">
+      <div className="relative w-full h-full bg-white dark:bg-zinc-950 overflow-hidden flex flex-col">
         
         {/* BARRE SUPÉRIEURE : Fil d'Ariane + Actions (1:1 Capture E-commerce) */}
         <div className="px-4 sm:px-6 py-3 border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/70 dark:bg-zinc-900/50 flex items-center justify-between gap-3 shrink-0">
