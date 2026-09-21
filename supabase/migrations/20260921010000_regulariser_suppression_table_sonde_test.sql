@@ -1,0 +1,25 @@
+-- Régularise, dans l'historique des migrations, une suppression faite en
+-- PRODUCTION hors migration le 21/09/2026.
+--
+-- Contexte : le test "Correctif DEFAULT PRIVILEGES" de
+-- tests/security/invariants.spec.js crée une table-sonde
+-- (public._test_default_privileges_probe_<horodatage>) puis la supprime dans
+-- un bloc finally. Une exécution interrompue par le délai de 60 s du test a
+-- laissé public._test_default_privileges_probe_1789949507080 en production :
+-- table vide (une seule colonne id, 0 ligne) et sans aucun droit pour
+-- anon/authenticated — donc aucune exposition — mais l'invariant 2 la
+-- signalait (RLS désactivé) et faisait échouer la vérification.
+--
+-- Elle a été supprimée avec l'instruction ci-dessous, exécutée directement
+-- via le helper de test (tests/helpers/privilegedSql.js) SANS fichier de
+-- migration, contrairement à la règle du dépôt ("toute modification en base
+-- passe par une migration commitée"). Vérifié ensuite en lecture seule :
+-- la table est absente et aucune autre table de test ne subsiste dans public.
+--
+-- Ce fichier ne change RIEN sur la production : la table n'existe déjà plus,
+-- DROP ... IF EXISTS est donc sans effet. Il est idempotent, et il trace la
+-- suppression pour que l'historique des migrations reflète l'état réel de la
+-- base. Il n'a volontairement PAS été appliqué par l'assistant (ni
+-- supabase db push).
+
+DROP TABLE IF EXISTS public._test_default_privileges_probe_1789949507080;
