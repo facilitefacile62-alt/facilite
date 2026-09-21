@@ -137,7 +137,8 @@
 // v137 (21/09/2026) : fiche produit remaniee (titre, marque, prix et reduction, coupon, quantite) : les faux choix de couleur/format, le bareme degressif et les fausses notes ("4.8", "620+ vendus") disparaissent
 // v138 (21/09/2026) : la messagerie Marketplace affiche enfin les echanges avec le compte admin (client ou vendeur) au lieu de "Aucun echange Marketplace", et ouvre directement le dernier echange
 // v139 (21/09/2026) : fiches produit et boutique - la barre de navigation du site reste visible au-dessus, avec un bouton Retour (fleche) vers la page precedente
-const VERSION_CACHE = "facilite-v139";
+// v140 (21/09/2026) : fiche produit - "Commander maintenant" retire (pas encore de paiement), boutons de discussion grises sur son propre article, et "Discuter sur la plateforme" prepare un message qui nomme l'article (titre, prix, lien) pour le vendeur
+const VERSION_CACHE = "facilite-v140";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

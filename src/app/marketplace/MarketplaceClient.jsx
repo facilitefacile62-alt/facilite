@@ -25,6 +25,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { etatDiscussionArticle, construireLienDiscussion } from "@/lib/discussionArticle";
 import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
 import EditeurAvatarBoutique from "@/components/EditeurAvatarBoutique";
@@ -5203,6 +5204,11 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
     ? Math.max(5, Math.round(((ancienPrix - prixUnitaire) / ancienPrix) * 100))
     : 11;
   const prixTotal = prixUnitaire * quantite;
+  // Sur son propre article, la discussion est impossible (on ne s'écrit pas à
+  // soi-même) : boutons grisés. Tant que le vendeur n'est pas connu, pas de lien
+  // vers une messagerie vide.
+  const etatDiscussion = etatDiscussionArticle({ userId, proprietaireId });
+  const estMonArticle = etatDiscussion === "mon-article";
   const nomBoutique = article.boutique_nom || "Boutique Officielle";
   const sku = `SKU: SN-${(article.id || "26041620").replace(/\D/g, "").slice(0, 10).padEnd(10, "8")}`;
 
@@ -5660,27 +5666,47 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                   </span>
                 </div>
 
-                {/* BOUTON 1 : DISCUTER SUR LA PLATEFORME (1:1 Capture 'Discuter ici') */}
-                {proprietaireId ? (
+                {/* BOUTON 1 : DISCUTER SUR LA PLATEFORME. L'article (titre, id, prix) voyage dans
+                    le lien : la messagerie prépare un message qui le nomme, pour que le vendeur
+                    sache quel produit intéresse l'acheteur. */}
+                {etatDiscussion === "pret" ? (
                   <Link
-                    href={`/messagerie?recipient=${proprietaireId}&contexte=marketplace&article=${encodeURIComponent(article.titre)}`}
+                    href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
                     className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white text-xs sm:text-sm font-black tracking-wide uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
                   >
                     <i className="fa-regular fa-comment-dots text-base"></i>
                     <span>Discuter sur la plateforme</span>
                   </Link>
                 ) : (
-                  <Link
-                    href={`/messagerie?contexte=marketplace&article=${encodeURIComponent(article.titre)}`}
-                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white text-xs sm:text-sm font-black tracking-wide uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    title={
+                      estMonArticle
+                        ? "C'est votre article : vous ne pouvez pas discuter avec vous-même."
+                        : "Chargement des informations du vendeur…"
+                    }
+                    className="w-full py-3.5 px-4 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-black tracking-wide uppercase flex items-center justify-center gap-2 cursor-not-allowed"
                   >
                     <i className="fa-regular fa-comment-dots text-base"></i>
                     <span>Discuter sur la plateforme</span>
-                  </Link>
+                  </button>
                 )}
 
-                {/* BOUTON 2 : DISCUTER SUR WHATSAPP */}
-                {lienWhatsApp ? (
+                {/* BOUTON 2 : DISCUTER SUR WHATSAPP (grisé sur son propre article) */}
+                {estMonArticle ? (
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    title="C'est votre article : vous ne pouvez pas vous écrire à vous-même."
+                    className="w-full py-3 px-4 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-black uppercase flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    <i className="fa-brands fa-whatsapp text-lg"></i>
+                    <span>Discuter sur WhatsApp</span>
+                  </button>
+                ) : lienWhatsApp ? (
                   <a
                     href={lienWhatsApp}
                     target="_blank"
@@ -5707,15 +5733,14 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                   </button>
                 )}
 
-                {/* BOUTON 3 : COMMANDER RAPIDEMENT */}
-                <button
-                  type="button"
-                  onClick={() => setModalCommandeOuverte(true)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-black dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <i className="fa-solid fa-bag-shopping text-xs"></i>
-                  <span>Commander maintenant</span>
-                </button>
+                {/* "Commander maintenant" retiré : aucun moyen de paiement pour le moment.
+                    (Le formulaire de commande plus bas est conservé mais n'est plus
+                    atteignable ; à rebrancher quand le paiement existera.) */}
+                {estMonArticle && (
+                  <p className="text-[11px] text-center text-gray-500 dark:text-gray-400 px-1">
+                    C&apos;est votre article : les boutons de discussion sont désactivés.
+                  </p>
+                )}
 
                 {/* Fiche Vendeur / Boutique Partenaire */}
                 <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
