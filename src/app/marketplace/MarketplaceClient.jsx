@@ -5254,28 +5254,54 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
     setCommandeEnvoyee(true);
   };
 
+  // La barre de navigation globale du site (<header id="main-site-header">)
+  // reste TOUJOURS visible au-dessus de la fiche produit sur tous les écrans.
+  const [hauteurHeader, setHauteurHeader] = useState(64);
+  useEffect(() => {
+    const mesurer = () => {
+      const header = document.querySelector("#main-site-header") || document.querySelector("header");
+      if (header) {
+        setHauteurHeader(header.getBoundingClientRect().height);
+      }
+    };
+    queueMicrotask(mesurer);
+    window.addEventListener("resize", mesurer);
+    return () => window.removeEventListener("resize", mesurer);
+  }, []);
+
   return (
-    // Pleine page : la fiche remplace tout l'écran (barre latérale comprise)
-    // au lieu d'une fenêtre centrée sur un fond sombre flouté — demande
-    // explicite de l'utilisateur ("toute la page ... pas d'arrière-plan").
-    // z-[1000] : au-dessus du bouton micro flottant (VoiceAssistant, z-[999])
-    // qui recouvrait sinon les boutons d'achat en bas à droite.
-    <div className="fixed inset-0 z-[1000] bg-white dark:bg-zinc-950 animate-fadeIn">
+    <div
+      className="fixed inset-x-0 bottom-0 z-40 bg-white dark:bg-zinc-950 animate-fadeIn flex flex-col overflow-hidden"
+      style={{ top: hauteurHeader || 64 }}
+    >
       <div className="relative w-full h-full bg-white dark:bg-zinc-950 overflow-hidden flex flex-col">
         
-        {/* BARRE SUPÉRIEURE : Fil d'Ariane + Actions (1:1 Capture E-commerce) */}
-        <div className="px-4 sm:px-6 py-3 border-b border-gray-100 dark:border-zinc-800/80 bg-gray-50/70 dark:bg-zinc-900/50 flex items-center justify-between gap-3 shrink-0">
-          <nav className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 overflow-x-auto no-scrollbar">
-            <span className="hover:text-blue-600 transition cursor-pointer font-medium" onClick={onFermer}>Marketplace</span>
-            <i className="fa-solid fa-chevron-right text-[9px] text-gray-400"></i>
-            <span className="capitalize font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px] sm:max-w-[180px]">
-              {article.categorie || "Articles & Accessoires"}
-            </span>
-            <i className="fa-solid fa-chevron-right text-[9px] text-gray-400"></i>
-            <span className="font-bold text-gray-900 dark:text-white truncate max-w-[140px] sm:max-w-[280px]">
-              {article.titre}
-            </span>
-          </nav>
+        {/* BARRE SUPÉRIEURE : Bouton Retour Flèche + Fil d'Ariane + Actions */}
+        <div className="px-3 sm:px-6 py-2.5 sm:py-3 border-b border-gray-200 dark:border-zinc-800 bg-[#FAF6F1]/95 dark:bg-zinc-900/95 backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* BOUTON FLÈCHE DE RETOUR EN HAUT (Toujours visible et mis en avant) */}
+            <button
+              type="button"
+              onClick={onFermer}
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-950 dark:text-white font-extrabold text-xs sm:text-sm border border-gray-300 dark:border-zinc-700 shadow-xs hover:shadow-md transition active:scale-95 cursor-pointer shrink-0"
+              title="Retour aux articles"
+            >
+              <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
+              <span>Retour</span>
+            </button>
+
+            <nav className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 overflow-x-auto no-scrollbar">
+              <span className="hover:text-blue-600 transition cursor-pointer font-medium truncate" onClick={onFermer}>Marketplace</span>
+              <i className="fa-solid fa-chevron-right text-[9px] text-gray-400"></i>
+              <span className="capitalize font-medium text-gray-700 dark:text-gray-300 truncate max-w-[90px] sm:max-w-[160px]">
+                {article.categorie || "Articles"}
+              </span>
+              <i className="fa-solid fa-chevron-right text-[9px] text-gray-400"></i>
+              <span className="font-bold text-gray-900 dark:text-white truncate max-w-[110px] sm:max-w-[240px]">
+                {article.titre}
+              </span>
+            </nav>
+          </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -5292,6 +5318,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
               onClick={onFermer}
               className="w-8 h-8 rounded-full bg-gray-200/80 hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 flex items-center justify-center transition cursor-pointer"
               aria-label="Fermer la vue produit"
+              title="Fermer"
             >
               <i className="fa-solid fa-xmark text-sm"></i>
             </button>
@@ -6438,9 +6465,16 @@ function ModalFicheBoutique({
           />
         ) : (
           <>
-            {/* Header Mobile minimaliste : Nom de la boutique au centre, Crayon de réglages à droite */}
+            {/* Header Mobile minimaliste : Bouton Retour à gauche, Nom de la boutique au centre, Crayon de réglages à droite */}
             <div className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-2xs">
-              <div className="w-9"></div>
+              <button
+                type="button"
+                onClick={onFermer}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-xs"
+                title="Retour à la Marketplace"
+              >
+                <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
+              </button>
 
               <span className="text-xs font-black uppercase tracking-wider text-zinc-900 dark:text-white truncate max-w-[220px] text-center">
                 {nom}
@@ -7426,6 +7460,17 @@ function ModalFicheBoutique({
               >
                 {/* Dégradé cinématographique pour lisibilité */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+
+                {/* Bouton Retour en haut à gauche */}
+                <button
+                  type="button"
+                  onClick={onFermer}
+                  className="absolute top-3 left-3 z-20 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white dark:bg-black/85 dark:hover:bg-black text-zinc-900 dark:text-white text-xs font-black flex items-center gap-2 shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95 border border-white/20"
+                  title="Retour à la Marketplace"
+                >
+                  <i className="fa-solid fa-arrow-left text-blue-600 dark:text-blue-400"></i>
+                  <span>Retour</span>
+                </button>
 
                 {/* Bouton pour modifier la photo de couverture au clic */}
                 <button
