@@ -7,6 +7,7 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
 import { classerConversationDirecte, repartirConversationsDirectes } from "@/lib/conversationsDirectes";
+import { construireBrouillonArticle } from "@/lib/discussionArticle";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import MarkdownLeger from "@/lib/markdownLeger";
@@ -1013,6 +1014,17 @@ export default function MessagerieClient() {
           setActiveConvId(recipientParam);
           if (estContexteMarketplace) {
             setDiscussionTypeFilter("MARKETPLACE");
+            // Arrivée depuis "Discuter sur la plateforme" (fiche produit) : l'article
+            // accompagne la discussion. Message prérempli (modifiable) qui nomme
+            // l'article, son prix et son lien, pour que le vendeur sache quel
+            // produit est visé. Jamais écrasé si l'utilisateur a déjà tapé.
+            const brouillon = construireBrouillonArticle({
+              titre: searchParams.get("article"),
+              articleId: searchParams.get("articleId"),
+              prix: searchParams.get("prix"),
+              origine: window.location.origin,
+            });
+            if (brouillon) setMessageText((courant) => courant || brouillon);
           }
         });
       } else if (estContexteMarketplace) {
