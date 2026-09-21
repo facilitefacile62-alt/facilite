@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, calculerStatutOuverture, urlPhoto } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
+import { centrerDansDefileur } from "@/lib/dockDefilement";
 
 const COULEUR = "#1877F2";
 const COULEUR_SERVICE = "#F59E0B";
@@ -127,7 +128,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
     if (!idActif) return;
     const attr = vueCarrousel === "boutiques" ? "data-boutique-id" : "data-article-id";
     const el = carouselContainerRef.current.querySelector(`[${attr}="${idActif}"]`);
-    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    centrerDansDefileur(carouselContainerRef.current, el);
   }, [boutiqueActiveId, articleActifId, vueCarrousel]);
 
   const onMouseDownCarousel = (e) => {
@@ -1293,7 +1294,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       }
                     }
                   }}
-                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
                 >
                   {/* Espaceurs de centrage : voir GlobeExplorateurBoutiques.jsx
                       pour le raisonnement complet (même dock). */}
@@ -1310,7 +1311,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                               if (dragRef.current.hasMoved) return;
                               ouvrirBoutiqueDuDock(b);
                               onChoisirBoutique?.(b.id);
-                              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                              centrerDansDefileur(carouselContainerRef.current, e.currentTarget);
                             }}
                             onMouseEnter={() => popupsBoutiquesRef.current.get(b.id)?.ouvrir?.()}
                             onMouseLeave={() => popupsBoutiquesRef.current.get(b.id)?.fermer?.()}
@@ -1361,7 +1362,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                             onClick={(e) => {
                               if (dragRef.current.hasMoved) return;
                               ouvrirArticleDuDock(a);
-                              e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                              centrerDansDefileur(carouselContainerRef.current, e.currentTarget);
                             }}
                             className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
                           >

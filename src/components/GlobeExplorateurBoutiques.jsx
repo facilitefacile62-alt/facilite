@@ -11,6 +11,7 @@ import {
   JOURS_SEMAINE,
 } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
+import { centrerDansDefileur } from "@/lib/dockDefilement";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -321,7 +322,9 @@ export default function GlobeExplorateurBoutiques({
     // l'impression que le bouclage n'existait pas. Signalé par
     // l'utilisateur ("ça doit faire le tour").
     const cible = element || carouselContainerRef.current?.querySelector(`[data-boutique-id="${b.id}"]`);
-    cible?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    // centrerDansDefileur (pas scrollIntoView) : ne fait défiler QUE le dock,
+    // jamais la page (voir src/lib/dockDefilement.js).
+    centrerDansDefileur(carouselContainerRef.current, cible);
   };
 
   const selectionnerArticleCarousel = (a, element = null) => {
@@ -340,7 +343,7 @@ export default function GlobeExplorateurBoutiques({
       selectionnerBoutiqueCarousel(boutiqueAssociee, null);
     }
     const cibleArticle = element || carouselContainerRef.current?.querySelector(`[data-article-id="${a.id}"]`);
-    cibleArticle?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    centrerDansDefileur(carouselContainerRef.current, cibleArticle);
   };
 
   const allerBoutiquePrecedente = () => {
@@ -1672,7 +1675,7 @@ export default function GlobeExplorateurBoutiques({
         </div>
 
         {/* Pilules de filtres thématiques (Dark Snap Map) */}
-        <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
           <button
             type="button"
             onClick={() => setFiltreActif("tous")}
@@ -1893,7 +1896,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {/* Espaceurs de centrage : sans eux, le 1er/dernier avatar ne
                     peut jamais atteindre le centre visuel (rien à faire
@@ -1987,7 +1990,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
