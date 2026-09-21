@@ -597,6 +597,86 @@ export async function chargerTousLesArticles({
 }
 
 /**
+ * Charge un article spécifique par son ID avec les informations de sa boutique.
+ */
+export async function obtenirArticleParId(itemId) {
+  if (!itemId) return null;
+  try {
+    const { data, error } = await supabase
+      .from("marketplace_items")
+      .select(`
+        id,
+        titre,
+        description,
+        categorie,
+        prix_xof,
+        quantite,
+        statut,
+        photos,
+        updated_at,
+        store:marketplace_stores (
+          id,
+          nom,
+          quartier,
+          ville,
+          telephone_whatsapp,
+          latitude,
+          longitude,
+          avatar_config,
+          owner_id
+        )
+      `)
+      .eq("id", itemId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const photosBrutes = Array.isArray(data.photos)
+      ? data.photos
+      : typeof data.photos === "string"
+      ? (() => {
+          try {
+            return JSON.parse(data.photos || "[]");
+          } catch {
+            return [data.photos];
+          }
+        })()
+      : [];
+
+    return {
+      id: data.id,
+      titre: data.titre,
+      description: data.description,
+      categorie: data.categorie,
+      prix_xof: data.prix_xof,
+      quantite: data.quantite,
+      statut: data.statut,
+      photos: photosBrutes.map(urlPhoto).filter(Boolean),
+      maj_le: data.updated_at,
+      boutique_id: data.store?.id,
+      boutique_nom: data.store?.nom,
+      boutique_quartier: data.store?.quartier,
+      boutique_ville: data.store?.ville,
+      boutique_lat: data.store?.latitude,
+      boutique_lng: data.store?.longitude,
+      boutique_avatar_config: data.store?.avatar_config || null,
+      boutique_owner_id: data.store?.owner_id || null,
+      telephone_whatsapp: data.store?.telephone_whatsapp,
+      whatsapp: data.store?.telephone_whatsapp,
+      whatsappUrl: lienWhatsapp(data.store?.telephone_whatsapp, data.titre),
+      distance_km: null,
+      distanceLisible: data.store?.ville
+        ? data.store?.quartier
+          ? `${data.store.quartier}, ${data.store.ville}`
+          : data.store.ville
+        : "Sénégal",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Articles triés du plus proche au plus éloigné.
  *
  * Le tri est fait par la base (fonction rechercher_articles_proches), pas par
