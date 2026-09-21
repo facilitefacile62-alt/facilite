@@ -129,7 +129,8 @@
 // v129 (21/09/2026) : carte "Autour de moi" - bandeau d'avatars façon Snapchat avec bascule Boutiques/Articles (restaure et complete le dock) ; Explorer ne declenche plus d'erreur Leaflet silencieuse a l'ouverture avec une position connue ; un utilisateur renvoye vers /messagerie apres une route non autorisee garde le contexte Marketplace
 // v130 (21/09/2026) : fiche produit detaillee avec lien direct partageable (/marketplace/produit/<id>) ; "Commander maintenant" envoie desormais reellement la commande au vendeur via WhatsApp (message pre-rempli) au lieu d'afficher une fausse confirmation, avec une erreur claire si le vendeur n'a pas de numero
 // v131 (21/09/2026) : la fiche produit s'affiche en pleine page (barre laterale comprise) sans fond sombre derriere, au lieu d'une fenetre centree ; le bouton micro flottant ne recouvre plus les boutons d'achat
-const VERSION_CACHE = "facilite-v131";
+// v132 (21/09/2026) : "Autour de moi" - une seule recherche par clic, la carte des boutiques n'est plus detruite/recree a chaque resultat (erreur Leaflet _leaflet_pos), et le bouton du header fonctionne aussi depuis l'onglet Vendre
+const VERSION_CACHE = "facilite-v132";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

@@ -362,12 +362,33 @@ export default function MarketplaceClient() {
     const id = params.get("boutique_id");
     if (!id) return;
     let annule = false;
-    obtenirBoutiqueParId(id).then((b) => {
-      if (!annule && b) setBoutiqueModal(b);
-    });
+    obtenirBoutiqueParId(id)
+      .then((b) => {
+        if (!annule && b) setBoutiqueModal(b);
+      })
+      .catch(() => {
+        // Lien de boutique introuvable ou réseau coupé : on reste sur le catalogue.
+      });
     return () => {
       annule = true;
     };
+  }, []);
+
+  // Bouton "Autour de moi" du header : écouté ICI (toujours monté) et non
+  // dans VueAcheteur, qui n'existe que sur l'onglet "acheter" — depuis
+  // l'onglet "vendre" l'événement partait dans le vide et le bouton ne
+  // faisait rien. On bascule sur "acheter" puis on transmet la demande à
+  // VueAcheteur (voir sa prop `demande`), qui la consomme une seule fois.
+  const [demandeAcheteur, setDemandeAcheteur] = useState(null);
+  const sequenceDemandeRef = useRef(0);
+  useEffect(() => {
+    const surAutourDeMoi = () => {
+      sequenceDemandeRef.current += 1;
+      setOnglet("acheter");
+      setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "autour" });
+    };
+    window.addEventListener("facilite:autour-de-moi", surAutourDeMoi);
+    return () => window.removeEventListener("facilite:autour-de-moi", surAutourDeMoi);
   }, []);
 
   // Répercute la boutique actuellement ouverte dans l'URL — relu par
@@ -620,6 +641,8 @@ export default function MarketplaceClient() {
                 }}
                 categorie={categorie}
                 onSelectCategorie={setCategorie}
+                demande={demandeAcheteur}
+                onDemandeTraitee={() => setDemandeAcheteur(null)}
               />
             ) : (
               <VueVendeur
@@ -709,7 +732,7 @@ export default function MarketplaceClient() {
 /* ACHETEUR                                                                    */
 /* ========================================================================== */
 
-function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelectCategorie }) {
+function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelectCategorie, demande = null, onDemandeTraitee }) {
   const [position, setPosition] = useState(null);
   const [texte, setTexte] = useState("");
   const [rayonKm, setRayonKm] = useState(10);
@@ -839,16 +862,21 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     [rayonKm, categorie, texte, seulementEnStock]
   );
 
+  // La recherche de proximité n'est PAS lancée ici : l'effet "Chargement
+  // automatique" plus bas dépend de `position` et s'en charge (300 ms
+  // après). L'appel explicite qui existait ici la doublait — deux jeux de
+  // résultats pour un seul clic, donc la carte "Autour de moi" détruite et
+  // recréée en pleine animation (erreur Leaflet _leaflet_pos). Le
+  // chargement reste affiché jusqu'à la fin de CETTE recherche ; il n'est
+  // coupé ici qu'en cas d'échec de la géolocalisation.
   const localiser = async () => {
     setErreur("");
     setChargement(true);
     try {
       const p = await positionActuelle();
       setPosition(p);
-      await lancerRecherche(p);
     } catch (e) {
       setErreur(e.message);
-    } finally {
       setChargement(false);
     }
   };
@@ -888,21 +916,33 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     });
   }, []);
 
-  // Écoute les clics sur les boutons "Autour de moi" et "Explorer la carte" de la barre de navigation
+  // Écoute le bouton "Explorer la carte" de la barre de navigation.
+  // ("Autour de moi" est écouté par MarketplaceClient, qui le transmet via
+  // la prop `demande` ci-dessous.)
   useEffect(() => {
-    const handleAutourDeMoi = () => {
-      localiser();
-    };
     const handleExplorerCarte = () => {
       setGlobeOuvert(true);
     };
-    window.addEventListener("facilite:autour-de-moi", handleAutourDeMoi);
     window.addEventListener("facilite:explorer-carte", handleExplorerCarte);
     return () => {
-      window.removeEventListener("facilite:autour-de-moi", handleAutourDeMoi);
       window.removeEventListener("facilite:explorer-carte", handleExplorerCarte);
     };
-  }, [rayonKm, categorie, texte, seulementEnStock]);
+  }, []);
+
+  // Consomme UNE fois chaque demande venue du parent (demande.id unique,
+  // évite un double déclenchement au double montage React du mode dev).
+  const derniereDemandeRef = useRef(null);
+  useEffect(() => {
+    if (!demande || derniereDemandeRef.current === demande.id) return;
+    derniereDemandeRef.current = demande.id;
+    // Différé d'un micro-cycle : localiser() met à jour de l'état de façon
+    // synchrone (même patron que l'effet de restauration d'URL plus haut).
+    queueMicrotask(() => {
+      onDemandeTraitee?.();
+      if (demande.type === "autour") localiser();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demande]);
 
   // Répercute ce même état dans l'URL à chaque changement (remplace
   // l'entrée d'historique courante, n'empile pas de nouvelle entrée à

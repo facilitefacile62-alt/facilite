@@ -62,9 +62,32 @@ const distanceLisible = (km) =>
       ? `${Math.round(Number(km) * 1000)} m`
       : `${String(Number(km)).replace(".", ",")} km`;
 
+// Destruction sûre d'une carte Leaflet. Une animation de zoom programme un
+// setTimeout de secours de 250 ms qui rappelle _onZoomTransitionEnd sans
+// jamais vérifier que la carte existe encore, et remove() supprime _mapPane
+// SANS annuler ce timer : 250 ms plus tard, TypeError sur `_leaflet_pos`
+// (même cause racine que celle corrigée dans GlobeExplorateurBoutiques.jsx,
+// commit ab77ff0 ; lu dans node_modules/leaflet/dist/leaflet-src.js).
+// try/catch : cette fonction sert dans des nettoyages d'effet, où une
+// exception remonterait jusqu'à React et démonterait toute la page.
+function detruireCarteLeaflet(carte) {
+  if (!carte) return;
+  try {
+    carte.stop();
+    carte._animatingZoom = false;
+    carte.remove();
+  } catch (err) {
+    console.warn("Destruction de la carte Leaflet ignorée :", err?.message);
+  }
+}
+
 export default function CarteBoutiques({ articles, boutiquesSansArticles = [], storeIdsPremium, depart, onChoisirBoutique, onOuvrirExplorer, onReinitialiserPosition }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
+  const groupeRef = useRef(null);
+  // Incrémenté à chaque création de carte : déclenche la (re)pose des
+  // marqueurs sur la NOUVELLE carte (voir l'effet des marqueurs plus bas).
+  const [versionCarte, setVersionCarte] = useState(0);
   const leafletRef = useRef(null);
   const menuFiltresRef = useRef(null);
   const carouselContainerRef = useRef(null);
@@ -434,32 +457,36 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
     ouvrirListeCluster(zone.getCenter(), membres);
   };
 
+  // 1. Cycle de vie de la CARTE : créée une seule fois, recréée seulement
+  // quand on la déplie après l'avoir repliée. Avant, un seul effet détruisait
+  // et recréait toute la carte à CHAQUE nouveau jeu de résultats (nouvelle
+  // référence de boutiquesAffichees — y compris quand seul storeIdsPremium
+  // arrivait après coup, ou pour la 2e recherche déclenchée par "Autour de
+  // moi"), ce qui détruisait la carte en pleine animation de zoom (erreur
+  // Leaflet _leaflet_pos, reproduite par
+  // tests/e2e/marketplace-autour-de-moi.spec.js). Les marqueurs sont mis à
+  // jour par l'effet suivant, sans toucher à la carte.
+  const aDesBoutiques = boutiquesAffichees.length > 0;
   useEffect(() => {
     let annule = false;
-    let carte = null;
 
     if (estPliee) {
-      if (carteRef.current) {
-        carteRef.current.remove();
-        carteRef.current = null;
-      }
+      detruireCarteLeaflet(carteRef.current);
+      carteRef.current = null;
+      groupeRef.current = null;
       return;
     }
+    if (!aDesBoutiques || carteRef.current) return;
 
     (async () => {
-      if (!conteneur.current || boutiquesAffichees.length === 0) return;
+      if (!conteneur.current) return;
       try {
         const L = (await import("leaflet")).default;
         leafletRef.current = L;
         await import("leaflet/dist/leaflet.css");
-        if (annule || !conteneur.current) return;
+        if (annule || !conteneur.current || carteRef.current) return;
 
-        if (carteRef.current) {
-          carteRef.current.remove();
-          carteRef.current = null;
-        }
-
-        carte = L.map(conteneur.current, { scrollWheelZoom: true, attributionControl: true });
+        const carte = L.map(conteneur.current, { scrollWheelZoom: true, attributionControl: true });
         carteRef.current = carte;
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -472,6 +499,32 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         const paneTuiles = carte.getPane("tilePane");
         if (paneTuiles) paneTuiles.style.filter = FILTRE_TUILES_SOMBRE;
 
+        groupeRef.current = L.layerGroup().addTo(carte);
+        setVersionCarte((v) => v + 1);
+      } catch (err) {
+        console.error("Carte des boutiques indisponible :", err);
+        if (!annule) setEchec(true);
+      }
+    })();
+
+    return () => {
+      annule = true;
+    };
+  }, [estPliee, aDesBoutiques]);
+
+  // 2. MARQUEURS : reposés sur la carte existante à chaque nouveau jeu de
+  // résultats ou changement de position, sans jamais la recréer.
+  useEffect(() => {
+    const carte = carteRef.current;
+    const L = leafletRef.current;
+    const groupe = groupeRef.current;
+    if (!carte || !L || !groupe || boutiquesAffichees.length === 0) return;
+
+    let annule = false;
+    const nettoyages = [];
+
+    (() => {
+      try {
         const points = [];
 
         // Position de "Vous êtes ici" calculée en amont (utilisée normalement
@@ -577,7 +630,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 entree.marqueur.setLatLng(m.position);
                 entree.decalageBas = false;
                 if (entree.ligne) {
-                  carte.removeLayer(entree.ligne);
+                  groupe.removeLayer(entree.ligne);
                   entree.ligne = null;
                 }
                 return;
@@ -606,7 +659,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                   opacity: 0.7,
                   dashArray: "2,4",
                   interactive: false,
-                }).addTo(carte);
+                }).addTo(groupe);
               }
             });
           });
@@ -702,14 +755,14 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                   iconSize: [96, 46],
                   iconAnchor: [48, 14],
                 }),
-              }).addTo(carte)
+              }).addTo(groupe)
             : L.circleMarker(b.position, {
                 radius: 9,
                 color: couleur,
                 weight: 3,
                 fillColor: couleur,
                 fillOpacity: 0.85,
-              }).addTo(carte);
+              }).addTo(groupe);
 
           marqueursCreesParId.set(b.id, { marqueur, ligne: null, decalageBas: false });
 
@@ -924,7 +977,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             iconSize: [70, 50],
             iconAnchor: [35, 25],
           });
-          const marqueurMoi = L.marker(ici, { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
+          const marqueurMoi = L.marker(ici, { icon: iconeMoi, pane: "paneMoi" }).addTo(groupe);
           // Enregistré au même titre qu'une boutique (clé "__ici__") pour
           // que recalculerDissociations puisse aussi l'écarter s'il
           // chevauche une boutique — voir ce commentaire plus haut.
@@ -937,7 +990,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           points.push(ici);
         }
 
-        brancherEchelleZoomAvatars(carte);
+        nettoyages.push(brancherEchelleZoomAvatars(carte));
 
         // Recalcul à chaque pan/zoom (l'écart en pixels dépend du niveau de
         // zoom courant). Différé via setTimeout(...,0) : "moveend" peut se
@@ -946,12 +999,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         // — ajouter une polyline à cet instant précis fait planter
         // Bounds.intersects (accès à des bounds encore incomplets). Un
         // setTimeout(...,0) repousse l'appel après la fin du cycle de reset
-        // en cours. Pas besoin de retirer cet écouteur explicitement :
-        // carte.remove() (voir le nettoyage de cet effet, et le début de
-        // chaque nouvelle exécution) détruit la carte entière avec tous ses
-        // écouteurs.
+        // en cours. La carte survivant maintenant à cet effet, ces écouteurs
+        // sont retirés explicitement dans le nettoyage (sinon chaque nouveau
+        // jeu de résultats en empilerait un de plus).
         // annule (fermé par cette IIFE, voir plus haut) évite d'agir sur
-        // une carte déjà détruite si ce timer se déclenche après un
+        // des marqueurs déjà retirés si ce timer se déclenche après un
         // démontage/ré-exécution de l'effet.
         const declencherRecalculerDissociations = () =>
           setTimeout(() => {
@@ -959,6 +1011,10 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           }, 0);
         carte.on("zoomend", declencherRecalculerDissociations);
         carte.on("moveend", declencherRecalculerDissociations);
+        nettoyages.push(() => {
+          carte.off("zoomend", declencherRecalculerDissociations);
+          carte.off("moveend", declencherRecalculerDissociations);
+        });
 
         carte.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 15 });
         // Application initiale, une fois la carte réellement centrée/zoomée
@@ -967,7 +1023,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         declencherRecalculerDissociations();
 
         setTimeout(() => {
-          if (!annule && carteRef.current) carteRef.current.invalidateSize();
+          if (!annule && carteRef.current === carte) carte.invalidateSize();
         }, 200);
       } catch (err) {
         console.error("Carte des boutiques indisponible :", err);
@@ -977,11 +1033,30 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
     return () => {
       annule = true;
-      if (carte) carte.remove();
-      carteRef.current = null;
+      nettoyages.forEach((nettoyer) => nettoyer());
+      // Carte déjà détruite (repliage/démontage) : remove() a déjà retiré
+      // tous ses calques, y toucher de nouveau ne ferait que lever une erreur.
+      if (carteRef.current === carte) {
+        carte.closePopup();
+        groupe.clearLayers();
+      }
+      boutiqueEpingleeIdRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boutiquesAffichees, depart, estPliee]);
+  }, [versionCarte, boutiquesAffichees, depart]);
+
+  // 3. Démontage du composant : détruit la carte (le repliage la détruit
+  // dans l'effet 1). Déclaré APRÈS l'effet des marqueurs : à l'unmount React
+  // exécute les nettoyages dans l'ordre de déclaration, les marqueurs sont
+  // donc retirés avant la carte.
+  useEffect(
+    () => () => {
+      detruireCarteLeaflet(carteRef.current);
+      carteRef.current = null;
+      groupeRef.current = null;
+    },
+    []
+  );
 
   useEffect(() => {
     if (!estPliee && carteRef.current) {
