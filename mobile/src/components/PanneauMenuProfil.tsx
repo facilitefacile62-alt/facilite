@@ -114,6 +114,17 @@ const RACCOURCIS: Raccourci[] = [
     },
   },
   {
+    id: 'marketplace',
+    icone: '🛍️',
+    bg: '#D1FAE5',
+    titre: 'Marketplace',
+    sous: 'Acheter et vendre',
+    action: ({ router, fermer }) => {
+      fermer();
+      router.push('/marketplace');
+    },
+  },
+  {
     id: 'fonctionnalites',
     icone: '🛠️',
     bg: '#F3F4F6',
@@ -162,14 +173,14 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
   }
 
   function selectionnerBusiness() {
-    // Menait vers un Alert.alert "bientôt disponible" alors que la
-    // destination (WebView Marketplace) existe déjà et fonctionne — voir
-    // "Ma boutique" juste en dessous, qui pointe déjà vers /web/marketplace.
-    // Best-effort, jamais bloquant : la navigation se fait même si
+    // Ouvre le Marketplace natif (grille d'articles, fiche produit, discussion
+    // avec le vendeur). "Ma boutique" (côté vendeur) reste pour l'instant une
+    // WebView (/web/marketplace) : l'espace vendeur natif n'est pas encore
+    // construit. Best-effort, jamais bloquant : la navigation se fait même si
     // l'écriture AsyncStorage échoue.
     definirUserMode('business').catch(() => {});
     onFermer();
-    router.push('/web/marketplace');
+    router.push('/marketplace');
   }
 
   return (

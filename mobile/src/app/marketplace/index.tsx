@@ -1,0 +1,185 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import {
+  CATEGORIES_MARKETPLACE,
+  enStock,
+  lieuBoutique,
+  prixLisible,
+  type ArticleMarketplace,
+} from '@/lib/marketplace';
+import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
+
+// Marketplace natif : grille d'articles + recherche + catégories. Mêmes
+// données que le site (marketplace_items / marketplace_stores), sans WebView
+// ni navigateur. Pas de design de référence dans design_handoff_facilite/ :
+// on reprend la palette de l'app (vert profond #0d3b34, menthe #6ee7c9, fond
+// clair) pour rester cohérent avec Offres et Accueil.
+const VERT_PROFOND = '#0d3b34';
+
+// Nombre impair d'articles : sans case vide, la dernière carte s'étirerait sur
+// toute la largeur (numColumns=2, flex-1).
+type LigneGrille = ArticleMarketplace | { id: string; vide: true };
+function avecCaseVide(articles: ArticleMarketplace[]): LigneGrille[] {
+  return articles.length % 2 === 1 ? [...articles, { id: '__vide__', vide: true }] : articles;
+}
+
+function CarteArticle({ article, onPress }: { article: ArticleMarketplace; onPress: () => void }) {
+  const photo = article.photos[0];
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-1 bg-white rounded-2xl border border-black/[0.06] overflow-hidden active:opacity-90">
+      <View className="w-full aspect-square bg-[#F2F0EA] items-center justify-center">
+        {photo ? (
+          <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={150} />
+        ) : (
+          <Ionicons name="image-outline" size={32} color="#9CA3AF" />
+        )}
+        {!enStock(article) && (
+          <View className="absolute top-2 left-2 bg-black/70 rounded-full px-2 py-0.5">
+            <Text className="text-white text-[10px] font-bold">Sur commande</Text>
+          </View>
+        )}
+      </View>
+      <View className="p-2.5">
+        <Text className="text-[15px] font-extrabold" style={{ color: VERT_PROFOND }}>
+          {prixLisible(article.prixXof)} <Text className="text-[10px] font-bold">FCFA</Text>
+        </Text>
+        <Text className="text-[12.5px] text-[#1A1A1A] mt-0.5 leading-[17px]" numberOfLines={2}>
+          {article.titre}
+        </Text>
+        <View className="flex-row items-center gap-1 mt-1.5">
+          <Ionicons name="storefront-outline" size={11} color="#6B7280" />
+          <Text className="text-[10.5px] text-gray-500 flex-1" numberOfLines={1}>
+            {article.boutiqueNom} · {lieuBoutique(article)}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+export default function MarketplaceScreen() {
+  const router = useRouter();
+  const [categorie, setCategorie] = useState<string | null>(null);
+  const [recherche, setRecherche] = useState('');
+  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, recherche);
+
+  return (
+    <View className="flex-1 bg-white">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            hitSlop={10}
+            accessibilityLabel="Retour"
+            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
+            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+          </Pressable>
+          <View className="flex-1">
+            <Text className="text-[10.5px] font-bold tracking-widest text-[#10B981]">FACILITÉ</Text>
+            <Text className="text-[20px] font-black text-[#1A1A1A] -mt-0.5">Marketplace</Text>
+          </View>
+        </View>
+
+        <View className="px-4">
+          <View className="flex-row items-center gap-2 bg-[#F2F0EA] rounded-full px-4 py-2.5">
+            <Ionicons name="search" size={17} color="#6B7280" />
+            <TextInput
+              value={recherche}
+              onChangeText={setRecherche}
+              placeholder="Rechercher un article"
+              placeholderTextColor="#9CA3AF"
+              returnKeyType="search"
+              autoCorrect={false}
+              className="flex-1 text-[14px] text-[#1A1A1A] p-0"
+            />
+            {recherche.length > 0 && (
+              <Pressable onPress={() => setRecherche('')} hitSlop={8} accessibilityLabel="Effacer la recherche">
+                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        <View className="mt-3">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+            {[{ id: null as string | null, label: 'Toutes', icone: 'apps-outline' }, ...CATEGORIES_MARKETPLACE].map((c) => {
+              const actif = categorie === c.id;
+              return (
+                <Pressable
+                  key={c.id ?? 'toutes'}
+                  onPress={() => setCategorie(c.id)}
+                  className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border ${
+                    actif ? 'border-transparent' : 'bg-white border-gray-200'
+                  }`}
+                  style={actif ? { backgroundColor: VERT_PROFOND } : undefined}>
+                  <Ionicons
+                    name={c.icone as keyof typeof Ionicons.glyphMap}
+                    size={14}
+                    color={actif ? '#6ee7c9' : '#4B5563'}
+                  />
+                  <Text className={`text-[12.5px] font-semibold ${actif ? 'text-white' : 'text-gray-700'}`}>
+                    {c.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {articles === null && !erreur ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator color="#10B981" />
+          </View>
+        ) : erreur && articles === null ? (
+          <View className="flex-1 items-center justify-center px-8 gap-3">
+            <Ionicons name="cloud-offline-outline" size={40} color="#9CA3AF" />
+            <Text className="text-[14px] text-gray-600 text-center">
+              Impossible de charger les articles. Vérifiez votre connexion.
+            </Text>
+            <Pressable onPress={recharger} className="rounded-full px-5 py-2.5" style={{ backgroundColor: VERT_PROFOND }}>
+              <Text className="text-white text-[13px] font-bold">Réessayer</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            data={avecCaseVide(articles ?? [])}
+            keyExtractor={(a) => a.id}
+            numColumns={2}
+            columnWrapperStyle={{ gap: 12 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshing={actualisation}
+            onRefresh={recharger}
+            ListEmptyComponent={
+              <View className="items-center pt-16 px-8 gap-2">
+                <Ionicons name="search-outline" size={40} color="#9CA3AF" />
+                <Text className="text-[15px] font-bold text-[#1A1A1A]">Aucun article trouvé</Text>
+                <Text className="text-[12.5px] text-gray-500 text-center">
+                  Essayez un autre mot ou une autre catégorie.
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) =>
+              'vide' in item ? (
+                <View className="flex-1" />
+              ) : (
+                <CarteArticle article={item} onPress={() => router.push(`/marketplace/${item.id}`)} />
+              )
+            }
+          />
+        )}
+      </SafeAreaView>
+    </View>
+  );
+}

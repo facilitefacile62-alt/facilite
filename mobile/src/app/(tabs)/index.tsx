@@ -27,6 +27,7 @@ const MODELES = [
 ];
 
 export default function AccueilScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const { offres, erreur } = useOffresReelles();
   const candidateMatchScores = useCandidateMatchScores(user?.id);
@@ -55,15 +56,33 @@ export default function AccueilScreen() {
             contentContainerClassName="pb-8"
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
-              <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl px-3 py-3.5 flex-row gap-4 border border-gray-200 shadow-xs">
-                {MODELES.map((modele) => (
-                  <View key={modele.id} className="items-center gap-1.5">
-                    <View className="w-14 h-14 rounded-full border-[2.5px] border-blue-600 p-0.5">
-                      <View className="w-full h-full rounded-full bg-[#e8c77a]" />
+              <View>
+                <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl px-3 py-3.5 flex-row gap-4 border border-gray-200 shadow-xs">
+                  {MODELES.map((modele) => (
+                    <View key={modele.id} className="items-center gap-1.5">
+                      <View className="w-14 h-14 rounded-full border-[2.5px] border-blue-600 p-0.5">
+                        <View className="w-full h-full rounded-full bg-[#e8c77a]" />
+                      </View>
+                      <Text className="text-[11px] font-semibold text-blue-600">{modele.label}</Text>
                     </View>
-                    <Text className="text-[11px] font-semibold text-blue-600">{modele.label}</Text>
-                  </View>
-                ))}
+                  ))}
+                </View>
+
+                {/* Entrée du Marketplace natif */}
+                <Pressable onPress={() => router.push('/marketplace')} className="mx-3 mb-3 active:opacity-90">
+                  <LinearGradient
+                    colors={['#0d3b34', '#0f4f42']}
+                    className="rounded-2xl px-4 py-3.5 flex-row items-center gap-3 overflow-hidden">
+                    <View className="w-11 h-11 rounded-xl bg-white/[0.14] items-center justify-center">
+                      <Ionicons name="storefront" size={22} color="#6ee7c9" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[10.5px] font-bold tracking-widest text-[#6ee7c9]">MARKETPLACE</Text>
+                      <Text className="text-white text-[15px] font-extrabold mt-0.5">Achetez et vendez près de chez vous</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#6ee7c9" />
+                  </LinearGradient>
+                </Pressable>
               </View>
             }
             ListEmptyComponent={
