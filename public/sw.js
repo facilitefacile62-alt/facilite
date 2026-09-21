@@ -130,7 +130,8 @@
 // v130 (21/09/2026) : fiche produit detaillee avec lien direct partageable (/marketplace/produit/<id>) ; "Commander maintenant" envoie desormais reellement la commande au vendeur via WhatsApp (message pre-rempli) au lieu d'afficher une fausse confirmation, avec une erreur claire si le vendeur n'a pas de numero
 // v131 (21/09/2026) : la fiche produit s'affiche en pleine page (barre laterale comprise) sans fond sombre derriere, au lieu d'une fenetre centree ; le bouton micro flottant ne recouvre plus les boutons d'achat
 // v132 (21/09/2026) : "Autour de moi" - une seule recherche par clic, la carte des boutiques n'est plus detruite/recree a chaque resultat (erreur Leaflet _leaflet_pos), et le bouton du header fonctionne aussi depuis l'onglet Vendre
-const VERSION_CACHE = "facilite-v132";
+// v133 (21/09/2026) : la barre de recherche du header applique enfin la recherche quand on est deja sur la Marketplace (Entree, bouton Rechercher, clic sur une suggestion), y compris depuis l'onglet Vendre
+const VERSION_CACHE = "facilite-v133";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

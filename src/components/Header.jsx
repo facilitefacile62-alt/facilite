@@ -1085,17 +1085,32 @@ export default function Header() {
     }
   };
 
+  // Sur la Marketplace DÉJÀ ouverte, router.push("/marketplace?q=…") ne change
+  // que l'URL : MarketplaceClient ne relit `q` qu'au montage, la recherche
+  // n'était donc jamais appliquée (régression des commits 686ca1a/5b8bbd8,
+  // reproduite par tests/e2e/marketplace-recherche-header.spec.js). La page
+  // est prévenue par un événement, comme pour "Autour de moi" ; depuis une
+  // autre page, la navigation classique MONTE la Marketplace, qui lit `q`.
+  const allerVers = (url) => {
+    if (pathname?.startsWith("/marketplace") && url.startsWith("/marketplace?q=")) {
+      const q = new URLSearchParams(url.slice(url.indexOf("?") + 1)).get("q") || "";
+      window.dispatchEvent(new CustomEvent("facilite:marketplace-recherche", { detail: { q } }));
+      return;
+    }
+    router.push(url);
+  };
+
   const executeSearch = (queryText, targetUrl = null) => {
     setIsOpen(false);
     setIsMobileSearchOpen(false);
     if (targetUrl) {
-      router.push(targetUrl);
+      allerVers(targetUrl);
     } else if (queryText.trim()) {
       // /recherche est la page de résultats Emploi (offres/candidats) —
       // sur la Marketplace, "Rechercher"/Entrée sans choisir un résultat
       // précis y envoyait quand même, faisant quitter la Marketplace au
       // moment même où l'utilisateur valide sa recherche.
-      router.push(
+      allerVers(
         isBusinessActive
           ? `/marketplace?q=${encodeURIComponent(queryText.trim())}`
           : `/recherche?q=${encodeURIComponent(queryText.trim())}`

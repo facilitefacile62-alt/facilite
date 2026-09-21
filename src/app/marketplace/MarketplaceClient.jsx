@@ -387,8 +387,25 @@ export default function MarketplaceClient() {
       setOnglet("acheter");
       setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "autour" });
     };
+    // Recherche de la barre du header : la page n'était jamais prévenue
+    // quand on y était déjà (voir Header.jsx, allerVers). Un événement plutôt
+    // qu'un suivi de `?q=` par useSearchParams : la page réécrit elle-même
+    // `q` dans l'URL à chaque frappe/filtre, et relire cette URL en retour
+    // pourrait écraser une saisie en cours (écho tardif d'une valeur
+    // précédente).
+    const surRecherche = (e) => {
+      const q = String(e?.detail?.q ?? "").trim();
+      if (!q) return;
+      sequenceDemandeRef.current += 1;
+      setOnglet("acheter");
+      setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "recherche", q });
+    };
     window.addEventListener("facilite:autour-de-moi", surAutourDeMoi);
-    return () => window.removeEventListener("facilite:autour-de-moi", surAutourDeMoi);
+    window.addEventListener("facilite:marketplace-recherche", surRecherche);
+    return () => {
+      window.removeEventListener("facilite:autour-de-moi", surAutourDeMoi);
+      window.removeEventListener("facilite:marketplace-recherche", surRecherche);
+    };
   }, []);
 
   // Répercute la boutique actuellement ouverte dans l'URL — relu par
@@ -940,6 +957,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     queueMicrotask(() => {
       onDemandeTraitee?.();
       if (demande.type === "autour") localiser();
+      else if (demande.type === "recherche") setTexte(demande.q);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demande]);
