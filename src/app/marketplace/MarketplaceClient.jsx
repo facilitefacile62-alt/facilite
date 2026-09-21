@@ -5093,6 +5093,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
   const [ongletInfo, setOngletInfo] = useState("description"); // 'description' | 'specs' | 'livraison'
   const [modalCommandeOuverte, setModalCommandeOuverte] = useState(false);
   const [commandeEnvoyee, setCommandeEnvoyee] = useState(false);
+  const [erreurCommande, setErreurCommande] = useState("");
   const [livraisonNom, setLivraisonNom] = useState(profile?.full_name || "");
   const [livraisonTel, setLivraisonTel] = useState(profile?.phone || "");
   const [livraisonAdresse, setLivraisonAdresse] = useState(profile?.city ? `${profile?.quartier || ""}, ${profile?.city}` : "");
@@ -5199,13 +5200,23 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
     }
   };
 
+  // Aucune table de commandes n'existe : la commande n'atteint le vendeur que
+  // par le message WhatsApp pré-rempli ci-dessous. Afficher un succès sans
+  // l'envoyer (comportement précédent) faisait croire à l'acheteur que le
+  // vendeur était prévenu alors que rien n'était transmis.
   const soumettreCommandeRapide = (e) => {
     e.preventDefault();
+    if (!numeroWhatsApp) {
+      setErreurCommande("Ce vendeur n'a pas de numéro WhatsApp enregistré. Contactez-le via la discussion Facilité.");
+      return;
+    }
+    setErreurCommande("");
+    const libellePaiement = { wave: "Wave", om: "Orange Money", livraison: "Paiement à la livraison" }[moyenPaiement] || moyenPaiement;
+    const messageCommande = encodeURIComponent(
+      `Bonjour ${nomBoutique},\nJe souhaite commander depuis Facilité :\n- *Produit* : ${article.titre}\n- *Option / Couleur* : ${couleurChoisie} (${formatChoisi})\n- *Quantité* : ${quantite} pièce(s)\n- *Total* : ${prixLisible(prixTotal)} FCFA\n\n*Livraison*\n- Nom : ${livraisonNom}\n- Téléphone : ${livraisonTel}\n- Adresse : ${livraisonAdresse}\n- Paiement souhaité : ${libellePaiement}\n\nLien du produit : ${urlPartage}`
+    );
+    window.open(`https://wa.me/${numeroWhatsApp.replace("+", "")}?text=${messageCommande}`, "_blank", "noopener,noreferrer");
     setCommandeEnvoyee(true);
-    setTimeout(() => {
-      setModalCommandeOuverte(false);
-      setCommandeEnvoyee(false);
-    }, 2800);
   };
 
   return (
@@ -5715,7 +5726,11 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
           <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-zinc-800 relative">
             <button
               type="button"
-              onClick={() => setModalCommandeOuverte(false)}
+              onClick={() => {
+                setModalCommandeOuverte(false);
+                setCommandeEnvoyee(false);
+                setErreurCommande("");
+              }}
               className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
             >
               <i className="fa-solid fa-xmark text-sm"></i>
@@ -5734,11 +5749,21 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                   <i className="fa-solid fa-check"></i>
                 </div>
                 <h4 className="text-sm font-bold text-gray-900 dark:text-white">
-                  Commande transmise au vendeur !
+                  Dernière étape : envoyez le message
                 </h4>
                 <p className="text-xs text-gray-500">
-                  {nomBoutique} a été notifié et vous contactera dans les plus brefs délais pour convenir de la livraison.
+                  WhatsApp vient de s&apos;ouvrir avec votre commande pré-remplie. {nomBoutique} ne la recevra qu&apos;une fois le message envoyé.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalCommandeOuverte(false);
+                    setCommandeEnvoyee(false);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black cursor-pointer"
+                >
+                  Fermer
+                </button>
               </div>
             ) : (
               <form onSubmit={soumettreCommandeRapide} className="space-y-3">
@@ -5825,6 +5850,12 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                   </div>
                 </div>
 
+                {erreurCommande && (
+                  <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400">
+                    {erreurCommande}
+                  </p>
+                )}
+
                 <div className="pt-3 border-t border-gray-200 dark:border-zinc-800 flex items-center justify-between">
                   <div>
                     <span className="text-[11px] text-gray-500 block">Total à régler :</span>
@@ -5836,7 +5867,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                     type="submit"
                     className="px-5 py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black shadow-md hover:bg-zinc-800 transition cursor-pointer"
                   >
-                    Confirmer la commande
+                    Envoyer ma commande sur WhatsApp
                   </button>
                 </div>
               </form>
