@@ -88,3 +88,7 @@ env/
 supabase/test-schema-dump*
 scripts/prod-schema-dump.sql
 scripts/prod-schema-dump.functions.json
+
+# Cache de build Gradle (projet android/ natif) — généré localement,
+# jamais le même d'une machine à l'autre
+android/.gradle/
