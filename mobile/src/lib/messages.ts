@@ -73,11 +73,16 @@ export async function sendMessage({
   content,
   receiverId,
   conversationId,
+  typeDiscussion,
 }: {
   senderId: string;
   content: string;
   receiverId: string | null;
   conversationId: string;
+  // 'MARKETPLACE' pour un échange acheteur <-> vendeur : sans cette étiquette
+  // le message retombe dans "ECHANGE" (défaut de la base) et n'apparaît pas
+  // dans la messagerie Marketplace du destinataire.
+  typeDiscussion?: 'MARKETPLACE';
 }) {
   const { data, error } = await supabase
     .from('messages')
@@ -87,6 +92,7 @@ export async function sendMessage({
       conversation_id: conversationId,
       content,
       is_read: false,
+      ...(typeDiscussion ? { type_discussion: typeDiscussion } : {}),
     })
     .select('id, sender_id, receiver_id, content, created_at, is_read')
     .single();
@@ -124,6 +130,15 @@ async function findOrCreateConversation(userId: string, otherUserId: string): Pr
   }
 
   return created.id;
+}
+
+/**
+ * Retrouve (ou crée) la conversation entre l'utilisateur et un autre
+ * utilisateur (ex. le vendeur d'un article). Refuse de s'écrire à soi-même.
+ */
+export async function ouvrirConversation(userId: string, autreUtilisateurId: string): Promise<string | null> {
+  if (!userId || !autreUtilisateurId || userId === autreUtilisateurId) return null;
+  return findOrCreateConversation(userId, autreUtilisateurId);
 }
 
 /**

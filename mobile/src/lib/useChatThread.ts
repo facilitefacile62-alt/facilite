@@ -10,7 +10,11 @@ import {
 
 export type AutreParticipant = { id: string; nom: string; estAdmin: boolean };
 
-export function useChatThread(conversationId: string | undefined, userId: string | undefined) {
+export function useChatThread(
+  conversationId: string | undefined,
+  userId: string | undefined,
+  typeDiscussion?: 'MARKETPLACE'
+) {
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [autreParticipant, setAutreParticipant] = useState<AutreParticipant | null>(null);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
@@ -50,6 +54,7 @@ export function useChatThread(conversationId: string | undefined, userId: string
           content: contenu,
           receiverId: autreParticipant?.id ?? null,
           conversationId,
+          typeDiscussion,
         });
         if (nouveau) {
           setMessages((prev) => (prev ? [...prev, nouveau] : [nouveau]));
@@ -59,7 +64,7 @@ export function useChatThread(conversationId: string | undefined, userId: string
         setEnvoiEnCours(false);
       }
     },
-    [conversationId, userId, autreParticipant, envoiEnCours]
+    [conversationId, userId, autreParticipant, envoiEnCours, typeDiscussion]
   );
 
   return { messages, autreParticipant, envoyer, envoiEnCours };

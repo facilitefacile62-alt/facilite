@@ -30,10 +30,24 @@ import type { ChatMessage } from '@/lib/messages';
 const NB_BARRES = 20;
 
 export default function ChatDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const {
+    id,
+    contexte,
+    nom: nomParam,
+    brouillon: brouillonParam,
+  } = useLocalSearchParams<{ id: string; contexte?: string; nom?: string; brouillon?: string }>();
+  // Arrivée depuis la fiche d'un article (Marketplace) : les messages sont
+  // étiquetés MARKETPLACE, le fil porte le nom de la boutique et le composeur
+  // est prérempli avec un message qui nomme l'article.
+  const marketplace = contexte === 'marketplace';
   const router = useRouter();
   const { user } = useAuth();
-  const { messages, autreParticipant, envoyer, envoiEnCours } = useChatThread(id, user?.id);
+  const { messages, autreParticipant, envoyer, envoiEnCours } = useChatThread(
+    id,
+    user?.id,
+    marketplace ? 'MARKETPLACE' : undefined
+  );
+  const nomAffiche = marketplace && nomParam ? nomParam : autreParticipant?.nom;
 
   const [favori, setFavori] = useState(false);
   const [menuOuvert, setMenuOuvert] = useState(false);
@@ -41,7 +55,7 @@ export default function ChatDetailScreen() {
   const [modaleIaOuverte, setModaleIaOuverte] = useState(false);
   const [enregistrement, setEnregistrement] = useState(false);
   const [dureeEnregistrement, setDureeEnregistrement] = useState(0);
-  const [brouillon, setBrouillon] = useState('');
+  const [brouillon, setBrouillon] = useState(typeof brouillonParam === 'string' ? brouillonParam : '');
   const [barresOnde, setBarresOnde] = useState<number[]>(() => Array.from({ length: NB_BARRES }, () => 6));
   const minuteurRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -90,12 +104,12 @@ export default function ChatDetailScreen() {
           </Pressable>
           <View className="w-[34px] h-[34px] rounded-full bg-emerald-500 items-center justify-center">
             <Text className="text-white font-bold text-[13px]">
-              {autreParticipant ? autreParticipant.nom.charAt(0).toUpperCase() : '·'}
+              {nomAffiche ? nomAffiche.charAt(0).toUpperCase() : '·'}
             </Text>
           </View>
           <View className="flex-1 min-w-0">
             <Text className="text-[13.5px] font-bold text-[#1A1A1A]" numberOfLines={1}>
-              {autreParticipant?.nom ?? 'Discussion'}
+              {nomAffiche ?? 'Discussion'}
             </Text>
             <Text className="text-[11px] text-emerald-500">
               {autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
@@ -231,9 +245,15 @@ export default function ChatDetailScreen() {
             <TextInput
               value={brouillon}
               onChangeText={setBrouillon}
-              placeholder="Posez une question, demandez un conseil CV ou orientation..."
+              placeholder={
+                marketplace ? 'Écrire au vendeur…' : 'Posez une question, demandez un conseil CV ou orientation...'
+              }
               placeholderTextColor="rgba(0,0,0,0.4)"
-              className="flex-1 bg-[#F2F0EA] rounded-full px-3.5 py-2.5 text-[13px] text-[#1A1A1A]"
+              // Multiligne : le message prérempli d'un article (3 lignes) doit être
+              // lisible en entier avant l'envoi, pas tronqué sur une seule ligne.
+              multiline
+              style={{ maxHeight: 120 }}
+              className="flex-1 bg-[#F2F0EA] rounded-[20px] px-3.5 py-2.5 text-[13px] text-[#1A1A1A]"
             />
             <Pressable
               onPress={() => setEnregistrement(true)}
@@ -245,6 +265,7 @@ export default function ChatDetailScreen() {
             </Pressable>
             <Pressable
               onPress={handleEnvoyer}
+              accessibilityLabel="Envoyer le message"
               disabled={envoiEnCours || !brouillon.trim()}
               className="w-[34px] h-[34px] rounded-full bg-[#1A1A1A] items-center justify-center disabled:opacity-40">
               <Svg width={15} height={15} viewBox="0 0 24 24">
