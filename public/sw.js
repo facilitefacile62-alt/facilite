@@ -127,7 +127,8 @@
 // v127 (20/09/2026) : la barre de recherche globale du header ne cherche plus que des boutiques/articles Marketplace quand on est sur la Marketplace (au lieu d'offres d'emploi) ; recherche Emploi inchangee et ne renvoie jamais de produit Marketplace
 // v128 (20/09/2026) : resultats de recherche Marketplace affichent la photo du produit ; si rien ne correspond exactement, suggere des produits similaires (description/categorie) puis des articles recents plutot qu'un simple "aucun resultat" ; "Rechercher"/Entree sans choisir un resultat reste aussi sur la Marketplace au lieu d'aller vers la recherche d'offres d'emploi
 // v129 (21/09/2026) : carte "Autour de moi" - bandeau d'avatars façon Snapchat avec bascule Boutiques/Articles (restaure et complete le dock) ; Explorer ne declenche plus d'erreur Leaflet silencieuse a l'ouverture avec une position connue ; un utilisateur renvoye vers /messagerie apres une route non autorisee garde le contexte Marketplace
-const VERSION_CACHE = "facilite-v129";
+// v130 (21/09/2026) : fiche produit detaillee avec lien direct partageable (/marketplace/produit/<id>) ; "Commander maintenant" envoie desormais reellement la commande au vendeur via WhatsApp (message pre-rempli) au lieu d'afficher une fausse confirmation, avec une erreur claire si le vendeur n'a pas de numero
+const VERSION_CACHE = "facilite-v130";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
