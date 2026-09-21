@@ -135,7 +135,8 @@
 // v135 (21/09/2026) : Explorer - les boutiques quasi confondues sont dissociees en anneau autour du centre du groupe (plus de recouvrement jusqu'a 10 boutiques), traits de rappel toujours affiches, "Vous etes ici" au-dessus des boutiques, et la disposition ne change plus entre le geste de zoom et le relachement
 // v136 (21/09/2026) : "Discuter sur la plateforme" ouvre enfin un vrai fil avec le vendeur dans la messagerie Marketplace, meme quand l'acheteur a deja une candidature avec ce compte (le dossier de candidature en lecture seule ne s'affiche plus a la place)
 // v137 (21/09/2026) : fiche produit remaniee (titre, marque, prix et reduction, coupon, quantite) : les faux choix de couleur/format, le bareme degressif et les fausses notes ("4.8", "620+ vendus") disparaissent
-const VERSION_CACHE = "facilite-v137";
+// v138 (21/09/2026) : la messagerie Marketplace affiche enfin les echanges avec le compte admin (client ou vendeur) au lieu de "Aucun echange Marketplace", et ouvre directement le dernier echange
+const VERSION_CACHE = "facilite-v138";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { classerConversationDirecte } = require("../../src/lib/conversationsDirectes.js");
+const { classerConversationDirecte, repartirConversationsDirectes } = require("../../src/lib/conversationsDirectes.js");
 
 /**
  * Classement pur d'un fil direct (aucun navigateur, aucun réseau) — voir
@@ -100,5 +100,100 @@ test.describe("classerConversationDirecte", () => {
     const copie = JSON.parse(JSON.stringify(msgs));
     classerConversationDirecte({ messages: msgs, aBoutique: true, contexteMarketplace: true, ouvertePourMarketplace: true });
     expect(msgs).toEqual(copie);
+  });
+});
+
+/**
+ * Répartition fils directs / Support. Cas signalé : le client (ou le vendeur)
+ * était le compte admin -> "Aucun échange Marketplace" alors qu'un message
+ * avait été reçu ; il n'apparaissait que dans "Discussions" (fil Support).
+ */
+const MOI = "user-moi";
+const ADMIN = "user-admin";
+const AUTRE = "user-autre";
+const conv = (id, autre) => ({ id, user_1_id: MOI, user_2_id: autre });
+const msg = (id, conversationId, typeDiscussion) => ({ id, conversationId, typeDiscussion });
+
+test.describe("repartirConversationsDirectes", () => {
+  test("cas signalé : échange MARKETPLACE avec l'admin -> fil direct, retiré du Support", () => {
+    const messages = [msg("a", "c-admin", "MARKETPLACE")];
+    const r = repartirConversationsDirectes({
+      mesConversations: [conv("c-admin", ADMIN)],
+      messages,
+      userId: MOI,
+      adminId: ADMIN,
+    });
+    expect(r.conversationsDirectes.map((c) => c.id)).toEqual(["c-admin"]);
+    expect(r.messagesDeConversation({ id: "c-admin" }).map((m) => m.id)).toEqual(["a"]);
+    expect(r.messagesSupport).toEqual([]);
+  });
+
+  test("paire avec l'admin mêlant Support et Marketplace : le Support garde ses messages, le fil direct n'a que le Marketplace", () => {
+    const messages = [msg("s1", "c-admin", "SUPPORT"), msg("m1", "c-admin", "MARKETPLACE"), msg("e1", "c-admin", "ECHANGE")];
+    const r = repartirConversationsDirectes({
+      mesConversations: [conv("c-admin", ADMIN)],
+      messages,
+      userId: MOI,
+      adminId: ADMIN,
+    });
+    expect(r.messagesDeConversation({ id: "c-admin" }).map((m) => m.id)).toEqual(["m1"]);
+    expect(r.messagesSupport.map((m) => m.id)).toEqual(["s1", "e1"]);
+  });
+
+  test("conversation avec l'admin SANS échange Marketplace : reste entièrement dans le Support (règle historique)", () => {
+    const messages = [msg("s1", "c-admin", "SUPPORT")];
+    const r = repartirConversationsDirectes({
+      mesConversations: [conv("c-admin", ADMIN)],
+      messages,
+      userId: MOI,
+      adminId: ADMIN,
+    });
+    expect(r.conversationsDirectes).toEqual([]);
+    expect(r.messagesSupport.map((m) => m.id)).toEqual(["s1"]);
+  });
+
+  test("interlocuteur ordinaire : fil direct complet, aucun de ses messages dans le Support", () => {
+    const messages = [msg("m1", "c-autre", "MARKETPLACE"), msg("e1", "c-autre", "ECHANGE")];
+    const r = repartirConversationsDirectes({
+      mesConversations: [conv("c-autre", AUTRE)],
+      messages,
+      userId: MOI,
+      adminId: ADMIN,
+    });
+    expect(r.conversationsDirectes.map((c) => c.id)).toEqual(["c-autre"]);
+    expect(r.messagesDeConversation({ id: "c-autre" }).map((m) => m.id)).toEqual(["m1", "e1"]);
+    expect(r.messagesSupport).toEqual([]);
+  });
+
+  test("les candidatures (OFFRE) ne vont jamais dans le Support", () => {
+    const messages = [msg("o1", "c-autre", "OFFRE"), msg("o2", null, "OFFRE"), msg("s1", null, "SUPPORT")];
+    const r = repartirConversationsDirectes({
+      mesConversations: [conv("c-autre", AUTRE)],
+      messages,
+      userId: MOI,
+      adminId: ADMIN,
+    });
+    expect(r.messagesSupport.map((m) => m.id)).toEqual(["s1"]);
+  });
+
+  test("aucun admin résolu : toutes les conversations avec un tiers sont des fils directs", () => {
+    const r = repartirConversationsDirectes({
+      mesConversations: [conv("c1", ADMIN), conv("c2", AUTRE)],
+      messages: [],
+      userId: MOI,
+      adminId: null,
+    });
+    expect(r.conversationsDirectes.map((c) => c.id)).toEqual(["c1", "c2"]);
+  });
+
+  test("l'utilisateur peut être user_1 ou user_2 de la ligne", () => {
+    const inverse = { id: "c-admin", user_1_id: ADMIN, user_2_id: MOI };
+    const r = repartirConversationsDirectes({
+      mesConversations: [inverse],
+      messages: [msg("a", "c-admin", "MARKETPLACE")],
+      userId: MOI,
+      adminId: ADMIN,
+    });
+    expect(r.conversationsDirectes.map((c) => c.id)).toEqual(["c-admin"]);
   });
 });

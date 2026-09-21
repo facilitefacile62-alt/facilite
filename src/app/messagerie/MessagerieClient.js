@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabase";
 import { fetchConversationMessages, toggleMessagePin, sendMessage, formatMessageRow, resolveSupportConversation, resolveConversationWith, touchConversation } from "@/lib/messages";
-import { classerConversationDirecte } from "@/lib/conversationsDirectes";
+import { classerConversationDirecte, repartirConversationsDirectes } from "@/lib/conversationsDirectes";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
 import MarkdownLeger from "@/lib/markdownLeger";
@@ -1135,9 +1135,19 @@ export default function MessagerieClient() {
           .select("id, user_1_id, user_2_id")
           .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`);
 
-        const conversationsDirectes = (mesConversations || []).filter((c) => {
-          const autrePartieId = c.user_1_id === session.user.id ? c.user_2_id : c.user_1_id;
-          return autrePartieId && autrePartieId !== adminIdForExclusion;
+        // Conversation avec l'admin = fil Support, SAUF ses échanges tagués
+        // MARKETPLACE (l'admin peut être client ou vendeur d'une boutique) : sans
+        // cette exception, un message reçu sur le Marketplace n'apparaissait que
+        // dans "Discussions" et la messagerie Marketplace restait vide.
+        const {
+          conversationsDirectes,
+          messagesDeConversation,
+          messagesSupport: supportMsgs,
+        } = repartirConversationsDirectes({
+          mesConversations: mesConversations || [],
+          messages: formattedMsgs,
+          userId: session.user.id,
+          adminId: adminIdForExclusion,
         });
 
         const autresPartiesIds = [...new Set(conversationsDirectes.map((c) =>
@@ -1160,7 +1170,7 @@ export default function MessagerieClient() {
           directCards = conversationsDirectes.map((conv) => {
             const autrePartieId = conv.user_1_id === session.user.id ? conv.user_2_id : conv.user_1_id;
             idsAvecConversationDirecte.add(autrePartieId);
-            const msgsDeCetteConv = formattedMsgs.filter((m) => m.conversationId === conv.id);
+            const msgsDeCetteConv = messagesDeConversation(conv);
             // Une conversation qui contient un message de candidature (OFFRE)
             // concerne la plateforme Facilité, jamais le Marketplace — même si
             // l'autre partie possède par ailleurs une boutique (cas réel en
@@ -1229,10 +1239,7 @@ export default function MessagerieClient() {
         // les conversations directes ci-dessus (Marketplace/recruteur) —
         // seuls les échanges sans conversation_id (historique) ou rattachés
         // à l'admin restent dans le fil fusionné.
-        const supportMsgs = formattedMsgs.filter((m) =>
-          m.typeDiscussion !== "OFFRE" &&
-          !(m.conversationId && conversationsDirectes.some((c) => c.id === m.conversationId))
-        );
+        // (supportMsgs vient de repartirConversationsDirectes, plus haut.)
 
         if (!isActive) return;
 
@@ -1293,6 +1300,15 @@ export default function MessagerieClient() {
         //   Facilité" incohérent avec une liste qui ne le montre plus.
         if (window.innerWidth >= 768 && !recipientParam && !estContexteMarketplace) {
           setActiveConvId("ai-assistant");
+        } else if (window.innerWidth >= 768 && !recipientParam && estContexteMarketplace) {
+          // Messagerie Marketplace ouverte sans destinataire précis : le dernier
+          // échange Marketplace s'affiche directement (le message d'un client
+          // est visible dès l'ouverture, sans devoir le chercher dans la liste).
+          const dernierHorodatage = (c) => new Date(c.messages[c.messages.length - 1]?.createdAt || 0).getTime();
+          const recents = directCards
+            .filter((c) => c.typeDiscussion === "MARKETPLACE" && c.messages.length > 0)
+            .sort((a, b) => dernierHorodatage(b) - dernierHorodatage(a));
+          if (recents.length > 0) setActiveConvId(recents[0].id);
         }
       } catch (err) {
         console.error("Erreur de chargement des messages utilisateur:", err);
