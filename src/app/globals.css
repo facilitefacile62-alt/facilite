@@ -327,6 +327,23 @@ html.dark .bg-whatsapp-chat {
   animation: avatar-boutique-respire 2s ease-in-out infinite;
 }
 
+/* Marqueurs dissociés de l'Explorer (voir src/lib/dissociationMarqueurs.js
+   et GlobeExplorateurBoutiques.jsx) : l'élément posé par Leaflet reste à la
+   VRAIE coordonnée mais son boîtier (140×90 / 100×75) est transparent aux
+   événements ; seul .marqueur-decale-contenu — déplacé en pixels vers sa
+   place dans l'anneau — reçoit survol et clics. Sans ça, les boîtiers
+   superposés de marqueurs quasi confondus interceptaient les événements
+   destinés aux avatars voisins, et "Vous êtes ici" (désormais au-dessus des
+   boutiques) aurait pris leurs clics. */
+.snap-custom-icon,
+.snap-custom-moi {
+  pointer-events: none !important;
+}
+.snap-custom-icon .marqueur-decale-contenu,
+.snap-custom-moi .marqueur-decale-contenu {
+  pointer-events: auto;
+}
+
 /* Tooltip et popup personnalisés haute-fidélité pour les cartes de boutiques */
 .carte-boutique-bulle-custom.leaflet-tooltip {
   background: rgba(15, 23, 42, 0.95) !important;

@@ -12,6 +12,7 @@ import {
 } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
+import { calculerDecalagesDissociation } from "@/lib/dissociationMarqueurs";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -58,6 +59,13 @@ const AVATARS_SNAP = [
   { id: "5", emoji: "🧕🏾", label: "Maison & Déco" },
   { id: "6", emoji: "🧢", label: "Sport & Style" },
 ];
+
+// Trait de rappel d'un marqueur dissocié : SVG posé DANS le marqueur, de
+// l'ancre (position réelle) vers l'ancre décalée. Caché tant que le marqueur
+// n'est pas déplacé (data-actif="0"), voir appliquerDecalageMarqueur.
+function htmlTraitRappel(ancreX, ancreY) {
+  return `<svg class="trait-rappel" data-actif="0" width="1" height="1" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none;display:none;"><line x1="${ancreX}" y1="${ancreY}" x2="${ancreX}" y2="${ancreY}" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.7" stroke-dasharray="2 4" stroke-linecap="round"/></svg>`;
+}
 
 function urlPhoto(chemin) {
   if (!chemin) return "";
@@ -848,98 +856,79 @@ export default function GlobeExplorateurBoutiques({
     groupe.clearLayers();
 
     // Boutiques à la même position réelle (ou trop proches à l'écran) :
-    // dissociées AUTOMATIQUEMENT en cercle autour de leur point d'origine,
+    // dissociées AUTOMATIQUEMENT en anneau autour du barycentre du groupe,
     // reliées chacune par un trait fin à leur position géographique réelle
     // — pattern "marqueur éclaté relié par une ligne", nécessaire pour
     // rester lisible (avatars/étiquettes/bouton d'action superposés sinon
-    // — confirmé par capture d'écran réelle à Guinaw Rail Nord). L'écart en
-    // pixels dépend du zoom courant, donc recalculé au premier rendu ET à
-    // chaque pan/zoom (écouteur posé plus bas), pas seulement à la
-    // création des marqueurs. Remplace l'ancienne version "dissociation au
-    // clic" — demande explicite de l'utilisateur, plus fiable qu'un geste
-    // à découvrir soi-même.
-    // Base à 26/30px pour un avatar affiché à sa taille de référence
-    // (échelle 1, zoom 14). brancherEchelleZoomAvatars grossit ensuite
-    // l'avatar jusqu'à ×1.4 en zoomant — sans réajuster ces deux seuils en
-    // proportion, un rayon de dissociation fixe restait correct pour la
-    // distance ENTRE LES CENTRES mais les avatars, devenus plus gros,
-    // se remettaient à se chevaucher sur les bords en zoomant fort (confirmé
-    // par capture d'écran réelle : superposition encore visible en "zoom
-    // très fort"). echelleAvatarPourZoom (même formule que
-    // brancherEchelleZoomAvatars, partagée pour ne jamais diverger) donne
-    // le facteur exact à appliquer aux deux seuils à CHAQUE recalcul (le
-    // zoom courant change à chaque appel).
-    const SEUIL_CLUSTER_PX_BASE = 26;
-    const RAYON_DISSOCIATION_PX_BASE = 30;
+    // — confirmé par capture d'écran réelle à Guinaw Rail Nord). Calcul PUR
+    // dans src/lib/dissociationMarqueurs.js : seuil = diamètre d'avatar ×
+    // échelle, rayon selon le nombre de membres, anneaux concentriques
+    // au-delà de 8 (l'ancien rayon fixe de 30 px laissait des avatars
+    // superposés dès 4 membres ; mesuré : 18,9 px entre voisins pour 10).
+    //
+    // DÉCALAGE EN PIXELS APPLIQUÉ AU CONTENU du marqueur (transform CSS sur
+    // .marqueur-decale-contenu), jamais à sa position géographique : le
+    // marqueur reste à sa vraie coordonnée. Avant, les marqueurs étaient
+    // déplacés en latlng à chaque zoomend : pendant un geste de zoom le
+    // rayon de l'anneau grossissait avec la carte (×2 par niveau) puis se
+    // recalait d'un coup au relâchement (saut mesuré de 36 px). Un
+    // décalage en pixels constants suit la carte sans dériver ; le calcul
+    // ne dépend que du zoom et est refait sur zoomanim (zoom CIBLE, dès le
+    // début du geste), zoom (vol, pincement) et zoomend. Le trait de rappel
+    // est un SVG DANS le marqueur : il se déplace avec lui, sans redessin
+    // de calque Leaflet.
     const marqueursCreesParId = new Map();
 
-    function recalculerDissociations() {
-      const echelle = echelleAvatarPourZoom(carte.getZoom());
-      const SEUIL_CLUSTER_PX = SEUIL_CLUSTER_PX_BASE * echelle;
-      const RAYON_DISSOCIATION_PX = RAYON_DISSOCIATION_PX_BASE * echelle;
+    function appliquerDecalageMarqueur(entree, dx, dy) {
+      const decale = Math.hypot(dx, dy) >= 0.5;
+      entree.decalage = { dx: decale ? dx : 0, dy: decale ? dy : 0 };
+      // Poussé vers le bas (l'axe Y écran croît vers le bas) : sa bulle par
+      // défaut (ouverte vers le haut) recouvrirait l'autre boutique juste
+      // au-dessus — ouvrirBulle la décale sur le côté à la place. Signalé
+      // par l'utilisateur avec une capture réelle des deux avatars empilés.
+      entree.decalageBas = decale && dy > 0;
+      const el = entree.marqueur.getElement();
+      if (el) {
+        const contenu = el.querySelector(".marqueur-decale-contenu");
+        const trait = el.querySelector(".trait-rappel");
+        if (contenu) contenu.style.transform = decale ? `translate(${dx}px, ${dy}px)` : "";
+        if (trait) {
+          const ligne = trait.firstElementChild;
+          if (decale && ligne) {
+            ligne.setAttribute("x2", String(entree.ancre[0] + dx));
+            ligne.setAttribute("y2", String(entree.ancre[1] + dy));
+          }
+          trait.style.display = decale ? "" : "none";
+          trait.dataset.actif = decale ? "1" : "0";
+        }
+      }
+      entree.rafraichirPopup?.();
+    }
+
+    function recalculerDissociations(zoom = carte.getZoom()) {
+      if (!Number.isFinite(zoom)) return;
+      const echelle = echelleAvatarPourZoom(zoom);
       // "Vous êtes ici" inclus dans le même regroupement que les boutiques
       // (pas seulement entre boutiques) : sinon, quand il coïncide avec une
       // boutique, son badge reste caché derrière elle sans jamais être
-      // écarté — confirmé par capture d'écran réelle. Le pousser dans le
-      // même cercle que les boutiques qu'il chevauche règle ça sans
-      // toucher au pane/z-index (paneMoi doit rester sous markerPane pour
-      // que le survol/clic des boutiques continue de fonctionner).
-      const pointsGroupables = boutiquesAffichees.map((b) => ({ id: b.id, lat: b.lat, lng: b.lng }));
+      // écarté — confirmé par capture d'écran réelle. Son pane est
+      // maintenant AU-DESSUS des marqueurs (voir centrerSurPosition).
+      const points = boutiquesAffichees.map((b) => ({ id: b.id, ll: [b.lat, b.lng], ici: false }));
       if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
-        pointsGroupables.push({
-          id: "__ici__",
-          lat: positionOrigineMoiRef.current[0],
-          lng: positionOrigineMoiRef.current[1],
-        });
+        points.push({ id: "__ici__", ll: positionOrigineMoiRef.current, ici: true });
       }
-      const dejaGroupees = new Set();
-      pointsGroupables.forEach((b) => {
-        if (dejaGroupees.has(b.id)) return;
-        const p1 = carte.latLngToContainerPoint([b.lat, b.lng]);
-        const membres = pointsGroupables.filter((autre) => {
-          const p2 = carte.latLngToContainerPoint([autre.lat, autre.lng]);
-          return Math.hypot(p1.x - p2.x, p1.y - p2.y) < SEUIL_CLUSTER_PX;
-        });
-        membres.forEach((m) => dejaGroupees.add(m.id));
-
-        membres.forEach((m, i) => {
-          const entree = marqueursCreesParId.get(m.id);
-          if (!entree) return;
-          if (membres.length <= 1) {
-            entree.marqueur.setLatLng([m.lat, m.lng]);
-            entree.decalageBas = false;
-            if (entree.ligne) {
-              groupe.removeLayer(entree.ligne);
-              entree.ligne = null;
-            }
-            return;
-          }
-          const angle = (2 * Math.PI * i) / membres.length - Math.PI / 2;
-          const pOrigine = carte.latLngToContainerPoint([m.lat, m.lng]);
-          const pDecale = L.point(
-            pOrigine.x + RAYON_DISSOCIATION_PX * Math.cos(angle),
-            pOrigine.y + RAYON_DISSOCIATION_PX * Math.sin(angle)
-          );
-          const posDecalee = carte.containerPointToLatLng(pDecale);
-          entree.marqueur.setLatLng(posDecalee);
-          // Poussé vers le bas (sin(angle) > 0, l'axe Y écran croît vers le
-          // bas) : sa bulle par défaut (ouverte vers le haut) recouvrirait
-          // l'autre boutique juste au-dessus — ouvrirBulle la décale sur le
-          // côté à la place. Signalé par l'utilisateur avec une capture
-          // réelle des deux avatars empilés.
-          entree.decalageBas = Math.sin(angle) > 0;
-          if (entree.ligne) {
-            entree.ligne.setLatLngs([[m.lat, m.lng], posDecalee]);
-          } else {
-            entree.ligne = L.polyline([[m.lat, m.lng], posDecalee], {
-              color: "#ffffff",
-              weight: 1.5,
-              opacity: 0.7,
-              dashArray: "2,4",
-              interactive: false,
-            }).addTo(groupe);
-          }
-        });
+      // Pixels ABSOLUS au zoom évalué (project) : ne dépend ni du centre ni
+      // de l'animation en cours, donc utilisable dès zoomanim.
+      const pixels = points.map((p) => {
+        const px = carte.project(p.ll, zoom);
+        return { id: p.id, x: px.x, y: px.y, ici: p.ici };
+      });
+      const { decalages } = calculerDecalagesDissociation(pixels, { echelle });
+      pixels.forEach((p) => {
+        const entree = marqueursCreesParId.get(p.id);
+        if (!entree) return;
+        const d = decalages.get(p.id);
+        appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
     }
 
@@ -1024,6 +1013,9 @@ export default function GlobeExplorateurBoutiques({
         : "";
 
       const htmlMarqueur = `
+        <div class="marqueur-decale">
+        ${htmlTraitRappel(70, 85)}
+        <div class="marqueur-decale-contenu">
         <div class="snap-marker-pin group flex flex-col items-center select-none cursor-pointer transform transition-all duration-300 hover:scale-115 ${
           estSelectionne ? "scale-115 z-50" : "z-10"
         }">
@@ -1050,6 +1042,8 @@ export default function GlobeExplorateurBoutiques({
           <!-- Ombre portée 3D au sol -->
           <div class="w-8 h-2 bg-black/60 rounded-full blur-[1.5px] mt-1"></div>
         </div>
+        </div>
+        </div>
       `;
 
       const icone = L.divIcon({
@@ -1064,7 +1058,7 @@ export default function GlobeExplorateurBoutiques({
       // la dissociation automatique (voir recalculerDissociations) — sa
       // bulle doit alors s'ouvrir sur le côté plutôt que par-dessus l'autre
       // boutique juste au-dessus (voir ouvrirBulle plus bas).
-      marqueursCreesParId.set(b.id, { marqueur, ligne: null, decalageBas: false });
+      marqueursCreesParId.set(b.id, { marqueur, decalage: { dx: 0, dy: 0 }, decalageBas: false, ancre: [70, 85], rafraichirPopup: null });
 
       // Carrousel de produits au survol de la boutique (Inspiré de la capture utilisateur)
       const bId = String(b.id || "");
@@ -1194,20 +1188,31 @@ export default function GlobeExplorateurBoutiques({
         }, 10);
       };
 
+      // Le marqueur reste à sa vraie coordonnée (seul son CONTENU est décalé
+      // en pixels, voir recalculerDissociations) : la bulle doit donc être
+      // décalée du même vecteur pour rester collée à l'avatar affiché.
+      // Poussée vers le bas par la dissociation : ouverte sur le côté plutôt
+      // que par-dessus l'autre boutique juste au-dessus, sinon elle la
+      // recouvre entièrement. Signalé par l'utilisateur avec une capture
+      // réelle des deux avatars empilés.
+      const offsetPopup = () => {
+        const entree = marqueursCreesParId.get(b.id);
+        const d = entree?.decalage || { dx: 0, dy: 0 };
+        return entree?.decalageBas ? [116 + d.dx, -46 + d.dy] : [d.dx, -88 + d.dy];
+      };
+
       const ouvrirBulle = () => {
         if (timerSurvol) clearTimeout(timerSurvol);
-        // Poussée vers le bas par la dissociation automatique (voir
-        // recalculerDissociations) : ouvrir la bulle sur le côté plutôt que
-        // par-dessus l'autre boutique juste au-dessus, sinon elle la
-        // recouvre entièrement. Signalé par l'utilisateur avec une capture
-        // réelle des deux avatars empilés.
-        const entree = marqueursCreesParId.get(b.id);
-        popup.options.offset = entree?.decalageBas ? [116, -46] : [0, -88];
-        // marqueur.getLatLng() (pas b.lat/b.lng, figés) : après une
-        // dissociation, le marqueur a pu être déplacé légèrement, la bulle
-        // doit suivre sa position réelle actuelle.
+        popup.options.offset = offsetPopup();
         popup.setLatLng(marqueur.getLatLng()).openOn(carte);
         attacherEcouteursPopup();
+      };
+      // Le zoom change le décalage : une bulle déjà ouverte le suit.
+      marqueursCreesParId.get(b.id).rafraichirPopup = () => {
+        if (popup.isOpen()) {
+          popup.options.offset = offsetPopup();
+          popup.update();
+        }
       };
 
       const fermerBulle = () => {
@@ -1292,7 +1297,7 @@ export default function GlobeExplorateurBoutiques({
     // le déplacer/le tracer s'il chevauche une boutique — voir le
     // commentaire dans recalculerDissociations ci-dessus.
     if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
-      marqueursCreesParId.set("__ici__", { marqueur: marqueurMoiRef.current, ligne: null, decalageBas: false });
+      marqueursCreesParId.set("__ici__", { marqueur: marqueurMoiRef.current, decalage: { dx: 0, dy: 0 }, decalageBas: false, ancre: [50, 70], rafraichirPopup: null });
     }
 
     // Application initiale de la dissociation automatique, puis recalcul à
@@ -1310,7 +1315,20 @@ export default function GlobeExplorateurBoutiques({
       setTimeout(() => {
         if (carteRef.current === carte) recalculerDissociations();
       }, 0);
+    // Calculs sans effet sur les calques Leaflet (seulement du style DOM) :
+    // sûrs en plein zoomanim, donc appliqués SYNCHRONEMENT. zoomanim = zoom
+    // CIBLE (dès le début d'un geste animé ou d'un pincement, à chaque
+    // cadre) ; zoom = vol/zoom instantané, cadre par cadre ; zoomend/moveend
+    // = filet de sécurité (positionnement initial, fin de vol).
+    const surZoomAnim = (e) => {
+      if (carteRef.current === carte) recalculerDissociations(e.zoom);
+    };
+    const surZoom = () => {
+      if (carteRef.current === carte && !carte._animatingZoom) recalculerDissociations();
+    };
     gestionnaireDissociation();
+    carte.on("zoomanim", surZoomAnim);
+    carte.on("zoom", surZoom);
     carte.on("zoomend", gestionnaireDissociation);
     carte.on("moveend", gestionnaireDissociation);
 
@@ -1327,6 +1345,8 @@ export default function GlobeExplorateurBoutiques({
       dissociationCleanupRef.current();
     }
     dissociationCleanupRef.current = () => {
+      carte.off("zoomanim", surZoomAnim);
+      carte.off("zoom", surZoom);
       carte.off("zoomend", gestionnaireDissociation);
       carte.off("moveend", gestionnaireDissociation);
     };
@@ -1414,6 +1434,9 @@ export default function GlobeExplorateurBoutiques({
     }
 
     const htmlMoi = `
+      <div class="marqueur-decale">
+        ${htmlTraitRappel(50, 70)}
+        <div class="marqueur-decale-contenu">
       <div class="relative flex flex-col items-center select-none cursor-pointer">
         <div class="absolute -inset-4 bg-sky-500/30 rounded-full animate-ping pointer-events-none"></div>
         <div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center text-xl">
@@ -1421,6 +1444,8 @@ export default function GlobeExplorateurBoutiques({
         </div>
         <div class="mt-1 px-2.5 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-lg border border-white whitespace-nowrap">
           Vous êtes ici
+        </div>
+      </div>
         </div>
       </div>
     `;
@@ -1432,15 +1457,16 @@ export default function GlobeExplorateurBoutiques({
       iconAnchor: [50, 70],
     });
 
-    // Pane dédié sous markerPane (600, où vivent les marqueurs boutique) :
-    // quand la position de l'utilisateur coïncide avec une boutique,
-    // "Vous êtes ici" reste EN DESSOUS pour le survol ET le clic, quel que
-    // soit l'ordre de création des marqueurs. Même correctif que
-    // CarteBoutiques.jsx — le clic seul avait été corrigé (v92/v96), pas
-    // le survol.
+    // Pane dédié AU-DESSUS de markerPane (600) et sous les bulles (700) :
+    // "Vous êtes ici" reste toujours visible au-dessus des boutiques (demande
+    // explicite). Il n'intercepte plus le survol/le clic des boutiques
+    // voisines : l'élément du marqueur est en pointer-events:none et seul
+    // son contenu visible reçoit les événements (voir globals.css,
+    // .snap-custom-moi) — c'était la raison de l'ancien pane SOUS les
+    // marqueurs (correctifs v92/v96).
     if (!carte.getPane("paneMoi")) {
       carte.createPane("paneMoi");
-      carte.getPane("paneMoi").style.zIndex = 350;
+      carte.getPane("paneMoi").style.zIndex = 640;
     }
 
     marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
@@ -1458,6 +1484,11 @@ export default function GlobeExplorateurBoutiques({
     } else {
       carte.setView([pos.latitude, pos.longitude], 15.5);
     }
+    // Ré-enregistre "Vous êtes ici" dans le registre de dissociation : sans
+    // ça, un badge créé APRÈS le dernier rafraîchissement des marqueurs
+    // (bouton "Autour de moi" du globe) n'était jamais écarté d'une boutique
+    // superposée.
+    rafraichirMarqueursRef.current?.();
   }, [gererClicPointCluster]);
   // Même raisonnement que rafraichirMarqueursRef ci-dessus.
   useEffect(() => {

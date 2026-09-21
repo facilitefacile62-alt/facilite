@@ -317,13 +317,25 @@ export function echelleAvatarPourZoom(zoom, { zoomReference = 14, pas = 0.08, mi
  * carte, mais utile si on veut la débrancher sans détruire la carte.
  */
 export function brancherEchelleZoomAvatars(carte, options = {}) {
-  const appliquer = () => {
-    const echelle = echelleAvatarPourZoom(carte.getZoom(), options);
+  const appliquerPourZoom = (zoom) => {
+    const echelle = echelleAvatarPourZoom(zoom, options);
     carte.getContainer().querySelectorAll(".avatar-boutique-zoom-scale").forEach((el) => {
       el.style.transform = `scale(${echelle})`;
     });
   };
+  const appliquer = () => appliquerPourZoom(carte.getZoom());
+  // zoomanim = zoom CIBLE, dès le début d'un geste animé (molette, boutons,
+  // pincement) : avant, la taille des avatars ne changeait qu'à zoomend, d'un
+  // coup au relâchement (la dissociation des marqueurs superposés dépend de
+  // cette taille, voir dissociationMarqueurs.js). zoom = vol/zoom instantané.
+  const surZoomAnim = (e) => appliquerPourZoom(e.zoom);
   carte.on("zoomend", appliquer);
+  carte.on("zoom", appliquer);
+  carte.on("zoomanim", surZoomAnim);
   appliquer();
-  return () => carte.off("zoomend", appliquer);
+  return () => {
+    carte.off("zoomend", appliquer);
+    carte.off("zoom", appliquer);
+    carte.off("zoomanim", surZoomAnim);
+  };
 }
