@@ -35,7 +35,13 @@
         }
       ],
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Facilité utilise votre position pour afficher les articles du Marketplace près de vous."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

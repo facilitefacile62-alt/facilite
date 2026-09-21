@@ -2,16 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   CATEGORIES_MARKETPLACE,
+  distanceLisible,
   enStock,
   lieuBoutique,
   prixLisible,
+  RAYON_PROCHE_KM,
   type ArticleMarketplace,
 } from '@/lib/marketplace';
+import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
 // Marketplace natif : grille d'articles + recherche + catégories. Mêmes
@@ -45,6 +48,12 @@ function CarteArticle({ article, onPress }: { article: ArticleMarketplace; onPre
             <Text className="text-white text-[10px] font-bold">Sur commande</Text>
           </View>
         )}
+        {distanceLisible(article.distanceKm) && (
+          <View className="absolute bottom-2 left-2 flex-row items-center gap-1 bg-black/65 rounded-full px-2 py-0.5">
+            <Ionicons name="location" size={10} color="#6ee7c9" />
+            <Text className="text-white text-[10px] font-bold">{distanceLisible(article.distanceKm)}</Text>
+          </View>
+        )}
       </View>
       <View className="p-2.5">
         <Text className="text-[15px] font-extrabold" style={{ color: VERT_PROFOND }}>
@@ -68,7 +77,35 @@ export default function MarketplaceScreen() {
   const router = useRouter();
   const [categorie, setCategorie] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
-  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, recherche);
+  const { etat, position, activer, desactiver } = useLocalisation();
+  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, recherche, position);
+
+  // "Autour de moi" : la permission n'est demandée qu'ici, au toucher du bouton.
+  async function basculerAutourDeMoi() {
+    if (etat === 'active') {
+      desactiver();
+      return;
+    }
+    if (etat === 'recherche') return;
+    const resultat = await activer();
+    if (resultat === 'refusee') {
+      Alert.alert(
+        'Localisation désactivée',
+        'Autorisez la localisation dans les réglages pour voir les articles près de vous.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Ouvrir les réglages',
+            onPress: () => {
+              Linking.openSettings().catch(() => {});
+            },
+          },
+        ]
+      );
+    } else if (resultat === 'erreur') {
+      Alert.alert('Localisation', "Impossible d'obtenir votre position pour le moment.");
+    }
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -112,6 +149,22 @@ export default function MarketplaceScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+            <Pressable
+              onPress={basculerAutourDeMoi}
+              accessibilityLabel="Autour de moi"
+              className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border ${
+                etat === 'active' ? 'border-transparent' : 'bg-white border-[#10B981]'
+              }`}
+              style={etat === 'active' ? { backgroundColor: VERT_PROFOND } : undefined}>
+              {etat === 'recherche' ? (
+                <ActivityIndicator size="small" color="#10B981" />
+              ) : (
+                <Ionicons name="locate" size={14} color={etat === 'active' ? '#6ee7c9' : '#047857'} />
+              )}
+              <Text className={`text-[12.5px] font-bold ${etat === 'active' ? 'text-white' : 'text-[#047857]'}`}>
+                Autour de moi
+              </Text>
+            </Pressable>
             {[{ id: null as string | null, label: 'Toutes', icone: 'apps-outline' }, ...CATEGORIES_MARKETPLACE].map((c) => {
               const actif = categorie === c.id;
               return (
@@ -135,6 +188,12 @@ export default function MarketplaceScreen() {
             })}
           </ScrollView>
         </View>
+
+        {etat === 'active' && (
+          <Text className="px-4 mt-2 text-[11.5px] text-gray-500">
+            Articles dans un rayon de {RAYON_PROCHE_KM} km, du plus proche au plus éloigné.
+          </Text>
+        )}
 
         {articles === null && !erreur ? (
           <View className="flex-1 items-center justify-center">
@@ -166,7 +225,9 @@ export default function MarketplaceScreen() {
                 <Ionicons name="search-outline" size={40} color="#9CA3AF" />
                 <Text className="text-[15px] font-bold text-[#1A1A1A]">Aucun article trouvé</Text>
                 <Text className="text-[12.5px] text-gray-500 text-center">
-                  Essayez un autre mot ou une autre catégorie.
+                  {etat === 'active'
+                    ? `Aucun article dans un rayon de ${RAYON_PROCHE_KM} km. Touchez « Autour de moi » pour voir tous les articles.`
+                    : 'Essayez un autre mot ou une autre catégorie.'}
                 </Text>
               </View>
             }

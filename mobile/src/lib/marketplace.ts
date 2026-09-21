@@ -48,6 +48,10 @@ export type ArticleMarketplace = {
   distanceKm: number | null;
 };
 
+export type Position = { latitude: number; longitude: number };
+/** Rayon de "Autour de moi" : le même que sur le site. */
+export const RAYON_PROCHE_KM = 10;
+
 /** Chemin de stockage -> URL publique ; les URL déjà complètes sont conservées. */
 export function urlPhoto(chemin: string | null | undefined): string | null {
   if (!chemin || typeof chemin !== 'string') return null;
@@ -147,6 +151,79 @@ export async function chargerArticles({
   const { data, error } = await requete;
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as LigneArticle[]).map(versArticle);
+}
+
+type LigneProche = {
+  id: string;
+  titre: string;
+  description: string | null;
+  categorie: string;
+  prix_xof: number;
+  quantite: number;
+  statut: string;
+  photos: unknown;
+  boutique_id: string | null;
+  boutique_nom: string | null;
+  quartier: string | null;
+  ville: string | null;
+  whatsapp: string | null;
+  distance_km: number | null;
+  boutique_owner_id: string | null;
+};
+
+/**
+ * Articles triés du plus proche au plus éloigné. Le tri est fait par la base
+ * (fonction rechercher_articles_proches, exécutable avec la clé publique),
+ * comme sur le site : jamais en téléchargeant tout le catalogue.
+ */
+export async function chargerArticlesProches({
+  position,
+  categorie = null,
+  texte = '',
+  rayonKm = RAYON_PROCHE_KM,
+  limite = 40,
+}: {
+  position: Position;
+  categorie?: string | null;
+  texte?: string;
+  rayonKm?: number;
+  limite?: number;
+}): Promise<ArticleMarketplace[]> {
+  const { data, error } = await supabase.rpc('rechercher_articles_proches', {
+    p_lat: position.latitude,
+    p_lng: position.longitude,
+    p_rayon_km: rayonKm,
+    p_categorie: categorie,
+    p_texte: texte.trim() || null,
+    p_en_stock: false,
+    p_limite: limite,
+  });
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as LigneProche[]).map((r) => ({
+    id: r.id,
+    titre: r.titre,
+    description: r.description || '',
+    categorie: r.categorie,
+    prixXof: r.prix_xof,
+    quantite: r.quantite,
+    statut: r.statut,
+    photos: listePhotos(r.photos),
+    boutiqueId: r.boutique_id,
+    boutiqueNom: r.boutique_nom || 'Boutique',
+    quartier: r.quartier,
+    ville: r.ville,
+    whatsapp: r.whatsapp,
+    proprietaireId: r.boutique_owner_id,
+    distanceKm: r.distance_km,
+  }));
+}
+
+/** 0,85 -> "850 m" ; 3,4 -> "3,4 km" ; null -> null. */
+export function distanceLisible(km: number | null | undefined): string | null {
+  if (km === null || km === undefined || !Number.isFinite(km)) return null;
+  if (km < 1) return `${Math.max(1, Math.round(km * 1000))} m`;
+  return `${(Math.round(km * 10) / 10).toString().replace('.', ',')} km`;
 }
 
 /** Un article par son identifiant (fiche produit). */
