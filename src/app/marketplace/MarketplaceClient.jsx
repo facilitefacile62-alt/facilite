@@ -5195,44 +5195,21 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
   const photoPrincipale = photos[photoIndex] || photos[0] || null;
   const enStock = article.statut === "en_stock" || Number(article.quantite) > 0;
   const prixUnitaire = Number(article.prix_xof) || 0;
-
-  // Calcul du barème de prix dégressif inspiré d'Alibaba (1:1 Capture)
-  const tiersPrix = useMemo(() => {
-    const p = Math.max(prixUnitaire, 100);
-    return [
-      { min: 1, max: 4, label: "1-4 pièces", prix: p },
-      { min: 5, max: 49, label: "5-49 pièces", prix: Math.round(p * 0.95) },
-      { min: 50, max: 299, label: "50-299 pièces", prix: Math.round(p * 0.9) },
-      { min: 300, max: 999999, label: "≥ 300 pièces", prix: Math.round(p * 0.82) },
-    ];
-  }, [prixUnitaire]);
-
-  // Trouver le palier actif en fonction de la quantité
-  const tierActif = tiersPrix.find((t) => quantite >= t.min && quantite <= t.max) || tiersPrix[0];
-  const prixApplique = tierActif.prix;
-  const prixTotal = prixApplique * quantite;
-  const ancienPrix = Math.round(prixUnitaire * 1.25);
+  const ancienPrix = article.ancien_prix_xof
+    ? Number(article.ancien_prix_xof)
+    : Math.round(prixUnitaire * 1.12);
+  const reductionMontant = Math.max(ancienPrix - prixUnitaire, 1000);
+  const pourcentagePromo = ancienPrix > 0
+    ? Math.max(5, Math.round(((ancienPrix - prixUnitaire) / ancienPrix) * 100))
+    : 11;
+  const prixTotal = prixUnitaire * quantite;
   const nomBoutique = article.boutique_nom || "Boutique Officielle";
   const sku = `SKU: SN-${(article.id || "26041620").replace(/\D/g, "").slice(0, 10).padEnd(10, "8")}`;
-
-  // Options de couleur / style
-  const COULEURS = [
-    { nom: "Noir Intense", pastille: "#18181B" },
-    { nom: "Marron Cuir", pastille: "#78350F" },
-    { nom: "Camel Doré", pastille: "#D97706" },
-    { nom: "Beige Crème", pastille: "#F5EBE0" },
-  ];
-
-  const FORMATS = [
-    article.categorie ? `Modèle ${article.categorie}` : "Format Standard",
-    "Pack Duo Éco",
-    "Édition Prestige",
-  ];
 
   const urlPartage = typeof window !== "undefined" ? `${window.location.origin}/marketplace?article=${article.id}` : "";
 
   const messageWhatsApp = encodeURIComponent(
-    `Bonjour ${nomBoutique},\nJe vous contacte depuis Facilité au sujet de votre produit :\n- *Produit* : ${article.titre}\n- *Option / Couleur* : ${couleurChoisie} (${formatChoisi})\n- *Quantité* : ${quantite} pièce(s)\n- *Total* : ${prixLisible(prixTotal)} FCFA\n\nLien du produit : ${urlPartage}\n\nPouvez-vous me confirmer la disponibilité et les délais de livraison ? Merci !`
+    `Bonjour ${nomBoutique},\nJe vous contacte depuis Facilité au sujet de votre produit :\n- *Produit* : ${article.titre}\n- *Quantité* : ${quantite} pièce(s)\n- *Prix unitaire* : ${prixLisible(prixUnitaire)} FCFA\n- *Total* : ${prixLisible(prixTotal)} FCFA\n\nLien du produit : ${urlPartage}\n\nPouvez-vous me confirmer la disponibilité et les délais de livraison ? Merci !`
   );
 
   const numeroWhatsApp = normaliserWhatsapp(article.telephone_whatsapp || article.whatsapp);
@@ -5271,7 +5248,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
     setErreurCommande("");
     const libellePaiement = { wave: "Wave", om: "Orange Money", livraison: "Paiement à la livraison" }[moyenPaiement] || moyenPaiement;
     const messageCommande = encodeURIComponent(
-      `Bonjour ${nomBoutique},\nJe souhaite commander depuis Facilité :\n- *Produit* : ${article.titre}\n- *Option / Couleur* : ${couleurChoisie} (${formatChoisi})\n- *Quantité* : ${quantite} pièce(s)\n- *Total* : ${prixLisible(prixTotal)} FCFA\n\n*Livraison*\n- Nom : ${livraisonNom}\n- Téléphone : ${livraisonTel}\n- Adresse : ${livraisonAdresse}\n- Paiement souhaité : ${libellePaiement}\n\nLien du produit : ${urlPartage}`
+      `Bonjour ${nomBoutique},\nJe souhaite commander depuis Facilité :\n- *Produit* : ${article.titre}\n- *Quantité* : ${quantite} pièce(s)\n- *Prix unitaire* : ${prixLisible(prixUnitaire)} FCFA\n- *Total* : ${prixLisible(prixTotal)} FCFA\n\n*Livraison*\n- Nom : ${livraisonNom}\n- Téléphone : ${livraisonTel}\n- Adresse : ${livraisonAdresse}\n- Paiement souhaité : ${libellePaiement}\n\nLien du produit : ${urlPartage}`
     );
     window.open(`https://wa.me/${numeroWhatsApp.replace("+", "")}?text=${messageCommande}`, "_blank", "noopener,noreferrer");
     setCommandeEnvoyee(true);
@@ -5422,143 +5399,129 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
               </div>
             </div>
 
-            {/* 2. COLONNE CENTRALE (lg:col-span-4) : Titre, Notes, Barème Prix & Options */}
-            <div className="lg:col-span-4 space-y-4">
+            {/* 2. COLONNE CENTRALE (lg:col-span-4) : Fiche Produit (1:1 Inspiré de la Capture 2) */}
+            <div className="lg:col-span-4 space-y-3.5">
               
-              {/* Titre & Évaluation (1:1 Capture) */}
-              <div className="space-y-1.5">
-                <h1 className="text-lg sm:text-xl font-black text-gray-950 dark:text-white leading-snug">
-                  {article.titre}
-                </h1>
-                
-                <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-1 text-amber-500 font-extrabold">
-                    <span>★</span>
-                    <span className="text-gray-900 dark:text-white font-bold">4.8</span>
-                    <span className="text-gray-400 font-normal hover:underline cursor-pointer">(21 avis)</span>
-                  </div>
-                  <span className="text-gray-300 dark:text-zinc-700">•</span>
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">620+ vendus</span>
-                  <span className="text-gray-300 dark:text-zinc-700">•</span>
-                  <span className="font-mono text-[11px] text-gray-400">{sku}</span>
-                </div>
-              </div>
-
-              {/* GRILLE DE PRIX DÉGRESSIFS EN FCFA (Style Alibaba 1:1 Capture) */}
-              <div className="p-3.5 rounded-2xl bg-orange-50/50 dark:bg-zinc-900/80 border border-orange-200/80 dark:border-zinc-800">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {tiersPrix.map((t, idx) => {
-                    const estCeTier = tierActif.label === t.label;
-                    return (
-                      <div
-                        key={idx}
-                        className={`p-2 rounded-xl text-center transition ${
-                          estCeTier
-                            ? "bg-white dark:bg-zinc-800 shadow-xs border-2 border-[#E14D2A] text-gray-900 dark:text-white scale-102"
-                            : "bg-transparent text-gray-600 dark:text-gray-400"
-                        }`}
-                      >
-                        <p className="text-xs sm:text-sm font-black text-[#D9381E] leading-tight">
-                          {prixLisible(t.prix)}{" "}
-                          <span className="text-[10px] font-bold">FCFA</span>
-                        </p>
-                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-0.5">
-                          {t.label}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-2.5 pt-2 border-t border-orange-200/50 dark:border-zinc-800 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400 line-through text-[11px]">
-                      {prixLisible(ancienPrix)} FCFA
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded-md bg-[#D9381E] text-white text-[10px] font-black">
-                      -20% PROMO
-                    </span>
-                  </div>
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                    Paiement sécurisé & direct
+              {/* En-tête : Badges & Favoris (1:1 Capture 2) */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-sm bg-[#185adb] text-white text-[11px] font-bold tracking-tight">
+                    Boutique Officielle
+                  </span>
+                  <span className="px-2 py-0.5 rounded-sm bg-[#e6004c] text-white text-[11px] font-bold tracking-tight">
+                    {prixLisible(reductionMontant)}F de réduction
                   </span>
                 </div>
+                
+                <button
+                  type="button"
+                  onClick={() => setAime(!aime)}
+                  className="p-1 hover:scale-110 transition cursor-pointer text-[#e55b13]"
+                  title={aime ? "Retirer des favoris" : "Ajouter aux favoris"}
+                >
+                  <i className={`${aime ? "fa-solid text-red-500" : "fa-regular text-[#e55b13]"} fa-heart text-2xl`}></i>
+                </button>
               </div>
 
-              {/* Sélection des Couleurs / Variantes (1:1 Capture) */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center justify-between">
-                  <span>Couleur / Style :</span>
-                  <span className="text-gray-500 font-semibold">{couleurChoisie}</span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {COULEURS.map((c) => (
-                    <button
-                      key={c.nom}
-                      type="button"
-                      onClick={() => setCouleurChoisie(c.nom)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border ${
-                        couleurChoisie === c.nom
-                          ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-xs"
-                          : "border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:border-gray-300"
-                      }`}
-                    >
-                      <span
-                        className="w-3 h-3 rounded-full border border-black/20 shrink-0"
-                        style={{ backgroundColor: c.pastille }}
-                      />
-                      <span>{c.nom}</span>
-                    </button>
-                  ))}
+              {/* Titre Produit (1:1 Capture 2) */}
+              <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-950 dark:text-white leading-snug">
+                {article.titre}
+              </h1>
+
+              {/* Marque & Lien Produits Similaires (1:1 Capture 2) */}
+              <div className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-400">
+                <span>Marque: </span>
+                <button
+                  type="button"
+                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+                >
+                  {nomBoutique}
+                </button>
+                <span className="mx-1.5 text-gray-400">|</span>
+                <button
+                  type="button"
+                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+                >
+                  Produits similaires par {nomBoutique}
+                </button>
+              </div>
+
+              {/* Ligne séparatrice fine (1:1 Capture 2) */}
+              <div className="border-t border-gray-200 dark:border-zinc-800" />
+
+              {/* BLOC PRIX & RÉDUCTION (1:1 Capture 2) */}
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2.5 flex-wrap">
+                  <span className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
+                    {prixLisible(prixUnitaire)} FCFA
+                  </span>
+                  <span className="text-base sm:text-lg text-gray-400 dark:text-gray-500 line-through font-normal">
+                    {prixLisible(ancienPrix)} FCFA
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-sm bg-[#fef3e9] text-[#e55b13] dark:bg-orange-950/60 dark:text-orange-400 text-xs font-black">
+                    -{pourcentagePromo}%
+                  </span>
                 </div>
+
+                {/* Statut Stock / Rareté (1:1 Capture 2) */}
+                <p className="text-xs sm:text-[13px] font-medium text-[#b45309] dark:text-amber-400 pt-0.5">
+                  {enStock ? "Quelques articles restants" : "Sur commande"}
+                </p>
+
+                {/* Frais de Livraison (1:1 Capture 2) */}
+                <p className="text-xs sm:text-[13px] text-gray-700 dark:text-gray-300">
+                  + Livraison à partir de <strong className="font-bold text-gray-900 dark:text-white">550 FCFA</strong> .
+                </p>
               </div>
 
-              {/* Sélection des Formats / Options */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
-                  Option / Format :
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {FORMATS.map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setFormatChoisi(f)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                        formatChoisi === f
-                          ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 shadow-xs"
-                          : "border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:border-gray-300"
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  ))}
+              {/* Carte Coupon / Voucher de réduction (1:1 Capture 2) */}
+              <div className="border border-[#fed7aa] bg-[#fffbf7] dark:bg-amber-950/30 dark:border-amber-800/40 rounded-md px-3 py-2 flex items-center justify-between text-[#e55b13] font-medium text-xs sm:text-sm cursor-pointer hover:bg-orange-50/80 transition">
+                <div className="flex items-center gap-2 truncate">
+                  <i className="fa-solid fa-tag text-[#e55b13]"></i>
+                  <span className="truncate">
+                    {reductionMontant > 0 ? `${prixLisible(reductionMontant)} FCFA de réduction sur ce produit` : `Promo spéciale sur ${article.titre?.slice(0, 24)}`}
+                  </span>
                 </div>
+                <i className="fa-solid fa-chevron-right text-xs text-[#e55b13] shrink-0 ml-2"></i>
               </div>
 
-              {/* Sélecteur de Quantité & Calcul du Total en direct */}
-              <div className="p-3 rounded-2xl bg-gray-50 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
+              {/* Évaluation / Avis Étoiles (1:1 Capture 2) */}
+              <div className="flex items-center gap-1.5 text-xs sm:text-[13px] text-gray-500 dark:text-gray-400">
+                <div className="flex items-center text-gray-300 dark:text-zinc-600 gap-0.5">
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                  <i className="fa-solid fa-star"></i>
+                </div>
+                <span>(Pas d&apos;avis disponibles)</span>
+              </div>
+
+              {/* Sélecteur de Quantité Compact */}
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">Quantité :</span>
-                  <span className="text-[11px] text-gray-500 font-medium">Prix unitaire : {prixLisible(prixApplique)} F</span>
+                  <span className="text-[11px] text-gray-500 font-medium">Prix unitaire : {prixLisible(prixUnitaire)} F</span>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
+                  <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
                     <button
                       type="button"
                       onClick={() => setQuantite(Math.max(1, quantite - 1))}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
                     >
                       −
                     </button>
-                    <span className="w-9 text-center text-xs font-black text-gray-900 dark:text-white">
+                    <span className="w-8 text-center text-xs font-black text-gray-900 dark:text-white">
                       {quantite}
                     </span>
                     <button
                       type="button"
                       onClick={() => setQuantite(quantite + 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
                     >
                       +
                     </button>
