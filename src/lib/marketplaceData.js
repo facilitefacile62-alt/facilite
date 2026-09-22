@@ -77,41 +77,79 @@ export async function compresserImage(fichier) {
   if (!(fichier instanceof Blob)) {
     throw new Error("Fichier invalide.");
   }
-  if (!fichier.type.startsWith("image/")) {
+  const isImageType =
+    (fichier.type && fichier.type.toLowerCase().startsWith("image/")) ||
+    /\.(jpe?g|png|webp|heic|heif|bmp|gif|tiff?)$/i.test(fichier.name || "");
+  if (!isImageType && fichier.type) {
     throw new Error("Ce fichier n'est pas une image.");
   }
 
-  // createImageBitmap décode hors du fil principal : sur un téléphone d'entrée
-  // de gamme, décoder une photo de 12 Mpx avec <img> fige l'interface une
-  // seconde ou deux, et la personne croit que l'application a planté.
-  const bitmap = await createImageBitmap(fichier);
+  try {
+    let bitmap = null;
+    let width = 0;
+    let height = 0;
+    let sourceElement = null;
 
-  const ratio = Math.min(1, LARGEUR_MAX / Math.max(bitmap.width, bitmap.height));
-  const largeur = Math.round(bitmap.width * ratio);
-  const hauteur = Math.round(bitmap.height * ratio);
+    if (typeof createImageBitmap === "function") {
+      try {
+        bitmap = await createImageBitmap(fichier);
+        width = bitmap.width;
+        height = bitmap.height;
+        sourceElement = bitmap;
+      } catch (bmpErr) {
+        console.warn("[compresserImage] createImageBitmap fallback sur Image:", bmpErr);
+      }
+    }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = largeur;
-  canvas.height = hauteur;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(bitmap, 0, 0, largeur, hauteur);
-  bitmap.close?.();
+    if (!sourceElement && typeof window !== "undefined") {
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        const url = URL.createObjectURL(fichier);
+        i.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(i);
+        };
+        i.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Impossible de décoder l'image."));
+        };
+        i.src = url;
+      });
+      width = img.naturalWidth || img.width;
+      height = img.naturalHeight || img.height;
+      sourceElement = img;
+    }
 
-  let qualite = QUALITE;
-  let blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", qualite));
+    if (!sourceElement || !width || !height) {
+      return fichier;
+    }
 
-  // Une photo très détaillée peut rester lourde après un seul passage. On
-  // rabote la qualité au plus trois fois — au-delà, l'image devient laide sans
-  // gagner grand-chose, et mieux vaut envoyer un fichier un peu plus gros.
-  let essais = 0;
-  while (blob && blob.size > POIDS_VISE && qualite > 0.4 && essais < 3) {
-    qualite -= 0.12;
-    essais += 1;
-    blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", qualite));
+    const ratio = Math.min(1, LARGEUR_MAX / Math.max(width, height));
+    const largeur = Math.round(width * ratio);
+    const hauteur = Math.round(height * ratio);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = largeur;
+    canvas.height = hauteur;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(sourceElement, 0, 0, largeur, hauteur);
+    if (bitmap?.close) bitmap.close();
+
+    let qualite = QUALITE;
+    let blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", qualite));
+
+    let essais = 0;
+    while (blob && blob.size > POIDS_VISE && qualite > 0.4 && essais < 3) {
+      qualite -= 0.12;
+      essais += 1;
+      blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", qualite));
+    }
+
+    return blob || fichier;
+  } catch (err) {
+    console.warn("[compresserImage] Repli direct sur fichier brut:", err);
+    return fichier;
   }
-
-  if (!blob) throw new Error("La compression de l'image a échoué.");
-  return blob;
 }
 
 /**

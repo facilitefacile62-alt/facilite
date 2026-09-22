@@ -74,6 +74,11 @@ export default function EcranWeb() {
 
   // Jamais dans l'URL (jamais un log d'accès, jamais un historique de
   // navigateur) : les jetons voyagent uniquement dans le corps de la requête.
+  // Pas de `headers` ici : react-native-webview le documente explicitement
+  // comme non pris en charge sur Android pour une requête POST (seulement
+  // pour GET) — la Content-Type "application/x-www-form-urlencoded" est de
+  // toute façon posée automatiquement par l'API Android sous-jacente
+  // (WebView.postUrl) pour ce type de requête.
   const source: WebViewSource = config.authRequise
     ? {
         uri: `${SITE_URL}/auth/mobile-bridge`,
@@ -81,7 +86,6 @@ export default function EcranWeb() {
         body: `access_token=${encodeURIComponent(session?.access_token ?? '')}&refresh_token=${encodeURIComponent(
           session?.refresh_token ?? ''
         )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}`,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       }
     : { uri: `${SITE_URL}${config.chemin}` };
 

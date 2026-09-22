@@ -1282,7 +1282,6 @@ export default function Header() {
                     ref={headerFileInputPhotoRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handleHeaderScanPhoto}
                     className="hidden"
                     disabled={headerScanPhotoEnCours}

@@ -1932,15 +1932,7 @@ function VueReglages({
 
   if (modalActive === "infos_perso") {
     return (
-      // Plein écran fixe sur mobile (z-50, par-dessus la carte boutique et
-      // sa bannière) : sans ça, ce panneau se contentait de s'empiler SOUS
-      // la colonne boutique sur petit écran (2 colonnes desktop qui
-      // passent naturellement en 1 colonne mobile), donnant l'impression
-      // d'une modale flottant devant un arrière-plan visible au lieu d'une
-      // vraie page dédiée. Signalé le 14/09/2026. À partir de md: (desktop),
-      // retour au comportement d'origine : contenu de la 2e colonne, à
-      // côté de la carte boutique.
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-white dark:bg-zinc-900 md:static md:z-auto md:overflow-hidden md:rounded-2xl md:border md:border-gray-100 md:dark:border-zinc-800 md:shadow-sm text-left w-full md:min-h-[600px] animate-fadeIn">
+      <div className="relative w-full min-h-full bg-white dark:bg-zinc-900 md:rounded-2xl md:border md:border-gray-100 md:dark:border-zinc-800 md:shadow-sm text-left overflow-y-auto animate-fadeIn">
         {/* Toast de confirmation */}
         {toastMessage && (
           <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
@@ -1957,8 +1949,8 @@ function VueReglages({
           onChange={handleAvatarUpload}
         />
 
-        {/* Header de la page : < Modifier le profil */}
-        <div className="bg-[#F8FAFC] dark:bg-zinc-900/90 px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+        {/* Header de la page fixe & collant : ← Modifier le profil */}
+        <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -1966,13 +1958,14 @@ function VueReglages({
                 if (onRetour) onRetour();
                 else setModalActive(null);
               }}
-              className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer text-gray-800 dark:text-gray-100 text-base font-bold"
+              className="px-3 py-1.5 rounded-full bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 flex items-center gap-2 transition cursor-pointer text-gray-800 dark:text-gray-100 text-xs font-black shadow-xs border border-gray-200 dark:border-zinc-700 active:scale-95"
               title="Retour"
             >
-              <i className="fa-solid fa-chevron-left text-sm"></i>
+              <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
+              <span>Retour</span>
             </button>
             <div>
-              <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-tight">
                 Modifier le profil
               </h2>
               <span className="text-[11px] font-bold text-[#00c988] dark:text-[#10e688] block -mt-0.5">
@@ -1982,16 +1975,20 @@ function VueReglages({
           </div>
           <button
             type="button"
-            onClick={() => onRetour?.()}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
+            onClick={() => {
+              if (onRetour) onRetour();
+              else if (onFermerMarketplace) onFermerMarketplace();
+              else setModalActive(null);
+            }}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition shadow-xs"
             title="Fermer"
           >
             <i className="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
 
-        {/* Corps de la page Informations personnelles (1:1 Conforme à la capture) */}
-        <div className="p-4 sm:p-6 max-w-lg mx-auto">
+        {/* Corps de la page Informations personnelles avec grand padding inférieur pour visibilité totale */}
+        <div className="p-4 sm:p-6 max-w-lg mx-auto pb-48">
           <form onSubmit={handleSaveInfosPerso} className="space-y-4 pt-2">
             {/* Avatar Circulaire Centré avec Bouton Crayon (1:1 Capture) */}
             <div className="flex justify-center pb-2">
@@ -2443,7 +2440,7 @@ function VueReglages({
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden text-left relative w-full">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden text-left relative w-full pb-40">
       {/* Toast de confirmation */}
       {toastMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-gray-900 text-white dark:bg-white dark:text-gray-950 text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2 animate-bounce">
@@ -2460,21 +2457,34 @@ function VueReglages({
         onChange={handleAvatarUpload}
       />
 
-      {/* Header : < Réglages (1:1 Capture exacte) */}
-      <div className="bg-[#F8FAFC] dark:bg-zinc-900/90 px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-3">
-        {onRetour && (
+      {/* Header collant : ← Réglages */}
+      <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3.5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-3">
+          {onRetour && (
+            <button
+              type="button"
+              onClick={onRetour}
+              className="px-3 py-1.5 rounded-full bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 flex items-center gap-2 transition cursor-pointer text-gray-800 dark:text-gray-100 text-xs font-black shadow-xs border border-gray-200 dark:border-zinc-700 active:scale-95"
+              title="Retour"
+            >
+              <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
+              <span>Retour</span>
+            </button>
+          )}
+          <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+            Réglages
+          </h2>
+        </div>
+        {onFermerMarketplace && (
           <button
             type="button"
-            onClick={onRetour}
-            className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer text-gray-800 dark:text-gray-100 text-base font-bold"
-            title="Retour"
+            onClick={onFermerMarketplace}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition shadow-xs"
+            title="Fermer"
           >
-            <i className="fa-solid fa-chevron-left text-sm"></i>
+            <i className="fa-solid fa-xmark text-sm"></i>
           </button>
         )}
-        <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
-          Réglages
-        </h2>
       </div>
 
       {/* GROUPE 1 : Boutique, Vitrine & Ventes */}
@@ -9196,15 +9206,17 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
   const [messageSucces, setMessageSucces] = useState("");
   const [erreur, setErreur] = useState("");
   const [motsCles, setMotsCles] = useState([]);
-  const champFichier = useRef(null);
+  const [modalChoixSourcePhoto, setModalChoixSourcePhoto] = useState(false);
+  const champGalerie = useRef(null);
+  const champCamera = useRef(null);
+  const champScanGalerie = useRef(null);
   const champScanCamera = useRef(null);
 
-  // Bouton flottant "Lens" (ModalFicheBoutique) : ouvre directement
-  // l'appareil photo dès l'arrivée sur ce formulaire au lieu de forcer un
-  // second clic sur "Scanner le produit avec l'IA" ci-dessous.
+  // Bouton flottant "Lens" (ModalFicheBoutique) : ouvre le sélecteur d'image / caméra
+  // dès l'arrivée sur ce formulaire sans forcer un second clic.
   useEffect(() => {
     if (jetonAutoScan) {
-      champScanCamera.current?.click();
+      champScanGalerie.current?.click();
       onAutoScanDeclenche?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -9344,9 +9356,11 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
     }
   };
 
-  const ajouterPhotos = async (e, declencherScanAuto = false) => {
+  const ajouterPhotos = async (e, declencherScanAuto = true) => {
     const fichiers = Array.from(e.target.files || []);
-    if (champFichier.current) champFichier.current.value = "";
+    if (champGalerie.current) champGalerie.current.value = "";
+    if (champCamera.current) champCamera.current.value = "";
+    if (champScanGalerie.current) champScanGalerie.current.value = "";
     if (champScanCamera.current) champScanCamera.current.value = "";
     if (fichiers.length === 0) return;
 
@@ -9354,25 +9368,45 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
     setCompression(true);
     try {
       const restant = Math.max(0, 6 - photos.length);
-      const nouvellesPhotos = [];
-      for (const f of fichiers.slice(0, restant)) {
-        const chemin = await envoyerPhoto(f, userId);
-        const pObj = { chemin, apercu: urlPhoto(chemin), rawFile: f };
-        nouvellesPhotos.push(pObj);
-        setPhotos((p) => [...p, pObj]);
+      const fichiersATraiter = fichiers.slice(0, restant);
+      if (fichiersATraiter.length === 0) {
+        setErreur("Limite maximale de 6 photos atteinte.");
+        return;
       }
+
+      const nouvellesPhotos = [];
+      for (const f of fichiersATraiter) {
+        let chemin = null;
+        try {
+          if (userId) {
+            chemin = await envoyerPhoto(f, userId);
+          }
+        } catch (uploadErr) {
+          console.warn("[Upload Photo Warning]", uploadErr);
+        }
+        const tempId = chemin || `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const localApercu = URL.createObjectURL(f);
+        const pObj = {
+          chemin: tempId,
+          apercu: chemin ? urlPhoto(chemin) : localApercu,
+          rawFile: f,
+        };
+        nouvellesPhotos.push(pObj);
+      }
+
+      setPhotos((p) => [...p, ...nouvellesPhotos]);
+
       if (fichiers.length > restant) {
         setErreur("6 photos au maximum par article.");
       }
 
-      // Si scan explicitement demandé OU si le commerçant importe une photo sans avoir encore saisi de titre :
-      // On lance automatiquement l'analyse Vision IA pour le "Zéro Saisie" !
+      // Scanner automatiquement la première photo ajoutée
       const premierePhoto = nouvellesPhotos[0];
-      if (premierePhoto && (declencherScanAuto || !champs.titre.trim())) {
+      if (premierePhoto && declencherScanAuto) {
         await scannerProduitParPhoto(premierePhoto.rawFile, premierePhoto.chemin);
       }
     } catch (err) {
-      setErreur(err.message);
+      setErreur(err.message || "Erreur lors de l'ajout des photos.");
     } finally {
       setCompression(false);
     }
@@ -9380,7 +9414,9 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
 
   const retirerPhoto = async (chemin) => {
     setPhotos((p) => p.filter((x) => x.chemin !== chemin));
-    await supprimerPhoto(chemin);
+    if (chemin && !chemin.startsWith("temp_") && !chemin.startsWith("blob:")) {
+      await supprimerPhoto(chemin);
+    }
   };
 
   const soumettre = async (e) => {
@@ -9389,7 +9425,21 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
     setErreur("");
     setMessageSucces("");
     try {
-      await publierArticle(storeId, { ...champs, photos: photos.map((p) => p.chemin) });
+      const chemisArray = [];
+      for (const p of photos) {
+        if (p.chemin && !p.chemin.startsWith("temp_") && !p.chemin.startsWith("blob:")) {
+          chemisArray.push(p.chemin);
+        } else if (p.rawFile && userId) {
+          try {
+            const ch = await envoyerPhoto(p.rawFile, userId);
+            chemisArray.push(ch);
+          } catch (upErr) {
+            console.warn("[Upload Final Warning]", upErr);
+          }
+        }
+      }
+
+      await publierArticle(storeId, { ...champs, photos: chemisArray });
       setChamps({ titre: "", description: "", categorie: champs.categorie, prix_xof: "", quantite: 1 });
       setPhotos([]);
       setMotsCles([]);
@@ -9398,7 +9448,7 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
       await onPublie();
       setTimeout(() => setMessageSucces(""), 6000);
     } catch (err) {
-      setErreur(err.message);
+      setErreur(err.message || "Erreur lors de la publication.");
     } finally {
       setEnvoi(false);
     }
@@ -9408,7 +9458,7 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
     if (photos.length > 0) {
       scannerProduitParPhoto(photos[0].rawFile || null, photos[0].chemin);
     } else {
-      champScanCamera.current?.click();
+      setModalChoixSourcePhoto(true);
     }
   };
 
@@ -9417,6 +9467,68 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
       onSubmit={soumettre}
       className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 shadow-sm transition-all"
     >
+      {/* Modal Choix Source Photo (Prendre une photo OU Importer) */}
+      {modalChoixSourcePhoto && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-800 space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <i className="fa-solid fa-camera-retro text-[#1877F2]"></i>
+                Photo du produit
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalChoixSourcePhoto(false)}
+                className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black dark:hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Choisissez comment vous souhaitez ajouter la photo pour la scanner et remplir votre fiche :
+            </p>
+
+            <div className="grid grid-cols-1 gap-2.5">
+              {/* Option 1 : Importer depuis Galerie */}
+              <button
+                type="button"
+                onClick={() => {
+                  setModalChoixSourcePhoto(false);
+                  champGalerie.current?.click();
+                }}
+                className="p-3.5 rounded-2xl border-2 border-dashed border-blue-200 dark:border-blue-900 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 flex items-center gap-3.5 transition group cursor-pointer text-left"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition shrink-0">
+                  <i className="fa-solid fa-images"></i>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-gray-900 dark:text-white">Importer une photo</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Choisir dans la galerie ou fichiers</p>
+                </div>
+              </button>
+
+              {/* Option 2 : Prendre une photo */}
+              <button
+                type="button"
+                onClick={() => {
+                  setModalChoixSourcePhoto(false);
+                  champCamera.current?.click();
+                }}
+                className="p-3.5 rounded-2xl border-2 border-dashed border-emerald-200 dark:border-emerald-900 hover:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 flex items-center gap-3.5 transition group cursor-pointer text-left"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-105 transition shrink-0">
+                  <i className="fa-solid fa-camera"></i>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-gray-900 dark:text-white">Prendre une photo</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">Ouvrir directement l'appareil photo</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* En-tête du Formulaire */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
         <div>
@@ -9628,16 +9740,33 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
           ))}
 
           {photos.length < 6 && (
-            <button
-              type="button"
-              onClick={() => champFichier.current?.click()}
-              disabled={compression || scanIAEnCours}
-              className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#1877F2] text-gray-400 dark:text-gray-500 hover:text-[#1877F2] flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition group"
-              aria-label="Ajouter une photo"
-            >
-              <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-camera"} text-base group-hover:scale-110 transition`}></i>
-              <span className="text-[9px] font-bold">Photo</span>
-            </button>
+            <>
+              {/* Bouton Importer depuis Galerie / Fichiers & Scanner */}
+              <button
+                type="button"
+                onClick={() => champGalerie.current?.click()}
+                disabled={compression || scanIAEnCours}
+                className="min-w-[85px] h-20 px-2.5 rounded-2xl border-2 border-dashed border-blue-300 dark:border-blue-800 hover:border-[#1877F2] text-gray-600 dark:text-gray-300 hover:text-[#1877F2] bg-blue-50/40 dark:bg-blue-950/20 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition group"
+                aria-label="Importer depuis la galerie et scanner"
+                title="Choisir une image dans votre galerie ou vos fichiers pour la scanner"
+              >
+                <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-images"} text-lg text-[#1877F2] group-hover:scale-110 transition`}></i>
+                <span className="text-[10px] font-black text-center leading-tight">Galerie &amp; Scan</span>
+              </button>
+
+              {/* Bouton Prendre Photo / Caméra & Scanner */}
+              <button
+                type="button"
+                onClick={() => champCamera.current?.click()}
+                disabled={compression || scanIAEnCours}
+                className="min-w-[85px] h-20 px-2.5 rounded-2xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 hover:border-emerald-500 text-gray-600 dark:text-gray-300 hover:text-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition group"
+                aria-label="Prendre une photo et scanner"
+                title="Prendre une photo avec l'appareil pour la scanner"
+              >
+                <i className={`fa-solid ${compression ? "fa-spinner fa-spin" : "fa-camera"} text-lg text-emerald-500 group-hover:scale-110 transition`}></i>
+                <span className="text-[10px] font-black text-center leading-tight">Caméra &amp; Scan</span>
+              </button>
+            </>
           )}
 
           {photos.length === 0 && (
@@ -9645,25 +9774,40 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
               type="button"
               onClick={declencherScanPrincipal}
               disabled={compression || scanIAEnCours}
-              className="h-20 px-3.5 rounded-2xl border-2 border-dashed border-violet-400 dark:border-violet-700 bg-violet-50/40 dark:bg-violet-950/20 text-violet-600 dark:text-violet-300 hover:bg-violet-100/50 dark:hover:bg-violet-900/30 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition"
-              title="Scanner directement un produit"
+              className="h-20 px-4 rounded-2xl border-2 border-dashed border-violet-400 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-300 hover:bg-violet-100/60 dark:hover:bg-violet-900/40 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition"
+              title="Scanner directement un produit sans rien saisir"
             >
-              <div className="flex items-center gap-1 text-xs font-black">
-                <i className="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+              <div className="flex items-center gap-1.5 text-xs font-black">
+                <i className="fa-solid fa-wand-magic-sparkles text-amber-500 animate-pulse"></i>
                 <span>Zéro Saisie IA</span>
               </div>
-              <span className="text-[9px] text-gray-500 dark:text-gray-400">Photo ➔ Remplissage auto</span>
+              <span className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold">Importer / Photo ➔ Fiche 100% auto</span>
             </button>
           )}
         </div>
 
         {/* Inputs de fichier */}
         <input
-          ref={champFichier}
+          ref={champGalerie}
           type="file"
           accept="image/*"
           multiple
-          onChange={(e) => ajouterPhotos(e, false)}
+          onChange={(e) => ajouterPhotos(e, true)}
+          className="hidden"
+        />
+        <input
+          ref={champCamera}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => ajouterPhotos(e, true)}
+          className="hidden"
+        />
+        <input
+          ref={champScanGalerie}
+          type="file"
+          accept="image/*"
+          onChange={(e) => ajouterPhotos(e, true)}
           className="hidden"
         />
         <input

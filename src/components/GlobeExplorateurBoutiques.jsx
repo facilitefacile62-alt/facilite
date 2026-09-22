@@ -1644,7 +1644,6 @@ export default function GlobeExplorateurBoutiques({
                 ref={fileInputPhotoRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleScanPhotoRecherche}
                 className="hidden"
                 disabled={scanPhotoEnCours}

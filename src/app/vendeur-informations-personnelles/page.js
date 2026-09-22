@@ -162,9 +162,27 @@ function VendeurInformationsPersonnellesContent() {
   }
 
   return (
-    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-3 sm:px-4 py-8 transition-colors">
+    <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-3 sm:px-4 py-8 pb-36 transition-colors">
       <main className="w-full max-w-lg">
         <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-100 dark:border-zinc-800 space-y-6">
+          <div className="flex items-center justify-between pb-1 border-b border-gray-100 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-100 text-xs font-black flex items-center gap-2 transition cursor-pointer active:scale-95 shadow-xs"
+            >
+              <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
+              <span>Retour</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePasser}
+              className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+            >
+              Passer
+            </button>
+          </div>
+
           <div className="text-center space-y-2">
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl mx-auto shadow-xs">
               <i className="fa-solid fa-store"></i>

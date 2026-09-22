@@ -278,10 +278,10 @@ export default function ImporterCvPage() {
       return;
     }
 
-    const validExtensions = ["pdf", "doc", "docx"];
+    const validExtensions = ["pdf", "doc", "docx", "png", "jpg", "jpeg", "webp", "heic", "htm", "html", "rtf", "txt"];
     const extension = selectedFile.name.split(".").pop().toLowerCase();
 
-    if (!validExtensions.includes(extension)) {
+    if (!validExtensions.includes(extension) && !selectedFile.type?.startsWith("image/")) {
       triggerToast(t.toastErrorImport, "fa-circle-exclamation");
       return;
     }
@@ -1073,14 +1073,14 @@ export default function ImporterCvPage() {
               </button>
 
               <p className="text-[11px] text-gray-400 font-normal">
-                Types de fichiers pris en charge: DOC, DOCX, PDF, HTM, RTF, TXT
+                Types de fichiers pris en charge: PDF, DOCX, PNG, JPG, WEBP, TXT
               </p>
 
               <input
                 ref={fileInputRef}
                 type="file"
                 onChange={handleFileSelect}
-                accept=".pdf,.doc,.docx,.htm,.html,.rtf,.txt"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.htm,.html,.rtf,.txt,image/*"
                 className="hidden"
               />
             </div>
