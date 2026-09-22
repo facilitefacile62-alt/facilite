@@ -53,9 +53,27 @@ Tables lues ou écrites par l'app : `profiles`, `user_roles`, `job_offers`, `con
 
 `npx tsc --noEmit`, `npx expo lint`, `npx expo-doctor` côté `mobile/` ; côté site (si `src/` est touché) : `npm run build` et les 13 invariants (`npx playwright test tests/security/invariants.spec.js`).
 
-## Bugs connus
+## Build EAS : toujours `--clear-cache` après un changement des variables d'environnement
 
-- **APK qui plante au lancement : cause inconnue, logcat requis.** L'APK installé sur le téléphone est peut-être antérieur au commit `9c59063` (20/09/2026 23:32 : ajout des plugins `expo-image` et `expo-web-browser`, dépendances Expo remontées) : vérifier sa date d'installation avant de conclure quoi que ce soit. Le test Expo Go prouve que le JavaScript de l'app tourne ; il ne prouve rien sur le binaire release.
+Résolu le 22/09/2026 (diagnostic par `adb logcat` sur un appareil réel — voir
+« Bugs connus » ci-dessous pour l'historique). Un APK compilé via
+`eas build --platform android --profile preview` plantait au lancement avec
+`EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY manquantes` alors
+que ces deux variables étaient bien déclarées, à la fois dans `eas.json`
+(`build.preview.env`) et dans l'environnement EAS `preview` (tableau de
+bord) — les logs du build confirmaient même les avoir chargées. Cause réelle :
+EAS réutilisait un artefact JS compilé lors d'un build antérieur (fait avant
+que les variables ne soient correctement configurées), sans le
+recompiler — la commande a réussi, le fichier produit était juste périmé.
+`eas build --platform android --profile preview --clear-cache` a résolu le
+problème (confirmé : `adb logcat -b crash` vide, l'app s'affiche). **Toujours
+ajouter `--clear-cache` au premier build suivant une modification des
+variables `EXPO_PUBLIC_*`** (`eas.json` ou tableau de bord EAS), sans quoi le
+prochain artefact peut de nouveau être réutilisé tel quel.
+
+## Bugs connus (historique — plantage résolu ci-dessus, gardé pour référence)
+
+- Avant résolution, hypothèse écartée : l'APK installé aurait pu être antérieur au commit `9c59063` (20/09/2026 23:32 : ajout des plugins `expo-image` et `expo-web-browser`, dépendances Expo remontées) — vérifiée fausse par `adb shell dumpsys package com.ffacilite.mobile` (date d'installation postérieure au commit en cause). Le test Expo Go prouvait que le JavaScript de l'app tournait ; il ne prouvait rien sur le binaire release — c'est `adb logcat -b crash` sur un appareil réel qui a donné la vraie cause.
 - `src/components/FaciliteSnapMap.tsx` : fichier orphelin (importe `react-native-maps`, non installé, jamais importé) ; c'est la seule source des 3 erreurs de `npx tsc --noEmit`.
 - `AuthContext.tsx` : `supabase.auth.getSession()` sans `.catch` au démarrage.
 - Le splash animé (`components/animated-icon.tsx`) utilise encore `assets/images/expo-logo.png`, le logo du gabarit Expo.
