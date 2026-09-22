@@ -12,21 +12,26 @@ export function useLocalisation() {
   const [etat, setEtat] = useState<EtatLocalisation>('inactive');
   const [position, setPosition] = useState<Position | null>(null);
 
-  const activer = useCallback(async (): Promise<EtatLocalisation> => {
+  // Renvoie la position obtenue (pas seulement l'état) : un appelant qui a
+  // besoin de la valeur immédiatement (ex. créer une boutique) ne peut pas se
+  // fier à l'état `position` du hook, dont la mise à jour ne sera visible
+  // qu'au prochain rendu — jamais dans la même exécution que cet appel.
+  const activer = useCallback(async (): Promise<{ etat: EtatLocalisation; position: Position | null }> => {
     setEtat('recherche');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setEtat('refusee');
-        return 'refusee';
+        return { etat: 'refusee', position: null };
       }
       const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setPosition({ latitude: p.coords.latitude, longitude: p.coords.longitude });
+      const nouvellePosition = { latitude: p.coords.latitude, longitude: p.coords.longitude };
+      setPosition(nouvellePosition);
       setEtat('active');
-      return 'active';
+      return { etat: 'active', position: nouvellePosition };
     } catch {
       setEtat('erreur');
-      return 'erreur';
+      return { etat: 'erreur', position: null };
     }
   }, []);
 

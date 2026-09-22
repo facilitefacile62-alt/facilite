@@ -87,7 +87,7 @@ export default function MarketplaceScreen() {
       return;
     }
     if (etat === 'recherche') return;
-    const resultat = await activer();
+    const { etat: resultat } = await activer();
     if (resultat === 'refusee') {
       Alert.alert(
         'Localisation désactivée',
@@ -122,6 +122,12 @@ export default function MarketplaceScreen() {
             <Text className="text-[10.5px] font-bold tracking-widest text-[#10B981]">FACILITÉ</Text>
             <Text className="text-[20px] font-black text-[#1A1A1A] -mt-0.5">Marketplace</Text>
           </View>
+          <Pressable
+            onPress={() => router.push('/marketplace/vendre')}
+            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border border-gray-300">
+            <Ionicons name="storefront-outline" size={15} color="#1A1A1A" />
+            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Vendre</Text>
+          </Pressable>
         </View>
 
         <View className="px-4">

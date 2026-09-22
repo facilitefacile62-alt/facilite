@@ -138,7 +138,8 @@
 // v138 (21/09/2026) : la messagerie Marketplace affiche enfin les echanges avec le compte admin (client ou vendeur) au lieu de "Aucun echange Marketplace", et ouvre directement le dernier echange
 // v139 (21/09/2026) : fiches produit et boutique - la barre de navigation du site reste visible au-dessus, avec un bouton Retour (fleche) vers la page precedente
 // v140 (21/09/2026) : fiche produit - "Commander maintenant" retire (pas encore de paiement), boutons de discussion grises sur son propre article, et "Discuter sur la plateforme" prepare un message qui nomme l'article (titre, prix, lien) pour le vendeur
-const VERSION_CACHE = "facilite-v140";
+// v141 (22/09/2026) : espace vendeur natif Marketplace ("Ma boutique") - creation de boutique, publication d'article avec photos compressees, ajustement du stock, retrait, visibilite et modification de la boutique
+const VERSION_CACHE = "facilite-v141";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

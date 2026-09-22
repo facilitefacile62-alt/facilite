@@ -125,6 +125,17 @@ const RACCOURCIS: Raccourci[] = [
     },
   },
   {
+    id: 'ma_boutique',
+    icone: '🏪',
+    bg: '#FEF3C7',
+    titre: 'Ma boutique',
+    sous: 'Publier et gérer mes articles',
+    action: ({ router, fermer }) => {
+      fermer();
+      router.push('/marketplace/vendre');
+    },
+  },
+  {
     id: 'fonctionnalites',
     icone: '🛠️',
     bg: '#F3F4F6',
@@ -289,7 +300,7 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
                 onPress={() => {
                   definirUserMode('business').catch(() => {});
                   onFermer();
-                  router.push('/web/marketplace');
+                  router.push('/marketplace/vendre');
                 }}>
                 <Text className="text-[12.5px] font-semibold text-[#1A1A1A]">🔗 Ma boutique</Text>
               </Pressable>
