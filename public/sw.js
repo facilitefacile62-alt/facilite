@@ -139,7 +139,8 @@
 // v139 (21/09/2026) : fiches produit et boutique - la barre de navigation du site reste visible au-dessus, avec un bouton Retour (fleche) vers la page precedente
 // v140 (21/09/2026) : fiche produit - "Commander maintenant" retire (pas encore de paiement), boutons de discussion grises sur son propre article, et "Discuter sur la plateforme" prepare un message qui nomme l'article (titre, prix, lien) pour le vendeur
 // v141 (22/09/2026) : espace vendeur natif Marketplace ("Ma boutique") - creation de boutique, publication d'article avec photos compressees, ajustement du stock, retrait, visibilite et modification de la boutique
-const VERSION_CACHE = "facilite-v141";
+// v142 (22/09/2026) : relevé de position (boutique/activité) - sur iPhone/iPad, les instructions de deblocage de la localisation s'affichent enfin apres un refus (l'API navigator.permissions ne couvre pas "geolocation" sur iOS, le bloc d'aide restait invisible), et s'ouvrent automatiquement au lieu de rester cachees dans un menu repliable
+const VERSION_CACHE = "facilite-v142";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

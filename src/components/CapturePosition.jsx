@@ -23,6 +23,7 @@
 // niveau, attendre n'apporte plus rien.
 
 import { useEffect, useRef, useState } from "react";
+import { aideLocalisationRefusee } from "@/lib/localisationAide";
 
 const DUREE_S = 10;
 const PRECISION_SUFFISANTE_M = 15;
@@ -62,6 +63,12 @@ export default function CapturePosition({
   // sert à rien — la boîte de dialogue ne réapparaîtra pas, il faut passer
   // par les réglages du navigateur.
   const [autorisation, setAutorisation] = useState("inconnu");
+  // Vrai dès qu'un refus RÉEL est arrivé (watchPosition err.code === 1),
+  // indépendamment de `autorisation` : sur iOS Safari, `navigator.permissions`
+  // n'existe pas pour "geolocation", donc `autorisation` ne devient jamais
+  // "denied" là-bas — sans cet état séparé, l'aide au déblocage ne
+  // s'affichait jamais sur iPhone (voir src/lib/localisationAide.js).
+  const [refuse, setRefuse] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [restant, setRestant] = useState(DUREE_S);
   const [meilleur, setMeilleur] = useState(null);
@@ -69,6 +76,21 @@ export default function CapturePosition({
   const veille = useRef(null);
   const minuteur = useRef(null);
   const compte = useRef(null);
+  const details = useRef(null);
+
+  // Le bloc d'aide (dont les instructions de déblocage) vit dans un menu
+  // repliable "Voir informations" — fermé par défaut. Sans cet effet, une
+  // personne dont la localisation est refusée ne voyait qu'une ligne rouge
+  // générique en bas de l'écran, jamais les instructions, à moins de penser
+  // à ouvrir ce menu elle-même (signalé le 22/09/2026 : vendeuse bloquée sur
+  // iPhone, jamais vu le message d'autorisation). Ouvert une seule fois
+  // automatiquement dès le refus ; la personne reste libre de le refermer
+  // ensuite.
+  useEffect(() => {
+    if ((refuse || autorisation === "denied") && details.current) {
+      details.current.open = true;
+    }
+  }, [refuse, autorisation]);
 
   const arreter = () => {
     if (veille.current !== null && typeof navigator !== "undefined") {
@@ -109,6 +131,7 @@ export default function CapturePosition({
       return;
     }
     setErreur("");
+    setRefuse(false);
     setMeilleur(null);
     setRestant(DUREE_S);
     setEnCours(true);
@@ -143,6 +166,7 @@ export default function CapturePosition({
       (err) => {
         arreter();
         setEnCours(false);
+        if (err.code === 1) setRefuse(true);
         setErreur(
           err.code === 1
             ? `Vous avez refusé la localisation. Autorisez-la pour positionner votre ${entite}.`
@@ -178,7 +202,10 @@ export default function CapturePosition({
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3.5 space-y-3">
       {/* Menu déroulant des informations de positionnement GPS */}
-      <details className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-2xs">
+      <details
+        ref={details}
+        className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-2xs"
+      >
         <summary className="px-3.5 py-2.5 cursor-pointer flex items-center justify-between font-black text-xs text-gray-900 dark:text-white select-none hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition list-none">
           <span className="flex items-center gap-2">
             <i className="fa-solid fa-location-crosshairs text-blue-500 text-xs"></i>
@@ -207,17 +234,30 @@ export default function CapturePosition({
                 <i className="fa-solid fa-circle-check text-emerald-500"></i>
                 <span>Localisation déjà autorisée pour ce site — le relevé démarrera sans rien demander.</span>
               </p>
-            ) : autorisation === "denied" ? (
-              <div className="space-y-1">
-                <p className="text-[11px] font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                  <i className="fa-solid fa-ban"></i>
-                  <span>La localisation est bloquée pour ce site</span>
-                </p>
-                <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Votre navigateur ne redemandera plus. Touchez le cadenas (ou l&apos;icône ⓘ) à côté
-                  de l&apos;adresse du site, puis autorisez la position, et revenez ici.
-                </p>
-              </div>
+            ) : autorisation === "denied" || refuse ? (
+              (() => {
+                const aide = aideLocalisationRefusee({
+                  userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+                  entite,
+                });
+                return (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                      <i className="fa-solid fa-ban"></i>
+                      <span>{aide.titre}</span>
+                    </p>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                      Votre navigateur ne redemandera plus tant que vous ne l&apos;aurez pas autorisée
+                      vous-même :
+                    </p>
+                    <ol className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed list-decimal list-inside space-y-0.5">
+                      {aide.etapes.map((etape) => (
+                        <li key={etape}>{etape}</li>
+                      ))}
+                    </ol>
+                  </div>
+                );
+              })()
             ) : (
               <div className="space-y-1">
                 <p className="text-[11px] font-black text-gray-900 dark:text-white flex items-center gap-1.5">
