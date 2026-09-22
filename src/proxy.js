@@ -27,6 +27,12 @@ const PUBLIC_ROUTES = [
   // AVANT qu'un cookie de session existe, par construction — doit rester
   // public pour ne pas se bloquer lui-même.
   "/auth/callback",
+  // Pont de session pour l'app mobile (voir src/app/auth/mobile-bridge/route.js) :
+  // atteint AVANT qu'un cookie de session existe sur cette WebView, par
+  // construction — même raisonnement que /auth/callback. La protection
+  // réelle est dans la route elle-même (jeton vérifié auprès de Supabase),
+  // pas ici.
+  "/auth/mobile-bridge",
   // Pages légales statiques, même nature que /faq (texte pur, aucune
   // personnalisation) — trouvées le 2026-08-21 en vérifiant robots.txt
   // contre le comportement réel : toutes redirigeaient vers /login pour un

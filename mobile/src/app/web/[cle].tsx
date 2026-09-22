@@ -4,18 +4,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Linking, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { type WebViewNavigation } from 'react-native-webview';
-import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
+import type { ShouldStartLoadRequest, WebViewSource } from 'react-native-webview/lib/WebViewTypes';
 
+import { useAuth } from '@/context/AuthContext';
 import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
 
 // Écran générique pour les pages web-only lourdes embarquées en WebView
-// (voir plan "Écrans WebView pour les pages lourdes web-only"). Point 1 :
-// uniquement des cibles publiques (`authRequise: false` dans
-// webEcrans.ts) — le pont de session pour les cibles authentifiées
-// (/auth/mobile-bridge) arrive au Point 2, pas construit ici.
+// (voir plan "Écrans WebView pour les pages lourdes web-only"). Pour une
+// cible authRequise (ex. creer-cv), la WebView charge d'abord
+// POST /auth/mobile-bridge avec les jetons de la session déjà ouverte dans
+// l'app — la redirection serveur qui suit amène la WebView sur la page
+// réelle déjà connectée, sans reconnexion demandée à l'utilisateur.
 export default function EcranWeb() {
-  const { cle } = useLocalSearchParams<{ cle: string }>();
+  const { cle, template } = useLocalSearchParams<{ cle: string; template?: string }>();
   const router = useRouter();
+  const { session } = useAuth();
   const webviewRef = useRef<WebView>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
@@ -23,12 +26,11 @@ export default function EcranWeb() {
   const [cleChargement, setCleChargement] = useState(0);
 
   const config = WEB_ECRANS[cle as CleEcranWeb];
-  // Aucune cible authRequise n'existe encore (Point 2 les ajoutera avec le
-  // pont de session) — filet de sécurité si une entrée future est ajoutée
-  // à webEcrans.ts sans que ce composant soit mis à jour. Calculé au
-  // rendu plutôt que dans un effet : pas de setState à déclencher pour une
-  // valeur dérivée directement de `config`.
-  const authNonSupportee = config?.authRequise === true;
+  // Seuls des écrans déjà protégés par l'app (session déjà vérifiée avant
+  // d'arriver ici) mènent à une cible authRequise : l'absence de session est
+  // donc un cas anormal, pas le chemin attendu — affiché plutôt que de
+  // poster des jetons vides vers le serveur.
+  const sessionManquante = config?.authRequise === true && !session;
 
   const onBackPress = useCallback(() => {
     if (peutReculer) {
@@ -70,6 +72,19 @@ export default function EcranWeb() {
     );
   }
 
+  // Jamais dans l'URL (jamais un log d'accès, jamais un historique de
+  // navigateur) : les jetons voyagent uniquement dans le corps de la requête.
+  const source: WebViewSource = config.authRequise
+    ? {
+        uri: `${SITE_URL}/auth/mobile-bridge`,
+        method: 'POST',
+        body: `access_token=${encodeURIComponent(session?.access_token ?? '')}&refresh_token=${encodeURIComponent(
+          session?.refresh_token ?? ''
+        )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      }
+    : { uri: `${SITE_URL}${config.chemin}` };
+
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -91,11 +106,9 @@ export default function EcranWeb() {
         </View>
 
         <View className="flex-1">
-          {authNonSupportee ? (
+          {sessionManquante ? (
             <View className="flex-1 items-center justify-center px-8">
-              <Text className="text-[13px] text-black/50 text-center">
-                Cet écran n&apos;est pas encore disponible.
-              </Text>
+              <Text className="text-[13px] text-black/50 text-center">Connectez-vous pour accéder à cet écran.</Text>
             </View>
           ) : erreur ? (
             <View className="flex-1 items-center justify-center px-8 gap-4">
@@ -115,7 +128,7 @@ export default function EcranWeb() {
             <WebView
               key={cleChargement}
               ref={webviewRef}
-              source={{ uri: `${SITE_URL}${config.chemin}` }}
+              source={source}
               onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
               onNavigationStateChange={onNavigationStateChange}
               onLoadStart={() => setChargement(true)}
@@ -132,7 +145,7 @@ export default function EcranWeb() {
             />
           )}
 
-          {chargement && !erreur && !authNonSupportee && (
+          {chargement && !erreur && !sessionManquante && (
             <View className="absolute inset-0 items-center justify-center bg-white">
               <ActivityIndicator color="#2563EB" size="large" />
             </View>

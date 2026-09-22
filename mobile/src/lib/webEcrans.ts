@@ -3,14 +3,14 @@
 // native plutôt que reconstruite en écran natif (pages lourdes, peu
 // utilisées sur mobile, ou déjà bien faites côté web). `authRequise`
 // détermine si l'écran doit d'abord passer par le pont de session
-// (/auth/mobile-bridge, voir Point 2) avant de charger `chemin`.
+// (/auth/mobile-bridge) avant de charger `chemin`.
 //
 // `cle` sert aussi de valeur au champ `cible` envoyé au pont de session —
 // le serveur tient sa PROPRE liste blanche (ALLOWED_MOBILE_BRIDGE_TARGETS,
 // src/app/auth/mobile-bridge/route.js), volontairement pas partagée avec
-// ce fichier : aucun chemin arbitraire n'est jamais accepté côté serveur,
-// seulement une clé qu'il connaît déjà lui-même.
-export type CleEcranWeb = 'marketplace';
+// ce fichier : aucun chemin arbitraire n'est jamais accepté, seulement une
+// clé que le serveur connaît déjà lui-même.
+export type CleEcranWeb = 'marketplace' | 'creer-cv';
 
 export type EcranWebConfig = {
   titre: string;
@@ -23,6 +23,11 @@ export const WEB_ECRANS: Record<CleEcranWeb, EcranWebConfig> = {
     titre: 'Marketplace',
     chemin: '/marketplace',
     authRequise: false,
+  },
+  'creer-cv': {
+    titre: 'Créer mon CV',
+    chemin: '/creer-cv',
+    authRequise: true,
   },
 };
 

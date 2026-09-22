@@ -20,10 +20,14 @@ import { useOffresReelles, type OffreReelle } from '@/lib/useOffresReelles';
 // useCandidateMatchScores) : le handoff ne fixe que la mise en page, pas
 // les libellés d'annonces d'exemple qu'il contient (README : "Aucune image
 // réelle... placeholders").
+// template = identifiant réel côté /creer-cv (ModelesClient.jsx, src/app/modeles) :
+// "modern" (Professionnel Moderne), "minimalist" (Minimaliste & Épuré),
+// "classic" (Classique & Structuré) — 3 des 10 modèles du site, les seuls
+// repris ici (les 7 autres restent accessibles depuis la fiche CV elle-même).
 const MODELES = [
-  { id: 'moderne', label: 'Moderne' },
-  { id: 'minimaliste', label: 'Minimaliste' },
-  { id: 'classique', label: 'Classique' },
+  { id: 'moderne', label: 'Moderne', template: 'modern' },
+  { id: 'minimaliste', label: 'Minimaliste', template: 'minimalist' },
+  { id: 'classique', label: 'Classique', template: 'classic' },
 ];
 
 export default function AccueilScreen() {
@@ -59,12 +63,17 @@ export default function AccueilScreen() {
               <View>
                 <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl px-3 py-3.5 flex-row gap-4 border border-gray-200 shadow-xs">
                   {MODELES.map((modele) => (
-                    <View key={modele.id} className="items-center gap-1.5">
+                    <Pressable
+                      key={modele.id}
+                      onPress={() =>
+                        router.push({ pathname: '/web/[cle]', params: { cle: 'creer-cv', template: modele.template } })
+                      }
+                      className="items-center gap-1.5">
                       <View className="w-14 h-14 rounded-full border-[2.5px] border-blue-600 p-0.5">
                         <View className="w-full h-full rounded-full bg-[#e8c77a]" />
                       </View>
                       <Text className="text-[11px] font-semibold text-blue-600">{modele.label}</Text>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
 
