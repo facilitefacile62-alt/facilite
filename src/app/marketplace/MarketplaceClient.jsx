@@ -794,15 +794,17 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   // sur mobile (header réel mesuré à 113,5px avec la barre d'icônes
   // Accueil/Autour/Notifs/Publier/Admin), coupant la carte au défilement.
   // Même patron de mesure dynamique que ModalFicheBoutique (hauteurHeader).
-  const [hauteurHeaderCarte, setHauteurHeaderCarte] = useState(64);
+  const [hauteurHeaderCarte, setHauteurHeaderCarte] = useState(() => (typeof window !== "undefined" && window.innerWidth < 768 ? 112 : 64));
   useEffect(() => {
     const mesurer = () => {
       const header = document.querySelector("#main-site-header") || document.querySelector("header");
       if (header) {
         setHauteurHeaderCarte(header.getBoundingClientRect().height);
+      } else if (typeof window !== "undefined" && window.innerWidth < 768) {
+        setHauteurHeaderCarte(112);
       }
     };
-    queueMicrotask(mesurer);
+    mesurer();
     window.addEventListener("resize", mesurer);
     return () => window.removeEventListener("resize", mesurer);
   }, []);
@@ -1949,46 +1951,60 @@ function VueReglages({
           onChange={handleAvatarUpload}
         />
 
-        {/* Header de la page fixe & collant : ← Modifier le profil */}
-        <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 dark:bg-zinc-900/95 backdrop-blur-md px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-3">
+        {/* Header de la page fixe & collant : ← Modifier le profil + bouton Enregistrer rapide */}
+        <div className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-3 sm:px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => {
                 if (onRetour) onRetour();
                 else setModalActive(null);
               }}
-              className="px-3 py-1.5 rounded-full bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 flex items-center gap-2 transition cursor-pointer text-gray-800 dark:text-gray-100 text-xs font-black shadow-xs border border-gray-200 dark:border-zinc-700 active:scale-95"
+              className="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center gap-1.5 transition cursor-pointer text-xs font-black shadow-xs border border-blue-200 dark:border-blue-800 active:scale-95 shrink-0"
               title="Retour"
             >
-              <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
+              <i className="fa-solid fa-arrow-left text-sm"></i>
               <span>Retour</span>
             </button>
-            <div>
-              <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-tight">
+            <div className="min-w-0 truncate">
+              <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-tight truncate">
                 Modifier le profil
               </h2>
-              <span className="text-[11px] font-bold text-[#00c988] dark:text-[#10e688] block -mt-0.5">
-                Informations personnelles &amp; Localisation
+              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block -mt-0.5 truncate">
+                Informations &amp; Localisation
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onRetour) onRetour();
-              else if (onFermerMarketplace) onFermerMarketplace();
-              else setModalActive(null);
-            }}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition shadow-xs"
-            title="Fermer"
-          >
-            <i className="fa-solid fa-xmark text-sm"></i>
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              disabled={enCours}
+              onClick={handleSaveInfosPerso}
+              className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              title="Enregistrer les modifications"
+            >
+              <i className="fa-solid fa-check text-xs"></i>
+              <span>{enCours ? "..." : "Enregistrer"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onRetour) onRetour();
+                else if (onFermerMarketplace) onFermerMarketplace();
+                else setModalActive(null);
+              }}
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white transition shadow-xs"
+              title="Fermer"
+            >
+              <i className="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
         </div>
 
         {/* Corps de la page Informations personnelles avec grand padding inférieur pour visibilité totale */}
-        <div className="p-4 sm:p-6 max-w-lg mx-auto pb-48">
+        <div className="p-4 sm:p-6 max-w-lg mx-auto pb-72">
           <form onSubmit={handleSaveInfosPerso} className="space-y-4 pt-2">
             {/* Avatar Circulaire Centré avec Bouton Crayon (1:1 Capture) */}
             <div className="flex justify-center pb-2">
@@ -2426,13 +2442,17 @@ function VueReglages({
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={enCours}
-              className="w-full py-3.5 rounded-2xl bg-[#0b1329] hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 font-black text-xs sm:text-sm shadow-md transition cursor-pointer disabled:opacity-50 mt-4"
-            >
-              {enCours ? "Enregistrement..." : "Enregistrer les modifications"}
-            </button>
+            {/* Bouton de soumission principal en bas, large et aéré */}
+            <div className="pt-4 pb-20">
+              <button
+                type="submit"
+                disabled={enCours}
+                className="w-full py-4 rounded-2xl bg-[#0b1329] hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 font-black text-sm shadow-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 active:scale-98"
+              >
+                <i className="fa-solid fa-circle-check text-base text-emerald-400 dark:text-emerald-600"></i>
+                <span>{enCours ? "Enregistrement en cours..." : "Enregistrer les modifications"}</span>
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -3783,7 +3803,7 @@ function VueVendeur({
         {/* 1. COLONNE GAUCHE : CARTE PROFIL VENDEUR & MENU (1:1 Capture exacte 2)     */}
         {/* ========================================================================= */}
         {ongletVendeur !== "publier" && (
-          <div className="w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-20">
+          <div className={`w-full md:w-[280px] shrink-0 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-20 ${ongletVendeur === "parametres" ? "hidden md:block" : "block"}`}>
             {/* Inputs cachés de téléchargement */}
             <input
               type="file"
@@ -6006,15 +6026,17 @@ function ModalFicheBoutique({
 
   // La barre de navigation globale du site (<header id="main-site-header"> sticky z-50 de Header.jsx)
   // reste TOUJOURS visible au-dessus de la fiche boutique sur tous les écrans (Desktop et Mobile).
-  const [hauteurHeader, setHauteurHeader] = useState(64);
+  const [hauteurHeader, setHauteurHeader] = useState(() => (typeof window !== "undefined" && window.innerWidth < 768 ? 112 : 64));
   useEffect(() => {
     const mesurer = () => {
       const header = document.querySelector("#main-site-header") || document.querySelector("header");
       if (header) {
         setHauteurHeader(header.getBoundingClientRect().height);
+      } else if (typeof window !== "undefined" && window.innerWidth < 768) {
+        setHauteurHeader(112);
       }
     };
-    queueMicrotask(mesurer);
+    mesurer();
     window.addEventListener("resize", mesurer);
     return () => window.removeEventListener("resize", mesurer);
   }, []);
