@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-// Fiche détaillée d'une offre — pendant "une seule offre" de
-// useOffresReelles.ts, mêmes conventions (logo dérivé, date relative).
-//
-// job_offers n'a pas de colonne "compétences requises" (skillChips du
-// handoff) ni de indicateur "remote" fiable — plutôt que d'inventer ces
-// deux informations, l'écran les omet honnêtement (voir offre/[id].tsx).
-// "Candidats" est en revanche une vraie donnée : compte réel sur
-// candidatures.job_offer_id, pas une valeur simulée.
 export type OffreDetail = {
   id: string;
   titre: string;
@@ -20,10 +12,15 @@ export type OffreDetail = {
   posted: string;
   logoBg: string;
   logo: string;
+  posterUri?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  externalLink?: string;
+  deadline?: string;
   applicantsCount: number;
 };
 
-const TEINTES = ['#2563EB', '#10B981', '#F59E0B'];
+const TEINTES = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
 
 function initiales(nom: string): string {
   const mots = nom.trim().split(/\s+/).filter(Boolean);
@@ -39,12 +36,16 @@ function teinte(id: string): string {
 }
 
 function dateRelative(iso: string): string {
+  if (!iso) return "Récemment";
   const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return minutes <= 1 ? "à l'instant" : `il y a ${minutes} min`;
   const heures = Math.floor(diffMs / 3_600_000);
-  if (heures < 1) return "à l'instant";
   if (heures < 24) return `il y a ${heures} h`;
   const jours = Math.floor(heures / 24);
-  return `il y a ${jours} j`;
+  if (jours < 30) return `il y a ${jours} j`;
+  const mois = Math.floor(jours / 30);
+  return `il y a ${mois} mois`;
 }
 
 export function useOffreDetail(id: string | undefined) {
@@ -60,7 +61,7 @@ export function useOffreDetail(id: string | undefined) {
         const [{ data, error }, { count }] = await Promise.all([
           supabase
             .from('job_offers')
-            .select('id, title, company, location, contract_type, salary_range, description, created_at')
+            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, external_link, deadline, image_url, created_at')
             .eq('id', id)
             .single(),
           supabase
@@ -86,8 +87,14 @@ export function useOffreDetail(id: string | undefined) {
             posted: dateRelative(data.created_at),
             logoBg: teinte(data.id),
             logo: initiales(data.company || ''),
+            posterUri: data.image_url || undefined,
+            contactEmail: data.contact_email || undefined,
+            contactPhone: data.contact_phone || undefined,
+            externalLink: data.external_link || undefined,
+            deadline: data.deadline || undefined,
             applicantsCount: count ?? 0,
           });
+          setErreur(false);
         }
       } catch (err) {
         console.error('Exception chargement de la fiche offre:', err);

@@ -1,8 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
@@ -185,16 +186,39 @@ export default function OffresScreen() {
 
 function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
   const router = useRouter();
+  const [aime, setAime] = useState(false);
+
+  const partager = async () => {
+    try {
+      const url = `https://ffacilite.com/offres/${offre.id}`;
+      await Share.share({
+        title: offre.titre,
+        message: `Découvrez cette offre d'emploi sur Facilité :\n${offre.titre} chez ${offre.entreprise} (${offre.localisation})\n\nPostulez ici : ${url}`,
+        url,
+      });
+    } catch {}
+  };
+
   return (
     <Pressable
       onPress={() => router.push(`/offre/${offre.id}`)}
-      className="bg-white rounded-2xl p-3.5 border border-gray-200 shadow-xs">
-      <View className="flex-row items-center gap-2.5">
-        <View className={`w-[38px] h-[38px] rounded-full ${offre.logoTeinte} items-center justify-center`}>
-          <Text className="text-white font-bold text-[13px]">{offre.logoInitiales}</Text>
-        </View>
-        <View className="flex-1">
-          <Text className="text-[14px] font-bold text-blue-600" numberOfLines={1}>
+      className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs active:opacity-95">
+      <View className="flex-row items-center gap-3">
+        {offre.posterUri ? (
+          <Image
+            source={{ uri: offre.posterUri }}
+            alt={offre.entreprise}
+            style={{ width: 44, height: 44, borderRadius: 12 }}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <View className={`w-11 h-11 rounded-xl ${offre.logoTeinte} items-center justify-center shadow-xs`}>
+            <Text className="text-white font-black text-[14px]">{offre.logoInitiales}</Text>
+          </View>
+        )}
+        <View className="flex-1 min-w-0">
+          <Text className="text-[14.5px] font-bold text-blue-600" numberOfLines={1}>
             {offre.entreprise}
           </Text>
           <Text className="text-[11.5px] text-black/45 mt-0.5">{offre.date}</Text>
@@ -205,9 +229,9 @@ function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchS
         <BadgeMatchingOffre score={matchScore} />
       </View>
 
-      <Text className="text-[15.5px] font-extrabold text-[#1A1A1A] leading-5 mt-1">{offre.titre}</Text>
-      <Text className="text-[12.5px] text-black/55 mt-2">
-        {offre.localisation} · {offre.contrat}
+      <Text className="text-[16px] font-extrabold text-[#1A1A1A] leading-5 mt-1.5">{offre.titre}</Text>
+      <Text className="text-[12.5px] text-black/60 mt-1.5 font-medium">
+        💼 {offre.localisation} · {offre.contrat} {offre.salaire ? `· 💰 ${offre.salaire}` : ''}
       </Text>
 
       {offre.posterUri ? (
@@ -220,16 +244,28 @@ function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchS
         />
       ) : null}
 
-      <Pressable
-        onPress={(e) => e.stopPropagation()}
-        className="flex-1 bg-blue-600 rounded-full flex-row items-center justify-center gap-2 py-3 mt-3">
-        <IconEnvoyer />
-        <Text className="text-white text-[14px] font-bold">Postuler via Facilité</Text>
-      </Pressable>
+      <View className="flex-row gap-2 mt-3.5 items-center">
+        <Pressable
+          onPress={() => setAime(!aime)}
+          className={`w-[40px] h-[40px] rounded-full border-[1.5px] items-center justify-center ${
+            aime ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50'
+          }`}>
+          <Ionicons name={aime ? 'heart' : 'heart-outline'} size={19} color={aime ? '#EF4444' : '#6B7280'} />
+        </Pressable>
 
-      <Text className="text-center mt-3 text-[12.5px] font-semibold text-blue-600">
-        Voir la fiche détaillée →
-      </Text>
+        <Pressable
+          onPress={partager}
+          className="w-[40px] h-[40px] rounded-full border-[1.5px] border-gray-200 bg-gray-50 items-center justify-center">
+          <Ionicons name="share-social-outline" size={19} color="#4B5563" />
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push(`/offre/${offre.id}`)}
+          className="flex-1 bg-blue-600 active:bg-blue-700 rounded-full flex-row items-center justify-center gap-2 py-2.5 shadow-sm active:scale-98">
+          <IconEnvoyer />
+          <Text className="text-white text-[14px] font-bold">Postuler via Facilité</Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
