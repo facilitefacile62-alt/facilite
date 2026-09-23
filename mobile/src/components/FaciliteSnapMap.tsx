@@ -1,3 +1,4 @@
+// @ts-nocheck
 // RÉFÉRENCE NON CONNECTÉE — déplacé ici depuis src/components/ (dépôt web
 // Next.js) le 2026-09-12 : écrit en React Native pur (react-native,
 // react-native-maps), jamais rendu par aucun écran, ni ici ni dans le web.

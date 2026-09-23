@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
 import FaciliteHeader from '@/components/FaciliteHeader';
+import OfferMediaView from '@/components/OfferMediaView';
 import { IconEnvoyer, IconPartager } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
@@ -142,6 +143,7 @@ export default function AccueilScreen() {
 function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
   const router = useRouter();
   const [aime, setAime] = useState(false);
+  const [logoErreur, setLogoErreur] = useState(false);
 
   const partager = async () => {
     try {
@@ -160,13 +162,14 @@ function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: num
       className="bg-white mx-3 rounded-2xl p-4 border border-gray-200 shadow-xs active:opacity-95">
       {/* En-tête : Logo entreprise réel ou Avatar coloré + Nom + Date */}
       <View className="flex-row items-center gap-3">
-        {offre.posterUri ? (
+        {offre.posterUri && !logoErreur ? (
           <Image
             source={{ uri: offre.posterUri }}
             alt={offre.entreprise}
-            style={{ width: 44, height: 44, borderRadius: 12 }}
+            style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3F4F6' }}
             contentFit="cover"
             transition={150}
+            onError={() => setLogoErreur(true)}
           />
         ) : (
           <View className={`w-11 h-11 rounded-xl ${offre.logoTeinte} items-center justify-center shadow-xs`}>
@@ -192,16 +195,12 @@ function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: num
         💼 {offre.localisation} · {offre.contrat} {offre.salaire ? `· 💰 ${offre.salaire}` : ''}
       </Text>
 
-      {/* Affiche de l'offre si présente */}
-      {offre.posterUri ? (
-        <Image
-          source={{ uri: offre.posterUri }}
-          alt={`Affiche : ${offre.titre}`}
-          contentFit="cover"
-          transition={150}
-          className="w-full h-48 rounded-xl bg-black/5 mt-3"
-        />
-      ) : null}
+      {/* Affiche de l'offre réelle avec dimensionnement explicite et chargement haute fidélité */}
+      <OfferMediaView
+        media={offre.rawImage || offre.posterUri}
+        height={220}
+        onPress={() => router.push(`/offre/${offre.id}`)}
+      />
 
       {/* Boutons d'Action Connectés */}
       <View className="flex-row gap-2 mt-3.5 items-center">

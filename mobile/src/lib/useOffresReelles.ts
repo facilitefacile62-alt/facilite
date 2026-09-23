@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getPrimaryOfferImage } from '@/lib/offerMedia';
 
 export type OffreReelle = {
   id: string;
@@ -12,6 +13,7 @@ export type OffreReelle = {
   contrat: string;
   salaire?: string;
   posterUri?: string;
+  rawImage?: unknown;
   description?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -72,7 +74,8 @@ export function useOffresReelles(limite = 30) {
           localisation: o.location || 'Sénégal',
           contrat: o.contract_type || 'CDI',
           salaire: o.salary_range || undefined,
-          posterUri: o.image_url || undefined,
+          posterUri: getPrimaryOfferImage(o.image_url),
+          rawImage: o.image_url,
           description: o.description || undefined,
           contactEmail: o.contact_email || undefined,
           contactPhone: o.contact_phone || undefined,

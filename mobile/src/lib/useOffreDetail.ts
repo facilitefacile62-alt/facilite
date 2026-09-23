@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getPrimaryOfferImage } from '@/lib/offerMedia';
 
 export type OffreDetail = {
   id: string;
@@ -13,6 +14,7 @@ export type OffreDetail = {
   logoBg: string;
   logo: string;
   posterUri?: string;
+  rawImage?: unknown;
   contactEmail?: string;
   contactPhone?: string;
   externalLink?: string;
@@ -87,7 +89,8 @@ export function useOffreDetail(id: string | undefined) {
             posted: dateRelative(data.created_at),
             logoBg: teinte(data.id),
             logo: initiales(data.company || ''),
-            posterUri: data.image_url || undefined,
+            posterUri: getPrimaryOfferImage(data.image_url),
+            rawImage: data.image_url,
             contactEmail: data.contact_email || undefined,
             contactPhone: data.contact_phone || undefined,
             externalLink: data.external_link || undefined,

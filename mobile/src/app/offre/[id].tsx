@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { useOffreDetail } from '@/lib/useOffreDetail';
+import OfferMediaView from '@/components/OfferMediaView';
 
 export default function FicheOffreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,6 +15,7 @@ export default function FicheOffreScreen() {
   const { offre, erreur } = useOffreDetail(id);
   const [sauvegarde, setSauvegarde] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
+  const [logoErreur, setLogoErreur] = useState(false);
 
   const urlOffre = `https://ffacilite.com/offres/${id}`;
 
@@ -94,13 +96,14 @@ export default function FicheOffreScreen() {
 
             {/* En-tête Entreprise & Titre */}
             <View className="px-5 pt-4 items-center">
-              {offre.posterUri ? (
+              {offre.posterUri && !logoErreur ? (
                 <Image
                   source={{ uri: offre.posterUri }}
                   alt={offre.entreprise}
-                  style={{ width: 64, height: 64, borderRadius: 18 }}
+                  style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: '#15181D' }}
                   contentFit="cover"
                   transition={150}
+                  onError={() => setLogoErreur(true)}
                 />
               ) : (
                 <View
@@ -138,18 +141,15 @@ export default function FicheOffreScreen() {
               </View>
             </View>
 
-            {/* Affiche de l'offre si présente */}
-            {offre.posterUri && (
-              <View className="px-5 pt-4">
-                <Image
-                  source={{ uri: offre.posterUri }}
-                  alt={`Affiche de l'offre : ${offre.titre}`}
-                  contentFit="cover"
-                  transition={150}
-                  className="w-full h-56 rounded-2xl bg-white/5"
-                />
-              </View>
-            )}
+            {/* Affiche réelle de l'offre */}
+            <View className="px-5">
+              <OfferMediaView
+                media={offre.rawImage || offre.posterUri}
+                height={260}
+                borderRadius={18}
+                dark={true}
+              />
+            </View>
 
             {/* Description */}
             <Text className="px-5 pt-5 pb-1.5 text-[15px] font-bold text-[#F5F6F7]">Description de l&apos;offre</Text>
