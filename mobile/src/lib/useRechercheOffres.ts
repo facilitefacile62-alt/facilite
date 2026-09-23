@@ -1,16 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getPrimaryOfferImage } from '@/lib/offerMedia';
 
-// Recherche pour recherche.tsx — reproduction de
-// design_handoff_facilite/pages/04-recherche.html. job_offers n'a pas de
-// colonne "secteur" : les catégories populaires sont donc de vrais
-// filtres par mot-clé sur title/description (approximatif mais réel),
-// pas une simple liste décorative.
 export type ResultatRecherche = {
   id: string;
   logoBg: string;
   logo: string;
+  posterUri?: string;
   titre: string;
   entreprise: string;
   localisation: string;
@@ -51,7 +48,7 @@ export function useRechercheOffres(requete: string) {
       try {
         const { data, error } = await supabase
           .from('job_offers')
-          .select('id, title, company, location')
+          .select('id, title, company, location, image_url')
           .eq('is_active', true)
           .or(`title.ilike.%${q}%,company.ilike.%${q}%,description.ilike.%${q}%`)
           .limit(20);
@@ -67,6 +64,7 @@ export function useRechercheOffres(requete: string) {
             id: o.id,
             logoBg: teinte(o.id),
             logo: initiales(o.company || ''),
+            posterUri: getPrimaryOfferImage(o.image_url),
             titre: o.title || 'Offre',
             entreprise: o.company || 'Entreprise',
             localisation: o.location || 'Sénégal',

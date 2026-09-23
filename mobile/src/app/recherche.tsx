@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
@@ -137,15 +138,28 @@ export default function RechercheScreen() {
 
 function CarteResultat({ resultat }: { resultat: ResultatRecherche }) {
   const router = useRouter();
+  const [logoErreur, setLogoErreur] = useState(false);
+
   return (
     <Pressable
       onPress={() => router.push(`/offre/${resultat.id}`)}
       className="bg-[#15181D] border border-white/[0.06] rounded-3xl p-4 flex-row gap-3 items-start">
-      <View
-        className="w-10 h-10 rounded-xl items-center justify-center"
-        style={{ backgroundColor: resultat.logoBg }}>
-        <Text className="text-[15px] font-bold text-[#0B0D10]">{resultat.logo}</Text>
-      </View>
+      {resultat.posterUri && !logoErreur ? (
+        <Image
+          source={{ uri: resultat.posterUri }}
+          alt={resultat.entreprise}
+          style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#0B0D10' }}
+          contentFit="cover"
+          transition={150}
+          onError={() => setLogoErreur(true)}
+        />
+      ) : (
+        <View
+          className="w-10 h-10 rounded-xl items-center justify-center"
+          style={{ backgroundColor: resultat.logoBg }}>
+          <Text className="text-[15px] font-bold text-[#0B0D10]">{resultat.logo}</Text>
+        </View>
+      )}
       <View className="flex-1 min-w-0">
         <Text className="text-[15px] font-bold text-[#F5F6F7]">{resultat.titre}</Text>
         <Text className="text-[13px] text-[#F5F6F7]/55 mt-0.5">

@@ -7,18 +7,23 @@ export function parseOfferImages(input: unknown): string[] {
   if (!input) return [];
 
   const resolveUrl = (url: string): string => {
+    if (!url || typeof url !== 'string') return '';
     const trimmed = url.trim();
-    if (!trimmed) return '';
+    if (!trimmed || trimmed === 'null' || trimmed === 'undefined' || trimmed === 'none' || trimmed === 'false') {
+      return '';
+    }
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
     if (trimmed.startsWith('data:image')) return trimmed;
+    if (trimmed.startsWith('/storage/')) return `https://ocfhzwwjvljintabxxlg.supabase.co${trimmed}`;
     if (trimmed.startsWith('/')) return `https://ffacilite.com${trimmed}`;
     return `https://ffacilite.com/${trimmed}`;
   };
 
   if (Array.isArray(input)) {
     return input
-      .map((item) => (typeof item === 'string' ? resolveUrl(item) : ''))
-      .filter((u) => u.length > 0);
+      .map((item) => (typeof item === 'string' ? resolveUrl(item) : parseOfferImages(item)))
+      .flat()
+      .filter((u): u is string => typeof u === 'string' && u.length > 0);
   }
 
   if (typeof input === 'object' && input !== null) {
@@ -29,13 +34,13 @@ export function parseOfferImages(input: unknown): string[] {
     if (Array.isArray(obj.images) && obj.images.length > 0) {
       return parseOfferImages(obj.images);
     }
-    const raw = (obj.image_url || obj.image || '') as string;
+    const raw = (obj.image_url || obj.image || obj.posterUri || '') as string;
     return parseOfferImages(raw);
   }
 
   if (typeof input === 'string') {
     const trimmed = input.trim();
-    if (!trimmed) return [];
+    if (!trimmed || trimmed === 'null' || trimmed === 'undefined' || trimmed === 'none') return [];
 
     // Format JSON array: ["https://...", "https://..."]
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {

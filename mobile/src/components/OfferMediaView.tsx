@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Pressable, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Dimensions, FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { parseOfferImages } from '@/lib/offerMedia';
 
 interface OfferMediaViewProps {
@@ -10,144 +11,177 @@ interface OfferMediaViewProps {
   borderRadius?: number;
   onPress?: () => void;
   dark?: boolean;
+  enableLightbox?: boolean;
 }
 
 export default function OfferMediaView({
   media,
-  height = 220,
+  height = 240,
   borderRadius = 14,
   onPress,
   dark = false,
+  enableLightbox = true,
 }: OfferMediaViewProps) {
   const images = parseOfferImages(media);
   const [indexActif, setIndexActif] = useState(0);
-  const [chargement, setChargement] = useState(true);
-  const [erreur, setErreur] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  if (images.length === 0 || erreur) {
+  if (images.length === 0) {
     return null;
   }
 
-  // Cas avec 1 seule image (majorité des affiches)
-  if (images.length === 1) {
-    const imageUrl = images[0];
-    return (
-      <Pressable
-        onPress={onPress}
-        disabled={!onPress}
-        style={{
-          width: '100%',
-          height,
-          borderRadius,
-          overflow: 'hidden',
-          backgroundColor: dark ? '#15181D' : '#F3F4F6',
-          marginTop: 12,
-          borderWidth: 1,
-          borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-          position: 'relative',
-        }}>
-        {chargement && (
+  const handlePressImage = (idx: number) => {
+    if (onPress) {
+      onPress();
+    } else if (enableLightbox) {
+      setLightboxIndex(idx);
+    }
+  };
+
+  return (
+    <>
+      {/* Lightbox / Visionneuse Plein Écran */}
+      {enableLightbox && lightboxIndex !== null && (
+        <Modal
+          visible={true}
+          transparent={false}
+          animationType="fade"
+          onRequestClose={() => setLightboxIndex(null)}>
+          <View style={{ flex: 1, backgroundColor: '#0B0D10' }}>
+            <SafeAreaView style={{ flex: 1 }}>
+              {/* Header Lightbox */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                  Affiche de recrutement {images.length > 1 ? `(${lightboxIndex + 1}/${images.length})` : ''}
+                </Text>
+                <Pressable
+                  onPress={() => setLightboxIndex(null)}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Ionicons name="close" size={22} color="#FFFFFF" />
+                </Pressable>
+              </View>
+
+              {/* Image Plein Écran */}
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 8 }}>
+                <Image
+                  source={{ uri: images[lightboxIndex] }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="contain"
+                  transition={200}
+                />
+              </View>
+            </SafeAreaView>
+          </View>
+        </Modal>
+      )}
+
+      {/* Rendu 1 image */}
+      {images.length === 1 ? (
+        <Pressable
+          onPress={() => handlePressImage(0)}
+          style={{
+            width: '100%',
+            height,
+            borderRadius,
+            overflow: 'hidden',
+            backgroundColor: dark ? '#15181D' : '#F1EFE9',
+            marginTop: 12,
+            borderWidth: 1,
+            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            position: 'relative',
+          }}>
+          <Image
+            source={{ uri: images[0] }}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="cover"
+            transition={200}
+            priority="high"
+          />
+          {/* Badge indicateur Affiche */}
           <View
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              bottom: 8,
+              right: 8,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              paddingHorizontal: 8,
+              paddingVertical: 3.5,
+              borderRadius: 8,
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: dark ? '#15181D' : '#F3F4F6',
-              zIndex: 1,
+              gap: 4,
             }}>
-            <ActivityIndicator size="small" color="#2563EB" />
+            <Ionicons name="image-outline" size={11} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>Affiche officielle</Text>
           </View>
-        )}
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: '100%', height: '100%' }}
-          contentFit="cover"
-          transition={200}
-          priority="high"
-          onLoadEnd={() => setChargement(false)}
-          onError={() => {
-            setChargement(false);
-            setErreur(true);
-          }}
-        />
-        {/* Badge indicateur HD */}
+        </Pressable>
+      ) : (
+        /* Rendu multi-photos */
         <View
           style={{
-            position: 'absolute',
-            bottom: 8,
-            right: 8,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 8,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
+            width: '100%',
+            height,
+            borderRadius,
+            overflow: 'hidden',
+            backgroundColor: dark ? '#15181D' : '#F1EFE9',
+            marginTop: 12,
+            borderWidth: 1,
+            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            position: 'relative',
           }}>
-          <Ionicons name="image-outline" size={11} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>Affiche officielle</Text>
+          <FlatList
+            data={images}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(_, idx) => `img-${idx}`}
+            onMomentumScrollEnd={(e) => {
+              const slide = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
+              setIndexActif(slide);
+            }}
+            renderItem={({ item, index }) => (
+              <Pressable
+                onPress={() => handlePressImage(index)}
+                style={{ width: Dimensions.get('window').width - 24, height }}>
+                <Image
+                  source={{ uri: item }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            )}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              paddingHorizontal: 9,
+              paddingVertical: 4,
+              borderRadius: 12,
+            }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+              {indexActif + 1} / {images.length}
+            </Text>
+          </View>
         </View>
-      </Pressable>
-    );
-  }
-
-  // Cas avec plusieurs photos (galerie swipable)
-  return (
-    <View
-      style={{
-        width: '100%',
-        height,
-        borderRadius,
-        overflow: 'hidden',
-        backgroundColor: dark ? '#15181D' : '#F3F4F6',
-        marginTop: 12,
-        borderWidth: 1,
-        borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-        position: 'relative',
-      }}>
-      <FlatList
-        data={images}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(_, idx) => `img-${idx}`}
-        onMomentumScrollEnd={(e) => {
-          const slide = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
-          setIndexActif(slide);
-        }}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={onPress}
-            disabled={!onPress}
-            style={{ width: Dimensions.get('window').width - 24, height }}>
-            <Image
-              source={{ uri: item }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-              transition={200}
-            />
-          </Pressable>
-        )}
-      />
-      {/* Indicateur de position (ex: 1/3) */}
-      <View
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          backgroundColor: 'rgba(0,0,0,0.65)',
-          paddingHorizontal: 9,
-          paddingVertical: 4,
-          borderRadius: 12,
-        }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-          {indexActif + 1} / {images.length}
-        </Text>
-      </View>
-    </View>
+      )}
+    </>
   );
 }
