@@ -73,6 +73,8 @@ import {
   obtenirPremiumActif,
   positionActuelle,
   publierArticle,
+  modifierArticle,
+  supprimerArticle,
   retirerArticle,
   supprimerPhoto,
   urlPhoto,
@@ -682,6 +684,14 @@ export default function MarketplaceClient() {
             article={articleSelectionne}
             userId={userId}
             profile={profile}
+            onArticleModifie={async () => {
+              setArticleSelectionne(null);
+              if (rechargerArticles) await rechargerArticles();
+            }}
+            onArticleSupprime={async () => {
+              setArticleSelectionne(null);
+              if (rechargerArticles) await rechargerArticles();
+            }}
             onFermer={() => {
               setArticleSelectionne(null);
               if (typeof window !== "undefined") {
@@ -4260,6 +4270,8 @@ function VueVendeur({
                     articles={articles}
                     onChange={recharger}
                     onPublier={() => setOngletVendeur("publier")}
+                    userId={userId || profile?.id}
+                    storeId={boutiqueActive?.id}
                   />
                 )}
               </div>
@@ -5170,7 +5182,7 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
  * Intègre la galerie photo, le tableau des prix dégressifs en FCFA, les avis vérifiés,
  * la protection des commandes et les boutons de discussion WhatsApp et Plateforme Facilité.
  */
-function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile }) {
+function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile, onArticleModifie, onArticleSupprime }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [quantite, setQuantite] = useState(1);
   const [formatChoisi, setFormatChoisi] = useState(article.categorie || "Format Standard");
@@ -5179,6 +5191,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
   const [copie, setCopie] = useState(false);
   const [imageErreur, setImageErreur] = useState(false);
   const [zoomActif, setZoomActif] = useState(false);
+  const [modalEditionOuverte, setModalEditionOuverte] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [ongletInfo, setOngletInfo] = useState("description"); // 'description' | 'specs' | 'livraison'
   const [modalCommandeOuverte, setModalCommandeOuverte] = useState(false);
   const [commandeEnvoyee, setCommandeEnvoyee] = useState(false);
@@ -5763,14 +5777,47 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                   </button>
                 )}
 
-                {/* "Commander maintenant" retiré : aucun moyen de paiement pour le moment.
-                    (Le formulaire de commande plus bas est conservé mais n'est plus
-                    atteignable ; à rebrancher quand le paiement existera.) */}
-                {estMonArticle && (
-                  <p className="text-[11px] text-center text-gray-500 dark:text-gray-400 px-1">
-                    C&apos;est votre article : les boutons de discussion sont désactivés.
-                  </p>
-                )}
+                {/* Actions Spécifiques Vendeur Propriétaire */}
+                {estMonArticle ? (
+                  <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-blue-900 dark:text-blue-300">
+                      <i className="fa-solid fa-store text-blue-600 dark:text-blue-400"></i>
+                      <span>Vous êtes le propriétaire de cet article</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setModalEditionOuverte(true)}
+                        className="py-2.5 px-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 active:scale-98 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                        <span>Modifier</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${article.titre}" ?`)) {
+                            setSuppressionEnCours(true);
+                            try {
+                              await supprimerArticle(article.id);
+                              if (onArticleSupprime) onArticleSupprime(article.id);
+                              onFermer?.();
+                              if (typeof window !== "undefined") window.location.reload();
+                            } catch (err) {
+                              alert(err.message || "Erreur lors de la suppression.");
+                              setSuppressionEnCours(false);
+                            }
+                          }
+                        }}
+                        disabled={suppressionEnCours}
+                        className="py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold transition flex items-center justify-center gap-1.5 border border-red-200 dark:border-red-900/60 cursor-pointer disabled:opacity-50"
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                        <span>{suppressionEnCours ? "Suppression…" : "Supprimer"}</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Fiche Vendeur / Boutique Partenaire */}
                 <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
@@ -5980,6 +6027,46 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile 
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ÉDITION ARTICLE PROPRIÉTAIRE */}
+      {modalEditionOuverte && (
+        <div className="fixed inset-0 z-60 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <i className="fa-solid fa-pen-to-square text-[#1877F2]"></i>
+                Modifier l&apos;article
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalEditionOuverte(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black dark:hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <FormulaireArticle
+              userId={userId || article.boutique_owner_id || article.owner_id}
+              storeId={article.boutique_id || article.store_id}
+              articleAEditer={article}
+              onPublie={() => {
+                setModalEditionOuverte(false);
+                if (onArticleModifie) onArticleModifie();
+                onFermer?.();
+                if (typeof window !== "undefined") window.location.reload();
+              }}
+              onAnnuler={() => setModalEditionOuverte(false)}
+              onSupprime={() => {
+                setModalEditionOuverte(false);
+                if (onArticleSupprime) onArticleSupprime(article.id);
+                onFermer?.();
+                if (typeof window !== "undefined") window.location.reload();
+              }}
+            />
           </div>
         </div>
       )}
@@ -9209,16 +9296,46 @@ function GrilleHorairesEtablissement({ boutique, horaires = [], chargement = fal
   );
 }
 
-function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoScanDeclenche }) {
+function FormulaireArticle({
+  userId,
+  storeId,
+  onPublie,
+  jetonAutoScan,
+  onAutoScanDeclenche,
+  articleAEditer = null,
+  onAnnuler = null,
+  onSupprime = null,
+}) {
   const { session } = useAuth();
+  const estEdition = Boolean(articleAEditer?.id);
   const [champs, setChamps] = useState({
-    titre: "",
-    description: "",
-    categorie: "telephones",
-    prix_xof: "",
-    quantite: 1,
+    titre: articleAEditer?.titre || "",
+    description: articleAEditer?.description || "",
+    categorie: articleAEditer?.categorie || "telephones",
+    prix_xof: articleAEditer?.prix_xof !== undefined && articleAEditer?.prix_xof !== null ? String(articleAEditer.prix_xof) : "",
+    quantite: articleAEditer?.quantite !== undefined && articleAEditer?.quantite !== null ? articleAEditer.quantite : 1,
   });
-  const [photos, setPhotos] = useState([]); // { chemin, apercu, rawFile }
+  const [photos, setPhotos] = useState(() => {
+    if (!articleAEditer?.photos && !articleAEditer?.photo) return [];
+    const list = Array.isArray(articleAEditer.photos)
+      ? articleAEditer.photos
+      : typeof articleAEditer.photos === "string"
+      ? (() => {
+          try {
+            return JSON.parse(articleAEditer.photos || "[]");
+          } catch {
+            return [articleAEditer.photos];
+          }
+        })()
+      : articleAEditer.photo
+      ? [articleAEditer.photo]
+      : [];
+    return list.map((p) => ({
+      chemin: p,
+      apercu: urlPhoto(p),
+      rawFile: null,
+    }));
+  });
   const [envoi, setEnvoi] = useState(false);
   const [compression, setCompression] = useState(false);
   const [optimisationIA, setOptimisationIA] = useState(false);
@@ -9461,18 +9578,38 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
         }
       }
 
-      await publierArticle(storeId, { ...champs, photos: chemisArray });
-      setChamps({ titre: "", description: "", categorie: champs.categorie, prix_xof: "", quantite: 1 });
-      setPhotos([]);
-      setMotsCles([]);
-      setPrixEstimeIA(null);
-      setMessageSucces("✅ Article publié et référencé instantanément sur la plateforme !");
-      await onPublie();
+      if (estEdition) {
+        await modifierArticle(articleAEditer.id, { ...champs, photos: chemisArray });
+        setMessageSucces("✅ Article mis à jour avec succès !");
+      } else {
+        await publierArticle(storeId, { ...champs, photos: chemisArray });
+        setChamps({ titre: "", description: "", categorie: champs.categorie, prix_xof: "", quantite: 1 });
+        setPhotos([]);
+        setMotsCles([]);
+        setPrixEstimeIA(null);
+        setMessageSucces("✅ Article publié et référencé instantanément sur la plateforme !");
+      }
+      if (onPublie) await onPublie();
       setTimeout(() => setMessageSucces(""), 6000);
     } catch (err) {
-      setErreur(err.message || "Erreur lors de la publication.");
+      setErreur(err.message || (estEdition ? "Erreur lors de la modification." : "Erreur lors de la publication."));
     } finally {
       setEnvoi(false);
+    }
+  };
+
+  const gererSuppression = async () => {
+    if (!articleAEditer?.id) return;
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${champs.titre || "cet article"}" ? Cette action est irréversible.`)) {
+      setEnvoi(true);
+      try {
+        await supprimerArticle(articleAEditer.id);
+        if (onSupprime) await onSupprime();
+        else if (onPublie) await onPublie();
+      } catch (err) {
+        setErreur(err.message || "Erreur lors de la suppression.");
+        setEnvoi(false);
+      }
     }
   };
 
@@ -9862,30 +9999,58 @@ function FormulaireArticle({ userId, storeId, onPublie, jetonAutoScan, onAutoSca
         </div>
       )}
 
-      {/* Bouton de Publication Immédiate */}
-      <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <button
-          type="submit"
-          disabled={envoi || compression || scanIAEnCours}
-          className="px-8 py-3.5 rounded-2xl bg-[#1877F2] hover:bg-blue-600 active:scale-98 text-white text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
-        >
-          <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : "fa-rocket"}`}></i>
-          {envoi ? "Publication instantanée…" : "Publier l'article immédiatement"}
-        </button>
+      {/* Boutons d'Action (Publier / Modifier / Annuler / Supprimer) */}
+      <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="submit"
+            disabled={envoi || compression || scanIAEnCours}
+            className="px-7 py-3 rounded-2xl bg-[#1877F2] hover:bg-blue-600 active:scale-98 text-white text-xs sm:text-sm font-black disabled:opacity-50 cursor-pointer shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+          >
+            <i className={`fa-solid ${envoi ? "fa-spinner fa-spin" : estEdition ? "fa-check" : "fa-rocket"}`}></i>
+            {envoi
+              ? estEdition ? "Enregistrement…" : "Publication instantanée…"
+              : estEdition ? "Enregistrer les modifications" : "Publier l'article immédiatement"}
+          </button>
 
-        {champs.titre && !envoi && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 justify-center">
-            <i className="fa-solid fa-check text-emerald-500"></i>
-            Prêt à publier sans saisie supplémentaire
-          </span>
+          {onAnnuler && (
+            <button
+              type="button"
+              onClick={onAnnuler}
+              disabled={envoi}
+              className="px-5 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-bold transition cursor-pointer"
+            >
+              Annuler
+            </button>
+          )}
+
+          {champs.titre && !envoi && !estEdition && (
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+              <i className="fa-solid fa-check text-emerald-500"></i>
+              Prêt à publier
+            </span>
+          )}
+        </div>
+
+        {estEdition && (
+          <button
+            type="button"
+            onClick={gererSuppression}
+            disabled={envoi}
+            className="px-4 py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 border border-red-200 dark:border-red-900/60"
+          >
+            <i className="fa-solid fa-trash-can"></i>
+            <span>Supprimer cet article</span>
+          </button>
         )}
       </div>
     </form>
   );
 }
 
-function ListeMesArticles({ articles, onChange, onPublier }) {
+function ListeMesArticles({ articles, onChange, onPublier, userId, storeId }) {
   const [enCours, setEnCours] = useState(null);
+  const [articleAEditer, setArticleAEditer] = useState(null);
 
   const changerStock = async (id, quantite) => {
     setEnCours(id);
@@ -9894,6 +10059,20 @@ function ListeMesArticles({ articles, onChange, onPublier }) {
       await onChange();
     } finally {
       setEnCours(null);
+    }
+  };
+
+  const gererSuppression = async (article) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${article.titre}" ?`)) {
+      setEnCours(article.id);
+      try {
+        await supprimerArticle(article.id);
+        await onChange();
+      } catch (err) {
+        alert(err.message || "Erreur lors de la suppression.");
+      } finally {
+        setEnCours(null);
+      }
     }
   };
 
@@ -9923,7 +10102,7 @@ function ListeMesArticles({ articles, onChange, onPublier }) {
             Mes articles <span className="text-gray-400 font-bold text-sm">({articles.length})</span>
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Gérez vos stocks ou publiez de nouveaux produits en ligne
+            Gérez vos stocks, modifiez les détails ou supprimez vos annonces
           </p>
         </div>
 
@@ -9944,57 +10123,74 @@ function ListeMesArticles({ articles, onChange, onPublier }) {
 
       <ul className="divide-y divide-gray-100 dark:divide-gray-800">
         {articles.map((a) => (
-          <li key={a.id} className="py-3 flex items-center gap-3">
-            <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
-              {a.photos?.[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={urlPhoto(a.photos[0])} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                  <i className="fa-solid fa-image"></i>
-                </div>
-              )}
+          <li key={a.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-800">
+                {a.photos?.[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={urlPhoto(a.photos[0])} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <i className="fa-solid fa-image"></i>
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{a.titre}</p>
+                <p className="text-xs text-gray-500">
+                  {prixLisible(a.prix_xof)} FCFA ·{" "}
+                  <span className={a.statut === "en_stock" ? "text-emerald-600 font-bold" : "text-gray-400 font-bold"}>
+                    {a.statut === "en_stock" ? `${a.quantite} en stock` : "Épuisé"}
+                  </span>
+                </p>
+              </div>
             </div>
 
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{a.titre}</p>
-              <p className="text-xs text-gray-500">
-                {prixLisible(a.prix_xof)} FCFA ·{" "}
-                <span className={a.statut === "en_stock" ? "text-emerald-600 font-bold" : "text-gray-400 font-bold"}>
-                  {a.statut === "en_stock" ? `${a.quantite} en stock` : "Épuisé"}
-                </span>
-              </p>
-            </div>
+            {/* Actions : Réactualisation du stock + Modification + Suppression */}
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              {/* Stock Stepper */}
+              <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800/80 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => changerStock(a.id, Math.max(0, a.quantite - 1))}
+                  disabled={enCours === a.id || a.quantite === 0}
+                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-black disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-600 transition cursor-pointer flex items-center justify-center text-xs"
+                  aria-label="Diminuer le stock"
+                >
+                  −
+                </button>
+                <span className="w-7 text-center text-xs font-black text-gray-900 dark:text-white">{a.quantite}</span>
+                <button
+                  type="button"
+                  onClick={() => changerStock(a.id, a.quantite + 1)}
+                  disabled={enCours === a.id}
+                  className="w-7 h-7 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-black disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-600 transition cursor-pointer flex items-center justify-center text-xs"
+                  aria-label="Augmenter le stock"
+                >
+                  +
+                </button>
+              </div>
 
-            {/* Réactualisation express : c'est le geste quotidien du vendeur. */}
-            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Bouton Modifier */}
               <button
                 type="button"
-                onClick={() => changerStock(a.id, Math.max(0, a.quantite - 1))}
-                disabled={enCours === a.id || a.quantite === 0}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-black disabled:opacity-40 cursor-pointer"
-                aria-label="Diminuer le stock"
+                onClick={() => setArticleAEditer(a)}
+                className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-blue-200 dark:border-blue-900/60"
+                title="Modifier cet article"
               >
-                −
+                <i className="fa-solid fa-pen-to-square text-xs"></i>
+                <span>Modifier</span>
               </button>
-              <span className="w-8 text-center text-sm font-black text-gray-900 dark:text-white">{a.quantite}</span>
+
+              {/* Bouton Supprimer */}
               <button
                 type="button"
-                onClick={() => changerStock(a.id, a.quantite + 1)}
+                onClick={() => gererSuppression(a)}
                 disabled={enCours === a.id}
-                className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-black disabled:opacity-40 cursor-pointer"
-                aria-label="Augmenter le stock"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await retirerArticle(a.id);
-                  await onChange();
-                }}
-                className="ml-1 w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 cursor-pointer"
-                aria-label="Retirer l'article"
+                className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 flex items-center justify-center transition cursor-pointer border border-red-200 dark:border-red-900/60"
+                aria-label="Supprimer l'article"
+                title="Supprimer cet article"
               >
                 <i className="fa-solid fa-trash-can text-xs"></i>
               </button>
@@ -10002,6 +10198,42 @@ function ListeMesArticles({ articles, onChange, onPublier }) {
           </li>
         ))}
       </ul>
+
+      {/* Modal d'édition d'article */}
+      {articleAEditer && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <i className="fa-solid fa-pen-to-square text-[#1877F2]"></i>
+                Modifier l&apos;article
+              </h3>
+              <button
+                type="button"
+                onClick={() => setArticleAEditer(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black dark:hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <FormulaireArticle
+              userId={userId || articleAEditer.owner_id || articleAEditer.user_id}
+              storeId={storeId || articleAEditer.store_id || articleAEditer.boutique_id}
+              articleAEditer={articleAEditer}
+              onPublie={async () => {
+                setArticleAEditer(null);
+                await onChange();
+              }}
+              onAnnuler={() => setArticleAEditer(null)}
+              onSupprime={async () => {
+                setArticleAEditer(null);
+                await onChange();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -548,6 +548,46 @@ export async function retirerArticle(itemId) {
   if (error) throw new Error(error.message);
 }
 
+export async function modifierArticle(itemId, champs) {
+  if (!itemId) throw new Error("ID d'article manquant.");
+  const titre = String(champs?.titre || "").trim();
+  if (!titre) throw new Error("Le titre est obligatoire.");
+
+  const { data, error } = await supabase
+    .from("marketplace_items")
+    .update({
+      titre,
+      categorie: champs?.categorie || "autre",
+      prix_xof: Math.max(0, Math.round(Number(champs?.prix_xof) || 0)),
+      quantite: Math.max(0, Math.round(Number(champs?.quantite) || 0)),
+      description: champs?.description?.trim() || null,
+      photos: Array.isArray(champs?.photos) ? champs.photos.slice(0, 6) : [],
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", itemId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function supprimerArticle(itemId) {
+  if (!itemId) throw new Error("ID d'article manquant.");
+  try {
+    const { error: rpcError } = await supabase.rpc("retirer_mon_article", { p_id: itemId });
+    if (!rpcError) return true;
+  } catch {}
+
+  const { error } = await supabase
+    .from("marketplace_items")
+    .delete()
+    .eq("id", itemId);
+
+  if (error) throw new Error(error.message);
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Recherche acheteur
 // ---------------------------------------------------------------------------
