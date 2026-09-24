@@ -29,7 +29,43 @@ export const maxDuration = 15;
  * aucune session. Jamais de journalisation des jetons.
  */
 const ALLOWED_MOBILE_BRIDGE_TARGETS = {
+  // Candidat : CV et candidatures
   "creer-cv": "/creer-cv",
+  modeles: "/modeles",
+  "importer-cv": "/importer-cv",
+  "aide-candidature": "/aide-candidature",
+  "mes-cvs": "/candidat/mes-cvs",
+  candidatures: "/candidat/candidatures",
+  candidat: "/candidat",
+  "mon-activite": "/mon-activite",
+  profil: "/profil",
+  // Compte
+  securite: "/candidat/securite",
+  facturation: "/candidat/facturation",
+  premium: "/premium",
+  "suppression-compte": "/suppression-compte",
+  // Services et informations
+  fonctionnalites: "/fonctionnalites",
+  etablissements: "/etablissements",
+  concours: "/concours",
+  formations: "/formations",
+  "recrutement-journalier": "/recrutement-journalier",
+  "boite-a-idees": "/boite-a-idees",
+  faq: "/faq",
+  service: "/service",
+  "conditions-utilisation": "/conditions-utilisation",
+  confidentialite: "/confidentialite",
+  // Espaces à rôle : le middleware (src/proxy.js) applique ensuite les mêmes contrôles de rôle que sur le site
+  // — ce pont n'ouvre AUCUN droit, il ne pose que la session que la personne a déjà.
+  recruteur: "/recruteur",
+  admin: "/admin",
+};
+
+// Cibles paramétrées : une offre précise. L'identifiant est contrôlé (UUID strict) avant d'être placé dans le
+// chemin, jamais recopié tel quel — aucun chemin arbitraire ne peut passer par ce paramètre.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ALLOWED_MOBILE_BRIDGE_ID_TARGETS = {
+  offre: (id) => `/offres/${id}`,
 };
 
 // Client dédié à la seule vérification du jeton, distinct de celui (plus
@@ -49,7 +85,17 @@ export async function POST(req) {
   const cible = form.get("cible");
   const template = form.get("template");
 
-  const chemin = typeof cible === "string" ? ALLOWED_MOBILE_BRIDGE_TARGETS[cible] : null;
+  const idCible = form.get("id");
+
+  let chemin = null;
+  if (typeof cible === "string" && Object.hasOwn(ALLOWED_MOBILE_BRIDGE_TARGETS, cible)) {
+    chemin = ALLOWED_MOBILE_BRIDGE_TARGETS[cible];
+  } else if (typeof cible === "string" && Object.hasOwn(ALLOWED_MOBILE_BRIDGE_ID_TARGETS, cible)) {
+    if (typeof idCible !== "string" || !UUID_RE.test(idCible)) {
+      return NextResponse.json({ error: "Identifiant invalide." }, { status: 400 });
+    }
+    chemin = ALLOWED_MOBILE_BRIDGE_ID_TARGETS[cible](idCible);
+  }
   if (!chemin) {
     return NextResponse.json({ error: "Cible inconnue." }, { status: 400 });
   }
@@ -66,7 +112,9 @@ export async function POST(req) {
   if (!allowed) return rateError;
 
   const cheminFinal =
-    typeof template === "string" && template ? `${chemin}?template=${encodeURIComponent(template)}` : chemin;
+    cible === "creer-cv" && typeof template === "string" && template
+      ? `${chemin}?template=${encodeURIComponent(template)}`
+      : chemin;
   const res = NextResponse.redirect(new URL(cheminFinal, req.url));
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
