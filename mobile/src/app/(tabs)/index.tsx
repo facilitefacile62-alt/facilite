@@ -3,24 +3,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import OfferMediaView from '@/components/OfferMediaView';
-import { IconEnvoyer, IconPartager } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles, type OffreReelle } from '@/lib/useOffresReelles';
 
-const MODELES_CV = [
-  { id: 'moderne', label: 'Moderne', template: 'modern', icone: 'sparkles', gradient: ['#2563EB', '#1D4ED8'], border: '#2563EB' },
-  { id: 'minimaliste', label: 'Minimaliste', template: 'minimalist', icone: 'document-text', gradient: ['#10B981', '#059669'], border: '#10B981' },
-  { id: 'classique', label: 'Classique', template: 'classic', icone: 'school', gradient: ['#8B5CF6', '#6D28D9'], border: '#8B5CF6' },
-  { id: 'canadien', label: 'Canadien', template: 'canadian', icone: 'globe-outline', gradient: ['#EF4444', '#B91C1C'], border: '#EF4444' },
-  { id: 'creatif', label: 'Créatif', template: 'creative', icone: 'color-palette', gradient: ['#EC4899', '#BE185D'], border: '#EC4899' },
-  { id: 'executive', label: 'Executive', template: 'executive', icone: 'briefcase', gradient: ['#F59E0B', '#B45309'], border: '#F59E0B' },
+const STORIES_CV = [
+  { id: 'moderne', label: 'Moderne', template: 'modern', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#38BDF8', '#2563EB'] },
+  { id: 'minimaliste', label: 'Minimaliste', template: 'minimalist', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#34D399', '#059669'] },
+  { id: 'classique', label: 'Classique', template: 'classic', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#A78BFA', '#7C3AED'] },
+  { id: 'canadien', label: 'Canadien', template: 'canadian', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#F87171', '#DC2626'] },
 ];
 
 export default function AccueilScreen() {
@@ -38,96 +35,161 @@ export default function AccueilScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <FaciliteHeader />
+    <View style={{ flex: 1, backgroundColor: '#0B0E14' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <FaciliteHeader dark={true} />
 
         {offres === null ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#2563EB" size="large" />
-            <Text className="text-[12px] text-black/50 font-medium mt-3">Chargement des offres en direct…</Text>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator color="#38BDF8" size="large" />
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: 12 }}>
+              Chargement des offres en direct…
+            </Text>
           </View>
         ) : erreur ? (
-          <View className="flex-1 items-center justify-center px-8">
-            <Ionicons name="cloud-offline-outline" size={32} color="rgba(0,0,0,0.3)" />
-            <Text className="text-[13px] text-black/60 font-medium mt-3 text-center">
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+            <Ionicons name="cloud-offline-outline" size={36} color="rgba(255,255,255,0.4)" />
+            <Text style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)', fontWeight: '500', marginTop: 12, textAlign: 'center' }}>
               Impossible de charger les offres pour le moment.
             </Text>
-            <Pressable onPress={rechargerFlux} className="mt-4 px-5 py-2.5 rounded-full bg-blue-600 active:opacity-90">
-              <Text className="text-white text-[13px] font-bold">Réessayer</Text>
+            <Pressable
+              onPress={rechargerFlux}
+              style={{
+                marginTop: 16,
+                paddingHorizontal: 20,
+                paddingVertical: 10,
+                borderRadius: 9999,
+                backgroundColor: '#2563EB',
+              }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Réessayer</Text>
             </Pressable>
           </View>
         ) : (
           <FlatList
             data={offres}
             keyExtractor={(item) => item.id}
-            contentContainerClassName="pb-10"
+            contentContainerStyle={{ paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
             refreshing={rafraichissement}
             onRefresh={rechargerFlux}
             ListHeaderComponent={
               <View>
-                {/* Carrousel Stories : Modèles de CV interactifs */}
-                <View className="bg-white mx-3 mt-2.5 mb-3 rounded-2xl p-2.5 border border-gray-200 shadow-xs">
-                  <Text className="text-[11px] font-black text-gray-400 uppercase tracking-wider px-1 mb-2">
-                    Créer mon CV · Modèles Recommandés
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-3 px-1 pb-1">
-                    {MODELES_CV.map((modele) => (
+                {/* 1. STORIES : MODÈLES CV (Style 1:1 Capture Web) */}
+                <View
+                  style={{
+                    backgroundColor: '#111622',
+                    marginHorizontal: 12,
+                    marginTop: 10,
+                    marginBottom: 12,
+                    borderRadius: 18,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: '#1E2638',
+                  }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+                    {STORIES_CV.map((s) => (
                       <Pressable
-                        key={modele.id}
+                        key={s.id}
                         onPress={() =>
-                          router.push({ pathname: '/web/[cle]', params: { cle: 'creer-cv', template: modele.template } })
+                          router.push({ pathname: '/web/[cle]', params: { cle: 'creer-cv', template: s.template } })
                         }
-                        className="items-center gap-1.5 active:scale-95">
-                        <View
-                          className="w-14 h-14 rounded-full p-0.5 items-center justify-center border-2"
-                          style={{ borderColor: modele.border }}>
-                          <LinearGradient
-                            colors={modele.gradient as [string, string]}
-                            className="w-full h-full rounded-full items-center justify-center shadow-xs">
-                            <Ionicons name={modele.icone as any} size={22} color="#FFFFFF" />
-                          </LinearGradient>
-                        </View>
-                        <Text className="text-[11px] font-bold text-gray-800">{modele.label}</Text>
+                        style={{ alignItems: 'center', gap: 6 }}>
+                        <LinearGradient
+                          colors={s.gradient as [string, string]}
+                          style={{
+                            width: 62,
+                            height: 62,
+                            borderRadius: 31,
+                            padding: 2.5,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                          <View
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: 30,
+                              overflow: 'hidden',
+                              backgroundColor: '#000',
+                            }}>
+                            <Image
+                              source={{ uri: s.image }}
+                              style={{ width: '100%', height: '100%' }}
+                              contentFit="cover"
+                            />
+                          </View>
+                        </LinearGradient>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#E2E8F0' }}>{s.label}</Text>
                       </Pressable>
                     ))}
                   </ScrollView>
                 </View>
 
-                {/* Entrée du Marketplace natif */}
-                <Pressable onPress={() => router.push('/marketplace')} className="mx-3 mb-3 active:opacity-90">
+                {/* 2. BANNIÈRE MARKETPLACE */}
+                <Pressable
+                  onPress={() => router.push('/marketplace')}
+                  style={{ marginHorizontal: 12, marginBottom: 12 }}>
                   <LinearGradient
                     colors={['#0d3b34', '#0f4f42']}
-                    className="rounded-2xl px-4 py-3.5 flex-row items-center gap-3 overflow-hidden shadow-sm">
-                    <View className="w-11 h-11 rounded-xl bg-white/[0.14] items-center justify-center">
-                      <Ionicons name="storefront" size={22} color="#6ee7c9" />
+                    style={{
+                      borderRadius: 16,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(110,231,201,0.2)',
+                    }}>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 12,
+                        backgroundColor: 'rgba(255,255,255,0.12)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <Ionicons name="storefront" size={20} color="#6EE7C9" />
                     </View>
-                    <View className="flex-1">
-                      <Text className="text-[10.5px] font-bold tracking-widest text-[#6ee7c9]">MARKETPLACE</Text>
-                      <Text className="text-white text-[15px] font-extrabold mt-0.5">Achetez et vendez près de chez vous</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#6EE7C9', letterSpacing: 0.8 }}>
+                        MARKETPLACE
+                      </Text>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF', marginTop: 2 }}>
+                        Achetez et vendez près de chez vous
+                      </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#6ee7c9" />
+                    <Ionicons name="chevron-forward" size={18} color="#6EE7C9" />
                   </LinearGradient>
                 </Pressable>
               </View>
             }
             ListEmptyComponent={
-              <View className="bg-white mx-3 rounded-2xl p-8 items-center border border-gray-200">
-                <Ionicons name="briefcase-outline" size={32} color="#9CA3AF" />
-                <Text className="text-[13px] text-gray-500 font-medium text-center mt-2">
+              <View
+                style={{
+                  backgroundColor: '#111622',
+                  marginHorizontal: 12,
+                  borderRadius: 18,
+                  padding: 32,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: '#1E2638',
+                }}>
+                <Ionicons name="briefcase-outline" size={36} color="rgba(255,255,255,0.3)" />
+                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: 8 }}>
                   Aucune offre active pour l&apos;instant.
                 </Text>
               </View>
             }
-            ItemSeparatorComponent={() => <View className="h-3" />}
+            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
             renderItem={({ item }) => (
               <CarteOffre offre={item} matchScore={candidateMatchScores?.[item.id] ?? null} />
             )}
             ListFooterComponent={
               offres.length > 0 ? (
-                <View className="flex-row items-center justify-center gap-2 py-5">
-                  <Text className="text-black/40 text-[12px] font-semibold">
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '600' }}>
                     {offres.length} offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''} en direct
                   </Text>
                 </View>
@@ -143,6 +205,8 @@ export default function AccueilScreen() {
 function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
   const router = useRouter();
   const [aime, setAime] = useState(false);
+  const [sauvegarde, setSauvegarde] = useState(false);
+  const [descriptionEtendue, setDescriptionEtendue] = useState(false);
   const [logoErreur, setLogoErreur] = useState(false);
 
   const partager = async () => {
@@ -150,82 +214,220 @@ function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: num
       const url = `https://ffacilite.com/offres/${offre.id}`;
       await Share.share({
         title: offre.titre,
-        message: `Découvrez cette offre d'emploi sur Facilité :\n${offre.titre} chez ${offre.entreprise} (${offre.localisation})\n\nPostulez ici : ${url}`,
+        message: `Découvrez cette opportunité sur Facilité :\n${offre.titre} chez ${offre.entreprise} (${offre.localisation})\n\nPostulez ici : ${url}`,
         url,
       });
     } catch {}
   };
 
+  const ouvrirPostuler = () => {
+    if (offre.externalLink && (offre.externalLink.startsWith('http://') || offre.externalLink.startsWith('https://'))) {
+      Linking.openURL(offre.externalLink).catch(() => {
+        router.push(`/offre/${offre.id}`);
+      });
+    } else {
+      router.push(`/offre/${offre.id}`);
+    }
+  };
+
   return (
     <Pressable
       onPress={() => router.push(`/offre/${offre.id}`)}
-      className="bg-white mx-3 rounded-2xl p-4 border border-gray-200 shadow-xs active:opacity-95">
-      {/* En-tête : Logo entreprise réel ou Avatar coloré + Nom + Date */}
-      <View className="flex-row items-center gap-3">
+      style={{
+        backgroundColor: '#111622',
+        marginHorizontal: 12,
+        borderRadius: 20,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#1E2638',
+      }}>
+      {/* 1. EN-TÊTE DE LA CARTE : Logo Entreprise + Nom + Date */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {offre.posterUri && !logoErreur ? (
           <Image
             source={{ uri: offre.posterUri }}
             alt={offre.entreprise}
-            style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3F4F6' }}
+            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#1E2638', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
             contentFit="cover"
             transition={150}
             onError={() => setLogoErreur(true)}
           />
         ) : (
-          <View className={`w-11 h-11 rounded-xl ${offre.logoTeinte} items-center justify-center shadow-xs`}>
-            <Text className="text-white font-black text-[14px]">{offre.logoInitiales}</Text>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: '#1E2638',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.15)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>{offre.logoInitiales}</Text>
           </View>
         )}
-        <View className="flex-1 min-w-0">
-          <Text className="text-[14.5px] font-bold text-blue-600" numberOfLines={1}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }} numberOfLines={1}>
             {offre.entreprise}
           </Text>
-          <Text className="text-[11.5px] text-black/45 mt-0.5">{offre.date}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Text style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)', fontWeight: '500' }}>
+              {offre.dateFormatee || offre.date}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>·</Text>
+            <Ionicons name="globe-outline" size={11} color="rgba(255,255,255,0.45)" />
+          </View>
         </View>
       </View>
 
-      {/* Badge Matching IA */}
-      <View className="mt-2.5">
-        <BadgeMatchingOffre score={matchScore} />
-      </View>
+      {/* 2. MATCHING IA */}
+      {matchScore !== null && (
+        <View style={{ marginTop: 10 }}>
+          <BadgeMatchingOffre score={matchScore} />
+        </View>
+      )}
 
-      {/* Titre & Localisation & Contrat */}
-      <Text className="text-[16px] font-extrabold text-[#1A1A1A] leading-5 mt-1.5">{offre.titre}</Text>
-      <Text className="text-[12.5px] text-black/60 mt-1.5 font-medium">
-        💼 {offre.localisation} · {offre.contrat} {offre.salaire ? `· 💰 ${offre.salaire}` : ''}
+      {/* 3. TITRE DU POSTE */}
+      <Text style={{ fontSize: 16.5, fontWeight: '800', color: '#F8FAFC', lineHeight: 22, marginTop: 10 }}>
+        {offre.titre}
       </Text>
 
-      {/* Affiche de l'offre réelle avec dimensionnement explicite et chargement haute fidélité */}
+      {/* 4. LOCALISATION, SECTEUR & DATE LIMITE (Style 1:1 Capture Web) */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 6 }}>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
+          {offre.localisation}
+        </Text>
+        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>·</Text>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
+          {offre.sector || 'Opportunité'}
+        </Text>
+        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>·</Text>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
+          {offre.contrat}
+        </Text>
+        {offre.deadline && (
+          <>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>·</Text>
+            <Text style={{ fontSize: 12, color: '#F59E0B', fontWeight: '800' }}>
+              Limite : {new Date(offre.deadline).toLocaleDateString('fr-FR')}
+            </Text>
+          </>
+        )}
+      </View>
+
+      {/* 5. DESCRIPTION AVEC VOIR PLUS */}
+      {offre.description && (
+        <View style={{ marginTop: 8 }}>
+          <Text
+            numberOfLines={descriptionEtendue ? undefined : 3}
+            style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 19 }}>
+            {offre.description}
+          </Text>
+          {offre.description.length > 120 && (
+            <Pressable
+              onPress={() => setDescriptionEtendue(!descriptionEtendue)}
+              style={{ marginTop: 4 }}>
+              <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700' }}>
+                {descriptionEtendue ? 'Voir moins' : '...Voir plus'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {/* 6. GRANDE AFFICHE RÉELLE DE L'OFFRE (Style Capture Web 1:1) */}
       <OfferMediaView
         media={offre.rawImage || offre.posterUri}
-        height={220}
+        height={260}
+        dark={true}
         onPress={() => router.push(`/offre/${offre.id}`)}
       />
 
-      {/* Boutons d'Action Connectés */}
-      <View className="flex-row gap-2 mt-3.5 items-center">
+      {/* 7. FOOTER CANDIDATS */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 12, paddingHorizontal: 2 }}>
+        <Ionicons name="people-outline" size={14} color="rgba(255,255,255,0.45)" />
+        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600' }}>
+          {offre.viewCount && offre.viewCount > 0 ? `${offre.viewCount} personnes intéressées` : '0 personne a postulé'}
+        </Text>
+      </View>
+
+      {/* 8. BARRE D'ACTIONS COMPLÈTE STYLE LINKEDIN / SAAS */}
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
         {/* Like */}
         <Pressable
           onPress={() => setAime(!aime)}
-          className={`w-[40px] h-[40px] rounded-full border-[1.5px] items-center justify-center transition active:scale-90 ${
-            aime ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50'
-          }`}>
-          <Ionicons name={aime ? 'heart' : 'heart-outline'} size={19} color={aime ? '#EF4444' : '#6B7280'} />
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: aime ? '#EF4444' : '#1E2638',
+            backgroundColor: aime ? 'rgba(239,68,68,0.15)' : '#161B26',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons name={aime ? 'thumbs-up' : 'thumbs-up-outline'} size={18} color={aime ? '#EF4444' : '#94A3B8'} />
         </Pressable>
 
-        {/* Partager universel */}
+        {/* Partager */}
         <Pressable
           onPress={partager}
-          className="w-[40px] h-[40px] rounded-full border-[1.5px] border-gray-200 bg-gray-50 items-center justify-center active:scale-90">
-          <IconPartager />
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#1E2638',
+            backgroundColor: '#161B26',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons name="share-social-outline" size={18} color="#94A3B8" />
         </Pressable>
 
-        {/* Postuler en direct */}
+        {/* Bouton Principal : Postuler sur le site officiel ou via Facilité */}
         <Pressable
-          onPress={() => router.push(`/offre/${offre.id}`)}
-          className="flex-1 bg-blue-600 active:bg-blue-700 rounded-full flex-row items-center justify-center gap-2 py-2.5 shadow-sm active:scale-98">
-          <IconEnvoyer />
-          <Text className="text-white text-[14px] font-bold">Postuler via Facilité</Text>
+          onPress={ouvrirPostuler}
+          style={{
+            flex: 1,
+            height: 42,
+            borderRadius: 12,
+            backgroundColor: '#2563EB',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 7,
+            paddingHorizontal: 12,
+          }}>
+          <Ionicons
+            name={offre.externalLink ? 'open-outline' : 'paper-plane'}
+            size={16}
+            color="#FFFFFF"
+          />
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>
+            {offre.externalLink ? 'Postuler sur le site officiel' : 'Postuler via Facilité'}
+          </Text>
+        </Pressable>
+
+        {/* Sauvegarder */}
+        <Pressable
+          onPress={() => setSauvegarde(!sauvegarde)}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: sauvegarde ? '#38BDF8' : '#1E2638',
+            backgroundColor: sauvegarde ? 'rgba(56,189,248,0.15)' : '#161B26',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons
+            name={sauvegarde ? 'bookmark' : 'bookmark-outline'}
+            size={18}
+            color={sauvegarde ? '#38BDF8' : '#94A3B8'}
+          />
         </Pressable>
       </View>
     </Pressable>

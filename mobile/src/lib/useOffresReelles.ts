@@ -8,6 +8,7 @@ export type OffreReelle = {
   logoTeinte: string;
   logoInitiales: string;
   date: string;
+  dateFormatee: string;
   titre: string;
   localisation: string;
   contrat: string;
@@ -17,8 +18,13 @@ export type OffreReelle = {
   description?: string;
   contactEmail?: string;
   contactPhone?: string;
+  contactWhatsapp?: string;
   externalLink?: string;
   deadline?: string;
+  listingType?: string;
+  sector?: string;
+  positionsCount?: number;
+  viewCount?: number;
 };
 
 const TEINTES = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-indigo-600', 'bg-amber-600', 'bg-rose-600'];
@@ -54,7 +60,7 @@ export function useOffresReelles(limite = 30) {
       try {
         const { data, error } = await supabase
           .from('job_offers')
-          .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, external_link, deadline, image_url, created_at')
+          .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, deadline, image_url, created_at, listing_type, sector, category, positions_count, view_count')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(limite);
@@ -70,6 +76,7 @@ export function useOffresReelles(limite = 30) {
           logoTeinte: TEINTES[idx % TEINTES.length],
           logoInitiales: initiales(o.company || ''),
           date: dateRelative(o.created_at),
+          dateFormatee: o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR') : 'Récemment',
           titre: o.title || 'Offre',
           localisation: o.location || 'Sénégal',
           contrat: o.contract_type || 'CDI',
@@ -79,8 +86,13 @@ export function useOffresReelles(limite = 30) {
           description: o.description || undefined,
           contactEmail: o.contact_email || undefined,
           contactPhone: o.contact_phone || undefined,
+          contactWhatsapp: o.contact_whatsapp || undefined,
           externalLink: o.external_link || undefined,
           deadline: o.deadline || undefined,
+          listingType: o.listing_type || 'offre_emploi',
+          sector: o.sector || o.category || 'Opportunité',
+          positionsCount: o.positions_count || undefined,
+          viewCount: o.view_count || 0,
         }));
 
         if (!annule) {

@@ -1,44 +1,119 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { IconMenuHamburger, IconNotifs, IconRecherche } from '@/components/facilite-icons';
 import PanneauMenuProfil from '@/components/PanneauMenuProfil';
 import PanneauNotifications from '@/components/PanneauNotifications';
 
-// En-tête partagé, simplifié : la navigation principale vit maintenant dans
-// la barre d'onglets native du bas (app-tabs.tsx : Accueil/Offres/
-// Extracteur/Messages/Profil), donc la rangée à 6 icônes du dossier de
-// design (redondante avec cette barre) est retirée. Profil a sa place dans
-// les onglets ; Notifications prend sa place ici, en haut à droite, à
-// l'emplacement où était l'avatar — badges à ajouter dans un point séparé.
-//
-// Notifications et Menu s'ouvrent en <Modal> (couvrent tout l'écran quelle
-// que soit la taille réelle de ce header) plutôt qu'en overlay positionné
-// localement. Recherche pousse /recherche (écran à part, voir
-// app/recherche.tsx) via le Stack racine.
-const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
+interface FaciliteHeaderProps {
+  dark?: boolean;
+}
 
-export default function FaciliteHeader() {
+export default function FaciliteHeader({ dark = false }: FaciliteHeaderProps) {
   const router = useRouter();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const [menuOuvert, setMenuOuvert] = useState(false);
 
+  const bg = dark ? '#0B0E14' : '#FFFFFF';
+  const border = dark ? '#1E2638' : 'rgba(0,0,0,0.06)';
+  const iconColor = dark ? '#F1F5F9' : '#1E293B';
+
   return (
-    <View className="bg-white border-b border-black/[0.06]">
-      <View className="flex-row items-center justify-between px-4 pt-3.5 pb-3">
-        <Pressable onPress={() => router.replace('/')}>
-          <Text className="text-blue-600 text-[18px] font-black">Facilité</Text>
+    <View style={{ backgroundColor: bg, borderBottomWidth: 1, borderColor: border }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          paddingBottom: 12,
+        }}>
+        <Pressable
+          onPress={() => router.replace('/')}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <View
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: '#2563EB',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Ionicons name="key" size={16} color="#FFFFFF" />
+          </View>
+          <Text
+            style={{
+              color: dark ? '#FFFFFF' : '#2563EB',
+              fontSize: 20,
+              fontWeight: '900',
+              letterSpacing: -0.3,
+            }}>
+            Facilité
+          </Text>
         </Pressable>
-        <View className="flex-row items-center gap-3.5">
-          <Pressable onPress={() => router.push('/recherche')}>
-            <IconRecherche />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {/* Recherche */}
+          <Pressable
+            onPress={() => router.push('/recherche')}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: dark ? '#161B26' : '#F1F5F9',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: dark ? '#1E2638' : 'transparent',
+            }}>
+            <Ionicons name="search" size={18} color={iconColor} />
           </Pressable>
-          <Pressable onPress={() => setNotifsOuvertes(true)}>
-            <IconNotifs />
+
+          {/* Notifications avec badge rouge */}
+          <Pressable
+            onPress={() => setNotifsOuvertes(true)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: dark ? '#161B26' : '#F1F5F9',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              borderWidth: 1,
+              borderColor: dark ? '#1E2638' : 'transparent',
+            }}>
+            <Ionicons name="notifications-outline" size={18} color={iconColor} />
+            <View
+              style={{
+                position: 'absolute',
+                top: 7,
+                right: 7,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: '#EF4444',
+              }}
+            />
           </Pressable>
-          <Pressable onPress={() => setMenuOuvert(true)}>
-            <IconMenuHamburger />
+
+          {/* Menu Hamburger */}
+          <Pressable
+            onPress={() => setMenuOuvert(true)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: dark ? '#161B26' : '#F1F5F9',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: dark ? '#1E2638' : 'transparent',
+            }}>
+            <Ionicons name="menu" size={20} color={iconColor} />
           </Pressable>
         </View>
       </View>

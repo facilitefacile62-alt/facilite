@@ -98,10 +98,10 @@ export default function OfferMediaView({
             height,
             borderRadius,
             overflow: 'hidden',
-            backgroundColor: dark ? '#15181D' : '#F1EFE9',
-            marginTop: 12,
+            backgroundColor: dark ? '#0E131F' : '#F1EFE9',
+            marginTop: 10,
             borderWidth: 1,
-            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
             position: 'relative',
           }}>
           <Image
@@ -111,22 +111,55 @@ export default function OfferMediaView({
             transition={200}
             priority="high"
           />
-          {/* Badge indicateur Affiche */}
+
+          {/* Bouton Agrandir en haut à droite (Style Capture Web 1:1) */}
           <View
             style={{
               position: 'absolute',
-              bottom: 8,
-              right: 8,
+              top: 10,
+              right: 10,
               backgroundColor: 'rgba(0,0,0,0.65)',
-              paddingHorizontal: 8,
-              paddingVertical: 3.5,
+              paddingHorizontal: 9,
+              paddingVertical: 4.5,
               borderRadius: 8,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 4,
+              gap: 5,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.15)',
             }}>
-            <Ionicons name="image-outline" size={11} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>Affiche officielle</Text>
+            <Ionicons name="search" size={11} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>Agrandir</Text>
+          </View>
+
+          {/* Filigrane ffacilite.com en bas (Style Capture Web 1:1) */}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: 'rgba(10,14,23,0.75)',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                backgroundColor: '#FFFFFF',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Ionicons name="key" size={10} color="#2563EB" />
+            </View>
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.2 }}>
+              ffacilite.com
+            </Text>
           </View>
         </Pressable>
       ) : (
@@ -137,10 +170,10 @@ export default function OfferMediaView({
             height,
             borderRadius,
             overflow: 'hidden',
-            backgroundColor: dark ? '#15181D' : '#F1EFE9',
-            marginTop: 12,
+            backgroundColor: dark ? '#0E131F' : '#F1EFE9',
+            marginTop: 10,
             borderWidth: 1,
-            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
             position: 'relative',
           }}>
           <FlatList
@@ -166,18 +199,57 @@ export default function OfferMediaView({
               </Pressable>
             )}
           />
-          <View
+
+          {/* Bouton Agrandir en haut à droite */}
+          <Pressable
+            onPress={() => handlePressImage(indexActif)}
             style={{
               position: 'absolute',
               top: 10,
               right: 10,
               backgroundColor: 'rgba(0,0,0,0.65)',
               paddingHorizontal: 9,
-              paddingVertical: 4,
-              borderRadius: 12,
+              paddingVertical: 4.5,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.15)',
             }}>
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-              {indexActif + 1} / {images.length}
+            <Ionicons name="search" size={11} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+              Agrandir ({indexActif + 1}/{images.length})
+            </Text>
+          </Pressable>
+
+          {/* Filigrane ffacilite.com en bas */}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: 'rgba(10,14,23,0.75)',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                backgroundColor: '#FFFFFF',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Ionicons name="key" size={10} color="#2563EB" />
+            </View>
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.2 }}>
+              ffacilite.com
             </Text>
           </View>
         </View>

@@ -3,29 +3,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import OfferMediaView from '@/components/OfferMediaView';
-import { IconClotureExpiree, IconDossier, IconEnvoyer, IconEtincelle } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles, type OffreReelle } from '@/lib/useOffresReelles';
 import { supabase } from '@/lib/supabase';
 
-// Reproduction de design_handoff_facilite/pages/03-offres.html. Le handoff
-// distingue "Offres disponibles" / "Offres expirées", mais job_offers ne
-// modélise pas de statut "expiré" distinct (seulement is_active) : le
-// filtre "Expirées" affiche donc honnêtement l'état vide déjà prévu par le
-// design plutôt qu'une fausse liste. "Voir plus d'offres" augmente la
-// limite réelle demandée à Supabase (pagination simple), pas une donnée
-// simulée.
 type Filtre = 'disponibles' | 'expirees';
-const PAS_PAGINATION = 12;
+const PAS_PAGINATION = 15;
 
 export default function OffresScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [limite, setLimite] = useState(PAS_PAGINATION);
   const { offres, erreur } = useOffresReelles(limite);
@@ -48,112 +41,175 @@ export default function OffresScreen() {
   }, []);
 
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <FaciliteHeader />
+    <View style={{ flex: 1, backgroundColor: '#0B0E14' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <FaciliteHeader dark={true} />
 
         {offres === null ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color="#2563EB" />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator color="#38BDF8" size="large" />
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: 12 }}>
+              Chargement des opportunités…
+            </Text>
           </View>
         ) : (
           <FlatList
             data={filtre === 'disponibles' ? offres : []}
             keyExtractor={(item) => item.id}
-            contentContainerClassName="px-3 pb-8"
+            contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View className="h-3.5" />}
+            ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
             ListHeaderComponent={
-              <View className="mb-3">
-                <LinearGradient colors={['#0d3b34', '#0f4f42']} className="rounded-2xl p-4 relative overflow-hidden">
-                  <View className="absolute top-3.5 right-3.5 w-[34px] h-[34px] rounded-[10px] bg-white/[0.14] items-center justify-center">
-                    <IconDossier />
+              <View style={{ marginBottom: 12, marginTop: 10 }}>
+                <LinearGradient
+                  colors={['#0d3b34', '#0f4f42']}
+                  style={{
+                    borderRadius: 18,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: 'rgba(110,231,201,0.2)',
+                    position: 'relative',
+                  }}>
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 14,
+                      right: 14,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Ionicons name="briefcase" size={18} color="#6EE7C9" />
                   </View>
-                  <Text className="text-[10.5px] font-bold tracking-widest text-[#6ee7c9]">
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', letterSpacing: 0.8, color: '#6EE7C9' }}>
                     CATALOGUE DES EMPLOIS
                   </Text>
-                  <Text className="text-white text-[18px] font-extrabold mt-1.5 leading-6 max-w-[80%]">
+                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginTop: 4, maxWidth: '80%' }}>
                     Offres d&apos;Emploi Disponibles
                   </Text>
-                  <Text className="text-[#d8f3ea] text-[12px] leading-5 mt-1.5 max-w-[85%]">
-                    Explorez toutes les opportunités publiées par nos recruteurs au Sénégal et postulez en un
-                    clic.
+                  <Text style={{ color: '#D8F3EA', fontSize: 12, lineHeight: 18, marginTop: 4, maxWidth: '88%' }}>
+                    Explorez toutes les opportunités publiées au Sénégal et postulez directement.
                   </Text>
                 </LinearGradient>
 
+                {/* Bouton Recherche Rapide */}
                 <Pressable
-                  onPress={() => Alert.alert('Recherche IA', 'Cette fonctionnalité arrive dans une prochaine mise à jour.')}
-                  className="bg-[#6ee7c9] rounded-full py-3.5 items-center mt-3 flex-row justify-center gap-2">
-                  <IconEtincelle color="#0d3b34" />
-                  <Text className="text-[#0d3b34] text-[14px] font-bold">Recherche IA</Text>
+                  onPress={() => router.push('/recherche')}
+                  style={{
+                    backgroundColor: '#6EE7C9',
+                    borderRadius: 9999,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    marginTop: 10,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}>
+                  <Ionicons name="search" size={17} color="#0D3B34" />
+                  <Text style={{ color: '#0D3B34', fontSize: 13.5, fontWeight: '800' }}>Rechercher une offre</Text>
                 </Pressable>
 
-                <View className="flex-row gap-2.5 mt-3">
+                {/* Filtres Disponibles / Expirées */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <Pressable
                     onPress={() => setFiltre('disponibles')}
-                    className={`flex-1 flex-row items-center gap-2 rounded-2xl px-3 py-3 ${
-                      filtre === 'disponibles' ? 'bg-white border border-gray-200 shadow-xs' : 'bg-white/40'
-                    }`}>
-                    <IconEtincelle color="#10B981" size={16} />
-                    <Text className="text-[12px] font-semibold text-[#1A1A1A] flex-1">Offres disponibles</Text>
-                    <Text className="text-[11.5px] font-bold text-[#0d3b34] bg-[#d7f2ea] px-2.5 py-0.5 rounded-full">
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      borderRadius: 14,
+                      padding: 10,
+                      backgroundColor: filtre === 'disponibles' ? '#161B26' : 'rgba(255,255,255,0.03)',
+                      borderWidth: 1,
+                      borderColor: filtre === 'disponibles' ? '#2563EB' : 'rgba(255,255,255,0.08)',
+                    }}>
+                    <Ionicons name="sparkles" size={15} color="#34D399" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF', flex: 1 }}>Disponibles</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: '#34D399',
+                        backgroundColor: 'rgba(52,211,153,0.15)',
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                      }}>
                       {totalDisponibles ?? '—'}
                     </Text>
                   </Pressable>
+
                   <Pressable
                     onPress={() => setFiltre('expirees')}
-                    className={`flex-1 flex-row items-center gap-2 rounded-2xl px-3 py-3 ${
-                      filtre === 'expirees' ? 'bg-white border border-gray-200 shadow-xs' : 'bg-white/40'
-                    }`}>
-                    <IconClotureExpiree />
-                    <Text className="text-[12px] font-semibold text-[#1A1A1A] flex-1">Offres expirées</Text>
-                    <Text className="text-[11.5px] font-bold text-[#7a1f1f] bg-[#f6d9d9] px-2.5 py-0.5 rounded-full">
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      borderRadius: 14,
+                      padding: 10,
+                      backgroundColor: filtre === 'expirees' ? '#161B26' : 'rgba(255,255,255,0.03)',
+                      borderWidth: 1,
+                      borderColor: filtre === 'expirees' ? '#EF4444' : 'rgba(255,255,255,0.08)',
+                    }}>
+                    <Ionicons name="time-outline" size={15} color="#F87171" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF', flex: 1 }}>Clôturées</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: '#F87171',
+                        backgroundColor: 'rgba(248,113,113,0.15)',
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                      }}>
                       0
                     </Text>
                   </Pressable>
                 </View>
-
-                {filtre === 'disponibles' ? (
-                  <View className="flex-row items-center gap-2 bg-[#d7f2ea] rounded-xl px-3.5 py-2.5 mt-3">
-                    <View className="w-[7px] h-[7px] rounded-full bg-amber-500" />
-                    <Text className="text-[12px] font-semibold text-[#0d3b34] flex-1">
-                      Recrutements en cours : postulez rapidement avant clôture !
-                    </Text>
-                  </View>
-                ) : (
-                  <View className="flex-row items-center gap-2 bg-[#fbe1e1] rounded-xl px-3.5 py-2.5 mt-3">
-                    <Text className="text-[13px]">↩</Text>
-                    <Text className="text-[12px] font-semibold text-[#7a1f1f] flex-1">
-                      Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !
-                    </Text>
-                  </View>
-                )}
               </View>
             }
             ListEmptyComponent={
               filtre === 'expirees' ? (
-                <View className="bg-white rounded-2xl px-5 py-8 items-center gap-2.5 border border-gray-200 shadow-xs">
-                  <View className="w-[52px] h-[52px] rounded-2xl bg-[#ECECEC] items-center justify-center">
-                    <IconClotureExpiree size={24} color="rgba(0,0,0,0.35)" />
-                  </View>
-                  <Text className="text-[15px] font-extrabold text-[#1A1A1A] mt-1">
+                <View
+                  style={{
+                    backgroundColor: '#111622',
+                    borderRadius: 18,
+                    padding: 32,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: '#1E2638',
+                  }}>
+                  <Ionicons name="hourglass-outline" size={36} color="rgba(255,255,255,0.3)" />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF', marginTop: 10 }}>
                     Aucune offre expirée pour le moment
                   </Text>
-                  <Text className="text-[12.5px] leading-5 text-black/50 text-center max-w-[88%]">
-                    Toutes les offres publiées sont actuellement actives et prêtes pour vos candidatures !
+                  <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 4, maxWidth: '85%' }}>
+                    Toutes les opportunités sont actuellement actives et prêtes pour vos candidatures !
                   </Text>
                   <Pressable
                     onPress={() => setFiltre('disponibles')}
-                    className="mt-1.5 bg-emerald-500 rounded-full px-5.5 py-2.5">
-                    <Text className="text-white text-[13px] font-bold">⚡ Voir les offres disponibles</Text>
+                    style={{
+                      marginTop: 14,
+                      backgroundColor: '#34D399',
+                      borderRadius: 9999,
+                      paddingHorizontal: 18,
+                      paddingVertical: 9,
+                    }}>
+                    <Text style={{ color: '#0D3B34', fontSize: 12.5, fontWeight: '800' }}>⚡ Voir les offres disponibles</Text>
                   </Pressable>
                 </View>
               ) : erreur ? (
-                <Text className="text-[12.5px] text-black/50 font-medium text-center mt-6">
+                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 24 }}>
                   Impossible de charger les offres pour le moment.
                 </Text>
               ) : (
-                <Text className="text-[12.5px] text-black/40 font-medium text-center mt-6">
+                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 24 }}>
                   Aucune offre active pour l&apos;instant.
                 </Text>
               )
@@ -163,15 +219,22 @@ export default function OffresScreen() {
             )}
             ListFooterComponent={
               filtre === 'disponibles' && offres.length > 0 && totalDisponibles !== null ? (
-                <View className="items-center mt-4">
+                <View style={{ alignItems: 'center', marginTop: 16 }}>
                   {offres.length < totalDisponibles && (
                     <Pressable
                       onPress={() => setLimite((n) => n + PAS_PAGINATION)}
-                      className="border-[1.5px] border-black/10 rounded-full px-5 py-2.5">
-                      <Text className="text-[12.5px] font-bold text-[#1A1A1A]">↓ Voir plus d&apos;offres</Text>
+                      style={{
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.15)',
+                        backgroundColor: '#161B26',
+                        borderRadius: 9999,
+                        paddingHorizontal: 20,
+                        paddingVertical: 10,
+                      }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>↓ Voir plus d&apos;offres</Text>
                     </Pressable>
                   )}
-                  <Text className="text-[11.5px] text-black/40 mt-2">
+                  <Text style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 8 }}>
                     {offres.length} offre{offres.length > 1 ? 's' : ''} affichée{offres.length > 1 ? 's' : ''} sur{' '}
                     {totalDisponibles}
                   </Text>
@@ -188,6 +251,8 @@ export default function OffresScreen() {
 function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchScore: number | null }) {
   const router = useRouter();
   const [aime, setAime] = useState(false);
+  const [sauvegarde, setSauvegarde] = useState(false);
+  const [descriptionEtendue, setDescriptionEtendue] = useState(false);
   const [logoErreur, setLogoErreur] = useState(false);
 
   const partager = async () => {
@@ -201,69 +266,207 @@ function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchS
     } catch {}
   };
 
+  const ouvrirPostuler = () => {
+    if (offre.externalLink && (offre.externalLink.startsWith('http://') || offre.externalLink.startsWith('https://'))) {
+      Linking.openURL(offre.externalLink).catch(() => {
+        router.push(`/offre/${offre.id}`);
+      });
+    } else {
+      router.push(`/offre/${offre.id}`);
+    }
+  };
+
   return (
     <Pressable
       onPress={() => router.push(`/offre/${offre.id}`)}
-      className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs active:opacity-95">
-      <View className="flex-row items-center gap-3">
+      style={{
+        backgroundColor: '#111622',
+        borderRadius: 20,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#1E2638',
+      }}>
+      {/* 1. Logo & Entreprise */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {offre.posterUri && !logoErreur ? (
           <Image
             source={{ uri: offre.posterUri }}
             alt={offre.entreprise}
-            style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3F4F6' }}
+            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#1E2638', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
             contentFit="cover"
             transition={150}
             onError={() => setLogoErreur(true)}
           />
         ) : (
-          <View className={`w-11 h-11 rounded-xl ${offre.logoTeinte} items-center justify-center shadow-xs`}>
-            <Text className="text-white font-black text-[14px]">{offre.logoInitiales}</Text>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: '#1E2638',
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.15)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>{offre.logoInitiales}</Text>
           </View>
         )}
-        <View className="flex-1 min-w-0">
-          <Text className="text-[14.5px] font-bold text-blue-600" numberOfLines={1}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }} numberOfLines={1}>
             {offre.entreprise}
           </Text>
-          <Text className="text-[11.5px] text-black/45 mt-0.5">{offre.date}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Text style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)', fontWeight: '500' }}>
+              {offre.dateFormatee || offre.date}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>·</Text>
+            <Ionicons name="globe-outline" size={11} color="rgba(255,255,255,0.45)" />
+          </View>
         </View>
       </View>
 
-      <View className="mt-2.5">
-        <BadgeMatchingOffre score={matchScore} />
+      {/* 2. Badge Matching IA */}
+      {matchScore !== null && (
+        <View style={{ marginTop: 10 }}>
+          <BadgeMatchingOffre score={matchScore} />
+        </View>
+      )}
+
+      {/* 3. Titre & Infos */}
+      <Text style={{ fontSize: 16.5, fontWeight: '800', color: '#F8FAFC', lineHeight: 22, marginTop: 10 }}>
+        {offre.titre}
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginTop: 6 }}>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
+          {offre.localisation}
+        </Text>
+        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>·</Text>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
+          {offre.sector || 'Opportunité'}
+        </Text>
+        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>·</Text>
+        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
+          {offre.contrat}
+        </Text>
+        {offre.deadline && (
+          <>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>·</Text>
+            <Text style={{ fontSize: 12, color: '#F59E0B', fontWeight: '800' }}>
+              Limite : {new Date(offre.deadline).toLocaleDateString('fr-FR')}
+            </Text>
+          </>
+        )}
       </View>
 
-      <Text className="text-[16px] font-extrabold text-[#1A1A1A] leading-5 mt-1.5">{offre.titre}</Text>
-      <Text className="text-[12.5px] text-black/60 mt-1.5 font-medium">
-        💼 {offre.localisation} · {offre.contrat} {offre.salaire ? `· 💰 ${offre.salaire}` : ''}
-      </Text>
+      {/* 4. Description avec voir plus */}
+      {offre.description && (
+        <View style={{ marginTop: 8 }}>
+          <Text
+            numberOfLines={descriptionEtendue ? undefined : 3}
+            style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 19 }}>
+            {offre.description}
+          </Text>
+          {offre.description.length > 120 && (
+            <Pressable
+              onPress={() => setDescriptionEtendue(!descriptionEtendue)}
+              style={{ marginTop: 4 }}>
+              <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700' }}>
+                {descriptionEtendue ? 'Voir moins' : '...Voir plus'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
-      {/* Affiche réelle de l'offre */}
+      {/* 5. Affiche réelle de l'offre */}
       <OfferMediaView
         media={offre.rawImage || offre.posterUri}
-        height={220}
+        height={260}
+        dark={true}
         onPress={() => router.push(`/offre/${offre.id}`)}
       />
 
-      <View className="flex-row gap-2 mt-3.5 items-center">
+      {/* 6. Footer Candidats */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 12, paddingHorizontal: 2 }}>
+        <Ionicons name="people-outline" size={14} color="rgba(255,255,255,0.45)" />
+        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600' }}>
+          {offre.viewCount && offre.viewCount > 0 ? `${offre.viewCount} personnes intéressées` : '0 personne a postulé'}
+        </Text>
+      </View>
+
+      {/* 7. Barre d'actions */}
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
         <Pressable
           onPress={() => setAime(!aime)}
-          className={`w-[40px] h-[40px] rounded-full border-[1.5px] items-center justify-center ${
-            aime ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-gray-50'
-          }`}>
-          <Ionicons name={aime ? 'heart' : 'heart-outline'} size={19} color={aime ? '#EF4444' : '#6B7280'} />
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: aime ? '#EF4444' : '#1E2638',
+            backgroundColor: aime ? 'rgba(239,68,68,0.15)' : '#161B26',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons name={aime ? 'thumbs-up' : 'thumbs-up-outline'} size={18} color={aime ? '#EF4444' : '#94A3B8'} />
         </Pressable>
 
         <Pressable
           onPress={partager}
-          className="w-[40px] h-[40px] rounded-full border-[1.5px] border-gray-200 bg-gray-50 items-center justify-center">
-          <Ionicons name="share-social-outline" size={19} color="#4B5563" />
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#1E2638',
+            backgroundColor: '#161B26',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons name="share-social-outline" size={18} color="#94A3B8" />
         </Pressable>
 
         <Pressable
-          onPress={() => router.push(`/offre/${offre.id}`)}
-          className="flex-1 bg-blue-600 active:bg-blue-700 rounded-full flex-row items-center justify-center gap-2 py-2.5 shadow-sm active:scale-98">
-          <IconEnvoyer />
-          <Text className="text-white text-[14px] font-bold">Postuler via Facilité</Text>
+          onPress={ouvrirPostuler}
+          style={{
+            flex: 1,
+            height: 42,
+            borderRadius: 12,
+            backgroundColor: '#2563EB',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 7,
+            paddingHorizontal: 12,
+          }}>
+          <Ionicons
+            name={offre.externalLink ? 'open-outline' : 'paper-plane'}
+            size={16}
+            color="#FFFFFF"
+          />
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>
+            {offre.externalLink ? 'Postuler sur le site officiel' : 'Postuler via Facilité'}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setSauvegarde(!sauvegarde)}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: sauvegarde ? '#38BDF8' : '#1E2638',
+            backgroundColor: sauvegarde ? 'rgba(56,189,248,0.15)' : '#161B26',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Ionicons
+            name={sauvegarde ? 'bookmark' : 'bookmark-outline'}
+            size={18}
+            color={sauvegarde ? '#38BDF8' : '#94A3B8'}
+          />
         </Pressable>
       </View>
     </Pressable>
