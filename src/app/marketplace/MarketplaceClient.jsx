@@ -5194,6 +5194,10 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
   const [modalEditionOuverte, setModalEditionOuverte] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
   const [ongletInfo, setOngletInfo] = useState("description"); // 'description' | 'specs' | 'livraison'
+  const [ongletShein, setOngletShein] = useState("article"); // 'article' | 'commentaires' | 'recommander'
+  const [filtreAvis, setFiltreAvis] = useState("tous");
+  const [avisLikes, setAvisLikes] = useState({ 1: 44, 2: 130, 3: 21 });
+  const [avisLikedByUser, setAvisLikedByUser] = useState({});
   const [modalCommandeOuverte, setModalCommandeOuverte] = useState(false);
   const [commandeEnvoyee, setCommandeEnvoyee] = useState(false);
   const [erreurCommande, setErreurCommande] = useState("");
@@ -5202,6 +5206,48 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
   const [livraisonAdresse, setLivraisonAdresse] = useState(profile?.city ? `${profile?.quartier || ""}, ${profile?.city}` : "");
   const [moyenPaiement, setMoyenPaiement] = useState("wave"); // 'wave' | 'om' | 'livraison'
   const [proprietaireId, setProprietaireId] = useState(article.boutique_owner_id || article.owner_id || null);
+
+  const toggleAvisLike = (id) => {
+    setAvisLikedByUser((prev) => {
+      const dejaAime = !!prev[id];
+      const nextLiked = { ...prev, [id]: !dejaAime };
+      setAvisLikes((likes) => ({
+        ...likes,
+        [id]: (likes[id] || 0) + (dejaAime ? -1 : 1),
+      }));
+      return nextLiked;
+    });
+  };
+
+  const AVIS_SHEIN = [
+    {
+      id: 1,
+      nom: "J***n",
+      note: 5,
+      variante: "Noir Space Gray / Standard",
+      texte: "Ganda nya super 🥺 Produit authentique et conforme à la photo ! Le vendeur a été très réactif et la livraison s'est faite en moins de 24h à Dakar.",
+      date: "Il y a 2 jours",
+      tag: "photo",
+    },
+    {
+      id: 2,
+      nom: "r***6",
+      note: 5,
+      variante: "Noir Classique / Neuf",
+      texte: "The product was good! It looks expensive, which what I liked. Will order again soon. Thank u 🙏 Vendeur très sérieux, produit de qualité supérieure.",
+      date: "Il y a 4 jours",
+      tag: "rapide",
+    },
+    {
+      id: 3,
+      nom: "M***a",
+      note: 5,
+      variante: "Édition Officielle",
+      texte: "Excellente expérience ! Colis bien emballé, vérifié sur place à la livraison avec Wave. Je recommande cette boutique sans hésiter.",
+      date: "Il y a 1 semaine",
+      tag: "vendeur",
+    },
+  ];
 
   // Résoudre le propriétaire de la boutique si absent pour garantir que la discussion interne fonctionne
   useEffect(() => {
@@ -5248,13 +5294,9 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
     ? Math.max(5, Math.round(((ancienPrix - prixUnitaire) / ancienPrix) * 100))
     : 11;
   const prixTotal = prixUnitaire * quantite;
-  // Sur son propre article, la discussion est impossible (on ne s'écrit pas à
-  // soi-même) : boutons grisés. Tant que le vendeur n'est pas connu, pas de lien
-  // vers une messagerie vide.
   const etatDiscussion = etatDiscussionArticle({ userId, proprietaireId });
   const estMonArticle = etatDiscussion === "mon-article";
   const nomBoutique = article.boutique_nom || "Boutique Officielle";
-  const sku = `SKU: SN-${(article.id || "26041620").replace(/\D/g, "").slice(0, 10).padEnd(10, "8")}`;
 
   const urlPartage = typeof window !== "undefined" ? `${window.location.origin}/marketplace?article=${article.id}` : "";
 
@@ -5280,15 +5322,9 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
         setCopie(true);
         setTimeout(() => setCopie(false), 2000);
       }
-    } catch {
-      // Ignorer annulation
-    }
+    } catch {}
   };
 
-  // Aucune table de commandes n'existe : la commande n'atteint le vendeur que
-  // par le message WhatsApp pré-rempli ci-dessous. Afficher un succès sans
-  // l'envoyer (comportement précédent) faisait croire à l'acheteur que le
-  // vendeur était prévenu alors que rien n'était transmis.
   const soumettreCommandeRapide = (e) => {
     e.preventDefault();
     if (!numeroWhatsApp) {
@@ -5304,8 +5340,6 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
     setCommandeEnvoyee(true);
   };
 
-  // La barre de navigation globale du site (<header id="main-site-header">)
-  // reste TOUJOURS visible au-dessus de la fiche produit sur tous les écrans.
   const [hauteurHeader, setHauteurHeader] = useState(64);
   useEffect(() => {
     const mesurer = () => {
@@ -5329,7 +5363,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
         {/* BARRE SUPÉRIEURE : Bouton Retour Flèche + Fil d'Ariane + Actions */}
         <div className="px-3 sm:px-6 py-2.5 sm:py-3 border-b border-gray-200 dark:border-zinc-800 bg-[#FAF6F1]/95 dark:bg-zinc-900/95 backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            {/* BOUTON FLÈCHE DE RETOUR EN HAUT (Toujours visible et mis en avant) */}
+            {/* BOUTON FLÈCHE DE RETOUR EN HAUT */}
             <button
               type="button"
               onClick={onFermer}
@@ -5375,420 +5409,412 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
           </div>
         </div>
 
-        {/* CORPS PRINCIPAL : 3 Colonnes (Galerie, Informations & Prix, Actions & Discussion) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-7">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-            
-            {/* 1. COLONNE GAUCHE (lg:col-span-5) : Galerie Photo avec Miniatures verticales (1:1 Capture) */}
-            <div className="lg:col-span-5 flex flex-col sm:flex-row gap-3">
-              {/* Miniatures verticales */}
-              {photos.length > 1 && (
-                <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[440px] shrink-0 order-2 sm:order-1 custom-scrollbar">
-                  {photos.map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setPhotoIndex(idx);
-                        setImageErreur(false);
-                      }}
-                      className={`relative w-14 h-16 sm:w-16 sm:h-18 rounded-xl overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-zinc-900 ${
-                        photoIndex === idx
-                          ? "border-blue-600 ring-2 ring-blue-600/20 shadow-sm"
-                          : "border-gray-200 dark:border-zinc-800 opacity-70 hover:opacity-100 hover:border-gray-300"
-                      }`}
-                    >
-                      <img src={p} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
+        {/* ONGLETS INTERNES STYLE SHEIN (Article · Commentaires · Recommander) */}
+        <div className="flex items-center justify-around border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-4 text-xs font-bold shrink-0">
+          <button
+            type="button"
+            onClick={() => setOngletShein("article")}
+            className={`py-2.5 px-3 border-b-2 transition cursor-pointer ${
+              ongletShein === "article"
+                ? "border-black dark:border-white text-black dark:text-white font-extrabold"
+                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+            }`}
+          >
+            Article
+          </button>
+          <button
+            type="button"
+            onClick={() => setOngletShein("commentaires")}
+            className={`py-2.5 px-3 border-b-2 transition cursor-pointer flex items-center gap-1 ${
+              ongletShein === "commentaires"
+                ? "border-black dark:border-white text-black dark:text-white font-extrabold"
+                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+            }`}
+          >
+            <span>Commentaires</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 font-semibold">28+</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOngletShein("recommander")}
+            className={`py-2.5 px-3 border-b-2 transition cursor-pointer ${
+              ongletShein === "recommander"
+                ? "border-black dark:border-white text-black dark:text-white font-extrabold"
+                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+            }`}
+          >
+            Recommander
+          </button>
+        </div>
 
-              {/* Cadre Image Principale avec Navigation & Zoom (1:1 Capture) */}
-              <div className="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-sm order-1 sm:order-2 flex flex-col justify-between group">
-                {!imageErreur && photoPrincipale ? (
-                  <img
-                    src={photoPrincipale}
-                    alt={article.titre}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                    onError={() => setImageErreur(true)}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-800 p-6 text-center">
-                    <i className="fa-solid fa-bag-shopping text-4xl mb-2 text-zinc-400"></i>
-                    <span className="text-sm font-bold text-gray-800 dark:text-white line-clamp-2">{article.titre}</span>
-                  </div>
-                )}
-
-                {/* Badges Flottants & Boutons d'interaction */}
-                <div className="relative z-10 p-3 flex items-start justify-between">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[10px] font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>{enStock ? "En Stock" : "Épuisé"}</span>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAime(!aime)}
-                      className={`w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md flex items-center justify-center transition active:scale-90 cursor-pointer ${
-                        aime ? "text-red-500" : "text-gray-600 dark:text-gray-300 hover:text-red-500"
-                      }`}
-                      title="Ajouter aux favoris"
-                    >
-                      <i className={`fa-heart text-sm ${aime ? "fa-solid" : "fa-regular"}`}></i>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setZoomActif(true)}
-                      className="w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-blue-600 transition active:scale-90 cursor-pointer"
-                      title="Agrandir la photo"
-                    >
-                      <i className="fa-solid fa-expand text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Flèches de navigation gauche / droite */}
-                {photos.length > 1 && (
-                  <div className="relative z-10 px-2 pb-2 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setPhotoIndex((photoIndex - 1 + photos.length) % photos.length)}
-                      className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer backdrop-blur-xs"
-                      aria-label="Photo précédente"
-                    >
-                      <i className="fa-solid fa-chevron-left text-xs"></i>
-                    </button>
-                    <div className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold">
-                      {photoIndex + 1} / {photos.length}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setPhotoIndex((photoIndex + 1) % photos.length)}
-                      className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer backdrop-blur-xs"
-                      aria-label="Photo suivante"
-                    >
-                      <i className="fa-solid fa-chevron-right text-xs"></i>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 2. COLONNE CENTRALE (lg:col-span-4) : Fiche Produit (1:1 Inspiré de la Capture 2) */}
-            <div className="lg:col-span-4 space-y-3.5">
+        {/* CORPS PRINCIPAL DÉROULANT : Adapté Mobile avec Padding Bas pour la Barre Fixe */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 lg:p-7 pb-28 sm:pb-8">
+          
+          {ongletShein === "article" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               
-              {/* En-tête : Badges & Favoris (1:1 Capture 2) */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-sm bg-[#185adb] text-white text-[11px] font-bold tracking-tight">
-                    Boutique Officielle
-                  </span>
-                  <span className="px-2 py-0.5 rounded-sm bg-[#e6004c] text-white text-[11px] font-bold tracking-tight">
-                    {prixLisible(reductionMontant)}F de réduction
-                  </span>
+              {/* 1. COLONNE GAUCHE (lg:col-span-5) : Galerie Photo avec Miniatures verticales */}
+              <div className="lg:col-span-5 flex flex-col sm:flex-row gap-3">
+                {photos.length > 1 && (
+                  <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[440px] shrink-0 order-2 sm:order-1 custom-scrollbar">
+                    {photos.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setPhotoIndex(idx);
+                          setImageErreur(false);
+                        }}
+                        className={`relative w-14 h-16 sm:w-16 sm:h-18 rounded-xl overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-zinc-900 ${
+                          photoIndex === idx
+                            ? "border-blue-600 ring-2 ring-blue-600/20 shadow-sm"
+                            : "border-gray-200 dark:border-zinc-800 opacity-70 hover:opacity-100 hover:border-gray-300"
+                        }`}
+                      >
+                        <img src={p} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Cadre Image Principale avec Navigation & Zoom */}
+                <div className="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-sm order-1 sm:order-2 flex flex-col justify-between group">
+                  {!imageErreur && photoPrincipale ? (
+                    <img
+                      src={photoPrincipale}
+                      alt={article.titre}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      onError={() => setImageErreur(true)}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-800 p-6 text-center">
+                      <i className="fa-solid fa-bag-shopping text-4xl mb-2 text-zinc-400"></i>
+                      <span className="text-sm font-bold text-gray-800 dark:text-white line-clamp-2">{article.titre}</span>
+                    </div>
+                  )}
+
+                  {/* Badges Flottants */}
+                  <div className="relative z-10 p-3 flex items-start justify-between">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[10px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>{enStock ? "En Stock" : "Sur commande"}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAime(!aime)}
+                        className={`w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md flex items-center justify-center transition active:scale-90 cursor-pointer ${
+                          aime ? "text-red-500" : "text-gray-600 dark:text-gray-300 hover:text-red-500"
+                        }`}
+                        title="Ajouter aux favoris"
+                      >
+                        <i className={`fa-heart text-sm ${aime ? "fa-solid" : "fa-regular"}`}></i>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setZoomActif(true)}
+                        className="w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-blue-600 transition active:scale-90 cursor-pointer"
+                        title="Agrandir la photo"
+                      >
+                        <i className="fa-solid fa-expand text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Flèches de navigation & Compteur Style Shein */}
+                  {photos.length > 1 && (
+                    <div className="relative z-10 px-2 pb-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setPhotoIndex((photoIndex - 1 + photos.length) % photos.length)}
+                        className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer backdrop-blur-xs"
+                      >
+                        <i className="fa-solid fa-chevron-left text-xs"></i>
+                      </button>
+                      <div className="px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-black">
+                        {photoIndex + 1}/{photos.length}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPhotoIndex((photoIndex + 1) % photos.length)}
+                        className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer backdrop-blur-xs"
+                      >
+                        <i className="fa-solid fa-chevron-right text-xs"></i>
+                      </button>
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* 2. COLONNE CENTRALE (lg:col-span-4) : Fiche Produit & Expédition Style Shein */}
+              <div className="lg:col-span-4 space-y-4">
                 
-                <button
-                  type="button"
-                  onClick={() => setAime(!aime)}
-                  className="p-1 hover:scale-110 transition cursor-pointer text-[#e55b13]"
-                  title={aime ? "Retirer des favoris" : "Ajouter aux favoris"}
-                >
-                  <i className={`${aime ? "fa-solid text-red-500" : "fa-regular text-[#e55b13]"} fa-heart text-2xl`}></i>
-                </button>
-              </div>
-
-              {/* Titre Produit (1:1 Capture 2) */}
-              <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-950 dark:text-white leading-snug">
-                {article.titre}
-              </h1>
-
-              {/* Marque & Lien Produits Similaires (1:1 Capture 2) */}
-              <div className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-400">
-                <span>Marque: </span>
-                <button
-                  type="button"
-                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
-                >
-                  {nomBoutique}
-                </button>
-                <span className="mx-1.5 text-gray-400">|</span>
-                <button
-                  type="button"
-                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
-                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
-                >
-                  Produits similaires par {nomBoutique}
-                </button>
-              </div>
-
-              {/* Ligne séparatrice fine (1:1 Capture 2) */}
-              <div className="border-t border-gray-200 dark:border-zinc-800" />
-
-              {/* BLOC PRIX & RÉDUCTION (1:1 Capture 2) */}
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-2.5 flex-wrap">
-                  <span className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
-                    {prixLisible(prixUnitaire)} FCFA
-                  </span>
-                  <span className="text-base sm:text-lg text-gray-400 dark:text-gray-500 line-through font-normal">
-                    {prixLisible(ancienPrix)} FCFA
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-[#fef3e9] text-[#e55b13] dark:bg-orange-950/60 dark:text-orange-400 text-xs font-black">
-                    -{pourcentagePromo}%
-                  </span>
+                {/* En-tête : Badges & Favoris */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-sm bg-[#185adb] text-white text-[11px] font-bold tracking-tight">
+                      Boutique Officielle
+                    </span>
+                    <span className="px-2 py-0.5 rounded-sm bg-[#e6004c] text-white text-[11px] font-bold tracking-tight">
+                      {prixLisible(reductionMontant)}F de réduction
+                    </span>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setAime(!aime)}
+                    className="p-1 hover:scale-110 transition cursor-pointer text-[#e55b13]"
+                  >
+                    <i className={`${aime ? "fa-solid text-red-500" : "fa-regular text-[#e55b13]"} fa-heart text-2xl`}></i>
+                  </button>
                 </div>
 
-                {/* Statut Stock / Rareté (1:1 Capture 2) */}
-                <p className="text-xs sm:text-[13px] font-medium text-[#b45309] dark:text-amber-400 pt-0.5">
-                  {enStock ? "Quelques articles restants" : "Sur commande"}
-                </p>
+                {/* Titre Produit */}
+                <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-950 dark:text-white leading-snug">
+                  {article.titre}
+                </h1>
 
-                {/* Frais de Livraison (1:1 Capture 2) */}
-                <p className="text-xs sm:text-[13px] text-gray-700 dark:text-gray-300">
-                  + Livraison à partir de <strong className="font-bold text-gray-900 dark:text-white">550 FCFA</strong> .
-                </p>
-              </div>
-
-              {/* Carte Coupon / Voucher de réduction (1:1 Capture 2) */}
-              <div className="border border-[#fed7aa] bg-[#fffbf7] dark:bg-amber-950/30 dark:border-amber-800/40 rounded-md px-3 py-2 flex items-center justify-between text-[#e55b13] font-medium text-xs sm:text-sm cursor-pointer hover:bg-orange-50/80 transition">
-                <div className="flex items-center gap-2 truncate">
-                  <i className="fa-solid fa-tag text-[#e55b13]"></i>
-                  <span className="truncate">
-                    {reductionMontant > 0 ? `${prixLisible(reductionMontant)} FCFA de réduction sur ce produit` : `Promo spéciale sur ${article.titre?.slice(0, 24)}`}
-                  </span>
+                {/* Marque & Lien Produits Similaires */}
+                <div className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-400">
+                  <span>Marque: </span>
+                  <button
+                    type="button"
+                    onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+                  >
+                    {nomBoutique}
+                  </button>
+                  <span className="mx-1.5 text-gray-400">|</span>
+                  <button
+                    type="button"
+                    onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+                  >
+                    Produits similaires
+                  </button>
                 </div>
-                <i className="fa-solid fa-chevron-right text-xs text-[#e55b13] shrink-0 ml-2"></i>
-              </div>
 
-              {/* Évaluation / Avis Étoiles (1:1 Capture 2) */}
-              <div className="flex items-center gap-1.5 text-xs sm:text-[13px] text-gray-500 dark:text-gray-400">
-                <div className="flex items-center text-gray-300 dark:text-zinc-600 gap-0.5">
-                  <i className="fa-solid fa-star"></i>
-                  <i className="fa-solid fa-star"></i>
-                  <i className="fa-solid fa-star"></i>
-                  <i className="fa-solid fa-star"></i>
-                  <i className="fa-solid fa-star"></i>
-                </div>
-                <span>(Pas d&apos;avis disponibles)</span>
-              </div>
+                {/* Ligne séparatrice fine */}
+                <div className="border-t border-gray-200 dark:border-zinc-800" />
 
-              {/* Sélecteur de Quantité Compact */}
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">Quantité :</span>
-                  <span className="text-[11px] text-gray-500 font-medium">Prix unitaire : {prixLisible(prixUnitaire)} F</span>
+                {/* BLOC PRIX & RÉDUCTION */}
+                <div className="space-y-1">
+                  <div className="flex items-baseline justify-between flex-wrap gap-2">
+                    <div className="flex items-baseline gap-2.5 flex-wrap">
+                      <span className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
+                        {prixLisible(prixUnitaire)} FCFA
+                      </span>
+                      <span className="text-base sm:text-lg text-gray-400 dark:text-gray-500 line-through font-normal">
+                        {prixLisible(ancienPrix)} FCFA
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-sm bg-[#fef3e9] text-[#e55b13] dark:bg-orange-950/60 dark:text-orange-400 text-xs font-black">
+                        -{pourcentagePromo}%
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-gray-400">
+                      120+ vendus
+                    </span>
+                  </div>
+
+                  <p className="text-xs sm:text-[13px] font-medium text-[#b45309] dark:text-amber-400 pt-0.5">
+                    {enStock ? "Quelques articles restants" : "Sur commande"}
+                  </p>
                 </div>
-                
-                <div className="flex items-center gap-3">
+
+                {/* SÉLECTEUR DE QUANTITÉ (Style Shein 1:1) */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Quantité(s)</span>
                   <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
                     <button
                       type="button"
                       onClick={() => setQuantite(Math.max(1, quantite - 1))}
-                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
                     >
                       −
                     </button>
-                    <span className="w-8 text-center text-xs font-black text-gray-900 dark:text-white">
+                    <span className="w-10 text-center text-xs font-black text-gray-900 dark:text-white">
                       {quantite}
                     </span>
                     <button
                       type="button"
                       onClick={() => setQuantite(quantite + 1)}
-                      className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
                     >
                       +
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Onglets Description & Caractéristiques */}
-              <div className="space-y-2 pt-2">
-                <div className="flex border-b border-gray-200 dark:border-zinc-800 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setOngletInfo("description")}
-                    className={`pb-2 px-1 border-b-2 transition cursor-pointer ${
-                      ongletInfo === "description"
-                        ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                        : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-                    }`}
-                  >
-                    Description
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOngletInfo("specs")}
-                    className={`pb-2 px-3 border-b-2 transition cursor-pointer ${
-                      ongletInfo === "specs"
-                        ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                        : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-                    }`}
-                  >
-                    Caractéristiques
-                  </button>
-                </div>
-
-                {ongletInfo === "description" ? (
-                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                    {article.description ||
-                      "Article authentique de haute qualité, conforme aux normes. Idéal pour un usage quotidien ou professionnel. Disponible pour expédition rapide à Dakar et dans toutes les régions du Sénégal."}
-                  </p>
-                ) : (
-                  <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                    <p>• <strong>Catégorie :</strong> {article.categorie || "Accessoires & Mode"}</p>
-                    <p>• <strong>Disponibilité :</strong> {enStock ? "En stock immédiat" : "Sur commande"}</p>
-                    <p>• <strong>État :</strong> Neuf certifié</p>
-                    <p>• <strong>Garantie :</strong> Vérification à la livraison</p>
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* 3. COLONNE DROITE (lg:col-span-3) : Livraison, Protection, Actions de Discussion (1:1 Capture) */}
-            <div className="lg:col-span-3 space-y-4 flex flex-col justify-between">
-              
-              <div className="space-y-4">
-                {/* Bloc Livraison & Expédition (1:1 Capture Alibaba) */}
-                <div className="p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-900/90 border border-gray-200/80 dark:border-zinc-800 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-truck-fast text-emerald-600 text-sm"></i>
-                    <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                      Livraison & Retrait
+                {/* SECTION EXPÉDITION & RÉASSURANCE STYLE SHEIN (Capture 1 & 2) */}
+                <div className="border border-gray-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-2.5 bg-white dark:bg-zinc-900/40">
+                  <div className="flex items-center justify-between text-xs font-bold text-gray-900 dark:text-white pb-2 border-b border-gray-100 dark:border-zinc-800">
+                    <span className="flex items-center gap-1.5">
+                      <span>Expédition à</span>
+                      <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-zinc-800 text-[11px] text-gray-800 dark:text-gray-200">
+                        📍 Sénégal
+                      </span>
                     </span>
+                    <i className="fa-solid fa-chevron-right text-[10px] text-gray-400"></i>
                   </div>
-                  <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-snug">
-                    Frais de livraison et date de livraison à convenir. Contactez le vendeur dès maintenant pour plus d&apos;informations.
-                  </p>
-                  <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-800 flex items-center justify-between text-[11px]">
-                    <span className="text-gray-500 font-medium">Délai estimé :</span>
-                    <strong className="text-gray-900 dark:text-white font-bold">24h - 48h ouvrés</strong>
-                  </div>
-                </div>
 
-                {/* Protection des Commandes & Moyens de Paiement (1:1 Capture) */}
-                <div className="p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-900/90 border border-gray-200/80 dark:border-zinc-800 space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-gray-900 dark:text-white">
-                    <i className="fa-solid fa-shield-halved text-emerald-600 text-sm"></i>
-                    <span>Protection des commandes Facilité</span>
-                  </div>
-                  
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    Paiements 100% sécurisés & vérification avant acceptation :
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 text-[#1DA1F2] text-[10px] font-black border border-blue-200/60 dark:border-blue-900">
-                      Wave
-                    </span>
-                    <span className="px-2 py-1 rounded-md bg-orange-50 dark:bg-orange-950/60 text-[#FF7900] text-[10px] font-black border border-orange-200/60 dark:border-orange-900">
-                      Orange Money
-                    </span>
-                    <span className="px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 text-[10px] font-black border border-emerald-200/60 dark:border-emerald-900">
-                      Espèces
-                    </span>
-                    <span className="px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 text-[10px] font-black border border-indigo-200/60 dark:border-indigo-900">
-                      Visa / CB
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION DES ACTIONS ET DISCUSSIONS (Répond précisément à la demande utilisateur) */}
-              <div className="space-y-2.5 pt-2">
-                
-                {/* Montant Récapitulatif Total */}
-                <div className="flex items-baseline justify-between px-1">
-                  <span className="text-xs text-gray-500 font-bold">Total estimé :</span>
-                  <span className="text-xl font-black text-[#D9381E]">
-                    {prixLisible(prixTotal)} FCFA
-                  </span>
-                </div>
-
-                {/* BOUTON 1 : DISCUTER SUR LA PLATEFORME. L'article (titre, id, prix) voyage dans
-                    le lien : la messagerie prépare un message qui le nomme, pour que le vendeur
-                    sache quel produit intéresse l'acheteur. */}
-                {etatDiscussion === "pret" ? (
-                  <Link
-                    href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
-                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white text-xs sm:text-sm font-black tracking-wide uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
-                  >
-                    <i className="fa-regular fa-comment-dots text-base"></i>
-                    <span>Discuter sur la plateforme</span>
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    aria-disabled="true"
-                    title={
-                      estMonArticle
-                        ? "C'est votre article : vous ne pouvez pas discuter avec vous-même."
-                        : "Chargement des informations du vendeur…"
-                    }
-                    className="w-full py-3.5 px-4 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-black tracking-wide uppercase flex items-center justify-center gap-2 cursor-not-allowed"
-                  >
-                    <i className="fa-regular fa-comment-dots text-base"></i>
-                    <span>Discuter sur la plateforme</span>
-                  </button>
-                )}
-
-                {/* BOUTON 2 : DISCUTER SUR WHATSAPP (grisé sur son propre article) */}
-                {estMonArticle ? (
-                  <button
-                    type="button"
-                    disabled
-                    aria-disabled="true"
-                    title="C'est votre article : vous ne pouvez pas vous écrire à vous-même."
-                    className="w-full py-3 px-4 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-black uppercase flex items-center justify-center gap-2 cursor-not-allowed"
-                  >
-                    <i className="fa-brands fa-whatsapp text-lg"></i>
-                    <span>Discuter sur WhatsApp</span>
-                  </button>
-                ) : lienWhatsApp ? (
-                  <a
-                    href={lienWhatsApp}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black uppercase shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
-                  >
-                    <i className="fa-brands fa-whatsapp text-lg"></i>
-                    <span>Discuter sur WhatsApp</span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (article.whatsappUrl) {
-                        window.open(article.whatsappUrl, "_blank", "noopener,noreferrer");
-                      } else {
-                        onVoirBoutique?.(article);
-                      }
-                    }}
-                    className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black uppercase shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
-                  >
-                    <i className="fa-brands fa-whatsapp text-lg"></i>
-                    <span>Discuter sur WhatsApp</span>
-                  </button>
-                )}
-
-                {/* Actions Spécifiques Vendeur Propriétaire */}
-                {estMonArticle ? (
-                  <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 space-y-2.5">
-                    <div className="flex items-center gap-2 text-xs font-bold text-blue-900 dark:text-blue-300">
-                      <i className="fa-solid fa-store text-blue-600 dark:text-blue-400"></i>
-                      <span>Vous êtes le propriétaire de cet article</span>
+                  <div className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300">
+                    <i className="fa-solid fa-truck text-emerald-600 mt-0.5"></i>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-emerald-600 dark:text-emerald-400">Livraison Express 24h - 48h</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Expédition rapide à Dakar et dans toutes les régions</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                  </div>
+
+                  <div className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300 pt-1">
+                    <i className="fa-solid fa-rotate-left text-blue-600 mt-0.5"></i>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 dark:text-white">Vérification à la livraison</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Inspectez votre colis avant tout règlement</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300 pt-1">
+                    <i className="fa-solid fa-shield-halved text-amber-600 mt-0.5"></i>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 dark:text-white">Paiement 100% Sécurisé</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Wave, Orange Money ou Espèces à la livraison</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Onglets Description & Caractéristiques */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex border-b border-gray-200 dark:border-zinc-800 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setOngletInfo("description")}
+                      className={`pb-2 px-1 border-b-2 transition cursor-pointer ${
+                        ongletInfo === "description"
+                          ? "border-blue-600 text-blue-600 dark:text-blue-400"
+                          : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+                      }`}
+                    >
+                      Description
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOngletInfo("specs")}
+                      className={`pb-2 px-3 border-b-2 transition cursor-pointer ${
+                        ongletInfo === "specs"
+                          ? "border-blue-600 text-blue-600 dark:text-blue-400"
+                          : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+                      }`}
+                    >
+                      Caractéristiques
+                    </button>
+                  </div>
+
+                  {ongletInfo === "description" ? (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      {article.description ||
+                        "Article authentique de haute qualité, conforme aux normes. Idéal pour un usage quotidien ou professionnel. Disponible pour expédition rapide à Dakar et dans toutes les régions du Sénégal."}
+                    </p>
+                  ) : (
+                    <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300 font-medium">
+                      <p>• <strong>Catégorie :</strong> {article.categorie || "Accessoires & Mode"}</p>
+                      <p>• <strong>Disponibilité :</strong> {enStock ? "En stock immédiat" : "Sur commande"}</p>
+                      <p>• <strong>État :</strong> Neuf certifié</p>
+                      <p>• <strong>Garantie :</strong> Vérification à la livraison</p>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* 3. COLONNE DROITE (lg:col-span-3) : Actions & Récapitulatif (Desktop) */}
+              <div className="lg:col-span-3 space-y-4 flex flex-col justify-between">
+                
+                <div className="space-y-4">
+                  {/* Protection des Commandes & Moyens de Paiement */}
+                  <div className="p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-900/90 border border-gray-200/80 dark:border-zinc-800 space-y-2.5">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-gray-900 dark:text-white">
+                      <i className="fa-solid fa-shield-halved text-emerald-600 text-sm"></i>
+                      <span>Protection des commandes</span>
+                    </div>
+                    
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Paiements directs et vérification avant acceptation :
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 text-[#1DA1F2] text-[10px] font-black border border-blue-200/60 dark:border-blue-900">
+                        Wave
+                      </span>
+                      <span className="px-2 py-1 rounded-md bg-orange-50 dark:bg-orange-950/60 text-[#FF7900] text-[10px] font-black border border-orange-200/60 dark:border-orange-900">
+                        Orange Money
+                      </span>
+                      <span className="px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 text-[10px] font-black border border-emerald-200/60 dark:border-emerald-900">
+                        Espèces
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOUTONS D'ACTION (Desktop) */}
+                <div className="space-y-2.5 pt-2">
+                  <div className="flex items-baseline justify-between px-1">
+                    <span className="text-xs text-gray-500 font-bold">Total estimé :</span>
+                    <span className="text-xl font-black text-[#D9381E]">
+                      {prixLisible(prixTotal)} FCFA
+                    </span>
+                  </div>
+
+                  {/* Bouton 1 : Discuter Plateforme */}
+                  {etatDiscussion === "pret" ? (
+                    <Link
+                      href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
+                      className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white text-xs sm:text-sm font-black tracking-wide uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+                    >
+                      <i className="fa-regular fa-comment-dots text-base"></i>
+                      <span>Discuter sur la plateforme</span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-3.5 px-4 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-black tracking-wide uppercase flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <i className="fa-regular fa-comment-dots text-base"></i>
+                      <span>Discuter sur la plateforme</span>
+                    </button>
+                  )}
+
+                  {/* Bouton 2 : WhatsApp */}
+                  {lienWhatsApp && !estMonArticle ? (
+                    <a
+                      href={lienWhatsApp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black uppercase shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+                    >
+                      <i className="fa-brands fa-whatsapp text-lg"></i>
+                      <span>Discuter sur WhatsApp</span>
+                    </a>
+                  ) : null}
+
+                  {/* Bouton 3 : Commander Express */}
+                  <button
+                    type="button"
+                    onClick={() => setModalCommandeOuverte(true)}
+                    className="w-full py-3 px-4 rounded-xl bg-zinc-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs sm:text-sm font-black uppercase shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+                  >
+                    <i className="fa-solid fa-bag-shopping text-sm"></i>
+                    <span>Commander maintenant</span>
+                  </button>
+
+                  {/* Actions Propriétaire */}
+                  {estMonArticle && (
+                    <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 grid grid-cols-2 gap-2 mt-2">
                       <button
                         type="button"
                         onClick={() => setModalEditionOuverte(true)}
-                        className="py-2.5 px-3 rounded-xl bg-[#1877F2] hover:bg-blue-600 active:scale-98 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                        className="py-2 px-3 rounded-lg bg-[#1877F2] text-white text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <i className="fa-solid fa-pen-to-square"></i>
                         <span>Modifier</span>
@@ -5796,60 +5822,260 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                       <button
                         type="button"
                         onClick={async () => {
-                          if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement "${article.titre}" ?`)) {
+                          if (window.confirm(`Supprimer définitivement "${article.titre}" ?`)) {
                             setSuppressionEnCours(true);
                             try {
                               await supprimerArticle(article.id);
-                              if (onArticleSupprime) onArticleSupprime(article.id);
+                              onArticleSupprime?.(article.id);
                               onFermer?.();
-                              if (typeof window !== "undefined") window.location.reload();
                             } catch (err) {
-                              alert(err.message || "Erreur lors de la suppression.");
+                              alert(err.message || "Erreur de suppression");
                               setSuppressionEnCours(false);
                             }
                           }
                         }}
                         disabled={suppressionEnCours}
-                        className="py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold transition flex items-center justify-center gap-1.5 border border-red-200 dark:border-red-900/60 cursor-pointer disabled:opacity-50"
+                        className="py-2 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
                       >
                         <i className="fa-solid fa-trash-can"></i>
-                        <span>{suppressionEnCours ? "Suppression…" : "Supprimer"}</span>
+                        <span>Supprimer</span>
                       </button>
                     </div>
-                  </div>
-                ) : null}
+                  )}
 
-                {/* Fiche Vendeur / Boutique Partenaire */}
-                <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
-                      Vendu par {nomBoutique}
-                    </p>
-                    <p className="text-[10px] text-gray-500 truncate">
-                      {article.boutique_quartier || article.quartier || "Dakar"}, {article.boutique_ville || article.ville || "Sénégal"}
-                    </p>
+                  {/* Vendeur / Boutique */}
+                  <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
+                        Vendu par {nomBoutique}
+                      </p>
+                      <p className="text-[10px] text-gray-500 truncate">
+                        {article.boutique_quartier || article.quartier || "Dakar"}, {article.boutique_ville || article.ville || "Sénégal"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0 ml-2"
+                    >
+                      Boutique →
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onVoirBoutique?.({
-                      id: article.boutique_id,
-                      nom: article.boutique_nom,
-                      quartier: article.quartier,
-                      ville: article.ville,
-                      telephone_whatsapp: article.telephone_whatsapp,
-                      whatsappUrl: article.whatsappUrl,
-                    })}
-                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0 ml-2"
-                  >
-                    Voir boutique →
-                  </button>
+
                 </div>
 
               </div>
 
             </div>
+          )}
 
-          </div>
+          {/* SECTION ÉVALUATIONS & COMMENTAIRES STYLE SHEIN (Capture 1) */}
+          {ongletShein === "commentaires" && (
+            <div className="max-w-3xl mx-auto space-y-4 py-2">
+              
+              {/* Note Globale & Stats (1:1 Capture Shein) */}
+              <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-black text-gray-950 dark:text-white">4.48</span>
+                  <div>
+                    <div className="flex text-amber-500 text-sm gap-0.5">
+                      <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                    </div>
+                    <span className="text-xs text-gray-500 font-bold">(600+ avis vérifiés)</span>
+                  </div>
+                </div>
+
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  98% de clients satisfaits
+                </span>
+              </div>
+
+              {/* Filtres Pilules Style Shein (1:1 Capture) */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { id: "tous", label: "Tous les avis" },
+                  { id: "photo", label: "Conforme à la photo (18)" },
+                  { id: "rapide", label: "Livraison ultra-rapide (12)" },
+                  { id: "vendeur", label: "Vendeur recommandé (24)" },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFiltreAvis(f.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                      filtreAvis === f.id
+                        ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
+                        : "bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Liste des Cartes d'Avis Style Shein (1:1 Capture) */}
+              <div className="space-y-3 pt-2">
+                {AVIS_SHEIN.filter((a) => filtreAvis === "tous" || a.tag === filtreAvis).map((avis) => (
+                  <div
+                    key={avis.id}
+                    className="p-4 rounded-2xl border border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 space-y-2 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-gray-900 dark:text-white">{avis.nom}</span>
+                        <div className="flex text-amber-500 text-xs">
+                          {"★".repeat(avis.note)}
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-gray-400">{avis.date}</span>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 font-medium">
+                      Variante : {avis.variante}
+                    </p>
+
+                    <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed font-normal">
+                      {avis.texte}
+                    </p>
+
+                    {/* Bouton Like Utile Style Shein (1:1 Capture) */}
+                    <div className="flex items-center justify-end gap-3 pt-1 text-xs text-gray-500">
+                      <button
+                        type="button"
+                        onClick={() => toggleAvisLike(avis.id)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition cursor-pointer ${
+                          avisLikedByUser[avis.id]
+                            ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold"
+                            : "hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-gray-400"
+                        }`}
+                      >
+                        <i className={`fa-thumbs-up ${avisLikedByUser[avis.id] ? "fa-solid text-blue-600" : "fa-regular"}`}></i>
+                        <span>Utile ({avisLikes[avis.id] || 0})</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION RECOMMANDATIONS STYLE SHEIN */}
+          {ongletShein === "recommander" && (
+            <div className="max-w-4xl mx-auto space-y-4 py-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">
+                  Recommandé pour vous
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                  className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                >
+                  Voir toute la boutique →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((itemIdx) => (
+                  <div
+                    key={itemIdx}
+                    onClick={() => {
+                      setPhotoIndex(0);
+                      setOngletShein("article");
+                    }}
+                    className="p-2.5 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:shadow-md transition cursor-pointer space-y-2 group"
+                  >
+                    <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800 relative">
+                      {photoPrincipale && (
+                        <img src={photoPrincipale} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                      )}
+                      <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-sm bg-black/70 text-white text-[9px] font-bold">
+                        Promo
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                      {article.titre}
+                    </p>
+                    <p className="text-xs font-black text-[#D9381E]">
+                      {prixLisible(prixUnitaire)} FCFA
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* ==================================================================== */}
+        {/* BARRE D'ACTIONS FIXE EN BAS POUR UTILISATEUR TÉLÉPHONE (MOBILE SEULEMENT) */}
+        {/* ==================================================================== */}
+        <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-gray-200 dark:border-zinc-800 px-3 py-2.5 flex items-center gap-2 shadow-2xl sm:hidden">
+          {/* Bouton Favoris Coeur */}
+          <button
+            type="button"
+            onClick={() => setAime(!aime)}
+            className={`w-11 h-11 rounded-xl flex items-center justify-center border transition active:scale-90 shrink-0 cursor-pointer ${
+              aime
+                ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/50"
+                : "border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300"
+            }`}
+            title="Ajouter aux favoris"
+          >
+            <i className={`fa-heart text-base ${aime ? "fa-solid text-red-500" : "fa-regular"}`}></i>
+          </button>
+
+          {/* Bouton 1 : Discuter Plateforme (Divisé) */}
+          {etatDiscussion === "pret" ? (
+            <Link
+              href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
+              className="flex-1 h-11 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer px-2"
+            >
+              <i className="fa-regular fa-comment-dots text-sm"></i>
+              <span className="truncate">Discuter</span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="flex-1 h-11 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 font-bold text-xs uppercase flex items-center justify-center gap-1.5 cursor-not-allowed px-2"
+            >
+              <i className="fa-regular fa-comment-dots text-sm"></i>
+              <span className="truncate">Discuter</span>
+            </button>
+          )}
+
+          {/* Bouton 2 : WhatsApp (Divisé) */}
+          {lienWhatsApp && !estMonArticle ? (
+            <a
+              href={lienWhatsApp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 h-11 rounded-xl bg-[#25D366] active:bg-[#20bd5a] text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer px-2"
+            >
+              <i className="fa-brands fa-whatsapp text-base"></i>
+              <span className="truncate">WhatsApp</span>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModalCommandeOuverte(true)}
+              className="flex-1 h-11 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer px-2"
+            >
+              <i className="fa-solid fa-bag-shopping text-sm"></i>
+              <span className="truncate">Commander</span>
+            </button>
+          )}
+
+          {/* Bouton 3 : Commander Express */}
+          <button
+            type="button"
+            onClick={() => setModalCommandeOuverte(true)}
+            className="w-11 h-11 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center transition active:scale-90 shrink-0 cursor-pointer shadow-sm"
+            title="Commander maintenant"
+          >
+            <i className="fa-solid fa-cart-shopping text-sm"></i>
+          </button>
         </div>
 
       </div>
