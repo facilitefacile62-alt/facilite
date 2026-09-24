@@ -185,7 +185,7 @@ export default function ArticleScreen() {
       );
       const url = whatsapp.includes('?') ? `${whatsapp}&text=${msg}` : `${whatsapp}?text=${msg}`;
       Linking.openURL(url).catch(() => {
-        Alert.alert('Commande Express', `Contactez le vendeur au ${article?.vendeurTelephone || 'WhatsApp'}`);
+        Alert.alert('Commande Express', `Contactez le vendeur au ${article?.whatsapp || 'WhatsApp'}`);
       });
     } else {
       discuter();
