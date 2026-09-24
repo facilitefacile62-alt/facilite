@@ -382,7 +382,6 @@ function CarteOffreDetaillee({ offre, matchScore }: { offre: OffreReelle; matchS
       {/* 5. Affiche réelle de l'offre */}
       <OfferMediaView
         media={offre.rawImage || offre.posterUri}
-        height={260}
         dark={true}
         onPress={() => router.push(`/offre/${offre.id}`)}
       />

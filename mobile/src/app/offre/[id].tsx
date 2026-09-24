@@ -145,7 +145,6 @@ export default function FicheOffreScreen() {
             <View className="px-5">
               <OfferMediaView
                 media={offre.rawImage || offre.posterUri}
-                height={260}
                 borderRadius={18}
                 dark={true}
               />

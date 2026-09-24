@@ -371,7 +371,6 @@ function CarteOffre({ offre, matchScore }: { offre: OffreReelle; matchScore: num
       {/* 6. GRANDE AFFICHE RÉELLE DE L'OFFRE (Style Capture Web 1:1) */}
       <OfferMediaView
         media={offre.rawImage || offre.posterUri}
-        height={260}
         dark={true}
         onPress={() => router.push(`/offre/${offre.id}`)}
       />

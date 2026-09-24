@@ -1,22 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
-import { Dimensions, FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RATIO_ATTENTE, ratioAffichage } from '@/lib/formatImage';
 import { parseOfferImages } from '@/lib/offerMedia';
 
 interface OfferMediaViewProps {
   media: unknown;
-  height?: number;
   borderRadius?: number;
   onPress?: () => void;
   dark?: boolean;
   enableLightbox?: boolean;
 }
 
+/**
+ * Affiche d'offre au FORMAT RÉEL de l'image : ni hauteur imposée, ni bandes sur
+ * les côtés, ni fond flou. La personne qui publie n'a rien à régler — le cadre
+ * prend le rapport de l'image dès qu'elle est chargée (bornes extrêmes dans
+ * lib/formatImage.ts). Plusieurs photos : la photo choisie en grand, les autres
+ * en vignettes de même hauteur, chacune à son propre format.
+ */
 export default function OfferMediaView({
   media,
-  height = 240,
   borderRadius = 14,
   onPress,
   dark = false,
@@ -25,10 +31,22 @@ export default function OfferMediaView({
   const images = parseOfferImages(media);
   const [indexActif, setIndexActif] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Rapport mesuré de chaque image, indexé par adresse.
+  const [ratios, setRatios] = useState<Record<string, number>>({});
 
   if (images.length === 0) {
     return null;
   }
+
+  const noter = (uri: string, largeur: number, hauteur: number) => {
+    const r = ratioAffichage(largeur, hauteur);
+    if (r) setRatios((prev) => (prev[uri] === r ? prev : { ...prev, [uri]: r }));
+  };
+
+  const indexValide = Math.min(indexActif, images.length - 1);
+  const uriActive = images[indexValide];
+  const fondNeutre = dark ? '#0E131F' : '#F1EFE9';
+  const bordure = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
   const handlePressImage = (idx: number) => {
     if (onPress) {
@@ -36,6 +54,10 @@ export default function OfferMediaView({
     } else if (enableLightbox) {
       setLightboxIndex(idx);
     }
+  };
+
+  const allerA = (delta: number) => {
+    setLightboxIndex((i) => (i === null ? i : (i + delta + images.length) % images.length));
   };
 
   return (
@@ -63,6 +85,7 @@ export default function OfferMediaView({
                 </Text>
                 <Pressable
                   onPress={() => setLightboxIndex(null)}
+                  accessibilityLabel="Fermer"
                   style={{
                     width: 38,
                     height: 38,
@@ -75,134 +98,81 @@ export default function OfferMediaView({
                 </Pressable>
               </View>
 
-              {/* Image Plein Écran */}
+              {/* Image Plein Écran (entière, quel que soit son format) */}
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 8 }}>
                 <Image
                   source={{ uri: images[lightboxIndex] }}
+                  alt="Affiche de recrutement"
                   style={{ width: '100%', height: '100%' }}
                   contentFit="contain"
                   transition={200}
                 />
+                {images.length > 1 && (
+                  <>
+                    <Pressable
+                      onPress={() => allerA(-1)}
+                      accessibilityLabel="Photo précédente"
+                      style={{
+                        position: 'absolute',
+                        left: 10,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: 'rgba(0,0,0,0.55)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => allerA(1)}
+                      accessibilityLabel="Photo suivante"
+                      style={{
+                        position: 'absolute',
+                        right: 10,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: 'rgba(0,0,0,0.55)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+                    </Pressable>
+                  </>
+                )}
               </View>
             </SafeAreaView>
           </View>
         </Modal>
       )}
 
-      {/* Rendu 1 image */}
-      {images.length === 1 ? (
+      <View
+        style={{
+          width: '100%',
+          borderRadius,
+          overflow: 'hidden',
+          backgroundColor: fondNeutre,
+          marginTop: 10,
+          borderWidth: 1,
+          borderColor: bordure,
+        }}>
+        {/* Photo au format réel */}
         <Pressable
-          onPress={() => handlePressImage(0)}
-          style={{
-            width: '100%',
-            height,
-            borderRadius,
-            overflow: 'hidden',
-            backgroundColor: dark ? '#0E131F' : '#F1EFE9',
-            marginTop: 10,
-            borderWidth: 1,
-            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            position: 'relative',
-          }}>
+          onPress={() => handlePressImage(indexValide)}
+          style={{ width: '100%', aspectRatio: ratios[uriActive] ?? RATIO_ATTENTE, position: 'relative' }}>
           <Image
-            source={{ uri: images[0] }}
+            source={{ uri: uriActive }}
+            alt="Affiche de recrutement"
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
             transition={200}
             priority="high"
-          />
-
-          {/* Bouton Agrandir en haut à droite (Style Capture Web 1:1) */}
-          <View
-            style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              backgroundColor: 'rgba(0,0,0,0.65)',
-              paddingHorizontal: 9,
-              paddingVertical: 4.5,
-              borderRadius: 8,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.15)',
-            }}>
-            <Ionicons name="search" size={11} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>Agrandir</Text>
-          </View>
-
-          {/* Filigrane ffacilite.com en bas (Style Capture Web 1:1) */}
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: 'rgba(10,14,23,0.75)',
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-            }}>
-            <View
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 9,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Ionicons name="key" size={10} color="#2563EB" />
-            </View>
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.2 }}>
-              ffacilite.com
-            </Text>
-          </View>
-        </Pressable>
-      ) : (
-        /* Rendu multi-photos */
-        <View
-          style={{
-            width: '100%',
-            height,
-            borderRadius,
-            overflow: 'hidden',
-            backgroundColor: dark ? '#0E131F' : '#F1EFE9',
-            marginTop: 10,
-            borderWidth: 1,
-            borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            position: 'relative',
-          }}>
-          <FlatList
-            data={images}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(_, idx) => `img-${idx}`}
-            onMomentumScrollEnd={(e) => {
-              const slide = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
-              setIndexActif(slide);
-            }}
-            renderItem={({ item, index }) => (
-              <Pressable
-                onPress={() => handlePressImage(index)}
-                style={{ width: Dimensions.get('window').width - 24, height }}>
-                <Image
-                  source={{ uri: item }}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="cover"
-                  transition={200}
-                />
-              </Pressable>
-            )}
+            onLoad={(e) => noter(uriActive, e.source.width, e.source.height)}
           />
 
           {/* Bouton Agrandir en haut à droite */}
-          <Pressable
-            onPress={() => handlePressImage(indexActif)}
+          <View
             style={{
               position: 'absolute',
               top: 10,
@@ -219,9 +189,9 @@ export default function OfferMediaView({
             }}>
             <Ionicons name="search" size={11} color="#FFFFFF" />
             <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-              Agrandir ({indexActif + 1}/{images.length})
+              Agrandir{images.length > 1 ? ` (${indexValide + 1}/${images.length})` : ''}
             </Text>
-          </Pressable>
+          </View>
 
           {/* Filigrane ffacilite.com en bas */}
           <View
@@ -252,8 +222,40 @@ export default function OfferMediaView({
               ffacilite.com
             </Text>
           </View>
-        </View>
-      )}
+        </Pressable>
+
+        {/* Autres photos : vignettes de même hauteur, chacune à son format */}
+        {images.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 4, padding: 4 }}>
+            {images.map((uri, idx) => (
+              <Pressable
+                key={`${uri}-${idx}`}
+                onPress={() => setIndexActif(idx)}
+                accessibilityLabel={`Voir la photo ${idx + 1}`}
+                style={{
+                  height: 64,
+                  aspectRatio: ratios[uri] ?? 1,
+                  borderRadius: Math.max(borderRadius - 6, 6),
+                  overflow: 'hidden',
+                  borderWidth: 2,
+                  borderColor: idx === indexValide ? '#10E688' : 'transparent',
+                  opacity: idx === indexValide ? 1 : 0.7,
+                }}>
+                <Image
+                  source={{ uri }}
+                  alt={`Photo ${idx + 1}`}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                  onLoad={(e) => noter(uri, e.source.width, e.source.height)}
+                />
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+      </View>
     </>
   );
 }
