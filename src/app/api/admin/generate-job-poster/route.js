@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { trouverFormatAffiche, idFormatPourFichier } from "@/lib/formatsAffiche";
 
 export const runtime = "nodejs";
 
 /**
  * Route API /api/admin/generate-job-poster
- * Générateur d'affiches de recrutement par IA au format carré 1:1 (1024x1024).
+ * Générateur d'affiches de recrutement par IA.
+ * Le format (1:1 par défaut, 4:5, 2:3, 9:16, 16:9) est choisi par son identifiant ;
+ * les dimensions viennent de la liste blanche src/lib/formatsAffiche.js, jamais du client.
  */
 export async function POST(req) {
   try {
@@ -30,6 +33,9 @@ export async function POST(req) {
     const rawPrompt = body?.prompt?.trim();
     const title = body?.title?.trim() || "";
     const company = body?.company?.trim() || "";
+    const format = trouverFormatAffiche(body?.format);
+    const forme =
+      format.largeur === format.hauteur ? "square" : format.largeur > format.hauteur ? "landscape" : "portrait";
 
     if (!rawPrompt && !title) {
       return NextResponse.json(
@@ -38,17 +44,17 @@ export async function POST(req) {
       );
     }
 
-    // Amélioration du prompt pour un rendu professionnel format 1:1
+    // Amélioration du prompt pour un rendu professionnel dans le format choisi
     const baseSubject = rawPrompt || `Professional job hiring recruitment banner for ${title} at ${company} in Dakar Senegal`;
-    const enrichedPrompt = `${baseSubject}, 1:1 aspect ratio square composition, premium modern corporate graphic design, sharp lighting, vibrant colors, cinematic photography, high resolution 8k, ultra-detailed, professional marketing poster, social media ready`;
+    const enrichedPrompt = `${baseSubject}, ${format.id} aspect ratio ${forme} composition, premium modern corporate graphic design, sharp lighting, vibrant colors, cinematic photography, high resolution 8k, ultra-detailed, professional marketing poster, social media ready`;
 
     const encodedPrompt = encodeURIComponent(enrichedPrompt);
     const seed = Math.floor(Math.random() * 10000000);
     
-    // Génération 1024x1024 (Format 1:1) via le moteur IA haute définition
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
+    // Génération aux dimensions du format choisi via le moteur IA haute définition
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${format.largeur}&height=${format.hauteur}&seed=${seed}&nologo=true&model=flux`;
 
-    console.log(`[AI Poster Generator] Génération de l'image 1:1 pour prompt: "${rawPrompt || title}"`);
+    console.log(`[AI Poster Generator] Génération de l'image ${format.id} pour prompt: "${rawPrompt || title}"`);
 
     const imageRes = await fetch(pollinationsUrl, {
       headers: {
@@ -64,7 +70,7 @@ export async function POST(req) {
     const imageBuffer = Buffer.from(imageArrayBuffer);
 
     // Upload direct de l'image générée dans le bucket Supabase Storage
-    const fileName = `generated_poster_1x1_${Date.now()}_${seed}.jpg`;
+    const fileName = `generated_poster_${idFormatPourFichier(format)}_${Date.now()}_${seed}.jpg`;
     
     let publicUrl = "";
     const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
@@ -92,6 +98,7 @@ export async function POST(req) {
       imageUrl: publicUrl,
       promptUsed: enrichedPrompt,
       seed,
+      format: format.id,
     });
   } catch (error) {
     console.error("[AI Poster Generator Exception]", error);

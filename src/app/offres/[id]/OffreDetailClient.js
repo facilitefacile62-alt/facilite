@@ -275,7 +275,6 @@ export default function OffreDetailClient({ initialOffer }) {
               <OfferMediaGallery
                 media={offer.photos || offer.images || offer.image_url || offer.image}
                 title={offer.title}
-                maxHeight="max-h-[580px]"
                 className="rounded-none border-x-0 border-t-0"
                 offer={offer}
               />

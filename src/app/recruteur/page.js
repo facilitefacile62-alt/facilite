@@ -12,6 +12,9 @@ import VideoInterviewModal from "@/components/VideoInterviewModal";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
+import ImageAdaptative from "@/components/ImageAdaptative";
+import SelecteurFormatAffiche from "@/components/SelecteurFormatAffiche";
+import { FORMAT_AFFICHE_PAR_DEFAUT } from "@/lib/formatsAffiche";
 import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
@@ -129,6 +132,7 @@ export default function RecruteurDashboardPage() {
   const [publishMode, setPublishMode] = useState("ai_scanner"); // "ai_scanner" | "manual"
   const [imageTab, setImageTab] = useState("upload"); // "upload" | "ai_generate"
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiFormat, setAiFormat] = useState(FORMAT_AFFICHE_PAR_DEFAUT);
   const [isGeneratingAiPoster, setIsGeneratingAiPoster] = useState(false);
   const [isScanningAI, setIsScanningAI] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
@@ -841,7 +845,7 @@ export default function RecruteurDashboardPage() {
     }
 
     setIsGeneratingAiPoster(true);
-    triggerToast("🎨 Génération de l'affiche 1:1 en cours par l'IA...");
+    triggerToast(`🎨 Génération de l'affiche ${aiFormat} en cours par l'IA...`);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -855,6 +859,7 @@ export default function RecruteurDashboardPage() {
           prompt: promptToUse,
           title: offerForm.title,
           company: offerForm.company || recruiterProfileForm.company_name,
+          format: aiFormat,
         }),
       });
 
@@ -863,8 +868,8 @@ export default function RecruteurDashboardPage() {
         setOfferImagePreviews((prev) => [data.imageUrl, ...prev]);
         setOfferForm((prev) => ({ ...prev, image_url: data.imageUrl }));
         setScanSuccess(true);
-        setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à l'offre !");
-        triggerToast("🎉 Affiche 1:1 générée avec succès !");
+        setScanMessage(`✨ Affiche ${aiFormat} générée avec succès et attachée à l'offre !`);
+        triggerToast(`🎉 Affiche ${aiFormat} générée avec succès !`);
       } else {
         triggerToast(data.error || "Erreur lors de la génération de l'image.");
       }
@@ -880,7 +885,7 @@ export default function RecruteurDashboardPage() {
     const title = offerForm.title || "Offre d'emploi";
     const company = offerForm.company || recruiterProfileForm.company_name || "Entreprise";
     const location = offerForm.location || "Dakar, Sénégal";
-    const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier, format carré 1:1`;
+    const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier`;
     setAiPrompt(suggested);
     triggerToast("Prompt suggéré généré avec succès !");
   };
@@ -1709,7 +1714,7 @@ export default function RecruteurDashboardPage() {
                         }`}
                       >
                         <i className="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
-                        <span>Générateur IA (Format 1:1)</span>
+                        <span>Générateur IA</span>
                       </button>
                     </div>
 
@@ -1732,7 +1737,7 @@ export default function RecruteurDashboardPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
-                            <span>🎨 Studio Créatif IA — Format Carré 1:1</span>
+                            <span>🎨 Studio Créatif IA</span>
                             <span className="px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full text-[10px] font-extrabold">HD</span>
                           </h4>
                           <p className="text-[11px] text-amber-800/80 mt-1 font-medium">
@@ -1759,11 +1764,9 @@ export default function RecruteurDashboardPage() {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[11px] text-amber-900 font-bold">
-                          <i className="fa-solid fa-crop-simple text-amber-600"></i>
-                          <span>Format 1024x1024 (Réseaux & Fil)</span>
-                        </div>
+                      <SelecteurFormatAffiche valeur={aiFormat} onChange={setAiFormat} desactive={isGeneratingAiPoster} />
+
+                      <div className="flex items-center justify-end">
                         <button
                           type="button"
                           disabled={isGeneratingAiPoster}
@@ -1771,7 +1774,7 @@ export default function RecruteurDashboardPage() {
                           className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-extrabold rounded-xl transition shadow-md flex items-center gap-2 cursor-pointer"
                         >
                           <i className={`fa-solid ${isGeneratingAiPoster ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"}`}></i>
-                          <span>{isGeneratingAiPoster ? "Génération 1:1..." : "Générer l'affiche 1:1"}</span>
+                          <span>{isGeneratingAiPoster ? `Génération ${aiFormat}...` : `Générer l'affiche ${aiFormat}`}</span>
                         </button>
                       </div>
                     </div>
@@ -1821,12 +1824,12 @@ export default function RecruteurDashboardPage() {
                   {/* 3. GALERIE DE PHOTOS ATTACHÉES */}
                   {offerImagePreviews.length > 0 && (
                     <div className="space-y-3 p-4 bg-gray-50/90 rounded-2xl border border-gray-200">
-                      <div className="relative rounded-2xl overflow-hidden bg-gray-950 max-h-[300px] flex items-center justify-center group shadow-md">
-                        <img
-                          src={offerImagePreviews[0]}
-                          alt="Photo principale"
-                          className="max-h-[300px] w-full object-contain mx-auto"
-                        />
+                      <ImageAdaptative
+                        src={offerImagePreviews[0]}
+                        alt="Photo principale"
+                        loading="eager"
+                        className="rounded-2xl group shadow-md"
+                      >
                         <OfferImageWatermark />
                         <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[11px] font-black px-3 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 shadow-md">
                           <i className="fa-solid fa-star text-amber-300"></i>
@@ -1845,7 +1848,7 @@ export default function RecruteurDashboardPage() {
                             <i className="fa-solid fa-expand"></i>
                           </button>
                         </div>
-                      </div>
+                      </ImageAdaptative>
 
                       {/* Miniatures des photos */}
                       <div>
@@ -1866,12 +1869,12 @@ export default function RecruteurDashboardPage() {
                             <div
                               key={idx}
                               onClick={() => handleSetCoverImage(idx)}
-                              className={`relative group rounded-xl overflow-hidden w-20 h-20 shrink-0 border-2 cursor-pointer transition ${
+                              className={`relative group rounded-xl overflow-hidden h-20 shrink-0 border-2 cursor-pointer transition ${
                                 idx === 0 ? "border-emerald-500 shadow-md ring-2 ring-emerald-300" : "border-gray-200 hover:border-gray-400"
                               }`}
                               title={idx === 0 ? "Photo de couverture" : "Cliquer pour définir comme couverture"}
                             >
-                              <img src={previewUrl} alt={`Vignette ${idx + 1}`} className="w-full h-full object-cover" />
+                              <img src={previewUrl} alt={`Vignette ${idx + 1}`} className="h-full w-auto block" />
                               {idx === 0 && (
                                 <span className="absolute bottom-1 left-1 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
                                   1ère

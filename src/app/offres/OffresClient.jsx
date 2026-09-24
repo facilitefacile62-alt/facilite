@@ -717,7 +717,6 @@ function OffresContent({ listingType } = {}) {
                       <OfferMediaGallery
                         media={offer.photos || offer.images || offer.image_url || offer.image}
                         title={offer.title}
-                        maxHeight="max-h-64 sm:max-h-80"
                         offer={offer}
                       />
                     </div>

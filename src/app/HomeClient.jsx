@@ -1747,7 +1747,6 @@ export default function Home({ initialOffers = [] }) {
                         media={job.photos || job.images || job.image_url || job.image}
                         title={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
                         className="my-1"
-                        maxHeight="max-h-80 sm:max-h-96"
                         offer={job}
                       />
                     )}

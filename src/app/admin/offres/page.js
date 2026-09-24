@@ -9,6 +9,9 @@ import RoleBadge from "@/components/RoleBadge";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
+import ImageAdaptative from "@/components/ImageAdaptative";
+import SelecteurFormatAffiche from "@/components/SelecteurFormatAffiche";
+import { FORMAT_AFFICHE_PAR_DEFAUT } from "@/lib/formatsAffiche";
 import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink, resolveOfferAction } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
@@ -73,9 +76,10 @@ export default function AdminOffresPage() {
   // Modal d'agrandissement d'image
   const [viewImageModal, setViewImageModal] = useState({ isOpen: false, url: null });
 
-  // Onglet Image : Upload/Scan ou Génération IA 1:1
+  // Onglet Image : Upload/Scan ou Génération IA
   const [imageTab, setImageTab] = useState("upload"); // "upload" | "ai_generate"
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiFormat, setAiFormat] = useState(FORMAT_AFFICHE_PAR_DEFAUT);
   const [isGeneratingAiPoster, setIsGeneratingAiPoster] = useState(false);
 
   // Sponsoring — activation manuelle admin uniquement (pas de webhook de
@@ -325,7 +329,7 @@ export default function AdminOffresPage() {
     }
   };
 
-  // Génération d'une affiche de recrutement IA au format 1:1
+  // Génération d'une affiche de recrutement IA (format choisi, carré par défaut)
   const handleGenerateAiPoster = async (customPrompt = aiPrompt) => {
     const promptToUse = (customPrompt || aiPrompt || "").trim();
     if (!promptToUse && !offerForm.title.trim()) {
@@ -334,7 +338,7 @@ export default function AdminOffresPage() {
     }
 
     setIsGeneratingAiPoster(true);
-    triggerToast("🎨 Génération de l'affiche 1:1 en cours par l'IA...", "fa-wand-magic-sparkles");
+    triggerToast(`🎨 Génération de l'affiche ${aiFormat} en cours par l'IA...`, "fa-wand-magic-sparkles");
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -348,6 +352,7 @@ export default function AdminOffresPage() {
           prompt: promptToUse,
           title: offerForm.title,
           company: offerForm.company,
+          format: aiFormat,
         }),
       });
 
@@ -356,8 +361,8 @@ export default function AdminOffresPage() {
         setOfferImagePreviews((prev) => [data.imageUrl, ...prev]);
         setOfferForm((prev) => ({ ...prev, image_url: data.imageUrl }));
         setScanSuccess(true);
-        setScanMessage("✨ Affiche format carré 1:1 générée avec succès et attachée à la publication !");
-        triggerToast("🎉 Affiche 1:1 générée avec succès !", "fa-circle-check");
+        setScanMessage(`✨ Affiche ${aiFormat} générée avec succès et attachée à la publication !`);
+        triggerToast(`🎉 Affiche ${aiFormat} générée avec succès !`, "fa-circle-check");
       } else {
         triggerToast(data.error || "Erreur lors de la génération de l'image.", "fa-triangle-exclamation");
       }
@@ -375,7 +380,7 @@ export default function AdminOffresPage() {
     const company = offerForm.company || "Entreprise";
     const location = offerForm.location || "Dakar, Sénégal";
     
-    const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier, format carré 1:1`;
+    const suggested = `Affiche de recrutement professionnelle et percutante pour le poste de ${title} chez ${company} à ${location}. Style corporate moderne, design soigné, mise en valeur du métier`;
     setAiPrompt(suggested);
     triggerToast("Prompt suggéré généré avec succès !", "fa-wand-magic-sparkles");
   };
@@ -857,7 +862,7 @@ export default function AdminOffresPage() {
           {/* Colonne Gauche : Formulaire & Zone de Scanner IA */}
           <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-8 space-y-6">
             
-            {/* Zone Affiche : Sélecteur d'Onglets (Upload vs Générateur IA 1:1) */}
+            {/* Zone Affiche : Sélecteur d'Onglets (Upload vs Générateur IA) */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-2xl border border-gray-200">
@@ -884,7 +889,7 @@ export default function AdminOffresPage() {
                     }`}
                   >
                     <i className="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
-                    <span>Générateur IA (Format 1:1)</span>
+                    <span>Générateur IA</span>
                   </button>
                 </div>
 
@@ -910,10 +915,10 @@ export default function AdminOffresPage() {
                       </span>
                       <div>
                         <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
-                          Studio Affiche IA • Format 1:1
+                          Studio Affiche IA
                         </h4>
                         <p className="text-[11px] text-emerald-700 font-medium">
-                          Créez un visuel carré haute fidélité prêt pour les réseaux sociaux.
+                          Créez un visuel haute fidélité, au format de votre choix, prêt pour les réseaux sociaux.
                         </p>
                       </div>
                     </div>
@@ -935,7 +940,7 @@ export default function AdminOffresPage() {
                       rows={3}
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="Décrivez l'affiche souhaitée (ex: Affiche de recrutement moderne et percutante pour Stagiaire Informaticien à Dakar, fond épuré, style corporate 1:1...)"
+                      placeholder="Décrivez l'affiche souhaitée (ex: Affiche de recrutement moderne et percutante pour Stagiaire Informaticien à Dakar, fond épuré, style corporate...)"
                       className="w-full p-3 bg-white border border-emerald-200 rounded-2xl text-xs font-medium text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition resize-none placeholder:text-gray-400"
                     />
                   </div>
@@ -944,10 +949,10 @@ export default function AdminOffresPage() {
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-[10px] font-extrabold text-gray-500 uppercase mr-1">Raccourcis :</span>
                     {[
-                      { label: "💻 Tech / Informatique", p: "Affiche de recrutement moderne Développeur & Informaticien, bureau high-tech avec ordinateurs, tons bleu et vert néon, format carré 1:1" },
-                      { label: "🏢 Commercial / Vente", p: "Affiche corporate recrutement Commercial B2B dynamique à Dakar, poignée de main, cadre professionnel prestigieux, format 1:1" },
-                      { label: "🏗️ BTP / Chantier", p: "Affiche professionnelle recrutement BTP & Chantier au Sénégal, ingénieurs et casques de sécurité, fond urbain moderne, format carré 1:1" },
-                      { label: "🛵 Logistique / Livreur", p: "Affiche dynamique recrutement Agent Livreur et Coursier avec scooter moderne dans les rues de Dakar, format 1:1" },
+                      { label: "💻 Tech / Informatique", p: "Affiche de recrutement moderne Développeur & Informaticien, bureau high-tech avec ordinateurs, tons bleu et vert néon" },
+                      { label: "🏢 Commercial / Vente", p: "Affiche corporate recrutement Commercial B2B dynamique à Dakar, poignée de main, cadre professionnel prestigieux" },
+                      { label: "🏗️ BTP / Chantier", p: "Affiche professionnelle recrutement BTP & Chantier au Sénégal, ingénieurs et casques de sécurité, fond urbain moderne" },
+                      { label: "🛵 Logistique / Livreur", p: "Affiche dynamique recrutement Agent Livreur et Coursier avec scooter moderne dans les rues de Dakar" },
                     ].map((item, idx) => (
                       <button
                         key={idx}
@@ -963,6 +968,9 @@ export default function AdminOffresPage() {
                     ))}
                   </div>
 
+                  {/* Format de l'affiche (génération uniquement : un dépôt garde son propre format) */}
+                  <SelecteurFormatAffiche valeur={aiFormat} onChange={setAiFormat} desactive={isGeneratingAiPoster} />
+
                   {/* Bouton de Lancement Génération */}
                   <button
                     type="button"
@@ -973,12 +981,12 @@ export default function AdminOffresPage() {
                     {isGeneratingAiPoster ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Génération du visuel 1:1 par l'IA...</span>
+                        <span>Génération du visuel {aiFormat} par l'IA...</span>
                       </>
                     ) : (
                       <>
                         <i className="fa-solid fa-wand-magic-sparkles text-amber-300 text-sm"></i>
-                        <span>Générer l'Affiche 1:1 avec l'IA</span>
+                        <span>Générer l'affiche {aiFormat} avec l'IA</span>
                       </>
                     )}
                   </button>
@@ -1030,12 +1038,12 @@ export default function AdminOffresPage() {
                 <div className="rounded-3xl overflow-hidden border border-gray-200 bg-gray-950 flex flex-col items-center shadow-md">
                   
                   {/* Photo de Couverture (Principale) */}
-                  <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] max-h-[380px] flex items-center justify-center overflow-hidden bg-black/40 group">
-                    <img
-                      src={offerImagePreviews[0]}
-                      alt="Photo principale de couverture"
-                      className="w-full h-full object-cover transition group-hover:scale-[1.01]"
-                    />
+                  <ImageAdaptative
+                    src={offerImagePreviews[0]}
+                    alt="Photo principale de couverture"
+                    loading="eager"
+                    className="group"
+                  >
 
                     {/* Badge Photo Principale */}
                     <div className="absolute top-3 left-3 bg-emerald-600/90 text-white text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-400/40 flex items-center gap-1 shadow-md">
@@ -1068,7 +1076,7 @@ export default function AdminOffresPage() {
                       <i className="fa-solid fa-magnifying-glass-plus"></i>
                       <span>Agrandir</span>
                     </button>
-                  </div>
+                  </ImageAdaptative>
 
                   {/* Grille des vignettes pour toutes les photos (Reclassement & Suppression) */}
                   <div className="w-full bg-gray-900/95 p-3 sm:p-4 border-t border-gray-800">
@@ -1086,7 +1094,7 @@ export default function AdminOffresPage() {
                       {offerImagePreviews.map((previewUrl, idx) => (
                         <div
                           key={idx}
-                          className={`relative group/thumb w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
+                          className={`relative group/thumb h-16 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
                             idx === 0
                               ? "border-[#10E688] ring-2 ring-[#10E688]/30 shadow-md"
                               : "border-gray-700 hover:border-gray-400 opacity-75 hover:opacity-100"
@@ -1097,7 +1105,7 @@ export default function AdminOffresPage() {
                           <img
                             src={previewUrl}
                             alt={`Photo ${idx + 1}`}
-                            className="w-full h-full object-cover"
+                            className="h-full w-auto block"
                           />
 
                           {/* Badge Étoile sur la 1ère */}
