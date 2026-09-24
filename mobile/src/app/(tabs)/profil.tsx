@@ -58,12 +58,12 @@ export default function ProfilScreen() {
             <LigneMenu
               icone="document-text-outline"
               label="Mes CV et documents"
-              onPress={() => Alert.alert('Bientôt disponible', 'Cet écran arrive dans une prochaine mise à jour.')}
+              onPress={() => router.push('/web/mes-cvs')}
             />
             <LigneMenu
               icone="settings-outline"
               label="Paramètres"
-              onPress={() => Alert.alert('Bientôt disponible', 'Cet écran arrive dans une prochaine mise à jour.')}
+              onPress={() => router.push('/mon-profil/parametres')}
             />
           </View>
 

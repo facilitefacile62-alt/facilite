@@ -29,6 +29,10 @@ type Outil = {
 
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
+// Liste alignée sur les VRAIS outils du site (src/app/fonctionnalites/FonctionnalitesClient.jsx). Les outils PDF
+// s'ouvrent sur la page du site, dans l'app : ils traitent le fichier sur l'appareil, comme sur le web.
+const OUTILS_PDF_SITE = () => '/web/fonctionnalites' as const;
+
 const OUTILS: Outil[] = [
   {
     id: 'compresser',
@@ -37,7 +41,7 @@ const OUTILS: Outil[] = [
     bg: '#E0E7FF',
     titre: 'Compresser un PDF',
     sous: 'Réduire la taille du fichier',
-    ouvrir: () => BIENTOT('Compresser un PDF'),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
     id: 'fusionner',
@@ -46,25 +50,43 @@ const OUTILS: Outil[] = [
     bg: '#DBEAFE',
     titre: 'Fusionner des PDF',
     sous: 'Combiner plusieurs documents',
-    ouvrir: () => BIENTOT('Fusionner des PDF'),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
-    id: 'convertir',
-    type: 'pdf',
-    icone: '🔄',
-    bg: '#D1FAE5',
-    titre: 'Convertir PDF ↔ Word',
-    sous: 'Éditer un CV ou une lettre',
-    ouvrir: () => BIENTOT('Convertir PDF ↔ Word'),
-  },
-  {
-    id: 'extraire_pages',
+    id: 'diviser',
     type: 'pdf',
     icone: '✂️',
     bg: '#FEF3C7',
-    titre: 'Extraire des pages',
-    sous: "Isoler une partie d'un document",
-    ouvrir: () => BIENTOT('Extraire des pages'),
+    titre: 'Diviser un PDF',
+    sous: "Extraire les pages voulues",
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+  },
+  {
+    id: 'organiser',
+    type: 'pdf',
+    icone: '🗂️',
+    bg: '#D1FAE5',
+    titre: 'Organiser les pages',
+    sous: 'Trier, pivoter, supprimer',
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+  },
+  {
+    id: 'jpg_en_pdf',
+    type: 'pdf',
+    icone: '🖼️',
+    bg: '#FCE7F3',
+    titre: 'Convertir JPG en PDF',
+    sous: 'Photos vers un seul document',
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+  },
+  {
+    id: 'pdf_en_jpg',
+    type: 'pdf',
+    icone: '📷',
+    bg: '#EDE9FE',
+    titre: 'Convertir PDF en JPG',
+    sous: 'Chaque page en image',
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
     id: 'extracteur_ia',
@@ -82,34 +104,25 @@ const OUTILS: Outil[] = [
     bg: '#D1FAE5',
     titre: 'Diagnostic CV Gratuit',
     sous: 'Analyse ATS et mots-clés',
-    ouvrir: () => BIENTOT('Diagnostic CV'),
+    ouvrir: (router) => router.push('/web/importer-cv'),
   },
   {
-    id: 'assistant_vocal',
+    id: 'services_modeles',
     type: 'ia',
-    icone: '🎙️',
+    icone: '🎨',
     bg: '#DBEAFE',
-    titre: 'Assistant vocal',
-    sous: 'Postuler en dictant',
-    ouvrir: () => BIENTOT('Assistant vocal'),
+    titre: 'Studio Services & Modèles',
+    sous: 'CV, lettres et modèles prêts',
+    ouvrir: (router) => router.push('/web/modeles'),
   },
   {
-    id: 'conseils_carriere',
+    id: 'boite_idees',
     type: 'ia',
     icone: '💡',
     bg: '#EDE9FE',
-    titre: 'Conseils carrière IA',
-    sous: 'Orientation personnalisée',
-    ouvrir: () => BIENTOT('Conseils carrière'),
-  },
-  {
-    id: 'lettre_motivation',
-    type: 'ia',
-    icone: '✍️',
-    bg: '#FCE7F3',
-    titre: 'Générateur de lettre',
-    sous: 'Lettre de motivation sur mesure',
-    ouvrir: () => BIENTOT('Générateur de lettre'),
+    titre: 'Boîte à idées',
+    sous: 'Proposer une amélioration',
+    ouvrir: (router) => router.push('/web/boite-a-idees'),
   },
 ];
 

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { type WebViewNavigation } from 'react-native-webview';
 import type { ShouldStartLoadRequest, WebViewSource } from 'react-native-webview/lib/WebViewTypes';
 
-import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
 
 // Écran générique pour les pages web-only lourdes embarquées en WebView
@@ -16,12 +16,16 @@ import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
 // l'app — la redirection serveur qui suit amène la WebView sur la page
 // réelle déjà connectée, sans reconnexion demandée à l'utilisateur.
 export default function EcranWeb() {
-  const { cle, template } = useLocalSearchParams<{ cle: string; template?: string }>();
+  const { cle, template, id } = useLocalSearchParams<{ cle: string; template?: string; id?: string }>();
   const router = useRouter();
-  const { session } = useAuth();
   const webviewRef = useRef<WebView>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
+  const [detailErreur, setDetailErreur] = useState('');
+  // undefined = lecture en cours, null = aucune session. Les jetons sont relus JUSTE avant d'ouvrir la page :
+  // getSession() renouvelle un jeton expiré, alors que l'état du contexte peut dater de la dernière ouverture
+  // de l'app (le pont refuse un jeton expiré : 401).
+  const [jetons, setJetons] = useState<{ acces: string; renouvellement: string } | null | undefined>(undefined);
   const [peutReculer, setPeutReculer] = useState(false);
   const [cleChargement, setCleChargement] = useState(0);
 
@@ -30,7 +34,22 @@ export default function EcranWeb() {
   // d'arriver ici) mènent à une cible authRequise : l'absence de session est
   // donc un cas anormal, pas le chemin attendu — affiché plutôt que de
   // poster des jetons vides vers le serveur.
-  const sessionManquante = config?.authRequise === true && !session;
+  const authRequise = config?.authRequise === true;
+  const sessionManquante = authRequise && jetons === null;
+  const jetonsEnLecture = authRequise && jetons === undefined;
+
+  useEffect(() => {
+    if (!authRequise) return;
+    let annule = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (annule) return;
+      const s = data.session;
+      setJetons(s ? { acces: s.access_token, renouvellement: s.refresh_token } : null);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [authRequise, cleChargement]);
 
   const onBackPress = useCallback(() => {
     if (peutReculer) {
@@ -83,9 +102,9 @@ export default function EcranWeb() {
     ? {
         uri: `${SITE_URL}/auth/mobile-bridge`,
         method: 'POST',
-        body: `access_token=${encodeURIComponent(session?.access_token ?? '')}&refresh_token=${encodeURIComponent(
-          session?.refresh_token ?? ''
-        )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}`,
+        body: `access_token=${encodeURIComponent(jetons?.acces ?? '')}&refresh_token=${encodeURIComponent(
+          jetons?.renouvellement ?? ''
+        )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}${id ? `&id=${encodeURIComponent(id)}` : ''}`,
       }
     : { uri: `${SITE_URL}${config.chemin}` };
 
@@ -102,6 +121,8 @@ export default function EcranWeb() {
           <Pressable
             onPress={() => {
               setErreur(false);
+              setDetailErreur('');
+              setJetons(undefined);
               setCleChargement((n) => n + 1);
             }}
             className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center">
@@ -119,14 +140,21 @@ export default function EcranWeb() {
               <Text className="text-[13px] text-black/50 text-center">
                 Impossible de charger cette page pour le moment.
               </Text>
+              {detailErreur ? <Text className="text-[11px] text-black/35 text-center">{detailErreur}</Text> : null}
               <Pressable
                 onPress={() => {
                   setErreur(false);
+                  setDetailErreur('');
+                  setJetons(undefined);
                   setCleChargement((n) => n + 1);
                 }}
                 className="bg-[#2563EB] rounded-full px-5 py-2.5">
                 <Text className="text-white text-[13px] font-bold">Réessayer</Text>
               </Pressable>
+            </View>
+          ) : jetonsEnLecture ? (
+            <View className="flex-1 items-center justify-center">
+              <ActivityIndicator color="#2563EB" size="large" />
             </View>
           ) : (
             <WebView
@@ -137,12 +165,14 @@ export default function EcranWeb() {
               onNavigationStateChange={onNavigationStateChange}
               onLoadStart={() => setChargement(true)}
               onLoadEnd={() => setChargement(false)}
-              onError={() => {
+              onError={(e) => {
                 setChargement(false);
+                setDetailErreur(e.nativeEvent.description || 'Erreur réseau');
                 setErreur(true);
               }}
-              onHttpError={() => {
+              onHttpError={(e) => {
                 setChargement(false);
+                setDetailErreur(`Erreur ${e.nativeEvent.statusCode} — ${new URL(e.nativeEvent.url).pathname}`);
                 setErreur(true);
               }}
               startInLoadingState={false}

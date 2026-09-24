@@ -163,7 +163,10 @@ const RACCOURCIS: Raccourci[] = [
     bg: '#D1FAE5',
     titre: 'Diagnostic CV Gratuit',
     sous: 'Analyse IA de votre CV',
-    action: () => BIENTOT('Diagnostic CV'),
+    action: ({ router, fermer }) => {
+      fermer();
+      router.push('/web/importer-cv');
+    },
   },
 ];
 
@@ -307,7 +310,12 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
             </View>
           </View>
 
-          <Pressable onPress={() => BIENTOT('Diagnostic CV')} className="rounded-2xl p-4 mt-3 relative overflow-hidden">
+          <Pressable
+            onPress={() => {
+              onFermer();
+              router.push('/web/importer-cv');
+            }}
+            className="rounded-2xl p-4 mt-3 relative overflow-hidden">
             <View className="absolute inset-0 bg-[#1d2547]" />
             <View className="absolute top-3.5 right-3.5 bg-emerald-500 px-2.5 py-0.5 rounded-full">
               <Text className="text-white text-[9.5px] font-bold">GRATUIT</Text>
@@ -344,7 +352,10 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
 
           <View className="gap-2 mt-3.5">
             <Pressable
-              onPress={() => BIENTOT('Paramètres et langue')}
+              onPress={() => {
+                onFermer();
+                router.push('/mon-profil/parametres');
+              }}
               className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center justify-between">
               <Text className="text-[13.5px] font-bold text-[#1A1A1A]">⚙ Paramètres et langue</Text>
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
 // Même projet Supabase que le site web (src/lib/supabase.js), même URL et
@@ -48,3 +48,14 @@ export const supabase = createClient(url, anonKey, {
     detectSessionInUrl: false,
   },
 });
+
+// Renouvellement de la session : sur mobile, supabase-js ne sait pas si l'app est au premier plan. Sans ceci, un jeton
+// périmé pendant la mise en veille n'est renouvelé qu'après le prochain passage du minuteur ; les écrans qui envoient le
+// jeton au serveur (pont WebView) recevaient alors un refus 401. Recommandation officielle de Supabase pour React Native.
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (etat) => {
+    if (etat === 'active') supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+  supabase.auth.startAutoRefresh();
+}

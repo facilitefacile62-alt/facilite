@@ -88,10 +88,10 @@ export default function ProfilAProposScreen() {
 
           <View className="flex-row gap-5 px-5 pt-5 border-b border-black/[0.08] mt-3.5">
             <Text className="text-[14px] font-bold text-[#2563EB] pb-2.5 border-b-2 border-[#2563EB]">À propos</Text>
-            <Pressable onPress={() => BIENTOT('Mes documents')}>
+            <Pressable onPress={() => router.push('/web/mes-cvs')}>
               <Text className="text-[14px] font-semibold text-black/50 pb-2.5">Mes documents</Text>
             </Pressable>
-            <Pressable onPress={() => BIENTOT('Paramètres')}>
+            <Pressable onPress={() => router.push('/mon-profil/parametres')}>
               <Text className="text-[14px] font-semibold text-black/50 pb-2.5">Paramètres</Text>
             </Pressable>
           </View>
