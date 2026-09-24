@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,33 +20,53 @@ const STORIES_CV = [
   { id: 'canadien', label: 'Canadien', template: 'canadian', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#F87171', '#DC2626'] },
 ];
 
+// Offres chargées par page : la base en compte plus d'une centaine (134 le
+// 23/09/2026) — sans pagination, l'Accueil n'en montrait que les 30 plus
+// récentes, sans aucun moyen d'atteindre les autres (constaté par
+// l'utilisateur : "je ne vois pas les offres du site").
+const PAS_PAGINATION = 30;
+
 export default function AccueilScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [limite, setLimite] = useState(30);
-  const { offres, erreur } = useOffresReelles(limite);
+  const [limite, setLimite] = useState(PAS_PAGINATION);
+  const { offres, erreur, recharger } = useOffresReelles(limite);
   const [rafraichissement, setRafraichissement] = useState(false);
   const candidateMatchScores = useCandidateMatchScores(user?.id);
 
-  const rechargerFlux = async () => {
-    setRafraichissement(true);
-    setLimite((n) => n);
-    setTimeout(() => setRafraichissement(false), 800);
+  // Une page pleine (autant d'offres que demandées) signale qu'il peut en
+  // rester : on n'en redemande qu'une fois la page précédente arrivée, ce qui
+  // évite les demandes en rafale quand onEndReached se déclenche plusieurs fois.
+  const peutChargerPlus = offres !== null && offres.length >= limite;
+  const chargerPlus = () => {
+    if (peutChargerPlus) setLimite((n) => n + PAS_PAGINATION);
   };
+
+  // Tirer pour actualiser relit VRAIMENT la base (l'ancien code appelait
+  // setLimite((n) => n), un no-op : rien n'était rechargé). Le voyant s'arrête
+  // dès qu'une nouvelle réponse (offres ou erreur) est arrivée.
+  const rechargerFlux = () => {
+    setRafraichissement(true);
+    recharger();
+  };
+  useEffect(() => {
+    // setState différé : corps d'un effet, pas un callback d'un système externe.
+    queueMicrotask(() => setRafraichissement(false));
+  }, [offres, erreur]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0B0E14' }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <FaciliteHeader dark={true} />
 
-        {offres === null ? (
+        {offres === null && !erreur ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color="#38BDF8" size="large" />
             <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: 12 }}>
               Chargement des offres en direct…
             </Text>
           </View>
-        ) : erreur ? (
+        ) : offres === null ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
             <Ionicons name="cloud-offline-outline" size={36} color="rgba(255,255,255,0.4)" />
             <Text style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)', fontWeight: '500', marginTop: 12, textAlign: 'center' }}>
@@ -72,6 +92,8 @@ export default function AccueilScreen() {
             showsVerticalScrollIndicator={false}
             refreshing={rafraichissement}
             onRefresh={rechargerFlux}
+            onEndReached={chargerPlus}
+            onEndReachedThreshold={0.6}
             ListHeaderComponent={
               <View>
                 {/* 1. STORIES : MODÈLES CV (Style 1:1 Capture Web) */}
@@ -114,6 +136,7 @@ export default function AccueilScreen() {
                             }}>
                             <Image
                               source={{ uri: s.image }}
+                              alt={`Modèle de CV ${s.label}`}
                               style={{ width: '100%', height: '100%' }}
                               contentFit="cover"
                             />
@@ -188,10 +211,19 @@ export default function AccueilScreen() {
             )}
             ListFooterComponent={
               offres.length > 0 ? (
-                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '600' }}>
-                    {offres.length} offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''} en direct
-                  </Text>
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 8 }}>
+                  {peutChargerPlus ? (
+                    <>
+                      <ActivityIndicator color="#38BDF8" size="small" />
+                      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '600' }}>
+                        Chargement de nouvelles offres…
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: '600' }}>
+                      {offres.length} offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''} en direct
+                    </Text>
+                  )}
                 </View>
               ) : null
             }

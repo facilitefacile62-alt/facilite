@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getPrimaryOfferImage } from '@/lib/offerMedia';
 
@@ -52,6 +52,10 @@ function dateRelative(iso: string): string {
 export function useOffresReelles(limite = 30) {
   const [offres, setOffres] = useState<OffreReelle[] | null>(null);
   const [erreur, setErreur] = useState(false);
+  // Incrémenté par recharger() : force une nouvelle lecture sans changer la
+  // limite (tirer pour actualiser, bouton Réessayer).
+  const [version, setVersion] = useState(0);
+  const recharger = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
     let annule = false;
@@ -119,7 +123,7 @@ export function useOffresReelles(limite = 30) {
       annule = true;
       supabase.removeChannel(channel);
     };
-  }, [limite]);
+  }, [limite, version]);
 
-  return { offres, erreur };
+  return { offres, erreur, recharger };
 }
