@@ -131,13 +131,12 @@ function RegisterForm() {
     setOauthLoading(true);
     try {
       const safeRedirect = redirectUrl.startsWith("/") ? redirectUrl : "/";
-      const nextApresConfirmation = `/bienvenue?redirect=${encodeURIComponent(safeRedirect)}`;
-      // /auth/callback échange le code CÔTÉ SERVEUR avant de rediriger vers
-      // /bienvenue (choix Facilité / Facilité Business).
+      // /auth/callback échange le code CÔTÉ SERVEUR puis envoie vers /bienvenue (choix Facilité / Facilité Business)
+      // uniquement si le compte vient d'être créé ; un compte déjà existant va directement à sa destination.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextApresConfirmation)}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
         },
       });
       if (error) throw error;

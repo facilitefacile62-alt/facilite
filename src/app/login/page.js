@@ -274,12 +274,13 @@ export default function LoginPage() {
       const params = new URLSearchParams(window.location.search);
       const targetRedirect = params.get("redirect") || "/";
       const safeRedirect = targetRedirect.startsWith("/") && !targetRedirect.startsWith("//") ? targetRedirect : "/";
-      const nextApresConnexion = `/bienvenue?redirect=${encodeURIComponent(safeRedirect)}`;
-
+      // Pas de /bienvenue forcé ici : /auth/callback l'ajoute lui-même, mais SEULEMENT pour un compte qui vient
+      // d'être créé. Avant, chaque connexion Google — même d'un ancien compte avec boutique — repassait par le choix
+      // Facilité / Facilité Business puis Visiteur / Vendeur (signalé le 24/09/2026).
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextApresConnexion)}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
         },
       });
 

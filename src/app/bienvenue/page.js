@@ -1,25 +1,59 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { choixDejaFait } from "@/lib/choixUnivers";
+
+function marquerChoixFait() {
+  supabase.auth.updateUser({ data: { onboarding_done: true } }).catch(() => {});
+}
 
 function BienvenueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [enCours, setEnCours] = useState(false);
+  // true tant qu'on ne sait pas si ce compte a déjà fait son choix : rien n'est affiché à un ancien utilisateur.
+  const [verification, setVerification] = useState(true);
 
   const rawRedirect = searchParams.get("redirect") || "/";
   const safeRedirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
 
+  useEffect(() => {
+    let annule = false;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (annule) return;
+        if (choixDejaFait(data?.user)) {
+          router.replace(safeRedirect);
+          return;
+        }
+        setVerification(false);
+      })
+      .catch(() => {
+        if (!annule) setVerification(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [router, safeRedirect]);
+
   const choisirFacilite = () => {
     setEnCours(true);
+    marquerChoixFait();
     router.push(safeRedirect);
   };
 
   const choisirBusiness = () => {
     setEnCours(true);
+    marquerChoixFait();
     router.push(`/bienvenue-marketplace?redirect=${encodeURIComponent(safeRedirect)}`);
   };
+
+  if (verification) {
+    return <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950" aria-busy="true" />;
+  }
 
   return (
     <div className="relative min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-4 py-8 overflow-hidden transition-colors selection:bg-[#10E688] selection:text-black">
