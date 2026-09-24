@@ -18,6 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { ratioAffichage } from '@/lib/formatImage';
 import {
   brouillonArticle,
   enStock,
@@ -71,6 +72,8 @@ export default function ArticleScreen() {
 
   const [article, setArticle] = useState<ArticleMarketplace | null | undefined>(undefined);
   const [photoActive, setPhotoActive] = useState(0);
+  // Rapport réel (largeur / hauteur) de chaque photo, mesuré au chargement : la galerie prend le format de la photo affichée.
+  const [ratiosPhotos, setRatiosPhotos] = useState<Record<string, number>>({});
   const [ouverture, setOuverture] = useState(false);
   const [favori, setFavori] = useState(false);
   const [onglet, setOnglet] = useState<'article' | 'commentaires' | 'recommander'>('article');
@@ -192,6 +195,10 @@ export default function ArticleScreen() {
     }
   }
 
+  // Photo affichée au format réel ; tant qu'elle n'est pas mesurée, le carré légèrement allongé d'avant.
+  const ratioActif = ratiosPhotos[article.photos[photoActive]] ?? 1 / 0.95;
+  const hauteurGalerie = width / ratioActif;
+
   return (
     <View className="flex-1 bg-[#FAF9F6]">
       {/* Barre de sous-onglets style Shein (Article / Commentaires / Recommander) */}
@@ -227,8 +234,8 @@ export default function ArticleScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Carrousel d'images */}
-        <View style={{ width, height: width * 0.95 }} className="bg-[#F2F0EA] relative">
+        {/* Carrousel d'images : hauteur = celle de la photo affichée, sans recadrage ni bandes */}
+        <View style={{ width, height: hauteurGalerie }} className="bg-[#F2F0EA] relative">
           {article.photos.length > 0 ? (
             <FlatList
               data={article.photos}
@@ -237,13 +244,19 @@ export default function ArticleScreen() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={surDefilement}
+              extraData={hauteurGalerie}
               renderItem={({ item }) => (
                 <Image
                   source={{ uri: item }}
                   alt={article.titre}
-                  style={{ width, height: width * 0.95 }}
+                  style={{ width, height: hauteurGalerie }}
                   contentFit="cover"
                   transition={150}
+                  onLoad={(e) => {
+                    // Bornes de la fiche : au-delà, la photo prendrait tout l'écran.
+                    const r = ratioAffichage(e.source.width, e.source.height, 0.6, 1.8);
+                    if (r) setRatiosPhotos((prev) => (prev[item] === r ? prev : { ...prev, [item]: r }));
+                  }}
                 />
               )}
             />

@@ -7,6 +7,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE } from '@/lib/marketplace';
 import { envoyerPhotoArticle, publierArticle } from '@/lib/vendeur';
 
@@ -110,7 +111,11 @@ export default function PublierArticleScreen() {
             <Text className="text-[12.5px] font-bold text-gray-700 mb-2">Photos ({photos.length}/{MAX_PHOTOS})</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {photos.map((p) => (
-                <View key={p.uri} className="w-20 h-20 rounded-xl overflow-hidden relative">
+                // Vignette à SON format (même hauteur pour toutes) : rien n'est recadré, rien à régler.
+                <View
+                  key={p.uri}
+                  style={{ height: 80, aspectRatio: ratioAffichage(p.width, p.height) ?? 1 }}
+                  className="rounded-xl overflow-hidden relative">
                   <Image source={{ uri: p.uri }} alt="" style={{ width: '100%', height: '100%' }} contentFit="cover" />
                   <Pressable
                     onPress={() => retirerPhoto(p.uri)}
