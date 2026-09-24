@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { useOffreDetail } from '@/lib/useOffreDetail';
@@ -13,11 +14,36 @@ export default function FicheOffreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { offre, erreur } = useOffreDetail(id);
+  const insets = useSafeAreaInsets();
   const [sauvegarde, setSauvegarde] = useState(false);
-  const [isApplied, setIsApplied] = useState(false);
   const [logoErreur, setLogoErreur] = useState(false);
 
   const urlOffre = `https://ffacilite.com/offres/${id}`;
+
+  // Offres enregistrées : liste d'identifiants gardée sur l'appareil, comme sur le site (clé facilite_saved_jobs).
+  useEffect(() => {
+    let annule = false;
+    AsyncStorage.getItem('facilite_saved_jobs')
+      .then((brut) => {
+        const liste: unknown = brut ? JSON.parse(brut) : [];
+        if (!annule) setSauvegarde(Array.isArray(liste) && liste.map(String).includes(String(id)));
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [id]);
+
+  const basculerSauvegarde = async () => {
+    const suivant = !sauvegarde;
+    setSauvegarde(suivant);
+    try {
+      const brut = await AsyncStorage.getItem('facilite_saved_jobs');
+      const liste: string[] = (brut ? JSON.parse(brut) : []).map(String).filter((x: string) => x !== String(id));
+      if (suivant) liste.push(String(id));
+      await AsyncStorage.setItem('facilite_saved_jobs', JSON.stringify(liste));
+    } catch {}
+  };
 
   const partager = async (plateforme?: string) => {
     if (!offre) return;
@@ -62,7 +88,7 @@ export default function FicheOffreScreen() {
             </Pressable>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-36">
             {/* Header barre navigation */}
             <View className="flex-row items-center justify-between px-4 pt-2">
               <Pressable
@@ -79,7 +105,7 @@ export default function FicheOffreScreen() {
                   <Ionicons name="share-social-outline" size={18} color="#F5F6F7" />
                 </Pressable>
                 <Pressable
-                  onPress={() => setSauvegarde((s) => !s)}
+                  onPress={basculerSauvegarde}
                   className="w-[38px] h-[38px] rounded-full bg-[#15181D] items-center justify-center">
                   <Svg width={18} height={18} viewBox="0 0 24 24">
                     <Path
@@ -180,38 +206,39 @@ export default function FicheOffreScreen() {
                 </Pressable>
               </View>
             </View>
-
-            {/* Bouton Postuler / Candidater */}
-            <View className="px-5 pt-6 pb-4">
-              {offre.externalLink ? (
-                <Pressable
-                  onPress={() => Linking.openURL(offre.externalLink!).catch(() => {})}
-                  className="rounded-full py-4 bg-blue-600 active:bg-blue-700 flex-row items-center justify-center gap-2 shadow-lg">
-                  <Ionicons name="open-outline" size={18} color="#FFFFFF" />
-                  <Text className="text-white text-[15px] font-black">
-                    Postuler sur le site du recruteur
-                  </Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  onPress={() => setIsApplied((v) => !v)}
-                  className={`rounded-full py-4 flex-row items-center justify-center gap-2 ${
-                    isApplied ? 'bg-[#10B981]/15 border border-[#10B981]' : 'bg-[#10B981] active:opacity-90'
-                  }`}>
-                  {isApplied && (
-                    <Svg width={18} height={18} viewBox="0 0 24 24">
-                      <Path d="M4 12L9 17L20 6" stroke="#10B981" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-                    </Svg>
-                  )}
-                  <Text className={`text-[15px] font-black ${isApplied ? 'text-[#10B981]' : 'text-[#0B0D10]'}`}>
-                    {isApplied ? 'Candidature envoyée avec succès' : 'Postuler via Facilité'}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
           </ScrollView>
         )}
       </SafeAreaView>
+
+      {/* Barre d'action FIXE : le bouton Postuler reste visible pendant qu'on lit la description
+          (même principe que la barre du bas de la fiche article Marketplace). */}
+      {offre && !erreur && (
+        <View
+          className="absolute left-0 right-0 bottom-0 flex-row items-center gap-3 px-4 pt-3 border-t border-white/10 bg-[#0B0D10]"
+          style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+          <Pressable
+            onPress={basculerSauvegarde}
+            accessibilityLabel={sauvegarde ? "Retirer l'offre des enregistrées" : "Enregistrer l'offre"}
+            className="w-12 h-12 rounded-full bg-[#15181D] border border-white/10 items-center justify-center">
+            <Ionicons name={sauvegarde ? 'bookmark' : 'bookmark-outline'} size={20} color={sauvegarde ? '#10B981' : '#F5F6F7'} />
+          </Pressable>
+          {offre.externalLink ? (
+            <Pressable
+              onPress={() => Linking.openURL(offre.externalLink!).catch(() => {})}
+              className="flex-1 h-12 rounded-full bg-blue-600 active:bg-blue-700 flex-row items-center justify-center gap-2">
+              <Ionicons name="open-outline" size={18} color="#FFFFFF" />
+              <Text className="text-white text-[15px] font-black">Postuler sur le site du recruteur</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => router.push({ pathname: '/web/[cle]', params: { cle: 'offre', id: String(id) } })}
+              className="flex-1 h-12 rounded-full bg-[#10B981] active:opacity-90 flex-row items-center justify-center gap-2">
+              <Ionicons name="paper-plane" size={17} color="#0B0D10" />
+              <Text className="text-[#0B0D10] text-[15px] font-black">Postuler via Facilité</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
