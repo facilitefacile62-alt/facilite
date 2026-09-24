@@ -5815,8 +5815,6 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                 </div>
 
               </div>
-
-            </div>
           )}
 
           {/* SECTION ÉVALUATIONS & COMMENTAIRES STYLE SHEIN (Capture 1) */}
