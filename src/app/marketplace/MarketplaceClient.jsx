@@ -5448,7 +5448,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
         </div>
 
         {/* CORPS PRINCIPAL DÉROULANT : Adapté Mobile avec Padding Bas pour la Barre Fixe */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 lg:p-7 pb-28 sm:pb-8">
+        <div className="flex-1 overflow-y-auto no-scrollbar scrollbar-none p-3 sm:p-6 lg:p-7 pb-28 sm:pb-8">
           
           {ongletShein === "article" && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
@@ -5456,7 +5456,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
               {/* 1. COLONNE GAUCHE (lg:col-span-5) : Galerie Photo avec Miniatures verticales */}
               <div className="lg:col-span-5 flex flex-col sm:flex-row gap-3">
                 {photos.length > 1 && (
-                  <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[440px] shrink-0 order-2 sm:order-1 custom-scrollbar">
+                  <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[440px] shrink-0 order-2 sm:order-1 no-scrollbar scrollbar-none">
                     {photos.map((p, idx) => (
                       <button
                         key={idx}
