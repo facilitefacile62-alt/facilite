@@ -784,7 +784,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           // reste vide pour elles).
           const articlesApercu = (b.articles || []).slice(0, 8);
           const contenuBulle = `
-            <div class="bulle-produits-container" style="position:relative; width:220px; max-width:250px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+            <div class="bulle-produits-container" style="position:relative; width:200px; max-width:240px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
               <!-- Bouton Fermer X -->
               <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
 
@@ -807,7 +807,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                           const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
                           const prixTxt = art.prix_xof || art.prix;
                           return `
-                            <div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
+                            <div data-article-id="${art.id}" style="flex-shrink:0; width:66px; height:86px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
                               ${
                                 photoUrl
                                   ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.replaceWith(Object.assign(document.createElement('div'),{style:'width:100%;height:100%;background:#c4a4b8;display:flex;align-items:center;justify-content:center;font-size:22px;',textContent:'🛍️'}))" />`
@@ -891,10 +891,69 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             // juste au-dessus, sinon elle la recouvre entièrement.
             const entree = marqueursCreesParId.get(b.id);
             popup.options.offset = entree?.decalageBas ? [86, -14] : [0, -28];
+            // Placement DANS le cadre de la carte, mesuré sur la vraie taille de la bulle : jamais au-dessus du bord
+            // supérieur ni sous la barre d'outils du haut, jamais sous le dock du bas (carrousel + bascule), jamais hors
+            // des côtés. Ordre : au-dessus du marqueur si elle y tient ; sinon EN DESSOUS (pointe masquée) ; sinon au-dessus,
+            // poussée juste assez pour rester entière. Pas de déplacement de la carte (autoPan) : la bulle s'ouvre au
+            // survol, la carte ne doit pas bouger.
+            let dx = popup.options.offset[0];
+            let dy = popup.options.offset[1];
             // marqueur.getLatLng() (pas b.position, figé) : après une
             // dissociation, le marqueur a pu être déplacé légèrement, la
             // bulle doit suivre sa position réelle actuelle.
             popup.setLatLng(marqueur.getLatLng()).openOn(carte);
+            const conteneurCarte = carte.getContainer();
+            // La même bulle sert à chaque ouverture : on retire le repère « ouverte en dessous » de la fois précédente.
+            popup.getElement()?.classList.remove("carte-bulle-bas");
+            const boiteBulle = popup.getElement()?.querySelector(".leaflet-popup-content-wrapper");
+            if (boiteBulle) {
+              const MARGE_HAUT = 48; // barre d'outils du haut (titre, recherche, fermer)
+              const MARGE = 6;
+              const dock = conteneurCarte.parentElement?.querySelector("[data-dock-carte]");
+              const positionner = () => {
+                popup.options.offset = [dx, dy];
+                popup.update();
+              };
+              const mesurer = () => {
+                const c = conteneurCarte.getBoundingClientRect();
+                const r = boiteBulle.getBoundingClientRect();
+                return { c, r, haut: r.top - c.top, gauche: r.left - c.left };
+              };
+              const limiteBas = () => {
+                const c = conteneurCarte.getBoundingClientRect();
+                return dock ? dock.getBoundingClientRect().top - c.top - MARGE : c.height - MARGE;
+              };
+              const pt = carte.latLngToContainerPoint(marqueur.getLatLng());
+              let m = mesurer();
+              let enDessous = false;
+              if (m.haut < MARGE_HAUT || m.haut + m.r.height > limiteBas()) {
+                const hautDessous = pt.y + 16;
+                if (hautDessous >= MARGE_HAUT && hautDessous + m.r.height <= limiteBas()) {
+                  enDessous = true;
+                  popup.getElement().classList.add("carte-bulle-bas");
+                  dy += hautDessous - m.haut;
+                } else {
+                  const cible = Math.min(Math.max(m.haut, MARGE_HAUT), Math.max(MARGE_HAUT, limiteBas() - m.r.height));
+                  dy += cible - m.haut;
+                }
+                positionner();
+                if (enDessous) {
+                  // la pointe masquée change la hauteur du conteneur : on recale sur la position mesurée
+                  m = mesurer();
+                  dy += hautDessous - m.haut;
+                  positionner();
+                }
+                m = mesurer();
+              }
+              // côtés
+              if (m.gauche < MARGE) {
+                dx += MARGE - m.gauche;
+                positionner();
+              } else if (m.gauche + m.r.width > m.c.width - MARGE) {
+                dx -= m.gauche + m.r.width - (m.c.width - MARGE);
+                positionner();
+              }
+            }
             attacherEcouteursPopup();
           };
 
@@ -1083,7 +1142,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           {/* CARTE LEAFLET EN ARRIÈRE-PLAN COMPLET */}
           <div
             ref={conteneur}
-            className={`w-full ${modeCompact ? "h-[160px] sm:h-[190px]" : "h-[210px] sm:h-[270px] md:h-[310px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
+            className={`w-full ${modeCompact ? "h-[160px] sm:h-[190px]" : "h-[320px] sm:h-[340px] md:h-[380px]"} z-0 transition-all duration-300 bg-[#0B0F17]`}
             aria-label="Carte des boutiques proches"
           />
 
@@ -1244,36 +1303,13 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
               même dock que GlobeExplorateurBoutiques.jsx (référence explicite
               de l'utilisateur), porté ici en gardant le principe flottant sur
               la carte déjà confirmé pour ce composant compact. */}
-          <div className="absolute inset-x-0 bottom-1.5 z-[400] px-2 flex flex-col items-center gap-1.5 pointer-events-none">
-            {(boutiquesAffichees.length > 0 || articlesAffiches.length > 0) && !modeCompact && (
-              <div className="pointer-events-auto flex items-center gap-1 bg-gray-950/80 rounded-full p-1 border border-gray-800 backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={() => setVueCarrousel("boutiques")}
-                  className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
-                    vueCarrousel === "boutiques" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
-                  }`}
-                >
-                  Boutiques
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVueCarrousel("articles")}
-                  className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
-                    vueCarrousel === "articles" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
-                  }`}
-                >
-                  Articles
-                </button>
-              </div>
-            )}
-
+          <div data-dock-carte className="absolute inset-x-0 bottom-2 z-[400] px-2 flex flex-col items-center gap-1.5 pointer-events-none">
             {!modeCompact && (boutiquesAffichees.length > 0 || articlesAffiches.length > 0) && (
-              <div className="pointer-events-auto w-full max-w-lg flex items-center justify-center gap-1.5 px-1 select-none">
+              <div className="pointer-events-auto w-full max-w-md flex items-center justify-center gap-1 px-1 select-none">
                 <button
                   type="button"
                   onClick={vueCarrousel === "boutiques" ? allerBoutiquePrecedente : allerArticlePrecedent}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label={vueCarrousel === "boutiques" ? "Boutique précédente" : "Article précédent"}
                 >
                   <i className="fa-solid fa-chevron-left text-[10px]"></i>
@@ -1294,7 +1330,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                       }
                     }
                   }}
-                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                  className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1 px-2 sm:px-3 flex items-center justify-start gap-1 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
                 >
                   {/* Espaceurs de centrage : voir GlobeExplorateurBoutiques.jsx
                       pour le raisonnement complet (même dock). */}
@@ -1320,8 +1356,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                             <div
                               className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                                 estSelectionne
-                                  ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
-                                  : "w-11 h-11 sm:w-12 sm:h-12 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
+                                  ? "w-10 h-10 sm:w-11 sm:h-11 p-[2.5px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
+                                  : "w-9 h-9 sm:w-10 sm:h-10 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                               }`}
                             >
                               <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border border-gray-950">
@@ -1344,7 +1380,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                               )}
                             </div>
                             {estSelectionne && (
-                              <span className="mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] truncate border border-gray-200 transition-all duration-200">
+                              <span className="mt-0.5 px-1.5 bg-white text-gray-950 text-[8px] leading-4 font-black rounded-full shadow-md max-w-[64px] truncate border border-gray-200 transition-all duration-200">
                                 {b.nom}
                               </span>
                             )}
@@ -1369,8 +1405,8 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                             <div
                               className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                                 estSelectionne
-                                  ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
-                                  : "w-11 h-11 sm:w-12 sm:h-12 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
+                                  ? "w-10 h-10 sm:w-11 sm:h-11 p-[2.5px] bg-white shadow-[0_0_20px_rgba(255,255,255,0.85),0_6px_18px_rgba(0,0,0,0.7)] ring-2 ring-black/40 scale-105 z-10"
+                                  : "w-9 h-9 sm:w-10 sm:h-10 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                               }`}
                             >
                               <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 border border-gray-950 flex items-center justify-center">
@@ -1382,7 +1418,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                               </div>
                             </div>
                             {estSelectionne && (
-                              <span className="mt-1 px-2 py-0.2 bg-white text-gray-950 text-[9px] font-black rounded-full shadow-md max-w-[70px] truncate border border-gray-200 transition-all duration-200">
+                              <span className="mt-0.5 px-1.5 bg-white text-gray-950 text-[8px] leading-4 font-black rounded-full shadow-md max-w-[64px] truncate border border-gray-200 transition-all duration-200">
                                 {a.titre}
                               </span>
                             )}
@@ -1395,10 +1431,33 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                 <button
                   type="button"
                   onClick={vueCarrousel === "boutiques" ? allerBoutiqueSuivante : allerArticleSuivant}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
+                  className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center text-xs backdrop-blur-md shadow-lg active:scale-90 transition cursor-pointer shrink-0 z-30"
                   aria-label={vueCarrousel === "boutiques" ? "Boutique suivante" : "Article suivant"}
                 >
                   <i className="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+              </div>
+            )}
+
+            {(boutiquesAffichees.length > 0 || articlesAffiches.length > 0) && !modeCompact && (
+              <div className="pointer-events-auto shrink-0 mx-auto flex items-center gap-1 bg-gray-950/80 rounded-full p-0.5 border border-gray-800 backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setVueCarrousel("boutiques")}
+                  className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                    vueCarrousel === "boutiques" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
+                  }`}
+                >
+                  Boutiques
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVueCarrousel("articles")}
+                  className={`px-3 py-1 rounded-full text-[10px] font-black transition cursor-pointer ${
+                    vueCarrousel === "articles" ? "bg-white text-gray-950" : "text-gray-300 hover:text-white"
+                  }`}
+                >
+                  Articles
                 </button>
               </div>
             )}

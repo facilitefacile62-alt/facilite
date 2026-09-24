@@ -141,7 +141,7 @@
 // v141 (22/09/2026) : espace vendeur natif Marketplace ("Ma boutique") - creation de boutique, publication d'article avec photos compressees, ajustement du stock, retrait, visibilite et modification de la boutique
 // v142 (22/09/2026) : relevé de position (boutique/activité) - sur iPhone/iPad, les instructions de deblocage de la localisation s'affichent enfin apres un refus (l'API navigator.permissions ne couvre pas "geolocation" sur iOS, le bloc d'aide restait invisible), et s'ouvrent automatiquement au lieu de rester cachees dans un menu repliable
 // v143 (22/09/2026) : app mobile - pont de session (POST /auth/mobile-bridge) pour ouvrir /creer-cv deja connecte depuis une WebView de l'app ; les 3 modeles de CV (Moderne/Minimaliste/Classique) de l'Accueil mobile y menent desormais reellement
-const VERSION_CACHE = "facilite-v146";
+const VERSION_CACHE = "facilite-v147";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher

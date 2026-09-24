@@ -379,6 +379,10 @@ html.dark .bg-whatsapp-chat {
   line-height: 1.4 !important;
 }
 
+/* Bulle ouverte SOUS le marqueur (pas de place au-dessus dans la mini carte) : la pointe du bas n'a plus de sens. */
+.carte-bulle-produits-popup.carte-bulle-bas .leaflet-popup-tip-container {
+  display: none;
+}
 .carte-bulle-produits-popup .leaflet-popup-tip-container {
   overflow: visible !important;
 }
