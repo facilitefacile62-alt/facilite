@@ -5756,8 +5756,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   </div>
                 </div>
 
-                {/* BOUTONS D'ACTION (Desktop) */}
-                <div className="space-y-2.5 pt-2">
+                {/* BOUTONS D'ACTION (Desktop uniquement - Sur mobile la barre fixe inférieure prend le relais) */}
+                <div className="hidden sm:block space-y-2.5 pt-2">
                   <div className="flex items-baseline justify-between px-1">
                     <span className="text-xs text-gray-500 font-bold">Total estimé :</span>
                     <span className="text-xl font-black text-[#D9381E]">
@@ -5807,41 +5807,42 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                     <i className="fa-solid fa-bag-shopping text-sm"></i>
                     <span>Commander maintenant</span>
                   </button>
+                </div>
 
-                  {/* Actions Propriétaire */}
-                  {estMonArticle && (
-                    <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 grid grid-cols-2 gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setModalEditionOuverte(true)}
-                        className="py-2 px-3 rounded-lg bg-[#1877F2] text-white text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <i className="fa-solid fa-pen-to-square"></i>
-                        <span>Modifier</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (window.confirm(`Supprimer définitivement "${article.titre}" ?`)) {
-                            setSuppressionEnCours(true);
-                            try {
-                              await supprimerArticle(article.id);
-                              onArticleSupprime?.(article.id);
-                              onFermer?.();
-                            } catch (err) {
-                              alert(err.message || "Erreur de suppression");
-                              setSuppressionEnCours(false);
-                            }
+                {/* Actions Propriétaire (Mobile & Desktop) */}
+                {estMonArticle && (
+                  <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 grid grid-cols-2 gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setModalEditionOuverte(true)}
+                      className="py-2 px-3 rounded-lg bg-[#1877F2] text-white text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i>
+                      <span>Modifier</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (window.confirm(`Supprimer définitivement "${article.titre}" ?`)) {
+                          setSuppressionEnCours(true);
+                          try {
+                            await supprimerArticle(article.id);
+                            onArticleSupprime?.(article.id);
+                            onFermer?.();
+                          } catch (err) {
+                            alert(err.message || "Erreur de suppression");
+                            setSuppressionEnCours(false);
                           }
-                        }}
-                        disabled={suppressionEnCours}
-                        className="py-2 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  )}
+                        }
+                      }}
+                      disabled={suppressionEnCours}
+                      className="py-2 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
+                    >
+                      <i className="fa-solid fa-trash-can"></i>
+                      <span>Supprimer</span>
+                    </button>
+                  </div>
+                )}
 
                   {/* Vendeur / Boutique */}
                   <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
