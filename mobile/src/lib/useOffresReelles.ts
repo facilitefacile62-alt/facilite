@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getPrimaryOfferImage } from '@/lib/offerMedia';
 
@@ -56,6 +56,11 @@ export function useOffresReelles(limite = 30) {
   // limite (tirer pour actualiser, bouton Réessayer).
   const [version, setVersion] = useState(0);
   const recharger = useCallback(() => setVersion((v) => v + 1), []);
+  // Un nom de canal PAR instance du hook. L'Accueil et l'onglet Offres l'utilisent tous les deux : avec un nom
+  // commun, supabase.channel() renvoie le canal déjà abonné et .on() lève « cannot add postgres_changes callbacks
+  // after subscribe() » à l'ouverture du second onglet (plantage constaté le 24/09/2026 sur tablette), et la
+  // fermeture de l'un coupait aussi le temps réel de l'autre.
+  const idInstance = useId().replace(/[^a-zA-Z0-9]/g, '');
 
   useEffect(() => {
     let annule = false;
@@ -114,7 +119,7 @@ export function useOffresReelles(limite = 30) {
 
     // Abonnement temps réel pour synchroniser immédiatement toute modification/nouvelle offre du site
     const channel = supabase
-      .channel('realtime_job_offers_mobile')
+      .channel(`realtime_job_offers_mobile_${idInstance}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_offers' }, () => {
         charger();
       })
@@ -124,7 +129,7 @@ export function useOffresReelles(limite = 30) {
       annule = true;
       supabase.removeChannel(channel);
     };
-  }, [limite, version]);
+  }, [limite, version, idInstance]);
 
   return { offres, erreur, recharger };
 }
