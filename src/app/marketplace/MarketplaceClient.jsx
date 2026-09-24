@@ -26,6 +26,7 @@ import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { etatDiscussionArticle, construireLienDiscussion } from "@/lib/discussionArticle";
+import { ratioAffichage } from "@/lib/formatImage";
 import CarteBoutiques from "@/components/CarteBoutiques";
 import CapturePosition from "@/components/CapturePosition";
 import EditeurAvatarBoutique from "@/components/EditeurAvatarBoutique";
@@ -5190,6 +5191,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
   const [aime, setAime] = useState(false);
   const [copie, setCopie] = useState(false);
   const [imageErreur, setImageErreur] = useState(false);
+  // Rapport réel de la photo affichée, mémorisé AVEC son adresse : au changement de photo on repart du carré.
+  const [mesurePhoto, setMesurePhoto] = useState({ src: null, ratio: null });
   const [zoomActif, setZoomActif] = useState(false);
   const [modalEditionOuverte, setModalEditionOuverte] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
@@ -5278,6 +5281,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
 
   const photos = photosBrutes.map(nettoyerUrl).filter(Boolean);
   const photoPrincipale = photos[photoIndex] || photos[0] || null;
+  const ratioPhoto = mesurePhoto.src === photoPrincipale ? mesurePhoto.ratio : null;
   const enStock = article.statut === "en_stock" || Number(article.quantite) > 0;
   const prixUnitaire = Number(article.prix_xof) || 0;
   const ancienPrix = article.ancien_prix_xof
@@ -5461,25 +5465,33 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                           setPhotoIndex(idx);
                           setImageErreur(false);
                         }}
-                        className={`relative w-14 h-16 sm:w-16 sm:h-18 rounded-xl overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-zinc-900 ${
+                        className={`relative h-16 w-auto sm:h-auto sm:w-16 rounded-xl overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-zinc-900 ${
                           photoIndex === idx
                             ? "border-blue-600 ring-2 ring-blue-600/20 shadow-sm"
                             : "border-gray-200 dark:border-zinc-800 opacity-70 hover:opacity-100 hover:border-gray-300"
                         }`}
                       >
-                        <img src={p} alt="" className="w-full h-full object-cover" />
+                        <img src={p} alt="" className="h-full w-auto sm:h-auto sm:w-full block" />
                       </button>
                     ))}
                   </div>
                 )}
 
                 {/* Cadre Image Principale avec Navigation & Zoom */}
-                <div className="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-sm order-1 sm:order-2 flex flex-col justify-between group">
+                <div
+                  style={{ aspectRatio: ratioPhoto ?? 1 }}
+                  className="relative flex-1 sm:self-start rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-sm order-1 sm:order-2 flex flex-col justify-between group"
+                >
                   {!imageErreur && photoPrincipale ? (
                     <img
                       src={photoPrincipale}
                       alt={article.titre}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onLoad={(e) => {
+                        // Bornes propres à la fiche : au-delà, la photo prendrait tout l'écran.
+                        const r = ratioAffichage(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight, 0.6, 1.8);
+                        if (r) setMesurePhoto({ src: photoPrincipale, ratio: r });
+                      }}
                       onError={() => setImageErreur(true)}
                     />
                   ) : (
@@ -10147,9 +10159,9 @@ function FormulaireArticle({
 
         <div className="flex flex-wrap gap-2.5">
           {photos.map((p) => (
-            <div key={p.chemin} className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm group">
+            <div key={p.chemin} className="relative h-20 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.apercu} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+              <img src={p.apercu} alt="" className="h-full w-auto block" />
               <button
                 type="button"
                 onClick={() => retirerPhoto(p.chemin)}
