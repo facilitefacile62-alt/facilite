@@ -64,7 +64,7 @@ export function useOffresReelles(limite = 30) {
       try {
         const { data, error } = await supabase
           .from('job_offers')
-          .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, deadline, image_url, created_at, listing_type, sector, category, positions_count, view_count')
+          .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, deadline, image_url, created_at, listing_type, view_count')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(limite);
@@ -94,8 +94,9 @@ export function useOffresReelles(limite = 30) {
           externalLink: o.external_link || undefined,
           deadline: o.deadline || undefined,
           listingType: o.listing_type || 'offre_emploi',
-          sector: o.sector || o.category || 'Opportunité',
-          positionsCount: o.positions_count || undefined,
+          // job_offers n'a PAS de colonnes sector / category / positions_count (erreur 42703 constatée
+          // le 24/09/2026 : la base refusait toute la requête, d'où « Impossible de charger les offres »).
+          sector: 'Opportunité',
           viewCount: o.view_count || 0,
         }));
 
