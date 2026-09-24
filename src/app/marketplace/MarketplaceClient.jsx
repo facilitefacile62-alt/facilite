@@ -5756,58 +5756,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   </div>
                 </div>
 
-                {/* BOUTONS D'ACTION (Desktop uniquement - Sur mobile la barre fixe inférieure prend le relais) */}
-                <div className="hidden sm:block space-y-2.5 pt-2">
-                  <div className="flex items-baseline justify-between px-1">
-                    <span className="text-xs text-gray-500 font-bold">Total estimé :</span>
-                    <span className="text-xl font-black text-[#D9381E]">
-                      {prixLisible(prixTotal)} FCFA
-                    </span>
-                  </div>
 
-                  {/* Bouton 1 : Discuter Plateforme */}
-                  {etatDiscussion === "pret" ? (
-                    <Link
-                      href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
-                      className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white text-xs sm:text-sm font-black tracking-wide uppercase shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
-                    >
-                      <i className="fa-regular fa-comment-dots text-base"></i>
-                      <span>Discuter sur la plateforme</span>
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full py-3.5 px-4 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 text-xs sm:text-sm font-black tracking-wide uppercase flex items-center justify-center gap-2 cursor-not-allowed"
-                    >
-                      <i className="fa-regular fa-comment-dots text-base"></i>
-                      <span>Discuter sur la plateforme</span>
-                    </button>
-                  )}
-
-                  {/* Bouton 2 : WhatsApp */}
-                  {lienWhatsApp && !estMonArticle ? (
-                    <a
-                      href={lienWhatsApp}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs sm:text-sm font-black uppercase shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
-                    >
-                      <i className="fa-brands fa-whatsapp text-lg"></i>
-                      <span>Discuter sur WhatsApp</span>
-                    </a>
-                  ) : null}
-
-                  {/* Bouton 3 : Commander Express */}
-                  <button
-                    type="button"
-                    onClick={() => setModalCommandeOuverte(true)}
-                    className="w-full py-3 px-4 rounded-xl bg-zinc-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs sm:text-sm font-black uppercase shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
-                  >
-                    <i className="fa-solid fa-bag-shopping text-sm"></i>
-                    <span>Commander maintenant</span>
-                  </button>
-                </div>
 
                 {/* Actions Propriétaire (Mobile & Desktop) */}
                 {estMonArticle && (
@@ -6009,74 +5958,76 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
         </div>
 
         {/* ==================================================================== */}
-        {/* BARRE D'ACTIONS FIXE EN BAS POUR UTILISATEUR TÉLÉPHONE (MOBILE SEULEMENT) */}
+        {/* BARRE D'ACTIONS HORIZONTALE FIXE (CAPTURE 2 - STYLE SHEIN DIVISÉ)   */}
         {/* ==================================================================== */}
-        <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-gray-200 dark:border-zinc-800 px-3 py-2.5 flex items-center gap-2 shadow-2xl sm:hidden">
-          {/* Bouton Favoris Coeur */}
-          <button
-            type="button"
-            onClick={() => setAime(!aime)}
-            className={`w-11 h-11 rounded-xl flex items-center justify-center border transition active:scale-90 shrink-0 cursor-pointer ${
-              aime
-                ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/50"
-                : "border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300"
-            }`}
-            title="Ajouter aux favoris"
-          >
-            <i className={`fa-heart text-base ${aime ? "fa-solid text-red-500" : "fa-regular"}`}></i>
-          </button>
-
-          {/* Bouton 1 : Discuter Plateforme (Divisé) */}
-          {etatDiscussion === "pret" ? (
-            <Link
-              href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
-              className="flex-1 h-11 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer px-2"
-            >
-              <i className="fa-regular fa-comment-dots text-sm"></i>
-              <span className="truncate">Discuter</span>
-            </Link>
-          ) : (
+        <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-gray-200 dark:border-zinc-800 px-3 sm:px-6 py-2.5 sm:py-3 shadow-2xl">
+          <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3 w-full">
+            {/* Bouton Favoris Coeur */}
             <button
               type="button"
-              disabled
-              className="flex-1 h-11 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 font-bold text-xs uppercase flex items-center justify-center gap-1.5 cursor-not-allowed px-2"
+              onClick={() => setAime(!aime)}
+              className={`w-11 sm:w-12 h-11 sm:h-12 rounded-xl flex items-center justify-center border transition active:scale-90 shrink-0 cursor-pointer ${
+                aime
+                  ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/50"
+                  : "border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+              }`}
+              title="Ajouter aux favoris"
             >
-              <i className="fa-regular fa-comment-dots text-sm"></i>
-              <span className="truncate">Discuter</span>
+              <i className={`fa-heart text-base ${aime ? "fa-solid text-red-500" : "fa-regular"}`}></i>
             </button>
-          )}
 
-          {/* Bouton 2 : WhatsApp (Divisé) */}
-          {lienWhatsApp && !estMonArticle ? (
-            <a
-              href={lienWhatsApp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 h-11 rounded-xl bg-[#25D366] active:bg-[#20bd5a] text-white font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer px-2"
-            >
-              <i className="fa-brands fa-whatsapp text-base"></i>
-              <span className="truncate">WhatsApp</span>
-            </a>
-          ) : (
+            {/* Bouton 1 : Discuter Plateforme (Divisé) */}
+            {etatDiscussion === "pret" ? (
+              <Link
+                href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
+                className="flex-1 h-11 sm:h-12 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white font-black text-xs sm:text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer px-3 transition"
+              >
+                <i className="fa-regular fa-comment-dots text-sm sm:text-base"></i>
+                <span className="truncate">Discuter</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="flex-1 h-11 sm:h-12 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 font-bold text-xs sm:text-sm uppercase flex items-center justify-center gap-2 cursor-not-allowed px-3"
+              >
+                <i className="fa-regular fa-comment-dots text-sm sm:text-base"></i>
+                <span className="truncate">Discuter</span>
+              </button>
+            )}
+
+            {/* Bouton 2 : WhatsApp (Divisé) */}
+            {lienWhatsApp && !estMonArticle ? (
+              <a
+                href={lienWhatsApp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 h-11 sm:h-12 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs sm:text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer px-3 transition"
+              >
+                <i className="fa-brands fa-whatsapp text-base sm:text-lg"></i>
+                <span className="truncate">WhatsApp</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalCommandeOuverte(true)}
+                className="flex-1 h-11 sm:h-12 rounded-xl bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black font-black text-xs sm:text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer px-3 transition"
+              >
+                <i className="fa-solid fa-bag-shopping text-sm sm:text-base"></i>
+                <span className="truncate">Commander</span>
+              </button>
+            )}
+
+            {/* Bouton 3 : Commander Express / Panier */}
             <button
               type="button"
               onClick={() => setModalCommandeOuverte(true)}
-              className="flex-1 h-11 rounded-xl bg-black dark:bg-white text-white dark:text-black font-black text-xs uppercase flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer px-2"
+              className="w-11 sm:w-12 h-11 sm:h-12 rounded-xl bg-zinc-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 flex items-center justify-center transition active:scale-90 shrink-0 cursor-pointer shadow-sm"
+              title="Commander maintenant"
             >
-              <i className="fa-solid fa-bag-shopping text-sm"></i>
-              <span className="truncate">Commander</span>
+              <i className="fa-solid fa-cart-shopping text-sm sm:text-base"></i>
             </button>
-          )}
-
-          {/* Bouton 3 : Commander Express */}
-          <button
-            type="button"
-            onClick={() => setModalCommandeOuverte(true)}
-            className="w-11 h-11 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center transition active:scale-90 shrink-0 cursor-pointer shadow-sm"
-            title="Commander maintenant"
-          >
-            <i className="fa-solid fa-cart-shopping text-sm"></i>
-          </button>
+          </div>
         </div>
 
       </div>
