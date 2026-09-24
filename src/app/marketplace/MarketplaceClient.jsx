@@ -5196,7 +5196,13 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
   const [ongletInfo, setOngletInfo] = useState("description"); // 'description' | 'specs' | 'livraison'
   const [ongletShein, setOngletShein] = useState("article"); // 'article' | 'commentaires' | 'recommander'
   const [filtreAvis, setFiltreAvis] = useState("tous");
-  const [avisLikes, setAvisLikes] = useState({ 1: 44, 2: 130, 3: 21 });
+  const [listeAvis, setListeAvis] = useState([]);
+  const [formulaireAvisOuvert, setFormulaireAvisOuvert] = useState(false);
+  const [noteAvis, setNoteAvis] = useState(5);
+  const [auteurAvis, setAuteurAvis] = useState(profile?.full_name || "");
+  const [texteAvis, setTexteAvis] = useState("");
+  const [avisSucces, setAvisSucces] = useState(false);
+  const [avisLikes, setAvisLikes] = useState({});
   const [avisLikedByUser, setAvisLikedByUser] = useState({});
   const [modalCommandeOuverte, setModalCommandeOuverte] = useState(false);
   const [commandeEnvoyee, setCommandeEnvoyee] = useState(false);
@@ -5219,35 +5225,23 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
     });
   };
 
-  const AVIS_SHEIN = [
-    {
-      id: 1,
-      nom: "J***n",
-      note: 5,
-      variante: "Noir Space Gray / Standard",
-      texte: "Ganda nya super 🥺 Produit authentique et conforme à la photo ! Le vendeur a été très réactif et la livraison s'est faite en moins de 24h à Dakar.",
-      date: "Il y a 2 jours",
-      tag: "photo",
-    },
-    {
-      id: 2,
-      nom: "r***6",
-      note: 5,
-      variante: "Noir Classique / Neuf",
-      texte: "The product was good! It looks expensive, which what I liked. Will order again soon. Thank u 🙏 Vendeur très sérieux, produit de qualité supérieure.",
-      date: "Il y a 4 jours",
-      tag: "rapide",
-    },
-    {
-      id: 3,
-      nom: "M***a",
-      note: 5,
-      variante: "Édition Officielle",
-      texte: "Excellente expérience ! Colis bien emballé, vérifié sur place à la livraison avec Wave. Je recommande cette boutique sans hésiter.",
-      date: "Il y a 1 semaine",
-      tag: "vendeur",
-    },
-  ];
+  const soumettreAvis = (e) => {
+    e.preventDefault();
+    if (!texteAvis.trim()) return;
+    const nouvelAvis = {
+      id: Date.now(),
+      nom: auteurAvis.trim() || profile?.full_name || "Acheteur Vérifié",
+      note: noteAvis,
+      variante: formatChoisi || "Standard",
+      texte: texteAvis.trim(),
+      date: "À l'instant",
+    };
+    setListeAvis((prev) => [nouvelAvis, ...prev]);
+    setTexteAvis("");
+    setFormulaireAvisOuvert(false);
+    setAvisSucces(true);
+    setTimeout(() => setAvisSucces(false), 3500);
+  };
 
   // Résoudre le propriétaire de la boutique si absent pour garantir que la discussion interne fonctionne
   useEffect(() => {
@@ -5432,7 +5426,9 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
             }`}
           >
             <span>Commentaires</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 font-semibold">28+</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 font-semibold">
+              {listeAvis.length}
+            </span>
           </button>
           <button
             type="button"
@@ -5817,138 +5813,229 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
               </div>
           )}
 
-          {/* SECTION ÉVALUATIONS & COMMENTAIRES STYLE SHEIN (Capture 1) */}
+          {/* SECTION COMMENTAIRES & AVIS VIERGE (Prêt pour les vrais utilisateurs) */}
           {ongletShein === "commentaires" && (
-            <div className="max-w-3xl mx-auto space-y-4 py-2">
+            <div className="max-w-3xl mx-auto space-y-6 py-4">
               
-              {/* Note Globale & Stats (1:1 Capture Shein) */}
+              {/* En-tête de la section avis */}
               <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-zinc-800">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-gray-950 dark:text-white">4.48</span>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center text-lg">
+                    <i className="fa-regular fa-comment-dots"></i>
+                  </div>
                   <div>
-                    <div className="flex text-amber-500 text-sm gap-0.5">
-                      <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-                    </div>
-                    <span className="text-xs text-gray-500 font-bold">(600+ avis vérifiés)</span>
+                    <h3 className="text-sm sm:text-base font-extrabold text-gray-950 dark:text-white">
+                      Avis & Commentaires ({listeAvis.length})
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {listeAvis.length === 0
+                        ? "Soyez le premier à donner votre avis !"
+                        : `${listeAvis.length} avis client(s)`}
+                    </p>
                   </div>
                 </div>
 
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  98% de clients satisfaits
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setFormulaireAvisOuvert(!formulaireAvisOuvert)}
+                  className="px-3.5 py-2 rounded-xl bg-black dark:bg-white text-white dark:text-black text-xs font-extrabold uppercase shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-pen text-xs"></i>
+                  <span>{formulaireAvisOuvert ? "Fermer" : "Laisser un avis"}</span>
+                </button>
               </div>
 
-              {/* Filtres Pilules Style Shein (1:1 Capture) */}
-              <div className="flex flex-wrap gap-2 pt-1">
-                {[
-                  { id: "tous", label: "Tous les avis" },
-                  { id: "photo", label: "Conforme à la photo (18)" },
-                  { id: "rapide", label: "Livraison ultra-rapide (12)" },
-                  { id: "vendeur", label: "Vendeur recommandé (24)" },
-                ].map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setFiltreAvis(f.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                      filtreAvis === f.id
-                        ? "bg-black dark:bg-white text-white dark:text-black shadow-xs"
-                        : "bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+              {/* Message de succès après publication */}
+              {avisSucces && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <i className="fa-solid fa-circle-check text-emerald-600"></i>
+                  <span>Merci ! Votre avis a été publié avec succès.</span>
+                </div>
+              )}
 
-              {/* Liste des Cartes d'Avis Style Shein (1:1 Capture) */}
-              <div className="space-y-3 pt-2">
-                {AVIS_SHEIN.filter((a) => filtreAvis === "tous" || a.tag === filtreAvis).map((avis) => (
-                  <div
-                    key={avis.id}
-                    className="p-4 rounded-2xl border border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 space-y-2 shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-gray-900 dark:text-white">{avis.nom}</span>
-                        <div className="flex text-amber-500 text-xs">
-                          {"★".repeat(avis.note)}
-                        </div>
-                      </div>
-                      <span className="text-[11px] text-gray-400">{avis.date}</span>
-                    </div>
+              {/* FORMULAIRE DE CRÉATION D'AVIS INTERACTIF */}
+              {formulaireAvisOuvert && (
+                <form
+                  onSubmit={soumettreAvis}
+                  className="p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50/80 dark:bg-zinc-900/80 space-y-4 animate-fadeIn"
+                >
+                  <h4 className="text-xs font-extrabold uppercase tracking-wide text-gray-900 dark:text-white">
+                    Rédiger un commentaire
+                  </h4>
 
-                    <p className="text-[11px] text-gray-500 font-medium">
-                      Variante : {avis.variante}
-                    </p>
-
-                    <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed font-normal">
-                      {avis.texte}
-                    </p>
-
-                    {/* Bouton Like Utile Style Shein (1:1 Capture) */}
-                    <div className="flex items-center justify-end gap-3 pt-1 text-xs text-gray-500">
-                      <button
-                        type="button"
-                        onClick={() => toggleAvisLike(avis.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition cursor-pointer ${
-                          avisLikedByUser[avis.id]
-                            ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold"
-                            : "hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-gray-400"
-                        }`}
-                      >
-                        <i className={`fa-thumbs-up ${avisLikedByUser[avis.id] ? "fa-solid text-blue-600" : "fa-regular"}`}></i>
-                        <span>Utile ({avisLikes[avis.id] || 0})</span>
-                      </button>
+                  {/* Choix des étoiles */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Votre note :</label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((etoile) => (
+                        <button
+                          key={etoile}
+                          type="button"
+                          onClick={() => setNoteAvis(etoile)}
+                          className="text-2xl transition hover:scale-125 cursor-pointer text-amber-500"
+                        >
+                          {etoile <= noteAvis ? "★" : "☆"}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Nom / Pseudo */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Votre nom :</label>
+                    <input
+                      type="text"
+                      value={auteurAvis}
+                      onChange={(e) => setAuteurAvis(e.target.value)}
+                      placeholder="Ex: Amadou D."
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-600"
+                      required
+                    />
+                  </div>
+
+                  {/* Commentaire */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Votre commentaire :</label>
+                    <textarea
+                      rows={3}
+                      value={texteAvis}
+                      onChange={(e) => setTexteAvis(e.target.value)}
+                      placeholder="Partagez votre expérience avec cet article ou cette boutique..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-600 resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setFormulaireAvisOuvert(false)}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-800 transition cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase transition cursor-pointer shadow-sm"
+                    >
+                      Publier l&apos;avis
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ÉTAT VIERGE (0 AVIS) */}
+              {listeAvis.length === 0 && !formulaireAvisOuvert && (
+                <div className="p-8 sm:p-12 rounded-3xl border border-dashed border-gray-300 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/30 flex flex-col items-center justify-center text-center space-y-3">
+                  <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center text-2xl shadow-2xs">
+                    <i className="fa-regular fa-comment-dots"></i>
+                  </div>
+                  <h4 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
+                    Aucun avis pour le moment
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                    Les retours des acheteurs apparaîtront ici. Soyez le premier client à donner votre avis !
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFormulaireAvisOuvert(true)}
+                    className="mt-2 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold uppercase hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <i className="fa-solid fa-pen"></i>
+                    <span>Écrire le 1er commentaire</span>
+                  </button>
+                </div>
+              )}
+
+              {/* LISTE DES VRAIS AVIS UTILISATEURS */}
+              {listeAvis.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  {listeAvis.map((avis) => (
+                    <div
+                      key={avis.id}
+                      className="p-4 rounded-2xl border border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 space-y-2 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-gray-900 dark:text-white">{avis.nom}</span>
+                          <div className="flex text-amber-500 text-xs">
+                            {"★".repeat(avis.note)}
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-gray-400">{avis.date}</span>
+                      </div>
+
+                      <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed font-normal">
+                        {avis.texte}
+                      </p>
+
+                      <div className="flex items-center justify-end gap-3 pt-1 text-xs text-gray-500">
+                        <button
+                          type="button"
+                          onClick={() => toggleAvisLike(avis.id)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition cursor-pointer ${
+                            avisLikedByUser[avis.id]
+                              ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold"
+                              : "hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-gray-400"
+                          }`}
+                        >
+                          <i className={`fa-thumbs-up ${avisLikedByUser[avis.id] ? "fa-solid text-blue-600" : "fa-regular"}`}></i>
+                          <span>Utile ({avisLikes[avis.id] || 0})</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* SECTION RECOMMANDATIONS STYLE SHEIN */}
+          {/* SECTION RECOMMANDATIONS VIERGE / DYNAMIQUE */}
           {ongletShein === "recommander" && (
-            <div className="max-w-4xl mx-auto space-y-4 py-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">
-                  Recommandé pour vous
-                </h3>
+            <div className="max-w-3xl mx-auto space-y-6 py-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-lg">
+                    <i className="fa-solid fa-boxes-stacked"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-gray-950 dark:text-white">
+                      Recommandé pour vous
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Articles similaires de {nomBoutique}
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
-                  className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-blue-600 hover:underline cursor-pointer shrink-0"
                 >
                   Voir toute la boutique →
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[1, 2, 3, 4].map((itemIdx) => (
-                  <div
-                    key={itemIdx}
-                    onClick={() => {
-                      setPhotoIndex(0);
-                      setOngletShein("article");
-                    }}
-                    className="p-2.5 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:shadow-md transition cursor-pointer space-y-2 group"
-                  >
-                    <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800 relative">
-                      {photoPrincipale && (
-                        <img src={photoPrincipale} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
-                      )}
-                      <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-sm bg-black/70 text-white text-[9px] font-bold">
-                        Promo
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                      {article.titre}
-                    </p>
-                    <p className="text-xs font-black text-[#D9381E]">
-                      {prixLisible(prixUnitaire)} FCFA
-                    </p>
-                  </div>
-                ))}
+              {/* État vierge sans duplication mockée */}
+              <div className="p-8 sm:p-12 rounded-3xl border border-dashed border-gray-300 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/30 flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center text-2xl shadow-2xs">
+                  <i className="fa-solid fa-store"></i>
+                </div>
+                <h4 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
+                  Aucun autre article dans cette boutique
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                  Le vendeur publiera prochainement ses autres nouveautés. Vous pouvez explorer les autres boutiques du Marketplace !
+                </p>
+                <button
+                  type="button"
+                  onClick={onFermer}
+                  className="mt-2 px-4 py-2 rounded-xl bg-[#0d3b34] text-white text-xs font-bold uppercase hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-bag-shopping"></i>
+                  <span>Explorer le Marketplace</span>
+                </button>
               </div>
             </div>
           )}

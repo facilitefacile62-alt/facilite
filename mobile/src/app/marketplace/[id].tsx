@@ -212,7 +212,7 @@ export default function ArticleScreen() {
               onPress={() => setOnglet('commentaires')}
               className={`py-2 px-3 border-b-2 ${onglet === 'commentaires' ? 'border-black' : 'border-transparent'}`}>
               <Text className={`text-[13px] font-bold ${onglet === 'commentaires' ? 'text-black font-extrabold' : 'text-gray-500'}`}>
-                Commentaires (600+)
+                Commentaires (0)
               </Text>
             </Pressable>
             <Pressable
@@ -374,79 +374,20 @@ export default function ArticleScreen() {
           </Text>
         </View>
 
-        {/* Section Avis Clients Style Shein */}
+        {/* Section Avis Clients */}
         <View className="bg-white mt-2 p-4">
           <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center gap-2">
-              <Text className="text-[16px] font-black text-[#1A1A1A]">4.48</Text>
-              <View className="flex-row">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Ionicons key={s} name="star" size={14} color="#F59E0B" />
-                ))}
-              </View>
-              <Text className="text-[12px] text-gray-500 font-medium">(600+ avis)</Text>
-            </View>
-            <Text className="text-[12px] font-bold text-blue-600">Voir tout &gt;</Text>
+            <Text className="text-[14px] font-extrabold text-[#1A1A1A]">Avis & Commentaires (0)</Text>
+            <Text className="text-[12px] text-gray-400">Aucun avis</Text>
           </View>
 
-          {/* Pilules de filtres d'avis */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
-            <View className="flex-row gap-2">
-              {['Tous', 'Conforme (42)', 'Livraison rapide (27)', 'Top Qualité (35)'].map((p) => (
-                <Pressable
-                  key={p}
-                  onPress={() => setFiltreAvis(p)}
-                  className={`px-3 py-1.5 rounded-full border ${
-                    filtreAvis === p ? 'bg-black border-black' : 'bg-gray-100 border-gray-200'
-                  }`}>
-                  <Text className={`text-[11.5px] font-bold ${filtreAvis === p ? 'text-white' : 'text-gray-700'}`}>
-                    {p}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
-
-          {/* Liste des avis individuels */}
-          <View className="gap-3">
-            {AVIS_SHEIN.map((av) => (
-              <View key={av.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-[12.5px] font-bold text-gray-800">{av.auteur}</Text>
-                    <View className="flex-row">
-                      {[...Array(av.note)].map((_, i) => (
-                        <Ionicons key={i} name="star" size={11} color="#F59E0B" />
-                      ))}
-                    </View>
-                  </View>
-                  <Text className="text-[11px] text-gray-400">{av.date}</Text>
-                </View>
-
-                <Text className="text-[11px] text-gray-500 mt-1 italic">
-                  Option: {av.variante}
-                </Text>
-
-                <Text className="text-[13px] text-gray-800 mt-2 leading-[18px]">
-                  {av.texte}
-                </Text>
-
-                <View className="flex-row justify-end mt-2">
-                  <Pressable
-                    onPress={() => toggleLikeAvis(av.id)}
-                    className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-gray-200">
-                    <Ionicons
-                      name={avisAimes[av.id] ? 'thumbs-up' : 'thumbs-up-outline'}
-                      size={13}
-                      color={avisAimes[av.id] ? '#2563EB' : '#6B7280'}
-                    />
-                    <Text className="text-[11px] font-bold text-gray-600">
-                      Utile ({avisLikes[av.id] || 0})
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
+          {/* État vierge mobile */}
+          <View className="p-6 rounded-2xl bg-gray-50 border border-dashed border-gray-200 items-center justify-center text-center">
+            <Ionicons name="chatbubbles-outline" size={32} color="#9CA3AF" />
+            <Text className="text-[13px] font-bold text-gray-800 mt-2">Aucun avis pour le moment</Text>
+            <Text className="text-[11.5px] text-gray-500 text-center mt-1">
+              Les avis des acheteurs après achat ou contact apparaîtront ici.
+            </Text>
           </View>
         </View>
       </ScrollView>
