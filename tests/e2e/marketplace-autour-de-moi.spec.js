@@ -49,18 +49,25 @@ async function installerMocks(page, compteurs) {
 
 const boutonAutourDeMoi = (page) => page.getByRole("button", { name: /Autour de moi/ }).first();
 
+// Le bouton du header ouvre désormais un menu (Articles proches / Mini carte / Pleine carte) :
+// ces tests visent la mini carte, donc on la choisit dans le menu.
+async function autourDeMoiMiniCarte(page, options = {}) {
+  await boutonAutourDeMoi(page).click(options);
+  await page.getByRole("menuitem", { name: /Mini carte/ }).click();
+}
+
 test.describe("Marketplace — Autour de moi", () => {
   test.use({ geolocation: POSITION, permissions: ["geolocation"] });
   test.setTimeout(180_000);
 
-  test("un clic = une seule recherche de proximité, carte non recréée", async ({ page }) => {
+  test("un choix « Mini carte » = une seule recherche de proximité, carte non recréée", async ({ page }) => {
     const compteurs = { articles: 0 };
     const erreurs = [];
     page.on("pageerror", (e) => erreurs.push(e.message));
     await installerMocks(page, compteurs);
 
     await page.goto("/marketplace");
-    await boutonAutourDeMoi(page).click({ timeout: 90_000 });
+    await autourDeMoiMiniCarte(page, { timeout: 90_000 });
 
     const carte = page.locator(".leaflet-container").first();
     await expect(carte).toBeVisible({ timeout: 30_000 });
@@ -79,7 +86,7 @@ test.describe("Marketplace — Autour de moi", () => {
     await installerMocks(page, compteurs);
 
     await page.goto("/marketplace");
-    await boutonAutourDeMoi(page).click({ timeout: 90_000 });
+    await autourDeMoiMiniCarte(page, { timeout: 90_000 });
     const carte = page.locator(".leaflet-container").first();
     await expect(carte).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(2500);
@@ -90,7 +97,7 @@ test.describe("Marketplace — Autour de moi", () => {
     const boite = await carte.boundingBox();
     await page.mouse.move(boite.x + boite.width / 2, boite.y + boite.height / 2);
     await page.mouse.wheel(0, -400);
-    await boutonAutourDeMoi(page).click();
+    await autourDeMoiMiniCarte(page);
     await page.waitForTimeout(3500);
 
     expect(erreurs.filter((m) => m.includes("_leaflet_pos")), "erreur Leaflet _leaflet_pos").toEqual([]);
@@ -102,7 +109,7 @@ test.describe("Marketplace — Autour de moi", () => {
     await installerMocks(page, compteurs);
 
     await page.goto("/marketplace?onglet=vendre");
-    await boutonAutourDeMoi(page).click({ timeout: 90_000 });
+    await autourDeMoiMiniCarte(page, { timeout: 90_000 });
 
     await expect(page.locator(".leaflet-container").first()).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(1500);

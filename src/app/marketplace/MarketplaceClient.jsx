@@ -386,10 +386,11 @@ export default function MarketplaceClient() {
   const [demandeAcheteur, setDemandeAcheteur] = useState(null);
   const sequenceDemandeRef = useRef(0);
   useEffect(() => {
-    const surAutourDeMoi = () => {
+    const surAutourDeMoi = (e) => {
       sequenceDemandeRef.current += 1;
       setOnglet("acheter");
-      setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "autour" });
+      // mode : "liste" (articles proches), "mini" (mini carte, défaut) ou "pleine" (pleine carte) — voir MenuAutourDeMoi.
+      setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "autour", mode: e?.detail?.mode || "mini" });
     };
     // Recherche de la barre du header : la page n'était jamais prévenue
     // quand on y était déjà (voir Header.jsx, allerVers). Un événement plutôt
@@ -777,6 +778,11 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
+  // Vue « Autour de moi » : "mini" = carte compacte au-dessus des catégories (défaut), "liste" = articles proches sans carte.
+  // La pleine carte est le globe (globeOuvert).
+  const [vueProches, setVueProches] = useState("mini");
+  // « Pleine carte » demandée avant que la position soit connue : le globe s'ouvre dès qu'elle arrive (ou échoue).
+  const [pleineEnAttente, setPleineEnAttente] = useState(false);
   const [modalEasyReturn, setModalEasyReturn] = useState(false);
   // Boutiques Premium Marketplace actives — chargé une fois, indépendamment
   // des résultats de recherche (change rarement, pas la peine de le
@@ -934,8 +940,11 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     const stock = params.get("stock") === "1";
     const explorer = params.get("explorer") === "1";
     const autourParam = params.get("autour_de_moi") === "1";
+    const vueParam = params.get("vue");
 
     queueMicrotask(() => {
+      if (vueParam === "liste") setVueProches("liste");
+      if (vueParam === "pleine") setPleineEnAttente(true);
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         setPosition({ latitude: lat, longitude: lng });
       } else if (autourParam) {
@@ -970,11 +979,33 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     // synchrone (même patron que l'effet de restauration d'URL plus haut).
     queueMicrotask(() => {
       onDemandeTraitee?.();
-      if (demande.type === "autour") localiser();
-      else if (demande.type === "recherche") setTexte(demande.q);
+      if (demande.type === "autour") {
+        const mode = demande.mode || "mini";
+        setVueProches(mode === "liste" ? "liste" : "mini");
+        if (mode === "pleine") {
+          if (position) setGlobeOuvert(true);
+          else {
+            setPleineEnAttente(true);
+            localiser();
+          }
+        } else {
+          setGlobeOuvert(false);
+          if (!position) localiser();
+        }
+      } else if (demande.type === "recherche") setTexte(demande.q);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demande]);
+
+  // « Pleine carte » choisie avant que la position soit connue : on ouvre le globe dès qu'elle est trouvée,
+  // ou qu'elle a échoué (l'explorateur fonctionne aussi sans position).
+  useEffect(() => {
+    if (!pleineEnAttente || (!position && !erreur)) return;
+    queueMicrotask(() => {
+      setPleineEnAttente(false);
+      setGlobeOuvert(true);
+    });
+  }, [pleineEnAttente, position, erreur]);
 
   // Répercute ce même état dans l'URL à chaque changement (remplace
   // l'entrée d'historique courante, n'empile pas de nouvelle entrée à
@@ -998,10 +1029,12 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     else params.delete("stock");
     if (globeOuvert) params.set("explorer", "1");
     else params.delete("explorer");
+    if (position && vueProches === "liste") params.set("vue", "liste");
+    else params.delete("vue");
     const query = params.toString();
     const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
     window.history.replaceState(window.history.state, "", url);
-  }, [position, texte, seulementEnStock, globeOuvert]);
+  }, [position, texte, seulementEnStock, globeOuvert, vueProches]);
 
   // Chargement automatique au démarrage et lors de la modification des filtres
   useEffect(() => {
@@ -1144,7 +1177,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       )}
 
       {/* 📍 CARTE FIXE EN MODE AUTOUR DE MOI (Immédiatement ancrée et fixe sous le header) */}
-      {position && (resultats.length > 0 || resultatsServices.length > 0) && (
+      {position && vueProches === "mini" && (resultats.length > 0 || resultatsServices.length > 0) && (
         <div
           style={{ position: "sticky", top: `${hauteurHeaderCarte}px`, zIndex: 30 }}
           className="w-full mb-3 shadow-2xl backdrop-blur-md rounded-2xl sm:rounded-3xl"

@@ -13,6 +13,7 @@ import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import BoutonInstallerApp from "@/components/BoutonInstallerApp";
+import MenuAutourDeMoi from "@/components/MenuAutourDeMoi";
 import { chargerTousLesArticles, urlPhoto } from "@/lib/marketplaceData";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
@@ -261,6 +262,16 @@ export default function Header() {
   // séparée.
   const isBusinessActive =
     pathname?.startsWith("/marketplace") || (pathname === "/messagerie" && contexteMarketplaceMessagerie);
+
+  // Choix du menu « Autour de moi » (liste / mini carte / pleine carte) : sur la Marketplace on prévient la page par
+  // un événement, depuis une autre page on y navigue avec le choix dans l'adresse.
+  const choisirAutourDeMoi = (mode) => {
+    if (pathname?.startsWith("/marketplace")) {
+      window.dispatchEvent(new CustomEvent("facilite:autour-de-moi", { detail: { mode } }));
+    } else {
+      router.push(`/marketplace?autour_de_moi=1&vue=${mode}`);
+    }
+  };
 
   // Pour les visiteurs (non connectés), le logo et le bouton Accueil ramènent
   // TOUJOURS à l'accueil principal de Facilité ("/") Carrière & Emploi.
@@ -1791,21 +1802,14 @@ export default function Header() {
 
           {/* 🎯 Bouton Autour de moi (Uniquement sur Marketplace) */}
           {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-                } else {
-                  router.push("/marketplace?autour_de_moi=1");
-                }
-              }}
+            <MenuAutourDeMoi
+              onChoisir={choisirAutourDeMoi}
               title="Afficher les articles et opportunités autour de moi"
               className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
             >
               <i className="fa-solid fa-location-crosshairs text-emerald-500 text-base"></i>
               <span className="text-[10px] font-bold tracking-tight">Autour de moi</span>
-            </button>
+            </MenuAutourDeMoi>
           )}
 
           {/* ➕ Bouton Publier un article (Uniquement sur Marketplace) */}
@@ -2271,21 +2275,14 @@ export default function Header() {
 
           {/* 📍 Autour de moi (mobile, uniquement sur Marketplace) */}
           {isBusinessActive && (
-            <button
-              type="button"
-              onClick={() => {
-                if (pathname?.startsWith("/marketplace")) {
-                  window.dispatchEvent(new CustomEvent("facilite:autour-de-moi"));
-                } else {
-                  router.push("/marketplace?autour_de_moi=1");
-                }
-              }}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition text-gray-700 dark:text-gray-200 hover:text-emerald-600 group"
+            <MenuAutourDeMoi
+              onChoisir={choisirAutourDeMoi}
               title="Afficher les articles et boutiques autour de moi"
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition text-gray-700 dark:text-gray-200 hover:text-emerald-600 group"
             >
               <i className="fa-solid fa-location-crosshairs text-sm sm:text-base text-emerald-500 group-hover:scale-110 transition-transform"></i>
               <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Autour de moi</span>
-            </button>
+            </MenuAutourDeMoi>
           )}
 
           <RoleNavLink session={userSession} variant="bottom-bar" />
