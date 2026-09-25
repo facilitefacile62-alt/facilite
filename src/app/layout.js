@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { cookies } from "next/headers";
 import "./globals.css";
 import Header from "@/components/Header";
 import GlobalModals from "@/components/GlobalModals";
@@ -206,7 +207,13 @@ const JSON_LD_DATA = {
   ]
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // Page ouverte dans la WebView de l'app mobile (cookie posé par le pont de session ou par le middleware,
+  // voir mobile/src/app/web/[cle].tsx) : l'en-tête du site n'est pas affiché, l'app a déjà le sien — sinon
+  // les deux se superposent (constaté le 25/09/2026 sur tablette, ex. page /candidat/securite).
+  const cookieStore = await cookies();
+  const dansAppMobile = cookieStore.get("app_embed")?.value === "1";
+
   return (
     <html lang="fr" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
       <head>
@@ -230,7 +237,7 @@ export default function RootLayout({ children }) {
       <body className={`${inter.className} bg-white dark:bg-gray-950 text-dark dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-300`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
-            <Header />
+            {!dansAppMobile && <Header />}
             {children}
             <GlobalModals />
           </AuthProvider>

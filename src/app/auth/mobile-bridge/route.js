@@ -118,6 +118,10 @@ export async function POST(req) {
   // 303 (et non le 307 par défaut) : la redirection doit se faire en GET. Avec 307 le navigateur intégré rejouait le POST vers
   // la page cible, qui répondait 405 (constaté le 25/09/2026 sur tablette : « Erreur 405 — /fonctionnalite-indisponible »).
   const res = NextResponse.redirect(new URL(cheminFinal, req.url), 303);
+  // Toute page atteinte par ce pont vient TOUJOURS de la WebView de l'app mobile — jamais d'un navigateur normal.
+  // Ce cookie dit à RootLayout (src/app/layout.js) de ne pas afficher l'en-tête du site : dans la WebView, il
+  // double avec l'en-tête natif de l'app (constaté le 25/09/2026 sur tablette, page /candidat/securite).
+  res.cookies.set("app_embed", "1", { path: "/", maxAge: 60 * 60 * 24 * 30, sameSite: "lax" });
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {

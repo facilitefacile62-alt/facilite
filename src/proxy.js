@@ -177,6 +177,20 @@ async function withTimeout(promise, timeoutMs = 1500) {
 export default async function proxy(req) {
   const { pathname } = req.nextUrl;
 
+  // 0. Page ouverte DIRECTEMENT par la WebView de l'app mobile, sans passer par le pont de session
+  // (cibles publiques — voir mobile/src/app/web/[cle].tsx, qui ajoute ce paramètre à l'adresse). Un
+  // aller-retour ici pose le même cookie durable app_embed que /auth/mobile-bridge, pour que RootLayout
+  // masque l'en-tête du site (qui double avec l'en-tête natif de l'app dans la WebView) sur toute la
+  // navigation qui suit — pas seulement cette première page. Le paramètre est retiré avant de continuer :
+  // il ne doit jamais rester dans une adresse partagée ou mise en favori.
+  if (req.nextUrl.searchParams.get("embed_app") === "1") {
+    const url = req.nextUrl.clone();
+    url.searchParams.delete("embed_app");
+    const res = NextResponse.redirect(url);
+    res.cookies.set("app_embed", "1", { path: "/", maxAge: 60 * 60 * 24 * 30, sameSite: "lax" });
+    return res;
+  }
+
   // 1. Si la route est publique, court-circuit immédiat sans aucun appel réseau
   if (estRoutePublique(pathname)) {
     return NextResponse.next();
