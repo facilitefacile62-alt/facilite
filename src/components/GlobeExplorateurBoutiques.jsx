@@ -37,16 +37,21 @@ const CENTRE_SENEGAL = [14.6937, -17.4441]; // [lat, lng] Dakar / Thiès
 // construction aucun article, donc aucune multiplication possible).
 const COULEUR_SERVICE = "#F59E0B";
 const COULEUR_ETABLISSEMENT = "#8B5CF6";
+// Valeurs alignées sur la contrainte CHECK réelle de
+// marketplace_stores.categorie_etablissement (migration
+// 20260917020000_marketplace_categories_etablissement_concretes) :
+// point_wave/pharmacie/clinique/autre — pas sante/finance/beaute, qui
+// n'existent plus en base depuis cette migration.
 const EMOJI_CATEGORIE_ETABLISSEMENT = {
-  sante: "🏥",
-  finance: "🏦",
-  beaute: "💇🏾",
+  point_wave: "💰",
+  pharmacie: "💊",
+  clinique: "🏥",
   autre: "🏢",
 };
 const LIBELLES_CATEGORIE_ETABLISSEMENT = {
-  sante: "Santé",
-  finance: "Finance",
-  beaute: "Beauté",
+  point_wave: "Point Wave",
+  pharmacie: "Pharmacie",
+  clinique: "Clinique",
   autre: "Établissement",
 };
 

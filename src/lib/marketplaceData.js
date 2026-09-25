@@ -889,7 +889,7 @@ export const METIERS_SERVICE = [
  * marketplace_stores/marketplace_horaires + rechercher_boutiques_proches,
  * migration 20260912...) — une fiche portant un de ces métiers reste
  * masquée du public tant que verifie=false, même mécanisme que
- * categorie_etablissement IN ('sante','finance'). Toute nouvelle profession
+ * categorie_etablissement IN ('point_wave','pharmacie','clinique'). Toute nouvelle profession
  * de santé ajoutée ici doit l'être aussi côté SQL, jamais l'un sans l'autre.
  */
 export const METIERS_REGLEMENTES = ["Pharmacien", "Infirmier/Infirmière", "Sage-femme"];

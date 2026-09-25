@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { METIERS_REGLEMENTES } from "@/lib/marketplaceData";
 
-// Écran de vérification des établissements sensibles (santé/finance) ET,
+// Écran de vérification des établissements sensibles (Point Wave/Pharmacie/Clinique) ET,
 // depuis l'ajout des métiers réglementés (boutiques type_boutique='service'
 // dont le métier est Pharmacien/Infirmier(ère)/Sage-femme), même esprit que
 // la file de modération des offres d'admin/page.js (handleModerateOffer ->
@@ -22,9 +22,16 @@ import { METIERS_REGLEMENTES } from "@/lib/marketplaceData";
 // de METIERS_REGLEMENTES contiennent des caractères (accents, "/") qui
 // rendent la syntaxe de filtre .or() fragile à composer/encoder à la main —
 // deux .in() simples, chacun sans ambiguïté, puis fusion côté client.
+// Alignées sur la contrainte CHECK réelle de
+// marketplace_stores.categorie_etablissement (migration
+// 20260917020000_marketplace_categories_etablissement_concretes) :
+// point_wave/pharmacie/clinique/autre. sante/finance n'existent plus en
+// base depuis cette migration — les garder ici faisait que cette file de
+// vérification ne pouvait plus jamais rien afficher.
 const LIBELLES_CATEGORIE = {
-  sante: "Santé",
-  finance: "Finance",
+  point_wave: "Point Wave",
+  pharmacie: "Pharmacie",
+  clinique: "Clinique",
 };
 
 export default function AdminEtablissementsPage() {
@@ -41,7 +48,7 @@ export default function AdminEtablissementsPage() {
         .from("marketplace_stores")
         .select(colonnes)
         .eq("type_boutique", "etablissement")
-        .in("categorie_etablissement", ["sante", "finance"])
+        .in("categorie_etablissement", ["point_wave", "pharmacie", "clinique"])
         .eq("verifie", false)
         .eq("actif", true),
       supabase
@@ -124,10 +131,10 @@ export default function AdminEtablissementsPage() {
               Vérification des fiches sensibles ({enAttente?.length ?? 0})
             </h1>
             <p className="text-xs text-gray-500 font-medium mt-1">
-              Établissements santé/finance et métiers réglementés (Pharmacien, Infirmier/Infirmière,
-              Sage-femme) uniquement — ces fiches restent invisibles du public tant qu&apos;elles ne sont pas
-              validées ici. Les autres catégories/métiers se publient immédiatement, sans passer par cette
-              file.
+              Établissements Point Wave/Pharmacie/Clinique et métiers réglementés (Pharmacien,
+              Infirmier/Infirmière, Sage-femme) uniquement — ces fiches restent invisibles du public tant
+              qu&apos;elles ne sont pas validées ici. Les autres catégories/métiers se publient immédiatement,
+              sans passer par cette file.
             </p>
           </div>
 
