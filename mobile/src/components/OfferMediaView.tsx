@@ -6,6 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RATIO_ATTENTE, ratioAffichage } from '@/lib/formatImage';
 import { parseOfferImages } from '@/lib/offerMedia';
 
+// Rapport connu de chaque image, GARDÉ ENTRE deux affichages : la liste démonte les cartes qui sortent de l'écran, et
+// sans cette mémoire chaque retour d'une affiche repartait du cadre provisoire puis « sautait » à sa vraie taille — c'est
+// ce qu'on voyait comme une image qui vibre quand on fait défiler ou qu'on la touche.
+const RATIOS_CONNUS = new Map<string, number>();
+
 interface OfferMediaViewProps {
   media: unknown;
   borderRadius?: number;
@@ -40,11 +45,15 @@ export default function OfferMediaView({
 
   const noter = (uri: string, largeur: number, hauteur: number) => {
     const r = ratioAffichage(largeur, hauteur);
-    if (r) setRatios((prev) => (prev[uri] === r ? prev : { ...prev, [uri]: r }));
+    if (r) {
+      RATIOS_CONNUS.set(uri, r);
+      setRatios((prev) => (prev[uri] === r ? prev : { ...prev, [uri]: r }));
+    }
   };
 
   const indexValide = Math.min(indexActif, images.length - 1);
   const uriActive = images[indexValide];
+  const ratioDe = (uri: string) => ratios[uri] ?? RATIOS_CONNUS.get(uri);
   const fondNeutre = dark ? '#0E131F' : '#F1EFE9';
   const bordure = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
@@ -160,13 +169,13 @@ export default function OfferMediaView({
         {/* Photo au format réel */}
         <Pressable
           onPress={() => handlePressImage(indexValide)}
-          style={{ width: '100%', aspectRatio: ratios[uriActive] ?? RATIO_ATTENTE, position: 'relative' }}>
+          style={{ width: '100%', aspectRatio: ratioDe(uriActive) ?? RATIO_ATTENTE, position: 'relative' }}>
           <Image
             source={{ uri: uriActive }}
             alt="Affiche de recrutement"
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
-            transition={200}
+            transition={0}
             priority="high"
             onLoad={(e) => noter(uriActive, e.source.width, e.source.height)}
           />
@@ -216,7 +225,7 @@ export default function OfferMediaView({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <Ionicons name="key" size={10} color="#2563EB" />
+              <Image source={require('@/assets/images/logo-cle.png')} alt="" style={{ width: 6, height: 12 }} contentFit="contain" />
             </View>
             <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.2 }}>
               ffacilite.com
@@ -237,7 +246,7 @@ export default function OfferMediaView({
                 accessibilityLabel={`Voir la photo ${idx + 1}`}
                 style={{
                   height: 64,
-                  aspectRatio: ratios[uri] ?? 1,
+                  aspectRatio: ratioDe(uri) ?? 1,
                   borderRadius: Math.max(borderRadius - 6, 6),
                   overflow: 'hidden',
                   borderWidth: 2,

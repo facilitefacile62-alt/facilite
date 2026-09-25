@@ -56,6 +56,7 @@ export default function OffresScreen() {
           <FlatList
             data={filtre === 'disponibles' ? offres : []}
             keyExtractor={(item) => item.id}
+            removeClippedSubviews={false}
             contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={{ height: 14 }} />}

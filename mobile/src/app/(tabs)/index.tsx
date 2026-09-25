@@ -94,6 +94,7 @@ export default function AccueilScreen() {
             onRefresh={rechargerFlux}
             onEndReached={chargerPlus}
             onEndReachedThreshold={0.6}
+        removeClippedSubviews={false}
             ListHeaderComponent={
               <View>
                 {/* 1. STORIES : MODÈLES CV (Style 1:1 Capture Web) */}
