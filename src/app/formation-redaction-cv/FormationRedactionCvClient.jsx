@@ -150,6 +150,15 @@ export default function FormationRedactionCvClient() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             Accès permanent · certification &quot;Rédacteur CV&quot; à la clé
           </p>
+          {user && (
+            <Link
+              href="/formation-redaction-cv/modules"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline mt-3"
+            >
+              <span>Voir les modules de la formation</span>
+              <i className="fa-solid fa-arrow-right text-[10px]"></i>
+            </Link>
+          )}
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs p-6 sm:p-8">
