@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   ImageBackground,
+  Keyboard,
   KeyboardAvoidingView,
   Pressable,
   Text,
@@ -45,6 +46,16 @@ export default function ChatDetailScreen() {
   const nomAffiche = marketplace && nomParam ? nomParam : autreParticipant?.nom;
   const [brouillon, setBrouillon] = useState(typeof brouillonParam === 'string' ? brouillonParam : '');
   const listeRef = useRef<FlatList<ChatMessage>>(null);
+  // Clavier ouvert : il recouvre déjà la barre système, inutile de garder sa marge sous la zone d'envoi.
+  const [clavierOuvert, setClavierOuvert] = useState(false);
+  useEffect(() => {
+    const ouvre = Keyboard.addListener('keyboardDidShow', () => setClavierOuvert(true));
+    const ferme = Keyboard.addListener('keyboardDidHide', () => setClavierOuvert(false));
+    return () => {
+      ouvre.remove();
+      ferme.remove();
+    };
+  }, []);
   const peutEnvoyer = !envoiEnCours && brouillon.trim().length > 0;
 
   async function handleEnvoyer() {
@@ -127,7 +138,7 @@ export default function ChatDetailScreen() {
               gap: 8,
               paddingHorizontal: 8,
               paddingTop: 8,
-              paddingBottom: Math.max(insets.bottom, 8) + 4,
+              paddingBottom: clavierOuvert ? 8 : Math.max(insets.bottom, 8) + 4,
               backgroundColor: 'rgba(242,240,234,0.96)',
             }}>
             <View

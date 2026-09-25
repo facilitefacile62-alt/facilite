@@ -43,7 +43,7 @@ export default function FaciliteHeader({ dark = false }: FaciliteHeaderProps) {
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-            <Image source={require('@/assets/images/logo-cle.png')} alt="Facilité" style={{ width: 13, height: 26 }} contentFit="contain" />
+            <Image source={require('@/assets/images/logo-cle.png')} alt="Facilité" style={{ width: 15, height: 30 }} contentFit="contain" />
           </View>
           <Text
             style={{

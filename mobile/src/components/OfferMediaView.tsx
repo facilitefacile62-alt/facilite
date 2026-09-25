@@ -225,7 +225,7 @@ export default function OfferMediaView({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-              <Image source={require('@/assets/images/logo-cle.png')} alt="" style={{ width: 6, height: 12 }} contentFit="contain" />
+              <Image source={require('@/assets/images/logo-cle.png')} alt="" style={{ width: 8, height: 16 }} contentFit="contain" />
             </View>
             <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.2 }}>
               ffacilite.com

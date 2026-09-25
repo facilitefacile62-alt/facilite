@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   CATEGORIES_MARKETPLACE,
@@ -82,6 +82,7 @@ function CarteArticle({ article, onPress }: { article: ArticleMarketplace; onPre
 
 export default function MarketplaceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [categorie, setCategorie] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
   const { etat, position, activer, desactiver } = useLocalisation();
@@ -280,7 +281,7 @@ export default function MarketplaceScreen() {
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
           <Pressable
             onPress={() => {}}
-            style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: 28, gap: 6 }}>
+            style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: Math.max(insets.bottom, 12) + 32, gap: 6 }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: '#1A1A1A', marginBottom: 6, paddingHorizontal: 4 }}>Autour de moi</Text>
             {OPTIONS_AUTOUR_DE_MOI.map((o) => (
               <Pressable
