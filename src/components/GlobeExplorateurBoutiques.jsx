@@ -38,21 +38,64 @@ const CENTRE_SENEGAL = [14.6937, -17.4441]; // [lat, lng] Dakar / Thiès
 const COULEUR_SERVICE = "#F59E0B";
 const COULEUR_ETABLISSEMENT = "#8B5CF6";
 // Valeurs alignées sur la contrainte CHECK réelle de
-// marketplace_stores.categorie_etablissement (migration
-// 20260917020000_marketplace_categories_etablissement_concretes) :
-// point_wave/pharmacie/clinique/autre — pas sante/finance/beaute, qui
-// n'existent plus en base depuis cette migration.
+// marketplace_stores.categorie_etablissement (migrations
+// 20260917020000, 20260925120000, 20260925130000) — pas sante/finance/beaute,
+// qui n'existent plus en base depuis la première de ces migrations.
 const EMOJI_CATEGORIE_ETABLISSEMENT = {
   point_wave: "💰",
   pharmacie: "💊",
   clinique: "🏥",
   autre: "🏢",
+  restaurant: "🍽️",
+  fast_food: "🍔",
+  malibu: "🥪",
+  dibiterie: "🍖",
+  jus_boissons: "🥤",
+  boulangerie: "🥖",
+  patisserie: "🍰",
+  beignet_fataya: "🥟",
+  barber: "💈",
+  tresses: "💇🏾‍♀️",
+  parfumerie: "🌸",
+  esthetique_ongles: "💅",
+  soins_bio: "🌿",
+  musculation_fitness: "🏋🏾",
+  terrain_foot: "⚽",
+  terrain_basket: "🏀",
+  alimentation_boutique: "🛒",
+  cafe_the: "☕",
+  banque_finance: "🏦",
+  hotellerie: "🛏️",
+  transport_gare: "🚌",
+  bus_mobilite: "🚏",
 };
 const LIBELLES_CATEGORIE_ETABLISSEMENT = {
   point_wave: "Point Wave",
   pharmacie: "Pharmacie",
   clinique: "Clinique",
   autre: "Établissement",
+  restaurant: "Restaurant",
+  fast_food: "Fast-food",
+  malibu: "Malibu",
+  dibiterie: "Dibiterie",
+  jus_boissons: "Jus & Boissons",
+  boulangerie: "Boulangerie",
+  patisserie: "Pâtisserie",
+  beignet_fataya: "Beignet ak Fataya",
+  barber: "Barber",
+  tresses: "Tresses",
+  parfumerie: "Parfumerie",
+  esthetique_ongles: "Esthétique & Ongles",
+  soins_bio: "Soins & Bio",
+  musculation_fitness: "Musculation / Fitness",
+  terrain_foot: "Terrain de foot",
+  terrain_basket: "Terrain de basket",
+  alimentation_boutique: "Alimentation / Boutique",
+  cafe_the: "Café ak Thé",
+  banque_finance: "Banque & Finance",
+  hotellerie: "Hôtel & Hébergement",
+  transport_gare: "Gare & Transport",
+  bus_mobilite: "Arrêt de bus",
 };
 
 // Avatars de démonstration pour commerçants / candidats

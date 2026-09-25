@@ -2229,6 +2229,28 @@ function VueReglages({
                   <option value="pharmacie">Pharmacie</option>
                   <option value="clinique">Clinique</option>
                   <option value="autre">Autre établissement</option>
+                  <option value="restaurant">Restaurant</option>
+                  <option value="fast_food">Fast-food</option>
+                  <option value="malibu">Malibu</option>
+                  <option value="dibiterie">Dibiterie</option>
+                  <option value="jus_boissons">Jus & Boissons</option>
+                  <option value="boulangerie">Boulangerie</option>
+                  <option value="patisserie">Pâtisserie</option>
+                  <option value="beignet_fataya">Beignet ak Fataya</option>
+                  <option value="barber">Barber</option>
+                  <option value="tresses">Tresses</option>
+                  <option value="parfumerie">Parfumerie</option>
+                  <option value="esthetique_ongles">Esthétique & Ongles</option>
+                  <option value="soins_bio">Soins & Bio</option>
+                  <option value="musculation_fitness">Musculation / Fitness</option>
+                  <option value="terrain_foot">Terrain de foot</option>
+                  <option value="terrain_basket">Terrain de basket</option>
+                  <option value="alimentation_boutique">Alimentation / Boutique</option>
+                  <option value="cafe_the">Café ak Thé</option>
+                  <option value="banque_finance">Banque & Finance</option>
+                  <option value="hotellerie">Hôtel & Hébergement</option>
+                  <option value="transport_gare">Gare & Transport</option>
+                  <option value="bus_mobilite">Arrêt de bus</option>
                 </select>
                 {["point_wave", "pharmacie", "clinique"].includes(categorieEtablissement) && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
@@ -2933,6 +2955,28 @@ function VueReglages({
                     <option value="pharmacie">Pharmacie</option>
                     <option value="clinique">Clinique</option>
                     <option value="autre">Autre établissement</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="fast_food">Fast-food</option>
+                    <option value="malibu">Malibu</option>
+                    <option value="dibiterie">Dibiterie</option>
+                    <option value="jus_boissons">Jus & Boissons</option>
+                    <option value="boulangerie">Boulangerie</option>
+                    <option value="patisserie">Pâtisserie</option>
+                    <option value="beignet_fataya">Beignet ak Fataya</option>
+                    <option value="barber">Barber</option>
+                    <option value="tresses">Tresses</option>
+                    <option value="parfumerie">Parfumerie</option>
+                    <option value="esthetique_ongles">Esthétique & Ongles</option>
+                    <option value="soins_bio">Soins & Bio</option>
+                    <option value="musculation_fitness">Musculation / Fitness</option>
+                    <option value="terrain_foot">Terrain de foot</option>
+                    <option value="terrain_basket">Terrain de basket</option>
+                    <option value="alimentation_boutique">Alimentation / Boutique</option>
+                    <option value="cafe_the">Café ak Thé</option>
+                    <option value="banque_finance">Banque & Finance</option>
+                    <option value="hotellerie">Hôtel & Hébergement</option>
+                    <option value="transport_gare">Gare & Transport</option>
+                    <option value="bus_mobilite">Arrêt de bus</option>
                   </select>
                   {["point_wave", "pharmacie", "clinique"].includes(categorieEtablissement) && (
                     <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
@@ -4540,6 +4584,28 @@ function VueVendeur({
                         <option value="pharmacie">Pharmacie</option>
                         <option value="clinique">Clinique</option>
                         <option value="autre">Autre établissement</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="fast_food">Fast-food</option>
+                        <option value="malibu">Malibu</option>
+                        <option value="dibiterie">Dibiterie</option>
+                        <option value="jus_boissons">Jus & Boissons</option>
+                        <option value="boulangerie">Boulangerie</option>
+                        <option value="patisserie">Pâtisserie</option>
+                        <option value="beignet_fataya">Beignet ak Fataya</option>
+                        <option value="barber">Barber</option>
+                        <option value="tresses">Tresses</option>
+                        <option value="parfumerie">Parfumerie</option>
+                        <option value="esthetique_ongles">Esthétique & Ongles</option>
+                        <option value="soins_bio">Soins & Bio</option>
+                        <option value="musculation_fitness">Musculation / Fitness</option>
+                        <option value="terrain_foot">Terrain de foot</option>
+                        <option value="terrain_basket">Terrain de basket</option>
+                        <option value="alimentation_boutique">Alimentation / Boutique</option>
+                        <option value="cafe_the">Café ak Thé</option>
+                        <option value="banque_finance">Banque & Finance</option>
+                        <option value="hotellerie">Hôtel & Hébergement</option>
+                        <option value="transport_gare">Gare & Transport</option>
+                        <option value="bus_mobilite">Arrêt de bus</option>
                       </select>
                       {["point_wave", "pharmacie", "clinique"].includes(categorieEdition) && (
                         <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
@@ -6387,6 +6453,28 @@ const LIBELLES_CATEGORIE_ETABLISSEMENT = {
   pharmacie: "Pharmacie",
   clinique: "Clinique",
   autre: "Autre établissement",
+  restaurant: "Restaurant",
+  fast_food: "Fast-food",
+  malibu: "Malibu",
+  dibiterie: "Dibiterie",
+  jus_boissons: "Jus & Boissons",
+  boulangerie: "Boulangerie",
+  patisserie: "Pâtisserie",
+  beignet_fataya: "Beignet ak Fataya",
+  barber: "Barber",
+  tresses: "Tresses",
+  parfumerie: "Parfumerie",
+  esthetique_ongles: "Esthétique & Ongles",
+  soins_bio: "Soins & Bio",
+  musculation_fitness: "Musculation / Fitness",
+  terrain_foot: "Terrain de foot",
+  terrain_basket: "Terrain de basket",
+  alimentation_boutique: "Alimentation / Boutique",
+  cafe_the: "Café ak Thé",
+  banque_finance: "Banque & Finance",
+  hotellerie: "Hôtel & Hébergement",
+  transport_gare: "Gare & Transport",
+  bus_mobilite: "Arrêt de bus",
 };
 
 /**
@@ -7345,6 +7433,28 @@ function ModalFicheBoutique({
                         <option value="pharmacie">Pharmacie</option>
                         <option value="clinique">Clinique</option>
                         <option value="autre">Autre établissement</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="fast_food">Fast-food</option>
+                        <option value="malibu">Malibu</option>
+                        <option value="dibiterie">Dibiterie</option>
+                        <option value="jus_boissons">Jus & Boissons</option>
+                        <option value="boulangerie">Boulangerie</option>
+                        <option value="patisserie">Pâtisserie</option>
+                        <option value="beignet_fataya">Beignet ak Fataya</option>
+                        <option value="barber">Barber</option>
+                        <option value="tresses">Tresses</option>
+                        <option value="parfumerie">Parfumerie</option>
+                        <option value="esthetique_ongles">Esthétique & Ongles</option>
+                        <option value="soins_bio">Soins & Bio</option>
+                        <option value="musculation_fitness">Musculation / Fitness</option>
+                        <option value="terrain_foot">Terrain de foot</option>
+                        <option value="terrain_basket">Terrain de basket</option>
+                        <option value="alimentation_boutique">Alimentation / Boutique</option>
+                        <option value="cafe_the">Café ak Thé</option>
+                        <option value="banque_finance">Banque & Finance</option>
+                        <option value="hotellerie">Hôtel & Hébergement</option>
+                        <option value="transport_gare">Gare & Transport</option>
+                        <option value="bus_mobilite">Arrêt de bus</option>
                       </select>
                       {["point_wave", "pharmacie", "clinique"].includes(categorieEdition) && (
                         <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
@@ -8441,6 +8551,28 @@ function ModalFicheBoutique({
                       <option value="pharmacie">Pharmacie</option>
                       <option value="clinique">Clinique</option>
                       <option value="autre">Autre établissement</option>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="fast_food">Fast-food</option>
+                      <option value="malibu">Malibu</option>
+                      <option value="dibiterie">Dibiterie</option>
+                      <option value="jus_boissons">Jus & Boissons</option>
+                      <option value="boulangerie">Boulangerie</option>
+                      <option value="patisserie">Pâtisserie</option>
+                      <option value="beignet_fataya">Beignet ak Fataya</option>
+                      <option value="barber">Barber</option>
+                      <option value="tresses">Tresses</option>
+                      <option value="parfumerie">Parfumerie</option>
+                      <option value="esthetique_ongles">Esthétique & Ongles</option>
+                      <option value="soins_bio">Soins & Bio</option>
+                      <option value="musculation_fitness">Musculation / Fitness</option>
+                      <option value="terrain_foot">Terrain de foot</option>
+                      <option value="terrain_basket">Terrain de basket</option>
+                      <option value="alimentation_boutique">Alimentation / Boutique</option>
+                      <option value="cafe_the">Café ak Thé</option>
+                      <option value="banque_finance">Banque & Finance</option>
+                      <option value="hotellerie">Hôtel & Hébergement</option>
+                      <option value="transport_gare">Gare & Transport</option>
+                      <option value="bus_mobilite">Arrêt de bus</option>
                     </select>
                     {["point_wave", "pharmacie", "clinique"].includes(categorieEdition) && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
@@ -9026,6 +9158,28 @@ function FormulaireBoutique({ userId, boutique, nombreBoutiques = 0, onEnregistr
             <option value="pharmacie">Pharmacie</option>
             <option value="clinique">Clinique</option>
             <option value="autre">Autre établissement</option>
+            <option value="restaurant">Restaurant</option>
+            <option value="fast_food">Fast-food</option>
+            <option value="malibu">Malibu</option>
+            <option value="dibiterie">Dibiterie</option>
+            <option value="jus_boissons">Jus & Boissons</option>
+            <option value="boulangerie">Boulangerie</option>
+            <option value="patisserie">Pâtisserie</option>
+            <option value="beignet_fataya">Beignet ak Fataya</option>
+            <option value="barber">Barber</option>
+            <option value="tresses">Tresses</option>
+            <option value="parfumerie">Parfumerie</option>
+            <option value="esthetique_ongles">Esthétique & Ongles</option>
+            <option value="soins_bio">Soins & Bio</option>
+            <option value="musculation_fitness">Musculation / Fitness</option>
+            <option value="terrain_foot">Terrain de foot</option>
+            <option value="terrain_basket">Terrain de basket</option>
+            <option value="alimentation_boutique">Alimentation / Boutique</option>
+            <option value="cafe_the">Café ak Thé</option>
+            <option value="banque_finance">Banque & Finance</option>
+            <option value="hotellerie">Hôtel & Hébergement</option>
+            <option value="transport_gare">Gare & Transport</option>
+            <option value="bus_mobilite">Arrêt de bus</option>
           </select>
           {["point_wave", "pharmacie", "clinique"].includes(champs.categorie_etablissement) && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
