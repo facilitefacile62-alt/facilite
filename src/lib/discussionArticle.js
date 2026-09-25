@@ -20,15 +20,22 @@ export function etatDiscussionArticle({ userId, proprietaireId }) {
 
 /**
  * Lien vers la messagerie Marketplace avec le vendeur. L'article (titre, id,
- * prix) voyage dans l'URL pour accompagner la discussion : voir
- * construireBrouillonArticle côté messagerie.
+ * prix, photo) voyage dans l'URL pour accompagner la discussion : voir
+ * construireBrouillonArticle côté messagerie pour le texte, et
+ * MessagerieClient.js pour l'envoi automatique de la photo (demande
+ * explicite : "Discuter" doit toujours joindre l'image du produit).
  */
-export function construireLienDiscussion({ proprietaireId, article, prixUnitaire }) {
+export function construireLienDiscussion({ proprietaireId, article, prixUnitaire, photoUrl }) {
   const params = new URLSearchParams({ recipient: proprietaireId, contexte: "marketplace" });
   if (article?.titre) params.set("article", String(article.titre).slice(0, 120));
   if (article?.id) params.set("articleId", String(article.id));
   const prix = Number(prixUnitaire);
   if (Number.isFinite(prix) && prix > 0) params.set("prix", String(Math.round(prix)));
+  // Uniquement une vraie URL http(s) (bucket public marketplace) — jamais un
+  // chemin brut, ni un data:, qui dépasserait la longueur raisonnable d'une URL.
+  if (typeof photoUrl === "string" && /^https?:\/\//i.test(photoUrl)) {
+    params.set("photo", photoUrl);
+  }
   return `/messagerie?${params.toString()}`;
 }
 

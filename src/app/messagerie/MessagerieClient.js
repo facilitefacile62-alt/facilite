@@ -1025,6 +1025,43 @@ export default function MessagerieClient() {
               origine: window.location.origin,
             });
             if (brouillon) setMessageText((courant) => courant || brouillon);
+
+            // Photo de l'article envoyée automatiquement — demande explicite :
+            // "Discuter" doit toujours accompagner la discussion de l'image du
+            // produit, pas seulement du texte. URL déjà publique (bucket
+            // marketplace, voir MarketplaceClient.jsx/nettoyerUrl) : passée
+            // telle quelle en attachment_url, getChatAttachmentSignedUrl la
+            // reconnaît déjà et la laisse inchangée (chatAttachments.js).
+            // Jamais renvoyée une seconde fois pour la même conversation —
+            // sinon rouvrir ce fil recréerait la photo à chaque visite.
+            const photoParam = searchParams.get("photo");
+            if (photoParam && !formattedMsgs.some((m) => m.attachment_url === photoParam)) {
+              const { data: savedPhoto } = await supabase
+                .from("messages")
+                .insert({
+                  sender_id: session.user.id,
+                  receiver_id: recipientParam,
+                  conversation_id: result.conversationId,
+                  content: "📎 Photo de l'article",
+                  attachment_url: photoParam,
+                  attachment_type: "image",
+                  type_discussion: "MARKETPLACE",
+                  created_at: new Date().toISOString(),
+                })
+                .select()
+                .single();
+
+              if (savedPhoto) {
+                const messagePhoto = formatMessageRow(savedPhoto, session.user.id);
+                setConversations((prev) =>
+                  prev.map((c) =>
+                    c.id === recipientParam
+                      ? { ...c, messages: [...c.messages, messagePhoto], lastMessage: messagePhoto.text }
+                      : c
+                  )
+                );
+              }
+            }
           }
         });
       } else if (estContexteMarketplace) {
@@ -2998,8 +3035,39 @@ export default function MessagerieClient() {
                               </button>
                             )}
 
+                            {/* Photo (ex: image d'article Marketplace jointe
+                                automatiquement depuis "Discuter") — affichée
+                                en vignette, pas comme un lien de fichier
+                                générique : c'est le point de cette pièce
+                                jointe précise. */}
+                            {msg.attachment_type === "image" && msg.attachment_url && (
+                              <ChatAttachmentUrl path={msg.attachment_url}>
+                                {(resolvedUrl) =>
+                                  resolvedUrl ? (
+                                    <a
+                                      href={resolvedUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block mb-2 rounded-2xl overflow-hidden max-w-[220px] border border-black/5 dark:border-white/10"
+                                    >
+                                      <img
+                                        src={resolvedUrl}
+                                        alt={msg.file_name || "Photo"}
+                                        className="w-full h-auto max-h-64 object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <div className="w-40 h-40 mb-2 rounded-2xl bg-black/5 dark:bg-white/10 animate-pulse" />
+                                  )
+                                }
+                              </ChatAttachmentUrl>
+                            )}
+
                             {/* Pièce jointe PDF / Document standard */}
-                            {(msg.attachment_url || msg.file) && msg.attachment_type !== "audio" && msg.attachment_type !== "video-interview" && (
+                            {(msg.attachment_url || msg.file) &&
+                              msg.attachment_type !== "audio" &&
+                              msg.attachment_type !== "video-interview" &&
+                              msg.attachment_type !== "image" && (
                               <ChatAttachmentUrl path={msg.attachment_url}>
                                 {(resolvedUrl) => (
                                   <a

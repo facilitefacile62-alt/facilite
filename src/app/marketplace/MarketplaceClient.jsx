@@ -6112,7 +6112,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
             {/* Bouton 1 : Discuter Plateforme (Divisé) */}
             {etatDiscussion === "pret" ? (
               <Link
-                href={construireLienDiscussion({ proprietaireId, article, prixUnitaire })}
+                href={construireLienDiscussion({ proprietaireId, article, prixUnitaire, photoUrl: photoPrincipale })}
                 className="flex-1 h-11 sm:h-12 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white font-black text-xs sm:text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer px-3 transition"
               >
                 <i className="fa-regular fa-comment-dots text-sm sm:text-base"></i>
