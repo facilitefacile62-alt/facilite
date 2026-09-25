@@ -318,6 +318,50 @@ export default function GlobeExplorateurBoutiques({
   // faire défiler jusqu'au centre.
   const [articleActif, setArticleActif] = useState(null);
   const carouselContainerRef = useRef(null);
+  // Mesurés pour éviter que la bulle produits (survol d'un avatar) ne
+  // s'ouvre sous l'en-tête (recherche + filtres, hauteur variable) ou sous
+  // le dock du bas — voir ouvrirBulle.
+  const headerRef = useRef(null);
+  const dockRef = useRef(null);
+  // Hauteur réelle de l'en-tête (varie avec le nombre de rangées de
+  // pastilles) : les contrôles flottants de droite (position/zoom/thème) se
+  // positionnent juste en dessous plutôt qu'à un décalage deviné, sinon
+  // l'ajout d'une rangée de filtres les fait à nouveau chevaucher — capture
+  // écran réelle de l'utilisateur montrant ce chevauchement après l'ajout de
+  // la barre de catégories.
+  // 150 = repli raisonnable le temps que ResizeObserver mesure une première
+  // fois (en-tête à 2 rangées de pastilles) ; jamais 0, qui ferait flasher
+  // les contrôles collés en haut de l'écran avant la première mesure.
+  const [hauteurEntete, setHauteurEntete] = useState(150);
+  useEffect(() => {
+    if (!headerRef.current || typeof ResizeObserver === "undefined") return;
+    const observateur = new ResizeObserver(([entree]) => {
+      setHauteurEntete(entree.contentRect.height);
+    });
+    observateur.observe(headerRef.current);
+    return () => observateur.disconnect();
+  }, []);
+
+  // Glisser-déposer à la souris pour les deux rangées de pastilles du haut
+  // (catégories, puis Toutes/Populaires/LIVE/Autour de moi) : à la souris
+  // (pas de trackpad ni écran tactile), overflow-x-auto seul ne se fait
+  // défiler qu'au clic-glissé de la barre de scroll elle-même ou à
+  // Maj+molette — aucun des deux n'est découvrable. Ref générique (une
+  // rangée à la fois glissée) plutôt qu'un ref par rangée : même geste,
+  // jamais engagé sur les deux en même temps.
+  const dragPastillesRef = useRef({ actif: false, cible: null, depart: 0, scrollDepart: 0 });
+  const onMouseDownPastilles = (e) => {
+    const cible = e.currentTarget;
+    dragPastillesRef.current = { actif: true, cible, depart: e.pageX, scrollDepart: cible.scrollLeft };
+  };
+  const onMouseMovePastilles = (e) => {
+    const etat = dragPastillesRef.current;
+    if (!etat.actif || !etat.cible) return;
+    etat.cible.scrollLeft = etat.scrollDepart - (e.pageX - etat.depart);
+  };
+  const onMouseUpPastilles = () => {
+    dragPastillesRef.current.actif = false;
+  };
 
   const defilerCarrousel = (direction) => {
     if (carouselContainerRef.current) {
@@ -1283,9 +1327,51 @@ export default function GlobeExplorateurBoutiques({
 
       const ouvrirBulle = () => {
         if (timerSurvol) clearTimeout(timerSurvol);
+        popup.getElement()?.classList.remove("carte-bulle-bas");
         popup.options.offset = offsetPopup();
         popup.setLatLng(marqueur.getLatLng()).openOn(carte);
         attacherEcouteursPopup();
+
+        // Par défaut la bulle s'ouvre au-dessus du marqueur à un offset fixe
+        // (voir offsetPopup) : si l'en-tête (recherche + filtres, hauteur
+        // variable selon les catégories affichées) ou le dock du bas la
+        // recouvrent, on la glisse dans la zone visible — mesuré sur la
+        // vraie taille rendue, jamais une marge devinée (même principe que
+        // CarteBoutiques.jsx). Le cas "decalageBas" (marqueurs dissociés
+        // empilés) ouvre déjà sur le côté pour une autre raison, non
+        // concerné ici. Ne rejoue pas ce calcul au fil d'un zoom (voir
+        // rafraichirPopup ci-dessous) : cas plus rare, laissé tel quel.
+        const entreeActuelle = marqueursCreesParId.get(b.id);
+        if (entreeActuelle?.decalageBas) return;
+        setTimeout(() => {
+          const el = popup.getElement();
+          const boiteBulle = el?.querySelector(".leaflet-popup-content-wrapper");
+          const conteneurCarte = carte.getContainer();
+          if (!boiteBulle || !conteneurCarte || !popup.isOpen()) return;
+          const MARGE = 6;
+          const c = conteneurCarte.getBoundingClientRect();
+          const r = boiteBulle.getBoundingClientRect();
+          const haut = r.top - c.top;
+          const limiteHaut = headerRef.current
+            ? headerRef.current.getBoundingClientRect().bottom - c.top + MARGE
+            : 48;
+          const limiteBas = dockRef.current
+            ? dockRef.current.getBoundingClientRect().top - c.top - MARGE
+            : c.height - MARGE;
+          if (haut >= limiteHaut && haut + r.height <= limiteBas) return;
+          let [dx, dy] = popup.options.offset;
+          const pt = carte.latLngToContainerPoint(marqueur.getLatLng());
+          const hautDessous = pt.y + 16;
+          if (hautDessous >= limiteHaut && hautDessous + r.height <= limiteBas) {
+            el.classList.add("carte-bulle-bas");
+            dy += hautDessous - haut;
+          } else {
+            const cible = Math.min(Math.max(haut, limiteHaut), Math.max(limiteHaut, limiteBas - r.height));
+            dy += cible - haut;
+          }
+          popup.options.offset = [dx, dy];
+          popup.update();
+        }, 20);
       };
       // Le zoom change le décalage : une bulle déjà ouverte le suit.
       marqueursCreesParId.get(b.id).rafraichirPopup = () => {
@@ -1629,7 +1715,10 @@ export default function GlobeExplorateurBoutiques({
       aria-label="Facilité Snap Map Sénégal"
     >
       {/* 1. EN-TÊTE SUPÉRIEUR SNAP MAP (Sombre, Météo Dakar/Thiès & Filtres) */}
-      <header className="absolute top-0 inset-x-0 z-20 pt-3 pb-2 px-3 sm:px-5 bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none flex flex-col gap-2">
+      <header
+        ref={headerRef}
+        className="absolute top-0 inset-x-0 z-20 pt-3 pb-2 px-3 sm:px-5 bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none flex flex-col gap-2"
+      >
         <div className="flex items-center justify-between">
           {/* Avatar Utilisateur Gauche + Météo */}
           <div className="pointer-events-auto flex items-center gap-2.5">
@@ -1790,7 +1879,13 @@ export default function GlobeExplorateurBoutiques({
             filtre par TYPE DE LIEU réel (restaurant, banque, arrêt de bus...),
             celle-là par statut des boutiques produit. Ne s'applique qu'aux
             établissements (voir categorieFiltre, boutiquesAffichees). */}
-        <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
+        <div
+          onMouseDown={onMouseDownPastilles}
+          onMouseMove={onMouseMovePastilles}
+          onMouseUp={onMouseUpPastilles}
+          onMouseLeave={onMouseUpPastilles}
+          className="pointer-events-auto flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1 cursor-grab active:cursor-grabbing"
+        >
           <button
             type="button"
             onClick={() => setCategorieFiltre(null)}
@@ -1820,7 +1915,13 @@ export default function GlobeExplorateurBoutiques({
         </div>
 
         {/* Pilules de filtres thématiques (Dark Snap Map) */}
-        <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
+        <div
+          onMouseDown={onMouseDownPastilles}
+          onMouseMove={onMouseMovePastilles}
+          onMouseUp={onMouseUpPastilles}
+          onMouseLeave={onMouseUpPastilles}
+          className="pointer-events-auto flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1 cursor-grab active:cursor-grabbing"
+        >
           <button
             type="button"
             onClick={() => setFiltreActif("tous")}
@@ -1900,8 +2001,13 @@ export default function GlobeExplorateurBoutiques({
           </div>
         )}
 
-        {/* 3. CONTRÔLES FLOTTANTS SNAP MAP (À droite) */}
-        <aside className="absolute right-3.5 top-28 sm:top-24 z-20 flex flex-col gap-2.5">
+        {/* 3. CONTRÔLES FLOTTANTS SNAP MAP (À droite) — top mesuré sur la
+            vraie hauteur de l'en-tête (hauteurEntete), pas un décalage fixe
+            deviné qui se désynchronise dès que l'en-tête change de hauteur. */}
+        <aside
+          className="absolute right-3.5 z-20 flex flex-col gap-2.5"
+          style={{ top: hauteurEntete + 12 }}
+        >
           {/* Bouton Ma Position */}
           <button
             type="button"
@@ -1972,13 +2078,19 @@ export default function GlobeExplorateurBoutiques({
 
         {/* Message d'erreur géolocalisation */}
         {erreurLocalisation && (
-          <div className="absolute top-28 left-1/2 -translate-x-1/2 z-30 bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-2xl max-w-[85%] text-center">
+          <div
+            className="absolute left-1/2 -translate-x-1/2 z-30 bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-2xl max-w-[85%] text-center"
+            style={{ top: hauteurEntete + 12 }}
+          >
             {erreurLocalisation}
           </div>
         )}
 
         {/* 4. CARROUSEL INFÉRIEUR DE STORIES & BOUTIQUES (Style Snap Map Dock) */}
-        <div className="absolute bottom-4 inset-x-0 z-20 px-3 sm:px-6 flex flex-col items-center gap-2 pointer-events-none">
+        <div
+          ref={dockRef}
+          className="absolute bottom-4 inset-x-0 z-20 px-3 sm:px-6 flex flex-col items-center gap-2 pointer-events-none"
+        >
           {/* Pilule d'information active */}
           <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/95 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-2xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
             <i className="fa-solid fa-house text-xs"></i>
