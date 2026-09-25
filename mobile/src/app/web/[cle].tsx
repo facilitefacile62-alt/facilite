@@ -61,6 +61,12 @@ export default function EcranWeb() {
     };
   }, [authRequise, cleChargement]);
 
+  // Filet de sécurité : au bout de 8 s le voile est retiré quoi qu'il arrive (la page, ou l'erreur, reste visible dessous).
+  useEffect(() => {
+    const minuterie = setTimeout(() => setChargement(false), 8000);
+    return () => clearTimeout(minuterie);
+  }, [cleChargement]);
+
   const onBackPress = useCallback(() => {
     if (peutReculer) {
       webviewRef.current?.goBack();
@@ -175,6 +181,11 @@ export default function EcranWeb() {
               onNavigationStateChange={onNavigationStateChange}
               onLoadStart={() => setChargement(true)}
               onLoadEnd={() => setChargement(false)}
+              // Le voile de chargement ne doit jamais cacher une page déjà affichée : les pages du site chargent des
+              // ressources longues (tuiles de carte, temps réel) et l'événement de fin peut tarder ou ne jamais venir.
+              onLoadProgress={(e) => {
+                if (e.nativeEvent.progress >= 0.8) setChargement(false);
+              }}
               onError={(e) => {
                 setChargement(false);
                 setDetailErreur(e.nativeEvent.description || 'Erreur réseau');
