@@ -27,6 +27,12 @@ const RUBRIQUES = [
   { id: 'experiences', icone: '💼', label: 'Expériences professionnelles', route: '/mon-profil/experiences' as const },
 ];
 
+// Rubrique séparée (pas dans RUBRIQUES ci-dessus, qui ne pousse que vers des écrans natifs) : « Mes documents »
+// en haut de cette page ouvre /candidat/mes-cvs (liste des CV déjà enregistrés), une page que l'administration
+// du site peut désactiver — signalé le 25/09/2026, l'utilisateur ne trouvait alors nulle part où importer un
+// CV. /importer-cv fait autre chose (déposer un nouveau CV et le faire lire par l'IA) et n'est jamais
+// désactivée par ce même réglage (voir featureFlags.js, feat_diagnostic_cv exclu du contrôle du proxy).
+
 export default function ProfilAProposScreen() {
   const router = useRouter();
   const { user, profile, role } = useAuth();
@@ -96,11 +102,17 @@ export default function ProfilAProposScreen() {
             </Pressable>
           </View>
 
-          <View className="px-5 pt-4 pb-1">
+          <View className="px-5 pt-4 pb-1 gap-2.5">
             <Pressable
               onPress={() => router.push('/mon-profil/scanner-document')}
               className="bg-emerald-500 rounded-full py-2.5 items-center flex-row justify-center gap-2">
               <Text className="text-white text-[12.5px] font-bold">⛶ Scanner Document (CV, CNI, Passeport)</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/web/importer-cv')}
+              className="bg-white border border-[#2563EB]/30 rounded-full py-2.5 items-center flex-row justify-center gap-2">
+              <Ionicons name="cloud-upload-outline" size={15} color="#2563EB" />
+              <Text className="text-[#2563EB] text-[12.5px] font-bold">Importer mon CV</Text>
             </Pressable>
           </View>
 
