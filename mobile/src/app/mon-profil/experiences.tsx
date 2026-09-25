@@ -12,9 +12,20 @@ type ExperienceProfil = {
   title: string;
   company: string;
   location?: string;
+  startMonth?: string;
   startYear?: string;
+  endMonth?: string;
+  endYear?: string;
   isCurrent?: boolean;
 };
+
+/** Période lisible ("Jan 2021 — Jan 2022" / "2021 — Présent"), comme sur le site (profil/page.js, PublicProfileClient.jsx). */
+function periodeLisible(x: ExperienceProfil): string {
+  const debut = [x.startMonth, x.startYear].filter(Boolean).join(' ');
+  const fin = x.isCurrent ? 'Présent' : [x.endMonth, x.endYear].filter(Boolean).join(' ') || 'Terminé';
+  if (!debut) return fin === 'Présent' ? 'Présent' : '';
+  return `${debut} — ${fin}`;
+}
 
 // Reproduction du contenu réel de 12e-profil-formation.html : le nom de
 // fichier du handoff est décalé d'un cran (voir langues.tsx) — ce fichier
@@ -22,11 +33,11 @@ type ExperienceProfil = {
 // donc bien l'écran Expériences. Pas d'écran "Formation" séparé construit
 // dans ce point : aucun fichier du handoff n'en contient réellement le
 // contenu (décision actée avec l'utilisateur).
-// Données réelles profiles.experiences ([{ title, company, location,
-// startYear, isCurrent, ... }], voir src/app/profil/page.js et
-// src/app/in/[username]/PublicProfileClient.jsx côté web). employmentType
-// et startMonth existent aussi côté web mais ne sont pas demandés dans ce
-// formulaire d'ajout mobile, volontairement minimal.
+// Données réelles profiles.experiences ([{ title, company, location, startMonth, startYear, endMonth,
+// endYear, isCurrent, ... }], voir src/app/profil/page.js et src/app/in/[username]/PublicProfileClient.jsx
+// côté web. L'affichage (periodeLisible) lit les 4 champs de date : une expérience créée depuis le site
+// n'affichait ici que l'année de début suivie de « Terminé », sans l'année de fin réelle (signalé le
+// 25/09/2026). Le formulaire d'ajout mobile reste volontairement minimal (pas de mois, ni employmentType).
 const PALETTE = ['#2563EB', '#10B981', '#7C3AED', '#F59E0B', '#DC2626', '#0EA5E9'];
 
 export default function ProfilExperiencesScreen() {
@@ -39,6 +50,7 @@ export default function ProfilExperiencesScreen() {
   const [entreprise, setEntreprise] = useState('');
   const [ville, setVille] = useState('');
   const [annee, setAnnee] = useState('');
+  const [anneeFin, setAnneeFin] = useState('');
   const [enCoursPoste, setEnCoursPoste] = useState(false);
   const [enregistrement, setEnregistrement] = useState(false);
 
@@ -66,6 +78,7 @@ export default function ProfilExperiencesScreen() {
         company: entreprise.trim(),
         location: ville.trim() || undefined,
         startYear: annee.trim() || undefined,
+        endYear: enCoursPoste ? undefined : anneeFin.trim() || undefined,
         isCurrent: enCoursPoste,
       },
     ]);
@@ -75,6 +88,7 @@ export default function ProfilExperiencesScreen() {
     setEntreprise('');
     setVille('');
     setAnnee('');
+    setAnneeFin('');
     setEnCoursPoste(false);
   }
 
@@ -130,10 +144,9 @@ export default function ProfilExperiencesScreen() {
                         {x.company}
                         {x.location ? ` • ${x.location}` : ''}
                       </Text>
-                      <Text className="text-[11.5px] text-black/40 mt-0.5">
-                        {x.startYear ? `${x.startYear} — ` : ''}
-                        {x.isCurrent ? 'En cours' : 'Terminé'}
-                      </Text>
+                      {periodeLisible(x) ? (
+                        <Text className="text-[11.5px] text-black/40 mt-0.5">{periodeLisible(x)}</Text>
+                      ) : null}
                     </View>
                     <Pressable onPress={() => supprimerExperience(i)}>
                       <Ionicons name="trash-outline" size={16} color="rgba(0,0,0,0.35)" />
@@ -178,6 +191,16 @@ export default function ProfilExperiencesScreen() {
                 keyboardType="number-pad"
                 className="border border-black/10 rounded-xl px-3.5 py-3 mt-2.5 text-[13.5px] text-[#1A1A1A]"
               />
+              {!enCoursPoste && (
+                <TextInput
+                  value={anneeFin}
+                  onChangeText={setAnneeFin}
+                  placeholder="Année de fin (ex : 2025)"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
+                  keyboardType="number-pad"
+                  className="border border-black/10 rounded-xl px-3.5 py-3 mt-2.5 text-[13.5px] text-[#1A1A1A]"
+                />
+              )}
               <View className="flex-row items-center justify-between mt-3">
                 <Text className="text-[13px] font-semibold text-[#1A1A1A]">Poste actuel</Text>
                 <Switch value={enCoursPoste} onValueChange={setEnCoursPoste} trackColor={{ true: '#2563EB' }} />
