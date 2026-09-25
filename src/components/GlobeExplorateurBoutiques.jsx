@@ -2150,8 +2150,8 @@ export default function GlobeExplorateurBoutiques({
                 </button>
               </div>
 
-              {/* Bouton WhatsApp Vert Grand Format */}
-              <div className="p-4 sm:p-5 border-b border-gray-800 bg-gray-950/60">
+              {/* Boutons d'action : WhatsApp + itinéraire GPS */}
+              <div className="p-4 sm:p-5 border-b border-gray-800 bg-gray-950/60 space-y-2.5">
                 {boutiqueSelectionnee.whatsappUrl ? (
                   <a
                     href={boutiqueSelectionnee.whatsappUrl}
@@ -2171,6 +2171,21 @@ export default function GlobeExplorateurBoutiques({
                     WhatsApp direct disponible auprès du vendeur
                   </p>
                 )}
+                {/* Itinéraire GPS — marqueurs déjà filtrés en amont (ligne
+                    ~301) pour n'avoir que des lat/lng valides, donc toujours
+                    exploitables ici sans vérification supplémentaire. */}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${boutiqueSelectionnee.lat},${boutiqueSelectionnee.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-2xl bg-blue-950/40 hover:bg-blue-900/40 border border-blue-800/60 flex items-center gap-3 transition cursor-pointer"
+                >
+                  <i className="fa-solid fa-diamond-turn-right text-[#1877F2] text-lg shrink-0"></i>
+                  <div className="text-left">
+                    <p className="text-xs sm:text-sm font-black text-blue-300 leading-tight">M&apos;y rendre</p>
+                    <p className="text-[11px] text-blue-400/70 leading-tight">Itinéraire GPS jusqu&apos;à la boutique</p>
+                  </div>
+                </a>
               </div>
 
               {/* Contenu de la fiche, adapté au type_boutique */}
