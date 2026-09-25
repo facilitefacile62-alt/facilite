@@ -3262,81 +3262,82 @@ export default function MessagerieClient() {
                         </div>
                       )}
 
-                      {/* Boîte de prompt sombre arrondie style Lovable/Claude unifiée */}
-                      <div className="bg-[#0b0c0f] border border-[#222630] hover:border-[#323846] focus-within:border-gray-500 rounded-[24px] p-3 sm:p-3.5 shadow-xl transition-all">
-                        <textarea
-                          value={messageText}
-                          onChange={(e) => setMessageText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage(e);
-                            }
-                          }}
-                          rows={2}
-                          placeholder={activeConversation.isAI ? "Posez une question, demandez un conseil CV ou orientation..." : "Entrez votre message (Entrée pour envoyer)..."}
-                          className="w-full bg-transparent text-white placeholder-gray-500 text-xs sm:text-sm leading-relaxed resize-none focus:outline-none custom-scrollbar"
-                          style={{ maxHeight: "120px" }}
-                        />
+                      {/* Zone de saisie façon WhatsApp — identique sur téléphone, tablette et ordinateur :
+                          champ arrondi (émojis à gauche, pièce jointe à droite) + gros bouton rond à sa droite
+                          (micro quand le champ est vide, envoi dès qu'il y a du texte). */}
+                      <div className="flex items-end gap-2 pb-[env(safe-area-inset-bottom)]">
+                        <div className="flex-1 min-w-0 flex items-end gap-0.5 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 focus-within:border-emerald-400 rounded-[26px] px-1.5 py-1 shadow-sm transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="w-10 h-10 shrink-0 rounded-full text-gray-500 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer"
+                            title="Émojis"
+                            aria-label="Émojis"
+                          >
+                            <i className="fa-regular fa-face-smile text-xl"></i>
+                          </button>
 
-                        <div className="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-white/5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          {activeConversation.isAI && (
                             <button
                               type="button"
                               onClick={() => setShowQuickActions(!showQuickActions)}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition cursor-pointer ${
-                                showQuickActions ? "bg-white text-black" : "bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white"
+                              className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition cursor-pointer ${
+                                showQuickActions ? "bg-emerald-100 text-emerald-700" : "text-gray-500 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-zinc-800"
                               }`}
-                              title="Actions rapides & Suggestions"
+                              title="Actions rapides & suggestions"
+                              aria-label="Actions rapides"
                             >
-                              <i className="fa-solid fa-plus"></i>
+                              <i className="fa-solid fa-wand-magic-sparkles text-base"></i>
                             </button>
+                          )}
 
-                            <button
-                              type="button"
-                              onClick={handleAttachmentClick}
-                              className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[11px] font-medium flex items-center gap-1.5 transition cursor-pointer"
-                              title="Joindre un fichier ou CV"
-                            >
-                              <i className="fa-solid fa-paperclip text-[10px]"></i>
-                              <span>Attach</span>
-                            </button>
+                          <textarea
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage(e);
+                              }
+                            }}
+                            rows={Math.min(5, Math.max(1, messageText.split("\n").length))}
+                            placeholder={activeConversation.isAI ? "Posez une question, demandez un conseil CV ou orientation..." : "Message"}
+                            aria-label="Écrire un message"
+                            className="flex-1 min-w-0 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 text-[15px] leading-6 resize-none focus:outline-none py-2 custom-scrollbar"
+                            style={{ maxHeight: "140px" }}
+                          />
 
-                            <button
-                              type="button"
-                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                              className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-amber-400 text-xs flex items-center justify-center transition cursor-pointer"
-                              title="Émojis"
-                            >
-                              <i className="fa-regular fa-smile text-xs"></i>
-                            </button>
-
-                            <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-[11px] font-medium flex items-center gap-1.5 select-none hidden sm:inline-flex">
-                              <i className="fa-solid fa-globe text-[10px] text-gray-400"></i>
-                              <span>{activeConversation.isAI ? "Support RH" : "Direct"}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={startVoiceRecording}
-                              className="px-2 py-1 text-xs rounded-full text-gray-400 hover:text-white transition flex items-center justify-center cursor-pointer"
-                              title="Enregistrer une note vocale"
-                            >
-                              <i className="fa-solid fa-microphone text-sm"></i>
-                            </button>
-
-                            <button
-                              type="submit"
-                              disabled={!messageText.trim()}
-                              className="w-8 h-8 rounded-full bg-white text-black hover:bg-gray-200 disabled:opacity-25 disabled:hover:bg-white transition-all flex items-center justify-center font-black text-sm shadow-md cursor-pointer disabled:cursor-not-allowed active:scale-95 flex-shrink-0"
-                              title="Envoyer (Entrée)"
-                            >
-                              <i className="fa-solid fa-arrow-up text-xs font-black"></i>
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAttachmentClick}
+                            className="w-10 h-10 shrink-0 rounded-full text-gray-500 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center justify-center transition cursor-pointer"
+                            title="Joindre un fichier ou CV"
+                            aria-label="Joindre un fichier"
+                          >
+                            <i className="fa-solid fa-paperclip text-lg"></i>
+                          </button>
                         </div>
+
+                        {messageText.trim() ? (
+                          <button
+                            type="submit"
+                            className="w-12 h-12 shrink-0 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                            title="Envoyer (Entrée)"
+                            aria-label="Envoyer le message"
+                          >
+                            <i className="fa-solid fa-paper-plane text-base"></i>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={startVoiceRecording}
+                            className="w-12 h-12 shrink-0 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md flex items-center justify-center transition active:scale-95 cursor-pointer"
+                            title="Enregistrer une note vocale"
+                            aria-label="Enregistrer une note vocale"
+                          >
+                            <i className="fa-solid fa-microphone text-lg"></i>
+                          </button>
+                        )}
                       </div>
                     </form>
                   )}
