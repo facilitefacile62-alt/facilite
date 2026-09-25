@@ -116,8 +116,8 @@ export default function LoginScreen() {
             <View className="bg-white rounded-[22px] px-6 py-7 items-center border border-gray-200 shadow-xs">
               <View className="w-14 h-14 rounded-full bg-white border-2 border-[#085041] items-center justify-center">
                 <Image
-                  source={require('@/assets/images/login_key_teal.png')}
-                  style={{ width: 28, height: 28 }}
+                  source={require('@/assets/images/logo-cle.png')}
+                  style={{ width: 16, height: 32 }}
                   contentFit="contain"
                   alt="Facilité"
                 />

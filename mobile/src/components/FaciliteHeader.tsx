@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -35,14 +36,14 @@ export default function FaciliteHeader({ dark = false }: FaciliteHeaderProps) {
           style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
           <View
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 15,
-              backgroundColor: '#2563EB',
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: '#FFFFFF',
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-            <Ionicons name="key" size={16} color="#FFFFFF" />
+            <Image source={require('@/assets/images/logo-cle.png')} alt="Facilité" style={{ width: 13, height: 26 }} contentFit="contain" />
           </View>
           <Text
             style={{
