@@ -1377,7 +1377,7 @@ export default function AdminDashboardPage() {
       {/* ------------------------------------------------------------- */}
       {/* SIDEBAR LATÉRALE (desktop) */}
       {/* ------------------------------------------------------------- */}
-      <aside className="hidden md:flex w-60 flex-shrink-0 bg-white border-r border-gray-200 flex-col h-screen sticky top-0">
+      <aside className="hidden md:flex w-72 flex-shrink-0 bg-white border-r border-gray-200 flex-col h-screen sticky top-0">
         <div className="flex items-center space-x-2 px-5 py-5 border-b border-gray-100">
           <Link href="/" className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition" title="Retour à l'accueil">
             <i className="fa-solid fa-chevron-left text-xs"></i>
