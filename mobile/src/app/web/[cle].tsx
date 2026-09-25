@@ -25,6 +25,15 @@ function adresseCarte(cle: string, lat?: string, lng?: string, vue?: string): st
   return `?lat=${la}&lng=${lo}&vue=${vue === 'pleine' ? 'pleine' : 'mini'}`;
 }
 
+// Signale au serveur que cette page s'ouvre dans la WebView de l'app (pas un navigateur) : le middleware
+// (src/proxy.js) pose alors un cookie durable qui dit à RootLayout de ne pas afficher l'en-tête du site — il
+// double avec l'en-tête natif de l'app. Un aller-retour une seule fois par ouverture, jamais gardé dans
+// l'adresse ensuite. Les cibles authRequise n'en ont pas besoin : /auth/mobile-bridge pose ce même cookie
+// directement (pas de round-trip possible avant la première requête pour celles-ci).
+function avecMarqueurEmbarque(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}embed_app=1`;
+}
+
 export default function EcranWeb() {
   const { cle, template, id, lat, lng, vue } = useLocalSearchParams<{ cle: string; template?: string; id?: string; lat?: string; lng?: string; vue?: string }>();
   const router = useRouter();
@@ -122,7 +131,7 @@ export default function EcranWeb() {
           jetons?.renouvellement ?? ''
         )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}${id ? `&id=${encodeURIComponent(id)}` : ''}`,
       }
-    : { uri: `${SITE_URL}${config.chemin}${adresseCarte(cle, lat, lng, vue)}` };
+    : { uri: avecMarqueurEmbarque(`${SITE_URL}${config.chemin}${adresseCarte(cle, lat, lng, vue)}`) };
 
   return (
     <View className="flex-1 bg-white">
