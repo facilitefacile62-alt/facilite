@@ -115,7 +115,9 @@ export async function POST(req) {
     cible === "creer-cv" && typeof template === "string" && template
       ? `${chemin}?template=${encodeURIComponent(template)}`
       : chemin;
-  const res = NextResponse.redirect(new URL(cheminFinal, req.url));
+  // 303 (et non le 307 par défaut) : la redirection doit se faire en GET. Avec 307 le navigateur intégré rejouait le POST vers
+  // la page cible, qui répondait 405 (constaté le 25/09/2026 sur tablette : « Erreur 405 — /fonctionnalite-indisponible »).
+  const res = NextResponse.redirect(new URL(cheminFinal, req.url), 303);
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {

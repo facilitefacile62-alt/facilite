@@ -1,4 +1,6 @@
 const { test, expect } = require("@playwright/test");
+const fs = require("fs");
+const path = require("path");
 
 /**
  * Pont de session de l'app mobile (POST /auth/mobile-bridge) : seules les
@@ -44,5 +46,13 @@ test.describe("Pont de session mobile : liste blanche", () => {
   test("jetons manquants : refusé (400) avant toute vérification", async ({ request }) => {
     const r = await poster(request, { cible: "creer-cv" });
     expect(r.status()).toBe(400);
+  });
+
+  // Une redirection 307 (défaut de NextResponse.redirect) rejouerait le POST vers la page cible : le navigateur intégré de l'app
+  // affichait « Erreur 405 — /fonctionnalite-indisponible » (25/09/2026). Il faut 303 pour que la suite se fasse en GET.
+  // Vérifié sur le source : atteindre cette redirection exige un jeton valide, impossible à simuler ici.
+  test("la redirection après l'ouverture de session est un 303 (GET), jamais un 307 (POST rejoué)", () => {
+    const source = fs.readFileSync(path.join(__dirname, "../../src/app/auth/mobile-bridge/route.js"), "utf8");
+    expect(source).toMatch(/NextResponse\.redirect\([^;]*,\s*303\)/);
   });
 });
