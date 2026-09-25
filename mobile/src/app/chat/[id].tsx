@@ -51,6 +51,12 @@ const EMOJIS = [
   '🎉', '❤️', '🔥', '✨', '👋', '💯', '🙌', '😇',
 ];
 
+// Barres décoratives (pas une vraie mesure d'amplitude) : suffisant pour évoquer un enregistrement/une
+// écoute, comme le fait d'ailleurs souvent l'indicateur d'attente d'une vraie appli plutôt qu'un calcul
+// coûteux échantillon par échantillon en continu.
+const BARRES_SAISIE = [6, 11, 8, 15, 9, 13, 7, 12, 10, 16, 8, 11];
+const BARRES_LECTURE = [5, 9, 14, 8, 17, 11, 6, 13, 10, 16, 7, 12, 9, 15, 6, 11, 8, 14, 10, 5];
+
 function formaterDuree(secondes: number): string {
   const total = Math.max(0, Math.round(secondes));
   const min = Math.floor(total / 60);
@@ -234,30 +240,34 @@ export default function ChatDetailScreen() {
               />
             )}
 
-            {/* Menu pièce jointe : Prendre une photo / Galerie / Document (comme WhatsApp) */}
+            {/* Menu pièce jointe : feuille du bas, icônes en cercle (même famille visuelle que WhatsApp) */}
             {menuJointOuvert && (
-              <Pressable
-                onPress={() => setMenuJointOuvert(false)}
-                style={{ position: 'absolute', inset: 0 }}>
-                <View
+              <Pressable onPress={() => setMenuJointOuvert(false)} style={{ position: 'absolute', inset: 0 }}>
+                <Pressable
+                  onPress={() => {}}
                   style={{
                     position: 'absolute',
-                    left: 8,
-                    bottom: 68,
-                    width: 220,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     backgroundColor: '#FFFFFF',
-                    borderRadius: 18,
-                    padding: 6,
+                    borderTopLeftRadius: 22,
+                    borderTopRightRadius: 22,
+                    paddingTop: 20,
+                    paddingBottom: 26,
+                    paddingHorizontal: 16,
+                    flexDirection: 'row',
+                    justifyContent: 'space-around',
                     shadowColor: '#000',
                     shadowOpacity: 0.15,
-                    shadowRadius: 12,
-                    shadowOffset: { width: 0, height: 4 },
-                    elevation: 6,
+                    shadowRadius: 16,
+                    shadowOffset: { width: 0, height: -4 },
+                    elevation: 10,
                   }}>
-                  <OptionJointe icone="camera-outline" couleur="#0d3b34" fond="#d7f2ea" label="Prendre une photo" onPress={prendrePhoto} />
-                  <OptionJointe icone="images-outline" couleur="#b45309" fond="#fdf1d9" label="Galerie" onPress={choisirDansGalerie} />
-                  <OptionJointe icone="document-outline" couleur="#2563EB" fond="#dbe8fc" label="Document" onPress={choisirDocument} />
-                </View>
+                  <OptionJointe icone="document-outline" couleur="#7C3AED" fond="#EDE7FB" label="Document" onPress={choisirDocument} />
+                  <OptionJointe icone="camera-outline" couleur="#DC2626" fond="#FBE7E7" label="Appareil photo" onPress={prendrePhoto} />
+                  <OptionJointe icone="images-outline" couleur="#2563EB" fond="#E1EAFB" label="Galerie" onPress={choisirDansGalerie} />
+                </Pressable>
               </Pressable>
             )}
 
@@ -335,11 +345,11 @@ function OptionJointe({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, borderRadius: 12 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: fond, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name={icone} size={18} color={couleur} />
+    <Pressable onPress={onPress} style={{ alignItems: 'center', gap: 7, width: 84 }}>
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: fond, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icone} size={24} color={couleur} />
       </View>
-      <Text style={{ fontSize: 13.5, fontWeight: '600', color: '#1A1A1A' }}>{label}</Text>
+      <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#1A1A1A', textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
@@ -380,6 +390,15 @@ function ZoneSaisie({
   const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const etatEnregistreur = useAudioRecorderState(recorder, 200);
   const [modeEnregistrement, setModeEnregistrement] = useState(false);
+  // En pause : l'enregistrement est suspendu et écoutable avant d'être envoyé ou repris — comme WhatsApp
+  // (« Pause » puis « Reprendre »), pas seulement Annuler/Envoyer.
+  const [enPause, setEnPause] = useState(false);
+  const [uriApercu, setUriApercu] = useState<string | null>(null);
+  const lecteurApercu = useAudioPlayer(uriApercu ?? undefined);
+  const statutApercu = useAudioPlayerStatus(lecteurApercu);
+  const dureeApercu = statutApercu.duration || 0;
+  const positionApercu = statutApercu.currentTime || 0;
+  const avancementApercu = dureeApercu > 0 ? Math.min(1, positionApercu / dureeApercu) : 0;
 
   async function commencerEnregistrement() {
     const { granted } = await requestRecordingPermissionsAsync();
@@ -391,14 +410,46 @@ function ZoneSaisie({
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
+      setEnPause(false);
+      setUriApercu(null);
       setModeEnregistrement(true);
     } catch {
       Alert.alert('Micro', "Impossible de démarrer l'enregistrement pour le moment.");
     }
   }
 
+  function mettreEnPause() {
+    try {
+      recorder.pause();
+      setUriApercu(recorder.uri);
+      setEnPause(true);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de mettre en pause pour le moment.');
+    }
+  }
+
+  function reprendreEnregistrement() {
+    lecteurApercu.pause();
+    setUriApercu(null);
+    setEnPause(false);
+    recorder.record();
+  }
+
+  function basculerApercu() {
+    if (!uriApercu) return;
+    if (statutApercu.playing) {
+      lecteurApercu.pause();
+      return;
+    }
+    if (positionApercu >= dureeApercu - 0.05 && dureeApercu > 0) lecteurApercu.seekTo(0);
+    lecteurApercu.play();
+  }
+
   async function annulerEnregistrement() {
     setModeEnregistrement(false);
+    setEnPause(false);
+    lecteurApercu.pause();
+    setUriApercu(null);
     try {
       await recorder.stop();
     } catch {
@@ -408,6 +459,8 @@ function ZoneSaisie({
 
   async function envoyerEnregistrement() {
     setModeEnregistrement(false);
+    setEnPause(false);
+    lecteurApercu.pause();
     try {
       await recorder.stop();
     } catch {
@@ -415,6 +468,7 @@ function ZoneSaisie({
       return;
     }
     const uri = recorder.uri;
+    setUriApercu(null);
     if (!uri || !userId) return;
     await onEnvoyerFichier(uri, `note_vocale_${Date.now()}.m4a`, 'audio/m4a', undefined, 'audio');
   }
@@ -423,28 +477,79 @@ function ZoneSaisie({
     return (
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
           paddingHorizontal: 14,
-          paddingTop: 8,
-          paddingBottom: clavierOuvert ? 8 : paddingBas,
+          paddingTop: 10,
+          paddingBottom: clavierOuvert ? 10 : paddingBas,
           backgroundColor: 'rgba(242,240,234,0.96)',
+          gap: 10,
         }}>
-        <Pressable onPress={annulerEnregistrement} accessibilityLabel="Annuler la note vocale" hitSlop={8}>
-          <Ionicons name="trash-outline" size={20} color="#DC2626" />
-        </Pressable>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#DC2626' }} />
-        <Text style={{ fontSize: 13, fontWeight: '600', color: '#1A1A1A', fontVariant: ['tabular-nums'] }}>
-          {formaterDuree((etatEnregistreur.durationMillis || 0) / 1000)}
-        </Text>
-        <Text style={{ flex: 1, fontSize: 12, color: 'rgba(0,0,0,0.4)' }}>Enregistrement de la note vocale…</Text>
-        <Pressable
-          onPress={envoyerEnregistrement}
-          accessibilityLabel="Envoyer la note vocale"
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: VERT, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginLeft: 2 }} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable onPress={annulerEnregistrement} accessibilityLabel="Supprimer la note vocale" hitSlop={8}>
+            <Ionicons name="trash-outline" size={20} color="#DC2626" />
+          </Pressable>
+          {enPause ? (
+            <>
+              <Pressable
+                onPress={basculerApercu}
+                disabled={!uriApercu}
+                accessibilityLabel={statutApercu.playing ? "Mettre l'écoute en pause" : 'Écouter avant d’envoyer'}
+                style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: VERT, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={statutApercu.playing ? 'pause' : 'play'} size={14} color="#FFFFFF" style={statutApercu.playing ? undefined : { marginLeft: 1.5 }} />
+              </Pressable>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2, height: 18 }}>
+                {BARRES_LECTURE.map((h, i) => {
+                  const actif = i / BARRES_LECTURE.length <= avancementApercu;
+                  return (
+                    <View
+                      key={i}
+                      style={{ width: 2.5, height: h, borderRadius: 2, backgroundColor: actif ? VERT : 'rgba(0,0,0,0.15)' }}
+                    />
+                  );
+                })}
+              </View>
+              <Text style={{ fontSize: 12, color: 'rgba(0,0,0,0.5)', fontVariant: ['tabular-nums'] }}>
+                {formaterDuree(statutApercu.playing || positionApercu > 0 ? positionApercu : dureeApercu)}
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#DC2626' }} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#1A1A1A', fontVariant: ['tabular-nums'] }}>
+                {formaterDuree((etatEnregistreur.durationMillis || 0) / 1000)}
+              </Text>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2.5, height: 18 }}>
+                {BARRES_SAISIE.map((h, i) => (
+                  <View key={i} style={{ width: 2.5, height: h, borderRadius: 2, backgroundColor: 'rgba(220,38,38,0.55)' }} />
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable
+            onPress={enPause ? reprendreEnregistrement : mettreEnPause}
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1,
+              borderColor: 'rgba(0,0,0,0.1)',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}>
+            <Ionicons name={enPause ? 'mic' : 'pause'} size={16} color="#1A1A1A" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A' }}>{enPause ? 'Reprendre' : 'Pause'}</Text>
+          </Pressable>
+          <Pressable
+            onPress={envoyerEnregistrement}
+            accessibilityLabel="Envoyer la note vocale"
+            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: VERT, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginLeft: 2 }} />
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -560,17 +665,28 @@ function BulleMessage({ message }: { message: ChatMessage }) {
         {!aUnePieceJointe && message.text ? (
           <Text style={{ fontSize: 15, lineHeight: 21, color: '#111827' }}>{message.text}</Text>
         ) : null}
-        <Text
+        <View
           style={{
-            fontSize: 10.5,
-            color: 'rgba(0,0,0,0.45)',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 3,
             alignSelf: 'flex-end',
             marginTop: aUnePieceJointe && message.attachmentType === 'image' ? 0 : 2,
             marginRight: aUnePieceJointe && message.attachmentType === 'image' ? 6 : 0,
             marginBottom: aUnePieceJointe && message.attachmentType === 'image' ? 4 : 0,
           }}>
-          {message.time}
-        </Text>
+          <Text style={{ fontSize: 10.5, color: 'rgba(0,0,0,0.45)' }}>{message.time}</Text>
+          {/* Accusé de lecture, comme WhatsApp : coche grise simple tant que non lu, double coche colorée une
+              fois lu. Snapshot pris à l'ouverture du fil — ne se met pas à jour toute seule si l'autre
+              personne lit pendant que cet écran reste ouvert (pas de mise à jour en direct pour l'instant). */}
+          {moi && (
+            <Ionicons
+              name={message.isRead ? 'checkmark-done' : 'checkmark'}
+              size={13}
+              color={message.isRead ? '#34B7F1' : 'rgba(0,0,0,0.4)'}
+            />
+          )}
+        </View>
       </View>
     </View>
   );
@@ -659,8 +775,17 @@ function LecteurNoteVocale({ chemin, moi }: { chemin: string; moi: boolean }) {
           <Ionicons name={status.playing ? 'pause' : 'play'} size={15} color={moi ? '#FFFFFF' : '#111827'} style={status.playing ? undefined : { marginLeft: 1.5 }} />
         )}
       </View>
-      <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.12)', overflow: 'hidden' }}>
-        <View style={{ width: `${avancement * 100}%`, height: '100%', backgroundColor: moi ? VERT : '#6B7280' }} />
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2, height: 18 }}>
+        {BARRES_LECTURE.map((h, i) => {
+          const actif = i / BARRES_LECTURE.length <= avancement;
+          const couleurInactive = moi ? 'rgba(16,185,129,0.3)' : 'rgba(0,0,0,0.15)';
+          return (
+            <View
+              key={i}
+              style={{ width: 2.5, height: h, borderRadius: 2, backgroundColor: actif ? (moi ? VERT : '#374151') : couleurInactive }}
+            />
+          );
+        })}
       </View>
       <Text style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)', minWidth: 30, fontVariant: ['tabular-nums'] }}>
         {formaterDuree(status.playing || position > 0 ? position : duree)}

@@ -22,6 +22,10 @@ export type ChatMessage = {
   attachmentType: TypePieceJointe | null;
   fileName: string | null;
   fileSize: string | null;
+  // Accusé de lecture (coche simple/double façon WhatsApp) : seulement affiché sur MES messages, jamais sur
+  // ceux reçus. `is_read` ne distingue pas « livré » de « lu » (une seule colonne côté base) — coche grise
+  // simple tant que faux, double coche colorée quand vrai.
+  isRead: boolean;
 };
 
 const formatTime = (isoDate: string) =>
@@ -32,6 +36,7 @@ function formatMessageRow(row: {
   sender_id: string | null;
   content: string;
   created_at: string;
+  is_read?: boolean | null;
   attachment_url?: string | null;
   attachment_type?: string | null;
   file_name?: string | null;
@@ -44,6 +49,7 @@ function formatMessageRow(row: {
     text: row.content,
     time: formatTime(row.created_at),
     createdAt: row.created_at,
+    isRead: row.is_read === true,
     attachmentUrl: row.attachment_url || null,
     attachmentType: (row.attachment_type as TypePieceJointe) || null,
     fileName: row.file_name || null,
