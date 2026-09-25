@@ -262,8 +262,13 @@ html.dark .bg-whatsapp-chat {
   min-height: 112px !important;
 }
 
-/* Styles indispensables à la carte "Snap Map" plein écran mobile
-   (CarteMobileAutourDeMoi.jsx) — SCOPÉS sous .snap-map-plein-ecran :
+/* Styles indispensables à la carte "Snap Map" plein écran
+   (GlobeExplorateurBoutiques.jsx, ex-CarteMobileAutourDeMoi.jsx renommé) —
+   la classe n'avait jamais été rattachée au fichier renommé, laissant
+   Leaflet retomber sur son fond clair par défaut (#ddd) dès qu'une zone
+   n'a pas fini de charger ses tuiles pendant un déplacement/zoom — signalé
+   par l'utilisateur comme des "écrans blancs". SCOPÉS sous
+   .snap-map-plein-ecran :
    ".leaflet-container" tout court visait TOUTE carte Leaflet du site (la
    classe est générique, ajoutée par Leaflet lui-même à chaque instance),
    donc "height: 100% !important" cassait aussi la carte "Autour de moi" du

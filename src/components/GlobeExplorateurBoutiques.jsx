@@ -1698,7 +1698,7 @@ export default function GlobeExplorateurBoutiques({
       // z-index par défaut atteint 1000), sous les modales vraiment
       // globales (ex. AuthRequiredModal, z-[9999]) qui doivent pouvoir
       // s'afficher par-dessus même Explorer.
-      className="fixed inset-0 z-[2000] flex flex-col bg-[#0B0F17] overflow-hidden select-none font-sans"
+      className="snap-map-plein-ecran fixed inset-0 z-[2000] flex flex-col bg-[#0B0F17] overflow-hidden select-none font-sans"
       role="dialog"
       aria-modal="true"
       aria-label="Facilité Snap Map Sénégal"
