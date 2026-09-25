@@ -43,3 +43,64 @@ export async function obtenirMaProgressionFormationCv() {
   if (error) throw new Error(error.message || "Impossible de charger votre progression.");
   return data || [];
 }
+
+/**
+ * Un module précis + ses questions de quiz. Jamais bonne_reponse_index
+ * (colonne non accordée à authenticated, voir migration 20260925140000) —
+ * la correction se fait exclusivement côté serveur (soumettreQuizFormationCv).
+ */
+export async function obtenirModuleEtQuizFormationCv(moduleId) {
+  const [{ data: module, error: erreurModule }, { data: questions, error: erreurQuestions }] = await Promise.all([
+    supabase
+      .from("formation_redaction_cv_modules")
+      .select("id, titre, description, video_url, ordre")
+      .eq("id", moduleId)
+      .single(),
+    supabase
+      .from("formation_redaction_cv_quiz_questions")
+      .select("id, question, choix, ordre")
+      .eq("module_id", moduleId)
+      .order("ordre", { ascending: true }),
+  ]);
+
+  if (erreurModule) throw new Error(erreurModule.message || "Module introuvable.");
+  if (erreurQuestions) throw new Error(erreurQuestions.message || "Impossible de charger le quiz.");
+
+  return { module, questions: questions || [] };
+}
+
+/**
+ * Ma progression pour UN module précis, ou null si jamais consulté/tenté.
+ */
+export async function obtenirMaProgressionModuleFormationCv(moduleId) {
+  const { data, error } = await supabase
+    .from("formation_redaction_cv_progression_modules")
+    .select("vu, vu_le, quiz_score_pourcent, quiz_reussi, quiz_tente_le")
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (error) throw new Error(error.message || "Impossible de charger votre progression.");
+  return data || null;
+}
+
+/**
+ * Marque le module comme vu (bouton "J'ai visionné cette vidéo" — pas de
+ * vrai contenu vidéo pour l'instant, voir le placeholder côté écran).
+ */
+export async function marquerModuleVuFormationCv(moduleId) {
+  const { error } = await supabase.rpc("marquer_module_vu", { p_module_id: moduleId });
+  if (error) throw new Error(error.message || "Impossible d'enregistrer votre progression.");
+}
+
+/**
+ * Soumet les réponses au quiz d'un module — correction et certification
+ * entièrement côté serveur (soumettre_quiz_module, SECURITY DEFINER).
+ * `reponses` : [{ question_id, choix_index }, ...].
+ */
+export async function soumettreQuizFormationCv(moduleId, reponses) {
+  const { data, error } = await supabase.rpc("soumettre_quiz_module", {
+    p_module_id: moduleId,
+    p_reponses: reponses,
+  });
+  if (error) throw new Error(error.message || "Impossible de soumettre le quiz.");
+  return data;
+}

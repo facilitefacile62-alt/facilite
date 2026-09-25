@@ -93,9 +93,10 @@ export default function ModulesFormationCvClient() {
               const quizTente = p?.quiz_score_pourcent != null;
 
               return (
-                <div
+                <Link
                   key={module.id}
-                  className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs p-5 sm:p-6 flex items-start gap-4"
+                  href={`/formation-redaction-cv/modules/${module.id}`}
+                  className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs p-5 sm:p-6 flex items-start gap-4 hover:border-gray-300 dark:hover:border-gray-700 transition"
                 >
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
@@ -136,7 +137,9 @@ export default function ModulesFormationCvClient() {
                       )}
                     </div>
                   </div>
-                </div>
+
+                  <i className="fa-solid fa-chevron-right text-xs text-gray-300 dark:text-gray-600 shrink-0 mt-2"></i>
+                </Link>
               );
             })}
           </div>
