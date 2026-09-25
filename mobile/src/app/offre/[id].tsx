@@ -45,27 +45,18 @@ export default function FicheOffreScreen() {
     } catch {}
   };
 
-  const partager = async (plateforme?: string) => {
+  // Un seul bouton de partage (l'icône flèche de l'en-tête), qui ouvre le menu natif du téléphone : c'est LUI
+  // qui propose WhatsApp, Facebook, Messages ou toute autre application installée — jamais trois boutons
+  // séparés à choisir à l'avance. Avant, trois boutons WhatsApp/LinkedIn/Facebook dans le corps de la page
+  // avaient été pris pour des « comptes » déjà connectés (signalé le 25/09/2026) ; ce ne sont pourtant que des
+  // raccourcis de partage — supprimés au profit de ce seul bouton, plus proche de ce à quoi l'utilisateur
+  // s'attend.
+  const partager = async () => {
     if (!offre) return;
-    const message = `Découvrez cette offre d'emploi sur Facilité :\n${offre.titre} chez ${offre.entreprise}\n\nPostulez ici : ${urlOffre}`;
-
-    if (plateforme === 'whatsapp') {
-      Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`).catch(() => {});
-      return;
-    }
-    if (plateforme === 'linkedin') {
-      Linking.openURL(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(urlOffre)}`).catch(() => {});
-      return;
-    }
-    if (plateforme === 'facebook') {
-      Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(urlOffre)}`).catch(() => {});
-      return;
-    }
-
     try {
       await Share.share({
         title: offre.titre,
-        message,
+        message: `Découvrez cette offre d'emploi sur Facilité :\n${offre.titre} chez ${offre.entreprise}\n\nPostulez ici : ${urlOffre}`,
         url: urlOffre,
       });
     } catch {}
@@ -179,33 +170,6 @@ export default function FicheOffreScreen() {
             {/* Description */}
             <Text className="px-5 pt-5 pb-1.5 text-[15px] font-bold text-[#F5F6F7]">Description de l&apos;offre</Text>
             <Text className="px-5 text-[13.5px] leading-6 text-[#F5F6F7]/75 font-normal">{offre.description}</Text>
-
-            {/* Partage Social Universel */}
-            <View className="px-5 pt-5">
-              <Text className="text-[12px] font-bold text-gray-400 mb-2.5 uppercase tracking-wider">
-                Partager cette opportunité
-              </Text>
-              <View className="flex-row gap-2.5">
-                <Pressable
-                  onPress={() => partager('whatsapp')}
-                  className="flex-1 py-2.5 rounded-xl bg-[#25D366]/20 border border-[#25D366]/40 items-center justify-center flex-row gap-2">
-                  <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
-                  <Text className="text-[#25D366] text-[12px] font-bold">WhatsApp</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => partager('linkedin')}
-                  className="flex-1 py-2.5 rounded-xl bg-[#0077B5]/20 border border-[#0077B5]/40 items-center justify-center flex-row gap-2">
-                  <Ionicons name="logo-linkedin" size={16} color="#0077B5" />
-                  <Text className="text-[#0077B5] text-[12px] font-bold">LinkedIn</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => partager('facebook')}
-                  className="flex-1 py-2.5 rounded-xl bg-[#1877F2]/20 border border-[#1877F2]/40 items-center justify-center flex-row gap-2">
-                  <Ionicons name="logo-facebook" size={16} color="#1877F2" />
-                  <Text className="text-[#1877F2] text-[12px] font-bold">Facebook</Text>
-                </Pressable>
-              </View>
-            </View>
           </ScrollView>
         )}
       </SafeAreaView>
