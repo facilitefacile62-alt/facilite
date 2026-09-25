@@ -5753,43 +5753,6 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   </div>
                 </div>
 
-                {/* SECTION EXPÉDITION & RÉASSURANCE STYLE SHEIN (Capture 1 & 2) */}
-                <div className="border border-gray-200 dark:border-zinc-800 rounded-2xl p-3.5 space-y-2.5 bg-white dark:bg-zinc-900/40">
-                  <div className="flex items-center justify-between text-xs font-bold text-gray-900 dark:text-white pb-2 border-b border-gray-100 dark:border-zinc-800">
-                    <span className="flex items-center gap-1.5">
-                      <span>Expédition à</span>
-                      <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-zinc-800 text-[11px] text-gray-800 dark:text-gray-200">
-                        📍 Sénégal
-                      </span>
-                    </span>
-                    <i className="fa-solid fa-chevron-right text-[10px] text-gray-400"></i>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300">
-                    <i className="fa-solid fa-truck text-emerald-600 mt-0.5"></i>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-emerald-600 dark:text-emerald-400">Livraison Express 24h - 48h</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Expédition rapide à Dakar et dans toutes les régions</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300 pt-1">
-                    <i className="fa-solid fa-rotate-left text-blue-600 mt-0.5"></i>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 dark:text-white">Vérification à la livraison</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Inspectez votre colis avant tout règlement</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 text-xs text-gray-700 dark:text-gray-300 pt-1">
-                    <i className="fa-solid fa-shield-halved text-amber-600 mt-0.5"></i>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 dark:text-white">Paiement 100% Sécurisé</p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Wave, Orange Money ou Espèces à la livraison</p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Onglets Description & Caractéristiques */}
                 <div className="space-y-2 pt-2">
                   <div className="flex border-b border-gray-200 dark:border-zinc-800 text-xs font-bold">
@@ -5836,32 +5799,6 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
 
               {/* 3. COLONNE DROITE (lg:col-span-3) : Actions & Récapitulatif (Desktop) */}
               <div className="lg:col-span-3 space-y-4 flex flex-col justify-between">
-                
-                <div className="space-y-4">
-                  {/* Protection des Commandes & Moyens de Paiement */}
-                  <div className="p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-900/90 border border-gray-200/80 dark:border-zinc-800 space-y-2.5">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-gray-900 dark:text-white">
-                      <i className="fa-solid fa-shield-halved text-emerald-600 text-sm"></i>
-                      <span>Protection des commandes</span>
-                    </div>
-                    
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      Paiements directs et vérification avant acceptation :
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 text-[#1DA1F2] text-[10px] font-black border border-blue-200/60 dark:border-blue-900">
-                        Wave
-                      </span>
-                      <span className="px-2 py-1 rounded-md bg-orange-50 dark:bg-orange-950/60 text-[#FF7900] text-[10px] font-black border border-orange-200/60 dark:border-orange-900">
-                        Orange Money
-                      </span>
-                      <span className="px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 text-[10px] font-black border border-emerald-200/60 dark:border-emerald-900">
-                        Espèces
-                      </span>
-                    </div>
-                  </div>
-                </div>
 
 
 

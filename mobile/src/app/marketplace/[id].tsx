@@ -313,52 +313,6 @@ export default function ArticleScreen() {
           </View>
         </View>
 
-        {/* Section Livraison & Garanties Style Shein */}
-        <View className="bg-white mt-2 p-4">
-          <View className="flex-row items-center justify-between pb-3 border-b border-gray-100">
-            <Text className="text-[13px] font-bold text-gray-800">Expédition vers</Text>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="location-sharp" size={14} color="#10B981" />
-              <Text className="text-[13px] font-bold text-[#1A1A1A]">Sénégal, Dakar</Text>
-              <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
-            </View>
-          </View>
-
-          <View className="mt-3 gap-3">
-            <View className="flex-row items-start gap-3">
-              <Ionicons name="car-outline" size={18} color="#047857" />
-              <View className="flex-1">
-                <Text className="text-[12.5px] font-bold text-emerald-700">
-                  Livraison Express Rapide (24h - 48h)
-                </Text>
-                <Text className="text-[11.5px] text-gray-500">
-                  Partout à Dakar et régions • Suivi par coursier
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row items-start gap-3">
-              <Ionicons name="refresh-outline" size={18} color="#4B5563" />
-              <View className="flex-1">
-                <Text className="text-[12.5px] font-bold text-gray-800">
-                  Vérification à la réception & Retours faciles
-                </Text>
-                <Text className="text-[11.5px] text-gray-500">
-                  Payez après vérification du produit
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row items-start gap-3">
-              <Ionicons name="shield-checkmark-outline" size={18} color="#2563EB" />
-              <View className="flex-1">
-                <Text className="text-[12.5px] font-bold text-gray-800">
-                  Paiements Sécurisés (Wave, Orange Money, Espèces)
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
 
         {/* Boutique / Vendeur */}
         <View className="bg-white mt-2 p-4">
