@@ -15,8 +15,18 @@ import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
 // POST /auth/mobile-bridge avec les jetons de la session déjà ouverte dans
 // l'app — la redirection serveur qui suit amène la WebView sur la page
 // réelle déjà connectée, sans reconnexion demandée à l'utilisateur.
+// Carte des boutiques : la position vient de l'app (déjà autorisée), jamais du navigateur intégré. Seuls des nombres et
+// deux valeurs de vue connues sont recopiés dans l'adresse.
+function adresseCarte(cle: string, lat?: string, lng?: string, vue?: string): string {
+  if (cle !== 'marketplace-carte') return '';
+  const la = Number(lat);
+  const lo = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return '';
+  return `?lat=${la}&lng=${lo}&vue=${vue === 'pleine' ? 'pleine' : 'mini'}`;
+}
+
 export default function EcranWeb() {
-  const { cle, template, id } = useLocalSearchParams<{ cle: string; template?: string; id?: string }>();
+  const { cle, template, id, lat, lng, vue } = useLocalSearchParams<{ cle: string; template?: string; id?: string; lat?: string; lng?: string; vue?: string }>();
   const router = useRouter();
   const webviewRef = useRef<WebView>(null);
   const [chargement, setChargement] = useState(true);
@@ -106,7 +116,7 @@ export default function EcranWeb() {
           jetons?.renouvellement ?? ''
         )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}${id ? `&id=${encodeURIComponent(id)}` : ''}`,
       }
-    : { uri: `${SITE_URL}${config.chemin}` };
+    : { uri: `${SITE_URL}${config.chemin}${adresseCarte(cle, lat, lng, vue)}` };
 
   return (
     <View className="flex-1 bg-white">

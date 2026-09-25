@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -23,6 +23,13 @@ import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 // on reprend la palette de l'app (vert profond #0d3b34, menthe #6ee7c9, fond
 // clair) pour rester cohérent avec Offres et Accueil.
 const VERT_PROFOND = '#0d3b34';
+
+// Choix du menu « Autour de moi » — mêmes libellés que le menu du site (MenuAutourDeMoi.jsx).
+const OPTIONS_AUTOUR_DE_MOI: { mode: 'liste' | 'mini' | 'pleine'; libelle: string; sous: string; icone: keyof typeof Ionicons.glyphMap }[] = [
+  { mode: 'liste', libelle: 'Articles proches', sous: 'Les articles de votre zone', icone: 'grid-outline' },
+  { mode: 'mini', libelle: 'Mini carte', sous: 'Aperçu de la carte des boutiques', icone: 'map-outline' },
+  { mode: 'pleine', libelle: 'Pleine carte', sous: 'Carte en grand écran', icone: 'expand-outline' },
+];
 
 // Nombre impair d'articles : sans case vide, la dernière carte s'étirerait sur
 // toute la largeur (numColumns=2, flex-1).
@@ -80,14 +87,30 @@ export default function MarketplaceScreen() {
   const { etat, position, activer, desactiver } = useLocalisation();
   const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, recherche, position);
 
-  // "Autour de moi" : la permission n'est demandée qu'ici, au toucher du bouton.
-  async function basculerAutourDeMoi() {
-    if (etat === 'active') {
-      desactiver();
-      return;
-    }
+  // Menu « Autour de moi » (comme sur le site) : Articles proches / Mini carte / Pleine carte.
+  const [menuAutourOuvert, setMenuAutourOuvert] = useState(false);
+
+  // "Autour de moi" : la permission n'est demandée qu'ici, au choix dans le menu.
+  async function choisirAutourDeMoi(mode: 'liste' | 'mini' | 'pleine') {
+    setMenuAutourOuvert(false);
     if (etat === 'recherche') return;
-    const { etat: resultat } = await activer();
+    let p = position;
+    if (!p) {
+      const r = await activer();
+      if (r.etat !== 'active' || !r.position) {
+        signalerEchecLocalisation(r.etat);
+        return;
+      }
+      p = r.position;
+    }
+    if (mode === 'liste') return; // la position est active : la liste est triée du plus proche au plus éloigné
+    router.push({
+      pathname: '/web/[cle]',
+      params: { cle: 'marketplace-carte', lat: String(p.latitude), lng: String(p.longitude), vue: mode },
+    });
+  }
+
+  function signalerEchecLocalisation(resultat: string) {
     if (resultat === 'refusee') {
       Alert.alert(
         'Localisation désactivée',
@@ -156,8 +179,9 @@ export default function MarketplaceScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
             <Pressable
-              onPress={basculerAutourDeMoi}
+              onPress={() => (etat === 'recherche' ? undefined : setMenuAutourOuvert(true))}
               accessibilityLabel="Autour de moi"
+              accessibilityHint="Ouvre le choix : articles proches, mini carte ou pleine carte"
               className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border ${
                 etat === 'active' ? 'border-transparent' : 'bg-white border-[#10B981]'
               }`}
@@ -247,6 +271,50 @@ export default function MarketplaceScreen() {
           />
         )}
       </SafeAreaView>
+
+      {/* Menu « Autour de moi » : mêmes trois choix que sur le site */}
+      <Modal visible={menuAutourOuvert} transparent animationType="fade" onRequestClose={() => setMenuAutourOuvert(false)}>
+        <Pressable
+          onPress={() => setMenuAutourOuvert(false)}
+          accessibilityLabel="Fermer le menu"
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+          <Pressable
+            onPress={() => {}}
+            style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: 28, gap: 6 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1A1A1A', marginBottom: 6, paddingHorizontal: 4 }}>Autour de moi</Text>
+            {OPTIONS_AUTOUR_DE_MOI.map((o) => (
+              <Pressable
+                key={o.mode}
+                onPress={() => choisirAutourDeMoi(o.mode)}
+                accessibilityRole="button"
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 6, borderRadius: 14 }}
+                android_ripple={{ color: 'rgba(16,185,129,0.12)' }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name={o.icone} size={19} color="#047857" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1A1A1A' }}>{o.libelle}</Text>
+                  <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{o.sous}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
+              </Pressable>
+            ))}
+            {etat === 'active' && (
+              <Pressable
+                onPress={() => {
+                  setMenuAutourOuvert(false);
+                  desactiver();
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 6, marginTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="close" size={19} color="#DC2626" />
+                </View>
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#DC2626' }}>Désactiver « Autour de moi »</Text>
+              </Pressable>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

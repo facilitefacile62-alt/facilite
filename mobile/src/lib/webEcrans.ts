@@ -17,6 +17,7 @@
 // D'ENTRÉE.
 export type CleEcranWeb =
   | 'marketplace'
+  | 'marketplace-carte'
   | 'creer-cv'
   | 'modeles'
   | 'importer-cv'
@@ -54,6 +55,8 @@ const protege = (titre: string, chemin: string): EcranWebConfig => ({ titre, che
 
 export const WEB_ECRANS: Record<CleEcranWeb, EcranWebConfig> = {
   marketplace: { titre: 'Marketplace', chemin: '/marketplace', authRequise: false },
+  // Carte des boutiques autour de moi (mini carte ou pleine carte) : /marketplace avec lat, lng et vue — voir web/[cle].tsx.
+  'marketplace-carte': { titre: 'Carte des boutiques', chemin: '/marketplace', authRequise: false },
   'creer-cv': protege('Créer mon CV', '/creer-cv'),
   modeles: protege('Modèles de CV', '/modeles'),
   'importer-cv': protege('Importer mon CV', '/importer-cv'),
