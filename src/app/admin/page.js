@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
@@ -231,6 +231,34 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [tableRoleFilter, setTableRoleFilter] = useState("all");
   const [updatingUserId, setUpdatingUserId] = useState(null);
+
+  // Glisser-déposer à la souris pour faire défiler horizontalement le tableau
+  // "Liste des Comptes" : la barre de défilement seule n'est pas assez visible
+  // sur un tableau aussi large (colonnes fixées à gauche/droite).
+  const usersTableScrollRef = useRef(null);
+  const usersTableDrag = useRef({ active: false, startX: 0, scrollLeft: 0 });
+
+  function startUsersTableDrag(e) {
+    if (e.target.closest("select, button, a, input, textarea")) return;
+    const el = usersTableScrollRef.current;
+    if (!el) return;
+    usersTableDrag.current = { active: true, startX: e.pageX, scrollLeft: el.scrollLeft };
+    el.style.cursor = "grabbing";
+    el.style.userSelect = "none";
+  }
+  function moveUsersTableDrag(e) {
+    if (!usersTableDrag.current.active) return;
+    const el = usersTableScrollRef.current;
+    if (!el) return;
+    el.scrollLeft = usersTableDrag.current.scrollLeft - (e.pageX - usersTableDrag.current.startX);
+  }
+  function endUsersTableDrag() {
+    usersTableDrag.current.active = false;
+    const el = usersTableScrollRef.current;
+    if (!el) return;
+    el.style.cursor = "grab";
+    el.style.userSelect = "";
+  }
 
   // --- Onglet Sécurité (partie D) ---
   const [securityAlerts, setSecurityAlerts] = useState([]);
@@ -1763,7 +1791,15 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto overflow-y-auto custom-scrollbar border-t border-gray-100" style={{ maxHeight: '520px', minHeight: '350px' }}>
+              <div
+                ref={usersTableScrollRef}
+                onMouseDown={startUsersTableDrag}
+                onMouseMove={moveUsersTableDrag}
+                onMouseUp={endUsersTableDrag}
+                onMouseLeave={endUsersTableDrag}
+                className="overflow-x-auto overflow-y-auto admin-table-scroll border-t border-gray-100 cursor-grab"
+                style={{ maxHeight: '520px', minHeight: '350px' }}
+              >
                 <table className="w-full text-left border-collapse whitespace-nowrap text-xs">
                   <thead className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-xs shadow-xs">
                     <tr className="border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">

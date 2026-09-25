@@ -213,6 +213,29 @@ html.dark .divide-gray-100 > * + * {
   scrollbar-width: none !important;
 }
 
+/* Barre de défilement visible pour les tableaux admin trop larges (ex. Liste
+   des Comptes) : .custom-scrollbar masque tout défilement, ce qui le rend
+   invisible et impossible à repérer pour l'utilisateur sur un tableau qui
+   déborde horizontalement. */
+.admin-table-scroll::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.admin-table-scroll::-webkit-scrollbar-track {
+  background: #F3F4F6;
+}
+.admin-table-scroll::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 999px;
+}
+.admin-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+.admin-table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB #F3F4F6;
+}
+
 /* Fond d'écran des discussions — motif de marque Facilité (tuile 280x280
    seamless), remplace l'ancien pointillé générique façon WhatsApp. Les
    bulles de message ont un fond opaque (#D9FDD3/#005C4B envoyé, blanc
