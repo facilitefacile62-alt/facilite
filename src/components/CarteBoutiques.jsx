@@ -354,6 +354,21 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
     []
   );
 
+  // Survol d'un avatar du dock (pas un clic) : recentre la carte sur cette
+  // boutique et ouvre sa bulle, SANS "committer" la sélection — contrairement
+  // à ouvrirBoutiqueDuDock, ne touche pas boutiqueActiveId et n'appelle pas
+  // onChoisirBoutique (qui ouvre la fiche complète côté MarketplaceClient :
+  // un simple survol ne doit jamais déclencher cette navigation). Différent
+  // aussi du survol d'un marqueur SUR la carte (ligne ~973, "pas
+  // d'autoPan") : là, le marqueur est déjà visible sous la souris ; ici,
+  // l'avatar du dock peut représenter une boutique hors champ, donc sans
+  // recentrage la bulle s'ouvrirait détachée de tout marqueur visible.
+  const survolerBoutiqueDuDock = useCallback((b) => {
+    carteRef.current?.panTo(b.position, { animate: true, duration: 0.8 });
+    const handler = popupsBoutiquesRef.current.get(b.id);
+    if (handler?.ouvrir) handler.ouvrir();
+  }, []);
+
   const allerBoutiquePrecedente = () => {
     const idxActuel = boutiquesAffichees.findIndex((b) => b.id === (boutiqueActiveId || boutiquesAffichees[0]?.id));
     const prevIdx = idxActuel > 0 ? idxActuel - 1 : boutiquesAffichees.length - 1;
@@ -1349,7 +1364,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
                               onChoisirBoutique?.(b.id);
                               centrerDansDefileur(carouselContainerRef.current, e.currentTarget);
                             }}
-                            onMouseEnter={() => popupsBoutiquesRef.current.get(b.id)?.ouvrir?.()}
+                            onMouseEnter={() => survolerBoutiqueDuDock(b)}
                             onMouseLeave={() => popupsBoutiquesRef.current.get(b.id)?.fermer?.()}
                             className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
                           >
