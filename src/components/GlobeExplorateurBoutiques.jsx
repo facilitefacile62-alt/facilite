@@ -210,6 +210,14 @@ export default function GlobeExplorateurBoutiques({
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
+  // Filtre par catégorie d'établissement (barre de pastilles sous la
+  // recherche) : null = "Tout", sinon une clé de categorie_etablissement
+  // (LIBELLES_CATEGORIE_ETABLISSEMENT). Ne s'applique qu'aux établissements
+  // (type_boutique === 'etablissement') — les boutiques produit/service
+  // n'ont pas de categorie_etablissement, donc disparaissent de la liste
+  // quand une catégorie est choisie, comme demandé (parcourir par type de
+  // lieu réel plutôt que par boutique).
+  const [categorieFiltre, setCategorieFiltre] = useState(null);
   const [styleActif, setStyleActif] = useState("dark"); // 'dark' (Défaut Dark Mapbox) | 'voyager' | 'satellite'
   const [localisationEnCours, setLocalisationEnCours] = useState(false);
   const [erreurLocalisation, setErreurLocalisation] = useState("");
@@ -525,11 +533,14 @@ export default function GlobeExplorateurBoutiques({
     } else {
       base = marqueurs;
     }
+    if (categorieFiltre) {
+      base = base.filter((b) => b.categorie_etablissement === categorieFiltre);
+    }
     if (!rechercheNormalisee) return base;
     return base.filter(
       (b) => (b.nom || "").toLowerCase().includes(rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
     );
-  }, [marqueurs, filtreActif, rechercheNormalisee, idsBoutiquesArticlesFiltres]);
+  }, [marqueurs, filtreActif, categorieFiltre, rechercheNormalisee, idsBoutiquesArticlesFiltres]);
 
   // Tous les points affichés (boutiques + "Vous êtes ici" si placé) — sert
   // à la fois à détecter les marqueurs superposés au clic et au cadre de
@@ -1750,6 +1761,41 @@ export default function GlobeExplorateurBoutiques({
               <span>L'intelligence artificielle analyse votre photo...</span>
             </div>
           )}
+        </div>
+
+        {/* Barre de catégories d'établissement — pastilles défilables
+            horizontalement, juste sous la recherche. Distincte de la barre
+            "Toutes les boutiques/Populaires/LIVE" ci-dessous : celle-ci
+            filtre par TYPE DE LIEU réel (restaurant, banque, arrêt de bus...),
+            celle-là par statut des boutiques produit. Ne s'applique qu'aux
+            établissements (voir categorieFiltre, boutiquesAffichees). */}
+        <div className="pointer-events-auto flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
+          <button
+            type="button"
+            onClick={() => setCategorieFiltre(null)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition cursor-pointer shadow-md backdrop-blur-md ${
+              categorieFiltre === null
+                ? "bg-white text-gray-950 font-black shadow-white/20"
+                : "bg-gray-900/80 text-white hover:bg-gray-800 border border-gray-700/80"
+            }`}
+          >
+            Tout
+          </button>
+          {Object.entries(LIBELLES_CATEGORIE_ETABLISSEMENT).map(([cle, libelle]) => (
+            <button
+              key={cle}
+              type="button"
+              onClick={() => setCategorieFiltre(cle)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shadow-md backdrop-blur-md ${
+                categorieFiltre === cle
+                  ? "bg-white text-gray-950 font-black shadow-white/20"
+                  : "bg-gray-900/80 text-white hover:bg-gray-800 border border-gray-700/80"
+              }`}
+            >
+              <span>{EMOJI_CATEGORIE_ETABLISSEMENT[cle]}</span>
+              <span>{libelle}</span>
+            </button>
+          ))}
         </div>
 
         {/* Pilules de filtres thématiques (Dark Snap Map) */}
