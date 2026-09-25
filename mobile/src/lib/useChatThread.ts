@@ -3,10 +3,12 @@ import {
   chargerAutreParticipant,
   fetchThreadMessages,
   marquerFilCommeLu,
+  sendAttachmentMessage,
   sendMessage,
   touchConversation,
   type ChatMessage,
 } from '@/lib/messages';
+import type { TypePieceJointe } from '@/lib/chatAttachments';
 
 export type AutreParticipant = { id: string; nom: string; estAdmin: boolean };
 
@@ -67,5 +69,32 @@ export function useChatThread(
     [conversationId, userId, autreParticipant, envoiEnCours, typeDiscussion]
   );
 
-  return { messages, autreParticipant, envoyer, envoiEnCours };
+  const envoyerPieceJointe = useCallback(
+    async (attachmentUrl: string, attachmentType: TypePieceJointe, fileName: string, fileSize: string) => {
+      if (!conversationId || !userId || envoiEnCours) return;
+
+      setEnvoiEnCours(true);
+      try {
+        const nouveau = await sendAttachmentMessage({
+          senderId: userId,
+          receiverId: autreParticipant?.id ?? null,
+          conversationId,
+          typeDiscussion,
+          attachmentUrl,
+          attachmentType,
+          fileName,
+          fileSize,
+        });
+        if (nouveau) {
+          setMessages((prev) => (prev ? [...prev, nouveau] : [nouveau]));
+          await touchConversation(conversationId, nouveau.text);
+        }
+      } finally {
+        setEnvoiEnCours(false);
+      }
+    },
+    [conversationId, userId, autreParticipant, envoiEnCours, typeDiscussion]
+  );
+
+  return { messages, autreParticipant, envoyer, envoyerPieceJointe, envoiEnCours };
 }

@@ -41,7 +41,9 @@
         {
           "locationWhenInUsePermission": "Facilité utilise votre position pour afficher les articles du Marketplace près de vous."
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 // conversation du handoff (06-chat-detail.html), plutôt que le modèle
 // fusionné du web.
 
+import type { TypePieceJointe } from '@/lib/chatAttachments';
+
 export type ChatMessage = {
   id: string;
   sender: 'me' | 'them';
@@ -16,6 +18,10 @@ export type ChatMessage = {
   text: string;
   time: string;
   createdAt: string;
+  attachmentUrl: string | null;
+  attachmentType: TypePieceJointe | null;
+  fileName: string | null;
+  fileSize: string | null;
 };
 
 const formatTime = (isoDate: string) =>
@@ -26,6 +32,10 @@ function formatMessageRow(row: {
   sender_id: string | null;
   content: string;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  file_name?: string | null;
+  file_size?: string | null;
 }, currentUserId: string): ChatMessage {
   return {
     id: row.id,
@@ -34,6 +44,10 @@ function formatMessageRow(row: {
     text: row.content,
     time: formatTime(row.created_at),
     createdAt: row.created_at,
+    attachmentUrl: row.attachment_url || null,
+    attachmentType: (row.attachment_type as TypePieceJointe) || null,
+    fileName: row.file_name || null,
+    fileSize: row.file_size || null,
   };
 }
 
@@ -41,7 +55,7 @@ function formatMessageRow(row: {
 export async function fetchThreadMessages(conversationId: string, currentUserId: string) {
   const { data, error } = await supabase
     .from('messages')
-    .select('id, sender_id, receiver_id, content, created_at, is_read')
+    .select('id, sender_id, receiver_id, content, created_at, is_read, attachment_url, attachment_type, file_name, file_size')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
 
@@ -99,6 +113,57 @@ export async function sendMessage({
 
   if (error || !data) {
     console.error("Erreur d'envoi du message:", error?.message);
+    return null;
+  }
+
+  return formatMessageRow(data, senderId);
+}
+
+/**
+ * Insère un message porteur d'une pièce jointe (photo, document ou note vocale) — même schéma que le site
+ * (sendAttachmentMessage, MessagerieClient.js) : `content` reste un texte de légende lisible même sans
+ * ouvrir la pièce jointe, les 4 colonnes attachment_* portent le fichier réel.
+ */
+export async function sendAttachmentMessage({
+  senderId,
+  receiverId,
+  conversationId,
+  typeDiscussion,
+  attachmentUrl,
+  attachmentType,
+  fileName,
+  fileSize,
+}: {
+  senderId: string;
+  receiverId: string | null;
+  conversationId: string;
+  typeDiscussion?: 'MARKETPLACE';
+  attachmentUrl: string;
+  attachmentType: TypePieceJointe;
+  fileName: string;
+  fileSize: string;
+}) {
+  const content = attachmentType === 'audio' ? '🎙️ Note vocale' : `📎 Fichier joint : ${fileName}`;
+
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      sender_id: senderId,
+      receiver_id: receiverId,
+      conversation_id: conversationId,
+      content,
+      is_read: false,
+      attachment_url: attachmentUrl,
+      attachment_type: attachmentType,
+      file_name: fileName,
+      file_size: fileSize,
+      ...(typeDiscussion ? { type_discussion: typeDiscussion } : {}),
+    })
+    .select('id, sender_id, receiver_id, content, created_at, is_read, attachment_url, attachment_type, file_name, file_size')
+    .single();
+
+  if (error || !data) {
+    console.error("Erreur d'envoi de la pièce jointe:", error?.message);
     return null;
   }
 
