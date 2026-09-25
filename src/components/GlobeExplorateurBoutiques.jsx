@@ -13,6 +13,7 @@ import {
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation } from "@/lib/dissociationMarqueurs";
+import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
 // anonyme à ces tuiles (elles renvoient un placeholder "API KEY REQUIRED" en
@@ -808,6 +809,26 @@ export default function GlobeExplorateurBoutiques({
 
         coucheTuilesRef.current = couche;
         groupeMarqueursRef.current = L.layerGroup().addTo(carte);
+
+        // Repères réels de transport public (BRT, TER) — couche de référence
+        // statique, jamais issue de marketplace_stores (pas des boutiques,
+        // personne n'en est "propriétaire" sur Facilité). Voir
+        // src/lib/transportSenegal.js pour la source des coordonnées.
+        const coucheTransport = L.layerGroup().addTo(carte);
+        const ajouterStationTransport = (station, couleur, reseau) => {
+          L.circleMarker([station.lat, station.lng], {
+            radius: 5,
+            weight: 2,
+            color: "#ffffff",
+            fillColor: couleur,
+            fillOpacity: 0.95,
+            pane: "markerPane",
+          })
+            .bindPopup(`<strong>${reseau}</strong><br>${echapperHtml(station.nom)}`)
+            .addTo(coucheTransport);
+        };
+        STATIONS_BRT.forEach((s) => ajouterStationTransport(s, COULEUR_BRT, "🚌 BRT"));
+        STATIONS_TER.forEach((s) => ajouterStationTransport(s, COULEUR_TER, "🚆 TER"));
 
         // Rendu "sombre" simulé par filtre CSS sur le seul pane des tuiles
         // (getPane("tilePane") renvoie le conteneur DOM des images raster,
