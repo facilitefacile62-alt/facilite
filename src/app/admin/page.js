@@ -96,6 +96,7 @@ const NAV_SECTIONS = [
     items: [
       { type: "link", href: "/admin/scraping", icon: "🤖", label: "Agrégation & Scraping" },
       { type: "tab", id: "dashboard", icon: "📊", label: "Statistiques" },
+      { type: "link", href: "/admin/sessions", icon: "🕒", label: "Fréquentation & sessions", badge: "Démo" },
     ],
   },
 ];
@@ -1272,8 +1273,13 @@ export default function AdminDashboardPage() {
           className={baseClass}
         >
           <span>{item.icon}</span>
-          <span>{item.label}</span>
+          <span className="truncate">{item.label}</span>
           {item.unread && <UnreadBadge count={unreadMessagesCount} />}
+          {item.badge && (
+            <span className="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
+              {item.badge}
+            </span>
+          )}
         </Link>
       );
     }
