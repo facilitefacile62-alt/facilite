@@ -5800,6 +5800,77 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
               {/* 3. COLONNE DROITE (lg:col-span-3) : Actions & Récapitulatif (Desktop) */}
               <div className="lg:col-span-3 space-y-4 flex flex-col justify-between">
 
+                {/* Actions — desktop uniquement (lg+) : la barre fixe du bas
+                    (plus bas dans ce fichier) reste seule visible en dessous
+                    de lg. Repositionnées ici, dans la partie autrement vierge
+                    depuis le retrait de la section réassurance style Shein,
+                    plutôt que superposées en bas de l'écran — demande
+                    explicite de l'utilisateur, avec une fiche Alibaba en
+                    référence (actions dans la colonne de droite). */}
+                <div className="hidden lg:flex lg:flex-col gap-2.5 sticky top-4">
+                  {etatDiscussion === "pret" ? (
+                    <Link
+                      href={construireLienDiscussion({ proprietaireId, article, prixUnitaire, photoUrl: photoPrincipale })}
+                      className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
+                    >
+                      <i className="fa-regular fa-comment-dots text-base"></i>
+                      <span>Discuter</span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full h-12 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 font-bold text-sm uppercase flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <i className="fa-regular fa-comment-dots text-base"></i>
+                      <span>Discuter</span>
+                    </button>
+                  )}
+
+                  {lienWhatsApp && !estMonArticle ? (
+                    <a
+                      href={lienWhatsApp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
+                    >
+                      <i className="fa-brands fa-whatsapp text-lg"></i>
+                      <span>WhatsApp</span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setModalCommandeOuverte(true)}
+                      className="w-full h-12 rounded-xl bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
+                    >
+                      <i className="fa-solid fa-bag-shopping text-base"></i>
+                      <span>Commander</span>
+                    </button>
+                  )}
+
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setAime(!aime)}
+                      className={`flex-1 h-11 rounded-xl flex items-center justify-center gap-2 border transition active:scale-98 cursor-pointer text-xs font-bold ${
+                        aime
+                          ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/50"
+                          : "border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <i className={`fa-heart text-sm ${aime ? "fa-solid text-red-500" : "fa-regular"}`}></i>
+                      <span>Favoris</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalCommandeOuverte(true)}
+                      className="w-11 h-11 rounded-xl bg-zinc-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 flex items-center justify-center transition active:scale-90 cursor-pointer shadow-sm shrink-0"
+                      title="Commander maintenant"
+                    >
+                      <i className="fa-solid fa-cart-shopping text-sm"></i>
+                    </button>
+                  </div>
+                </div>
 
 
                 {/* Actions Propriétaire (Mobile & Desktop) */}
@@ -6091,9 +6162,12 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
         </div>
 
         {/* ==================================================================== */}
-        {/* BARRE D'ACTIONS HORIZONTALE FIXE (CAPTURE 2 - STYLE SHEIN DIVISÉ)   */}
+        {/* BARRE D'ACTIONS HORIZONTALE FIXE — mobile/tablette uniquement (< lg) :
+            en desktop, ces mêmes actions vivent maintenant dans la colonne de
+            droite ci-dessus (lg:col-span-3), plus superposées en bas de
+            l'écran. */}
         {/* ==================================================================== */}
-        <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-gray-200 dark:border-zinc-800 px-3 sm:px-6 py-2.5 sm:py-3 shadow-2xl">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-t border-gray-200 dark:border-zinc-800 px-3 sm:px-6 py-2.5 sm:py-3 shadow-2xl">
           <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3 w-full">
             {/* Bouton Favoris Coeur */}
             <button
