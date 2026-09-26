@@ -4,6 +4,14 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { supabase, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import { finaliserCandidaturesEnAttente } from "@/lib/candidatureIntentions";
 
+// Fréquentation réelle du site web (page admin /admin/sessions, voir
+// 20260926050000_presence_heartbeats.sql) : un battement toutes les 60s
+// tant que l'onglet est visible, agrégé côté SQL en "sessions" (voir la
+// fonction admin_lister_sessions_du_jour). Ce fichier est le point de
+// montage racine le plus naturel : déjà monté une seule fois pour toute
+// l'app, déjà au courant de `user`.
+const PRESENCE_HEARTBEAT_INTERVAL_MS = 60 * 1000;
+
 const AuthContext = createContext({
   session: null,
   user: null,
@@ -202,6 +210,28 @@ export function AuthProvider({ children }) {
       supabase.removeChannel(channel);
     };
   }, [user?.id, session, fetchUserData]);
+
+  // Battement de présence (site web uniquement — voir commentaire en tête
+  // de fichier). N'envoie rien pour un visiteur non connecté, et seulement
+  // quand l'onglet est réellement visible pour ne pas gonfler le temps
+  // affiché avec un onglet oublié en arrière-plan.
+  useEffect(() => {
+    if (!user?.id || typeof document === "undefined") return;
+
+    const envoyerHeartbeat = () => {
+      if (document.visibilityState !== "visible") return;
+      supabase.rpc("enregistrer_presence_heartbeat").catch(() => {});
+    };
+
+    envoyerHeartbeat();
+    const intervalId = setInterval(envoyerHeartbeat, PRESENCE_HEARTBEAT_INTERVAL_MS);
+    document.addEventListener("visibilitychange", envoyerHeartbeat);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", envoyerHeartbeat);
+    };
+  }, [user?.id]);
 
   const refreshProfile = useCallback(async () => {
     if (session) {

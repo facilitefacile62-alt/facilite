@@ -227,6 +227,12 @@ test.describe("Invariants de sécurité", () => {
       // 20260903150000_banque_cv_quota.sql. Même doctrine que banque_cv :
       // aucune policy, service_role uniquement.
       "banque_cv_usage_daily",
+      // Journal brut des battements de présence (fréquentation site web,
+      // /admin/sessions) : jamais lu ni écrit directement depuis le client,
+      // seulement via enregistrer_presence_heartbeat() (écriture) et
+      // admin_lister_sessions_du_jour() (lecture agrégée). Voir
+      // 20260926050000_presence_heartbeats.sql.
+      "presence_heartbeats",
     ]);
 
     const rows = await runIntrospectionSql(`

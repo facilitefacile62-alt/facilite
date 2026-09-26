@@ -96,7 +96,7 @@ const NAV_SECTIONS = [
     items: [
       { type: "link", href: "/admin/scraping", icon: "🤖", label: "Agrégation & Scraping" },
       { type: "tab", id: "dashboard", icon: "📊", label: "Statistiques" },
-      { type: "link", href: "/admin/sessions", icon: "🕒", label: "Fréquentation & sessions", badge: "Démo" },
+      { type: "link", href: "/admin/sessions", icon: "🕒", label: "Fréquentation du site web" },
     ],
   },
 ];
