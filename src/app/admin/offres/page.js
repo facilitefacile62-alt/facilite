@@ -515,18 +515,28 @@ export default function AdminOffresPage() {
         recruiter_id: userSession.user.id,
       };
 
-      // Session relue ici (pas userSession, potentiellement vieille de
-      // plusieurs heures si cet onglet Admin est resté ouvert) : getSession()
-      // rafraîchit automatiquement un jeton expiré via le refresh token,
-      // évitant le 401 "Session invalide ou expirée" alors que l'admin est
-      // toujours réellement connecté. Même correctif que la relecture déjà
-      // faite plus haut dans ce fichier avant d'autres appels API.
-      const { data: { session: sessionFraiche } } = await supabase.auth.getSession();
+      // refreshSession() (pas getSession(), ni userSession — potentiellement
+      // vieux de plusieurs heures si cet onglet Admin est resté ouvert) :
+      // force une VRAIE tentative de rafraîchissement via le refresh token,
+      // au lieu de se contenter de relire ce qui est déjà en mémoire/stockage
+      // (qui peut être tout aussi périmé après une longue inactivité ou une
+      // restauration Back-Forward Cache). Si même ça échoue, le refresh
+      // token lui-même est mort : aucun jeton ne fonctionnera, autant le
+      // dire clairement plutôt que retenter avec un jeton déjà connu pour
+      // échouer (ancien correctif, insuffisant — cf. capture utilisateur).
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      const jetonActuel = refreshData?.session?.access_token;
+      if (refreshError || !jetonActuel) {
+        triggerToast("Votre session a expiré. Reconnectez-vous puis réessayez.", "fa-triangle-exclamation");
+        setSavingOffer(false);
+        return;
+      }
+
       const res = await fetch("/api/admin/publish-offer", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionFraiche?.access_token || userSession.access_token}`,
+          Authorization: `Bearer ${jetonActuel}`,
         },
         body: JSON.stringify(payload),
       });
@@ -613,14 +623,21 @@ export default function AdminOffresPage() {
         recruiter_id: userSession.user.id,
       };
 
-      // Session relue ici (voir le commentaire du premier appel à
-      // publish-offer plus haut dans ce fichier, même correctif).
-      const { data: { session: sessionFraiche } } = await supabase.auth.getSession();
+      // refreshSession() — voir le commentaire du premier appel à
+      // publish-offer plus haut dans ce fichier, même correctif.
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      const jetonActuel = refreshData?.session?.access_token;
+      if (refreshError || !jetonActuel) {
+        triggerToast("Votre session a expiré. Reconnectez-vous puis réessayez.", "fa-triangle-exclamation");
+        setSavingOffer(false);
+        return;
+      }
+
       const res = await fetch("/api/admin/publish-offer", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionFraiche?.access_token || userSession.access_token}`,
+          Authorization: `Bearer ${jetonActuel}`,
         },
         body: JSON.stringify(payload),
       });
