@@ -398,6 +398,14 @@ export default function MessagerieClient() {
   const timerRef = useRef(null);
   const fileInputDocRef = useRef(null);
   const fileInputRef = useRef(null);
+  // Menu de pièce jointe façon WhatsApp (Document / Photos et vidéos /
+  // Caméra / Audio) : un input file caché par option, tous branchés sur le
+  // même handleFileChange (le type réel du fichier choisi détermine
+  // attachment_type, pas l'input d'origine).
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const fileInputPhotoVideoRef = useRef(null);
+  const fileInputCameraRef = useRef(null);
+  const fileInputAudioRef = useRef(null);
   // Chat scroll container ref
   const messagesContainerRef = useRef(null);
   // Registre des noeuds DOM par id de message (scroll vers le message épinglé)
@@ -1971,11 +1979,12 @@ export default function MessagerieClient() {
 
   // --- GESTION DES PIÈCES JOINTES & VOCAUX DANS LA MESSAGERIE CLIENT ---
   const handleAttachmentClick = () => {
-    if (fileInputDocRef.current) {
-      fileInputDocRef.current.click();
-    } else if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    setShowAttachMenu((v) => !v);
+  };
+
+  const ouvrirSelecteurFichier = (ref) => {
+    setShowAttachMenu(false);
+    ref.current?.click();
   };
 
   const handleFileChange = async (e) => {
@@ -3063,11 +3072,31 @@ export default function MessagerieClient() {
                               </ChatAttachmentUrl>
                             )}
 
+                            {/* Vidéo (envoyée via "Photos et vidéos" du menu
+                                de pièce jointe) — lecteur natif du navigateur,
+                                même traitement que la photo ci-dessus. */}
+                            {msg.attachment_type === "video" && msg.attachment_url && (
+                              <ChatAttachmentUrl path={msg.attachment_url}>
+                                {(resolvedUrl) =>
+                                  resolvedUrl ? (
+                                    <video
+                                      src={resolvedUrl}
+                                      controls
+                                      className="block mb-2 rounded-2xl overflow-hidden max-w-[260px] max-h-64 bg-black"
+                                    />
+                                  ) : (
+                                    <div className="w-40 h-40 mb-2 rounded-2xl bg-black/5 dark:bg-white/10 animate-pulse" />
+                                  )
+                                }
+                              </ChatAttachmentUrl>
+                            )}
+
                             {/* Pièce jointe PDF / Document standard */}
                             {(msg.attachment_url || msg.file) &&
                               msg.attachment_type !== "audio" &&
                               msg.attachment_type !== "video-interview" &&
-                              msg.attachment_type !== "image" && (
+                              msg.attachment_type !== "image" &&
+                              msg.attachment_type !== "video" && (
                               <ChatAttachmentUrl path={msg.attachment_url}>
                                 {(resolvedUrl) => (
                                   <a
@@ -3222,11 +3251,81 @@ export default function MessagerieClient() {
                     </div>
                   )}
 
+                  {/* Menu de pièce jointe façon WhatsApp : Document / Photos
+                      et vidéos / Caméra / Audio, chacun un input file caché
+                      différent (accept ciblé) mais le même handleFileChange. */}
+                  {showAttachMenu && (
+                    <div className="absolute bottom-full right-3 sm:right-4 mb-2 w-56 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl shadow-xl z-40 overflow-hidden py-1.5 animate-fade-in-up">
+                      <button
+                        type="button"
+                        onClick={() => ouvrirSelecteurFichier(fileInputDocRef)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+                      >
+                        <span className="w-9 h-9 rounded-full bg-indigo-500 text-white flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-file-lines text-sm"></i>
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Document</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => ouvrirSelecteurFichier(fileInputPhotoVideoRef)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+                      >
+                        <span className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-images text-sm"></i>
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Photos et vidéos</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => ouvrirSelecteurFichier(fileInputCameraRef)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+                      >
+                        <span className="w-9 h-9 rounded-full bg-rose-500 text-white flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-camera text-sm"></i>
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Caméra</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => ouvrirSelecteurFichier(fileInputAudioRef)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+                      >
+                        <span className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0">
+                          <i className="fa-solid fa-headphones text-sm"></i>
+                        </span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Audio</span>
+                      </button>
+                    </div>
+                  )}
+
                   <input
                     type="file"
                     ref={fileInputDocRef}
                     onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputPhotoVideoRef}
+                    onChange={handleFileChange}
+                    accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime,video/webm"
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputCameraRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputAudioRef}
+                    onChange={handleFileChange}
+                    accept="audio/*"
                     className="hidden"
                   />
 

@@ -13,6 +13,15 @@ export const CHAT_FILE_TYPES = [
   "image/png",
   "image/jpeg",
   "image/webp",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/ogg",
+  "audio/webm",
+  "audio/wav",
+  "audio/x-wav",
 ];
 
 export const MAX_CHAT_FILE_BYTES = 15 * 1024 * 1024; // 15 Mo
@@ -27,6 +36,7 @@ export function formatFileSize(bytes) {
 function classifyAttachment(mimeType) {
   if (mimeType === "application/pdf") return "pdf";
   if (mimeType?.startsWith("image/")) return "image";
+  if (mimeType?.startsWith("video/")) return "video";
   if (mimeType?.startsWith("audio/")) return "audio";
   return "document";
 }
@@ -41,7 +51,7 @@ function classifyAttachment(mimeType) {
 export async function validateChatFile(file) {
   if (!file) return { valid: false, error: "Aucun fichier sélectionné." };
   if (!CHAT_FILE_TYPES.includes(file.type)) {
-    return { valid: false, error: "Format non supporté (PDF, DOC/DOCX, PNG ou JPG uniquement)." };
+    return { valid: false, error: "Format non supporté (document, photo, vidéo ou audio uniquement)." };
   }
   if (file.size > MAX_CHAT_FILE_BYTES) {
     return { valid: false, error: "Fichier trop volumineux (15 Mo maximum)." };
@@ -60,9 +70,15 @@ export async function validateChatFile(file) {
     else if (hex.startsWith("FFD8FF")) realType = "image/jpeg";
     else if (hex.startsWith("52494646") && hex.substring(16, 24) === "57454250") realType = "image/webp";
 
-    const isImageOrAudio = file.type.startsWith("image/") || file.type.startsWith("audio/");
-    
-    if (realType && realType !== file.type && !isImageOrAudio) {
+    // Aucune signature magic-bytes vérifiée pour l'image/audio/vidéo :
+    // beaucoup de conteneurs valides (HEIC, WebM, MP4 variantes...) ne sont
+    // pas couverts par les quelques signatures ci-dessus, et le risque réel
+    // (contenu malveillant déguisé en média) est le même pour ces trois
+    // familles — déjà accepté pour image/audio avant l'ajout de la vidéo ici.
+    const isImageAudioOrVideo =
+      file.type.startsWith("image/") || file.type.startsWith("audio/") || file.type.startsWith("video/");
+
+    if (realType && realType !== file.type && !isImageAudioOrVideo) {
         return { valid: false, error: "Le contenu réel du fichier ne correspond pas à son extension (sécurité)." };
     }
   } catch (err) {
