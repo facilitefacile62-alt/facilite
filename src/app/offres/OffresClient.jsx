@@ -556,6 +556,96 @@ function OffresContent({ listingType } = {}) {
           </div>
         )}
 
+        {/* Encart Officiel Mis en Avant : Formation Rédaction de CV & Certification Facilité */}
+        {listingType === "formation" && (
+          <div className="mb-8 rounded-3xl bg-gradient-to-br from-emerald-900 via-gray-900 to-emerald-950 text-white p-6 sm:p-8 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
+            {/* Lueur d'arrière plan */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
+              <div className="flex-1 min-w-0">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-black uppercase tracking-wider mb-3 border border-emerald-500/30">
+                  <i className="fa-solid fa-graduation-cap"></i>
+                  <span>Masterclass &amp; Certification Officielle</span>
+                </div>
+
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
+                  Formation Rédaction de CV Professionnel &amp; ATS
+                </h2>
+
+                <p className="text-xs sm:text-sm text-emerald-100/90 font-medium leading-relaxed mb-4 max-w-2xl">
+                  Apprenez les secrets d&apos;un CV d&apos;élite capable de franchir les filtres ATS et de convaincre un recruteur en moins de 10 secondes. Décrochez votre certification officielle de rédacteur de CV Facilité.
+                </p>
+
+                {/* 4 Piliers clés */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-5 text-xs text-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
+                      <i className="fa-solid fa-check"></i>
+                    </span>
+                    <span>Structure &amp; impact en 10 secondes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
+                      <i className="fa-solid fa-check"></i>
+                    </span>
+                    <span>Élimination des erreurs rédhibitoires</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
+                      <i className="fa-solid fa-check"></i>
+                    </span>
+                    <span>Résumé &amp; accroche percutante</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
+                      <i className="fa-solid fa-check"></i>
+                    </span>
+                    <span>Certification professionnelle délivrée</span>
+                  </div>
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href="/formation-redaction-cv"
+                    className="px-6 py-3 bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-play"></i>
+                    <span>Accéder à la formation</span>
+                  </Link>
+
+                  <Link
+                    href="/formation-redaction-cv/modules"
+                    className="px-5 py-3 bg-white/10 hover:bg-white/15 text-white font-extrabold text-xs sm:text-sm rounded-xl border border-white/20 transition cursor-pointer flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-layer-group"></i>
+                    <span>Consulter les modules</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Bloc Tarif & Réassurance */}
+              <div className="w-full lg:w-72 bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xs flex flex-col items-center text-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">
+                  Accès Illimité à Vie
+                </span>
+                <div className="text-2xl sm:text-3xl font-black text-white mb-1">
+                  15 000 <span className="text-sm font-bold text-emerald-300">FCFA</span>
+                </div>
+                <p className="text-[11px] text-gray-300 font-medium mb-4">
+                  Paiement sécurisé instantané (Wave, Orange Money, Carte)
+                </p>
+
+                <div className="w-full pt-3 border-t border-white/10 flex items-center justify-center gap-2 text-xs text-emerald-300 font-bold">
+                  <i className="fa-solid fa-award"></i>
+                  <span>Attestation officielle incluse</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Grille des Offres d'Emploi */}
         {loading ? (
           <div className="py-20 text-center">
