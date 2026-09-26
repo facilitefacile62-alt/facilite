@@ -217,53 +217,36 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
       <head>
-        {/* Favicons/manifest : déjà déclarés une seule fois via l'objet
-            metadata.icons/manifest ci-dessus (Next.js génère les <link>
-            automatiquement) — des balises manuelles identiques ici
-            produisaient un doublon exact dans le <head> rendu, sans
-            rapport avec le contenu affiché mais un vrai doublon de
-            balisage, retiré le 2026-08-21. */}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        {/* Pas de <link> Leaflet ici : unpkg.com n'est pas dans le style-src
-            de la CSP (next.config.mjs) et cette balise était donc bloquée
-            sans effet. Chaque composant carte importe déjà sa propre CSS
-            Leaflet depuis node_modules (`await import("leaflet/dist/leaflet.css")`),
-            servie en same-origin par le bundler — aucun <link> global requis. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD_DATA) }}
         />
       </head>
       <body className={`${inter.className} bg-white dark:bg-gray-950 text-dark dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-300`} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            {!dansAppMobile && <Header />}
-            {children}
-            <GlobalModals />
-          </AuthProvider>
-        </ThemeProvider>
+        <div id="facilite-root" className="min-h-screen flex flex-col flex-1">
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AuthProvider>
+              {!dansAppMobile && <Header />}
+              {children}
+              <GlobalModals />
+            </AuthProvider>
+          </ThemeProvider>
+        </div>
         <ServiceWorkerRegistration />
         {process.env.NODE_ENV === "production" && (
-          <Script id="clarity-script" strategy="afterInteractive">
-            {`
-              (function(c,l,a,r,i,t,y){
-                  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-              })(window, document, "clarity", "script", "y7wcieqnsj");
-            `}
-          </Script>
-        )}
-        {/* Plausible (point 2, 2026-08-23) — uniquement en production : le
-            dépôt lance énormément de trafic Playwright contre ce même code
-            (dev local pointe déjà vers la base de production, voir
-            CLAUDE.md), qui polluerait le dashboard réel s'il était chargé
-            aussi en dev. afterInteractive : n'entrave jamais le rendu
-            initial. */}
-        {process.env.NODE_ENV === "production" && (
           <>
-            <Script strategy="afterInteractive" src="https://plausible.io/js/pa-wTgUIIBGOJXMLrt7nyXVt.js" />
-            <Script id="plausible-init" strategy="afterInteractive">
+            <Script id="clarity-script" strategy="lazyOnload">
+              {`
+                (function(c,l,a,r,i,t,y){
+                    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                    y=l.getElementsByTagName(r)[0];if(y&&y.parentNode){y.parentNode.insertBefore(t,y);}
+                })(window, document, "clarity", "script", "y7wcieqnsj");
+              `}
+            </Script>
+            <Script strategy="lazyOnload" src="https://plausible.io/js/pa-wTgUIIBGOJXMLrt7nyXVt.js" />
+            <Script id="plausible-init" strategy="lazyOnload">
               {`window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
   plausible.init()`}
             </Script>
