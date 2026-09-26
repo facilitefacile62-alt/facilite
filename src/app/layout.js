@@ -208,11 +208,11 @@ const JSON_LD_DATA = {
 };
 
 export default async function RootLayout({ children }) {
-  // Page ouverte dans la WebView de l'app mobile (cookie posé par le pont de session ou par le middleware,
-  // voir mobile/src/app/web/[cle].tsx) : l'en-tête du site n'est pas affiché, l'app a déjà le sien — sinon
-  // les deux se superposent (constaté le 25/09/2026 sur tablette, ex. page /candidat/securite).
-  const cookieStore = await cookies();
-  const dansAppMobile = cookieStore.get("app_embed")?.value === "1";
+  let dansAppMobile = false;
+  try {
+    const cookieStore = await cookies();
+    dansAppMobile = cookieStore.get("app_embed")?.value === "1";
+  } catch {}
 
   return (
     <html lang="fr" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>

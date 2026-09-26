@@ -40,9 +40,25 @@ export default function GlobalError({ error, reset }) {
             Plateforme Facilité — Récupération
           </h2>
 
-          <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed mb-6">
-            Une mise à jour importante de la plateforme est disponible. Cliquez sur le bouton ci-dessous pour renouveler votre session.
+          <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed mb-4">
+            Une erreur s&apos;est produite lors du chargement. Détail de l&apos;erreur ci-dessous :
           </p>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-6 text-left overflow-auto max-h-40">
+              <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider block mb-1">
+                Erreur détectée :
+              </span>
+              <p className="text-xs font-mono text-red-800 break-words whitespace-pre-wrap">
+                {error.message || String(error)}
+              </p>
+              {error.digest && (
+                <span className="text-[10px] font-mono text-gray-500 block mt-1">
+                  Digest: {error.digest}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             <button
