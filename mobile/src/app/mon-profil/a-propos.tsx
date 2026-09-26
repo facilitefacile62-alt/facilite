@@ -13,12 +13,13 @@ import { useAuth } from '@/context/AuthContext';
 // (tabs)/profil.tsx qui possède déjà la route `/profil`, même précaution
 // que offre/[id].tsx vis-à-vis de (tabs)/offres.tsx.
 //
-// Les onglets "Mes documents" / "Paramètres" n'ont pas d'écran réel
-// derrière eux (comme "Mes CV et documents" / "Paramètres" déjà stub
-// dans (tabs)/profil.tsx) : alerte honnête. "Scanner Document" pousse
-// vers scanner-document.tsx, un vrai flux (CNI/passeport + CV, voir
-// lib/scanDocument.ts) qui réutilise les endpoints déjà déployés côté
-// web (/api/profil/scan-identity-document, /api/parse-document).
+// Les onglets "Mes documents" / "Paramètres" ouvrent respectivement
+// /web/mes-cvs (WebView, pont de session) et le hub natif
+// mon-profil/parametres.tsx — mêmes cibles que (tabs)/profil.tsx.
+// "Scanner Document" pousse vers scanner-document.tsx, un vrai flux
+// (CNI/passeport + CV, voir lib/scanDocument.ts) qui réutilise les
+// endpoints déjà déployés côté web (/api/profil/scan-identity-document,
+// /api/parse-document).
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 const RUBRIQUES = [

@@ -6,11 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 
 // Écran Profil minimal. "Informations personnelles" pousse vers le hub
-// mon-profil/a-propos.tsx (12a-profil-a-propos.html et sous-écrans —
-// Point F de la feuille de route). "Mes CV et documents" et "Paramètres"
-// restent des Alert.alert stub : aucun écran de référence construit pour
-// eux dans ce point (voir le hub, qui les stub pareillement sous forme
-// d'onglets).
+// mon-profil/a-propos.tsx. "Mes CV et documents" ouvre /web/mes-cvs
+// (WebView, pont de session) et "Paramètres" ouvre le hub natif
+// mon-profil/parametres.tsx (sécurité, facturation, pages légales, etc.).
 const LIBELLES_ROLE: Record<string, string> = {
   admin: 'Administrateur',
   publisher: 'Recruteur',

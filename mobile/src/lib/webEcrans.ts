@@ -16,7 +16,6 @@
 // site (même origine, session posée) : ces clés ne sont que des POINTS
 // D'ENTRÉE.
 export type CleEcranWeb =
-  | 'marketplace'
   | 'marketplace-carte'
   | 'creer-cv'
   | 'modeles'
@@ -54,8 +53,9 @@ export type EcranWebConfig = {
 const protege = (titre: string, chemin: string): EcranWebConfig => ({ titre, chemin, authRequise: true });
 
 export const WEB_ECRANS: Record<CleEcranWeb, EcranWebConfig> = {
-  marketplace: { titre: 'Marketplace', chemin: '/marketplace', authRequise: false },
   // Carte des boutiques autour de moi (mini carte ou pleine carte) : /marketplace avec lat, lng et vue — voir web/[cle].tsx.
+  // La marketplace elle-même est un écran natif (mobile/src/app/marketplace/),
+  // pas une WebView — pas d'entrée `marketplace` ici, seulement sa carte.
   'marketplace-carte': { titre: 'Carte des boutiques', chemin: '/marketplace', authRequise: false },
   'creer-cv': protege('Créer mon CV', '/creer-cv'),
   modeles: protege('Modèles de CV', '/modeles'),

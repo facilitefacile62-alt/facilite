@@ -187,11 +187,11 @@ export default function PanneauMenuProfil({ visible, onFermer }: { visible: bool
   }
 
   function selectionnerBusiness() {
-    // Ouvre le Marketplace natif (grille d'articles, fiche produit, discussion
-    // avec le vendeur). "Ma boutique" (côté vendeur) reste pour l'instant une
-    // WebView (/web/marketplace) : l'espace vendeur natif n'est pas encore
-    // construit. Best-effort, jamais bloquant : la navigation se fait même si
-    // l'écriture AsyncStorage échoue.
+    // Bascule "Candidat/Business" du menu : ouvre le Marketplace natif
+    // (grille d'articles, fiche produit, discussion avec le vendeur). "Ma
+    // boutique" (côté vendeur, raccourci séparé ci-dessus) est elle aussi
+    // native (/marketplace/vendre). Best-effort, jamais bloquant : la
+    // navigation se fait même si l'écriture AsyncStorage échoue.
     definirUserMode('business').catch(() => {});
     onFermer();
     router.push('/marketplace');
