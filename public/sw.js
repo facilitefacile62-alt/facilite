@@ -142,7 +142,8 @@
 // v142 (22/09/2026) : relevé de position (boutique/activité) - sur iPhone/iPad, les instructions de deblocage de la localisation s'affichent enfin apres un refus (l'API navigator.permissions ne couvre pas "geolocation" sur iOS, le bloc d'aide restait invisible), et s'ouvrent automatiquement au lieu de rester cachees dans un menu repliable
 // v143 (22/09/2026) : app mobile - pont de session (POST /auth/mobile-bridge) pour ouvrir /creer-cv deja connecte depuis une WebView de l'app ; les 3 modeles de CV (Moderne/Minimaliste/Classique) de l'Accueil mobile y menent desormais reellement
 // v152 (25/09/2026) : jamais incrementee malgre une longue serie de changements Marketplace (carte, categories, fiche produit) - les navigateurs qui gardaient un onglet ouvert depuis le debut de la session ne voyaient toujours pas les derniers changements. Force le renouvellement du cache pour tout le monde.
-const VERSION_CACHE = "facilite-v152";
+// v153 (26/09/2026) : "This page couldn't load" signale sur /marketplace PUIS sur la page d'accueil elle-meme, alors que le serveur repondait 200 OK - trois deploiements (sessions, mobile, messagerie) sont sortis depuis v152 sans jamais rebasculer cette valeur. Symptome identique a celui deja resolu par v152 (cache navigateur reste sur une combinaison HTML/JS perimee) : force a nouveau la purge complete pour tout le monde plutot que de continuer a chercher un bug cote React qui n'a pas ete reproduit (voir le diagnostic dans la conversation : page saine en anonyme, chunk servi = chunk courant).
+const VERSION_CACHE = "facilite-v153";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
