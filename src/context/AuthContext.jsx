@@ -218,9 +218,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user?.id || typeof document === "undefined") return;
 
-    const envoyerHeartbeat = () => {
+    const envoyerHeartbeat = async () => {
       if (document.visibilityState !== "visible") return;
-      supabase.rpc("enregistrer_presence_heartbeat").catch(() => {});
+      try {
+        await supabase.rpc("enregistrer_presence_heartbeat");
+      } catch {}
     };
 
     envoyerHeartbeat();
