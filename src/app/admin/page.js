@@ -404,7 +404,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     let active = true;
     
-    // Sécurité de délai (Timeout de secours de 4 secondes)
+    // Sécurité de délai (Timeout de secours de 4 secondes si chargement bloqué)
     const timeoutId = setTimeout(() => {
       if (active) {
         console.warn("[Admin Access] Sécurité timeout de 4s déclenchée.");
@@ -419,8 +419,9 @@ export default function AdminDashboardPage() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
+          clearTimeout(timeoutId);
           if (active) {
-            router.push("/login");
+            window.location.replace("/login");
           }
           return;
         }
@@ -435,8 +436,9 @@ export default function AdminDashboardPage() {
 
         if (rpcError || isAdmin !== true) {
           console.warn("[Admin Access] Refus d'accès: non admin ou erreur RPC.", rpcError);
+          clearTimeout(timeoutId);
           if (active) {
-            router.push("/profil");
+            window.location.replace("/profil");
           }
           return;
         }
