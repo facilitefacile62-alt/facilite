@@ -48,6 +48,28 @@ const FALLBACK_JOB_POSTERS = [
   "/soboa.png",
 ];
 
+const OFFICIAL_FORMATION_OFFERS = [
+  {
+    id: "formation-redaction-cv",
+    title: "Formation Rédaction de CV Professionnel & Certification ATS",
+    company: "Facilité Academy",
+    contract_type: "Formation Certifiante",
+    location: "En ligne / Dakar, Sénégal",
+    description: "🎓 Masterclass Officielle Facilité : Maîtrisez la conception de CV d'élite à fort impact, optimisés pour franchir les filtres ATS et convaincre les recruteurs en moins de 10 secondes. Certification de rédacteur professionnel délivrée.",
+    image_url: "/affiche_cv_pro.jpg",
+    created_at: new Date().toISOString(),
+    is_active: true,
+    listing_type: "formation",
+    is_sponsored: true,
+    sponsor_priority: 100,
+    sector: "Formation Numérique & E-learning",
+    external_link: "/formation-redaction-cv",
+    external_button_label: "S'inscrire à la formation",
+    contact_phone: "+221 77 140 08 32",
+    contact_email: "contact@ffacilite.com",
+  },
+];
+
 const COMPANY_COLORS = [
   "bg-emerald-600",
   "bg-blue-600",
@@ -318,41 +340,56 @@ function OffresContent({ listingType } = {}) {
     setSemanticSearchError("");
   };
 
-  const filteredOffers = offers.filter((offer) => {
-    if (semanticResults !== null) {
-      if (!(offer.id in semanticResults)) return false;
-    } else if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = offer.title?.toLowerCase().includes(q);
-      const matchComp = offer.company?.toLowerCase().includes(q);
-      const matchDesc = offer.description?.toLowerCase().includes(q);
-      const matchLoc = offer.location?.toLowerCase().includes(q);
+  // Fusionne les formations certifiées officielles dans le catalogue quand listingType === "formation"
+  const allBaseOffers = useMemo(() => {
+    let base = offers;
+    if (listingType === "formation") {
+      const existingIds = new Set(offers.map((o) => String(o.id)));
+      const staticToAdd = OFFICIAL_FORMATION_OFFERS.filter((o) => !existingIds.has(String(o.id)));
+      base = [...staticToAdd, ...offers];
+    }
+    return base;
+  }, [offers, listingType]);
 
-      const reqSkills = Array.isArray(offer.required_skills)
-        ? offer.required_skills.join(" ").toLowerCase()
-        : (offer.required_skills || "").toLowerCase();
-      const matchSkills = reqSkills.includes(q);
+  const filteredOffers = useMemo(() => {
+    let list = allBaseOffers.filter((offer) => {
+      if (semanticResults !== null) {
+        if (!(offer.id in semanticResults)) return false;
+      } else if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = offer.title?.toLowerCase().includes(q);
+        const matchComp = offer.company?.toLowerCase().includes(q);
+        const matchDesc = offer.description?.toLowerCase().includes(q);
+        const matchLoc = offer.location?.toLowerCase().includes(q);
 
-      if (!matchTitle && !matchComp && !matchDesc && !matchLoc && !matchSkills) {
-        return false;
+        const reqSkills = Array.isArray(offer.required_skills)
+          ? offer.required_skills.join(" ").toLowerCase()
+          : (offer.required_skills || "").toLowerCase();
+        const matchSkills = reqSkills.includes(q);
+
+        if (!matchTitle && !matchComp && !matchDesc && !matchLoc && !matchSkills) {
+          return false;
+        }
       }
-    }
 
-    if (locationFilter) {
-      const locMatch = offer.location?.toLowerCase().includes(locationFilter.toLowerCase());
-      if (!locMatch) return false;
-    }
+      if (locationFilter) {
+        const locMatch = offer.location?.toLowerCase().includes(locationFilter.toLowerCase());
+        if (!locMatch) return false;
+      }
 
-    return true;
-  });
-
-  if (semanticResults !== null) {
-    filteredOffers.sort((a, b) => {
-      const simA = semanticResults[a.id] || 0;
-      const simB = semanticResults[b.id] || 0;
-      return simB - simA;
+      return true;
     });
-  }
+
+    if (semanticResults !== null) {
+      list = [...list].sort((a, b) => {
+        const simA = semanticResults[a.id] || 0;
+        const simB = semanticResults[b.id] || 0;
+        return simB - simA;
+      });
+    }
+
+    return list;
+  }, [allBaseOffers, semanticResults, searchQuery, locationFilter]);
 
   // Séparation en offres disponibles (actives) et offres expirées (FOMO)
   const availableOffers = useMemo(() => {
@@ -556,138 +593,46 @@ function OffresContent({ listingType } = {}) {
           </div>
         )}
 
-        {/* Encart Officiel Mis en Avant : Formation Rédaction de CV & Certification Facilité */}
-        {listingType === "formation" && (
-          <div className="mb-8 rounded-3xl bg-gradient-to-br from-emerald-900 via-gray-900 to-emerald-950 text-white p-6 sm:p-8 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
-            {/* Lueur d'arrière plan */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
-              <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-black uppercase tracking-wider mb-3 border border-emerald-500/30">
-                  <i className="fa-solid fa-graduation-cap"></i>
-                  <span>Masterclass &amp; Certification Officielle</span>
-                </div>
-
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
-                  Formation Rédaction de CV Professionnel &amp; ATS
-                </h2>
-
-                <p className="text-xs sm:text-sm text-emerald-100/90 font-medium leading-relaxed mb-4 max-w-2xl">
-                  Apprenez les secrets d&apos;un CV d&apos;élite capable de franchir les filtres ATS et de convaincre un recruteur en moins de 10 secondes. Décrochez votre certification officielle de rédacteur de CV Facilité.
-                </p>
-
-                {/* 4 Piliers clés */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-5 text-xs text-gray-200">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
-                      <i className="fa-solid fa-check"></i>
-                    </span>
-                    <span>Structure &amp; impact en 10 secondes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
-                      <i className="fa-solid fa-check"></i>
-                    </span>
-                    <span>Élimination des erreurs rédhibitoires</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
-                      <i className="fa-solid fa-check"></i>
-                    </span>
-                    <span>Résumé &amp; accroche percutante</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">
-                      <i className="fa-solid fa-check"></i>
-                    </span>
-                    <span>Certification professionnelle délivrée</span>
-                  </div>
-                </div>
-
-                {/* Boutons d'action */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link
-                    href="/formation-redaction-cv"
-                    className="px-6 py-3 bg-[#10E688] hover:bg-[#0fd07b] text-gray-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all cursor-pointer flex items-center gap-2"
-                  >
-                    <i className="fa-solid fa-play"></i>
-                    <span>Accéder à la formation</span>
-                  </Link>
-
-                  <Link
-                    href="/formation-redaction-cv/modules"
-                    className="px-5 py-3 bg-white/10 hover:bg-white/15 text-white font-extrabold text-xs sm:text-sm rounded-xl border border-white/20 transition cursor-pointer flex items-center gap-2"
-                  >
-                    <i className="fa-solid fa-layer-group"></i>
-                    <span>Consulter les modules</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Bloc Tarif & Réassurance */}
-              <div className="w-full lg:w-72 bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xs flex flex-col items-center text-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">
-                  Accès Illimité à Vie
-                </span>
-                <div className="text-2xl sm:text-3xl font-black text-white mb-1">
-                  15 000 <span className="text-sm font-bold text-emerald-300">FCFA</span>
-                </div>
-                <p className="text-[11px] text-gray-300 font-medium mb-4">
-                  Paiement sécurisé instantané (Wave, Orange Money, Carte)
-                </p>
-
-                <div className="w-full pt-3 border-t border-white/10 flex items-center justify-center gap-2 text-xs text-emerald-300 font-bold">
-                  <i className="fa-solid fa-award"></i>
-                  <span>Attestation officielle incluse</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Grille des Offres d'Emploi */}
         {loading ? (
           <div className="py-20 text-center">
             <i className="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-3"></i>
-            <p className="text-sm font-bold text-gray-500">Chargement des offres d'emploi...</p>
+            <p className="text-sm font-bold text-gray-500">Chargement des opportunités...</p>
           </div>
         ) : feedOffers.length === 0 ? (
-          listingType === "formation" ? null : (
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center max-w-lg mx-auto shadow-sm">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-                <i className={`fa-solid ${activeTab === "expired" ? "fa-hourglass-end" : hero.icon}`}></i>
-              </div>
-              <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">
-                {activeTab === "expired"
-                  ? "Aucune offre expirée pour le moment"
-                  : listingType
-                  ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" disponible`
-                  : "Aucune offre disponible actuellement"}
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
-                {activeTab === "expired"
-                  ? "Toutes les offres publiées sont actuellement actives et prêtes pour vos candidatures !"
-                  : "Essayez de modifier vos termes de recherche ou réinitialisez les filtres."}
-              </p>
-              {activeTab === "expired" ? (
-                <button
-                  onClick={() => setActiveTab("available")}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2 mx-auto"
-                >
-                  <i className="fa-solid fa-bolt"></i>
-                  <span>Voir les offres disponibles</span>
-                </button>
-              ) : (
-                <button
-                  onClick={handleResetSearch}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
-                >
-                  Afficher toutes les offres
-                </button>
-              )}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center max-w-lg mx-auto shadow-sm">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+              <i className={`fa-solid ${activeTab === "expired" ? "fa-hourglass-end" : hero.icon}`}></i>
             </div>
-          )
+            <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">
+              {activeTab === "expired"
+                ? "Aucune offre expirée pour le moment"
+                : listingType
+                ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" disponible`
+                : "Aucune offre disponible actuellement"}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+              {activeTab === "expired"
+                ? "Toutes les opportunités publiées sont actuellement actives et prêtes pour vos candidatures !"
+                : "Essayez de modifier vos termes de recherche ou réinitialisez les filtres."}
+            </p>
+            {activeTab === "expired" ? (
+              <button
+                onClick={() => setActiveTab("available")}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2 mx-auto"
+              >
+                <i className="fa-solid fa-bolt"></i>
+                <span>Voir les opportunités disponibles</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleResetSearch}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+              >
+                Afficher toutes les opportunités
+              </button>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {feedOffers.map((offer, idx) => {
@@ -696,7 +641,6 @@ function OffresContent({ listingType } = {}) {
               const verdictNiveau = comparerNiveaux(niveauxEtudes, candidateEducationCode, offer.min_education_level_code);
               const eligible = verdictNiveau.statut !== "insuffisant";
               const isExpired = isOfferExpired(offer);
-              const offerImg = getOfferImage(offer, idx);
               const initials = offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO";
               const logoColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
               const dateFormatted = offer.created_at
@@ -704,6 +648,9 @@ function OffresContent({ listingType } = {}) {
                 : "Récent";
 
               const isActivelySponsored = isOfferActivelySponsored(offer);
+              const offerDetailHref = offer.external_link && offer.listing_type === "formation"
+                ? offer.external_link
+                : `/offres/${offer.id}`;
 
               return (
                 <div
@@ -755,7 +702,7 @@ function OffresContent({ listingType } = {}) {
                       </div>
                     )}
                     <Link
-                      href={`/offres/${offer.id}`}
+                      href={offerDetailHref}
                       className="text-sm font-extrabold text-gray-900 dark:text-white leading-snug hover:text-emerald-700 dark:hover:text-[#10E688] transition-colors block line-clamp-1 min-h-[20px]"
                       title={offer.title}
                     >
@@ -849,10 +796,10 @@ function OffresContent({ listingType } = {}) {
                     {/* Lien secondaire vers les détails */}
                     <div className="pt-2 text-center">
                       <Link
-                        href={`/offres/${offer.id}`}
+                        href={offerDetailHref}
                         className="text-[11px] font-bold text-gray-500 hover:text-emerald-700 dark:hover:text-[#10E688] transition inline-flex items-center gap-1"
                       >
-                        <span>Voir la fiche détaillée</span>
+                        <span>{offer.listing_type === "formation" ? "Découvrir la formation" : "Voir la fiche détaillée"}</span>
                         <i className="fa-solid fa-arrow-right text-[9px]"></i>
                       </Link>
                     </div>
