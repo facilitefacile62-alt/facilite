@@ -396,9 +396,9 @@ Extrais méticuleusement et organise :
 
 9. "additional_info" : toutes les autres informations utiles qui ne rentrent dans aucun champ ci-dessus — liens annexes, documents à télécharger ou à fournir, pièces à joindre, précisions logistiques, références de concours. Recopie les URL EN ENTIER, telles quelles. Chaîne vide s'il n'y a rien.
 
-10. Date limite de candidature (au format AAAA-MM-JJ si mentionnée, sinon chaîne vide)
-11. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun, Professionnel / Technique)
-12. Fourchette salariale / Indemnité (si mentionnée, ex: 'Selon profil', ou laisser vide)
+10. Date limite de candidature (au format AAAA-MM-JJ si mentionnée sur l'affiche, sinon chaîne vide — N'INVENTE JAMAIS une date)
+11. Niveau d'études requis (ex: BAC, Licence, Master, Doctorat, Aucun, Professionnel / Technique) — UNIQUEMENT s'il est explicitement écrit sur l'affiche ou le texte fourni (un diplôme précis, "BAC+3", "niveau Licence exigé"...). Ne déduis JAMAIS ce niveau à partir de l'intitulé du poste, du secteur ou d'une supposition générale ("ce poste ressemble à un poste de cadre donc Licence") : si l'affiche ne précise aucun niveau d'études, renvoie "Aucun" — jamais une valeur devinée.
+12. Fourchette salariale / Indemnité — UNIQUEMENT si un montant ou une mention explicite ("Selon profil", "À négocier") figure sur l'affiche. N'INVENTE JAMAIS un montant ni "Selon profil" par défaut : chaîne vide si rien n'est indiqué.
 13. Description structurée, attrayante et aérée avec des emojis adaptés (présentation du poste, missions détaillées avec puces, profil recherché, comment postuler, contacts).
 14. Type de publication (listing_type) — classe cette publication dans EXACTEMENT une de ces 6 catégories, choisis la plus précise :
    - "offre_emploi" : un poste précis à pourvoir (CDI, CDD, stage, intérim, freelance...) proposé par une entreprise qui recrute.
