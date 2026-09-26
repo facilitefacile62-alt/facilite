@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -2297,7 +2296,7 @@ export default function Header() {
           de 6s pour naviguer vers une page depuis ce menu, sur un mobile
           milieu de gamme (CPU x4, réseau lent). Signalé par l'utilisateur
           ("ça prend du temps"). */}
-      {mounted && menuOuvertUneFois && typeof document !== "undefined" && createPortal(
+      {mounted && menuOuvertUneFois && (
         <div
           className={`md:hidden fixed inset-0 z-[99999] bg-[#F0F2F5] dark:bg-gray-950 flex flex-col h-[100dvh] w-screen overflow-hidden transition-opacity duration-150 ${
             mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -3269,8 +3268,7 @@ export default function Header() {
             </div>
 
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* 🔔 POPUP DE NOTIFICATIONS 1:1 FACEBOOK PIXEL-PERFECT */}

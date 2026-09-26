@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 /**
  * Bouton « Autour de moi » de la barre de navigation Marketplace, avec son menu
@@ -9,11 +8,6 @@ import { createPortal } from "react-dom";
  *  - liste  : « Articles proches »  → grille des articles de la zone, sans carte ;
  *  - mini   : « Mini carte »        → carte compacte au-dessus des catégories ;
  *  - pleine : « Pleine carte »      → explorateur de carte en grand écran.
- *
- * Le menu est rendu dans <body> (portail) et positionné sous le bouton : la barre de
- * navigation défile horizontalement sur téléphone (overflow), un menu placé DANS la
- * barre serait coupé. Il se ferme au clic à l'extérieur, à la touche Échap, quand on
- * choisit une option, et si la fenêtre est redimensionnée ou défilée.
  */
 export const OPTIONS_AUTOUR_DE_MOI = [
   { mode: "liste", libelle: "Articles proches", sous: "Les articles de votre zone", icone: "fa-table-cells-large" },
@@ -51,7 +45,6 @@ export default function MenuAutourDeMoi({ onChoisir, className = "", title = "",
     }
     clearTimeout(minuterieRef.current);
     setMonte(true);
-    // Une image plus tard : le menu est d'abord posé masqué, puis passe à « ouvert » — la transition joue.
     requestAnimationFrame(() => setOuvert(true));
   };
 
@@ -103,38 +96,35 @@ export default function MenuAutourDeMoi({ onChoisir, className = "", title = "",
         {children}
       </button>
 
-      {monte &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            role="menu"
-            aria-label="Autour de moi"
-            style={{ position: "fixed", top: position.haut, left: position.gauche, width: LARGEUR_MENU, zIndex: 700 }}
-            className={`rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-xl p-1.5 origin-top transition duration-150 ease-out ${
-              ouvert ? "opacity-100 translate-y-0 scale-100" : "opacity-0 -translate-y-1 scale-95 pointer-events-none"
-            }`}
-          >
-            {OPTIONS_AUTOUR_DE_MOI.map((o) => (
-              <button
-                key={o.mode}
-                type="button"
-                role="menuitem"
-                onClick={() => choisir(o.mode)}
-                className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-              >
-                <span className="w-9 h-9 shrink-0 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
-                  <i className={`fa-solid ${o.icone}`}></i>
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100 leading-tight">{o.libelle}</span>
-                  <span className="block text-[11px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">{o.sous}</span>
-                </span>
-              </button>
-            ))}
-          </div>,
-          document.body
-        )}
+      {monte && (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label="Autour de moi"
+          style={{ position: "fixed", top: position.haut, left: position.gauche, width: LARGEUR_MENU, zIndex: 700 }}
+          className={`rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-xl p-1.5 origin-top transition duration-150 ease-out ${
+            ouvert ? "opacity-100 translate-y-0 scale-100" : "opacity-0 -translate-y-1 scale-95 pointer-events-none"
+          }`}
+        >
+          {OPTIONS_AUTOUR_DE_MOI.map((o) => (
+            <button
+              key={o.mode}
+              type="button"
+              role="menuitem"
+              onClick={() => choisir(o.mode)}
+              className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              <span className="w-9 h-9 shrink-0 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
+                <i className={`fa-solid ${o.icone}`}></i>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-bold text-gray-900 dark:text-gray-100 leading-tight">{o.libelle}</span>
+                <span className="block text-[11px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">{o.sous}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </>
   );
 }
