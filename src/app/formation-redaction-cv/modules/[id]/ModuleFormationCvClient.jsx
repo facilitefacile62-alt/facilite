@@ -131,22 +131,42 @@ export default function ModuleFormationCvClient({ moduleId }) {
               )}
             </div>
 
-            {/* Vidéo — placeholder, pas encore de vrai contenu (voir migration) */}
+            {/* Leçon — vraie vidéo (pas encore de module qui en a une),
+                sinon texte de leçon en attendant (contenu_texte), sinon
+                simple placeholder "à venir". */}
             <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs overflow-hidden">
-              <div className="aspect-video bg-gray-900 dark:bg-black flex flex-col items-center justify-center gap-2 text-gray-400">
-                <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
-                  <i className="fa-solid fa-play text-xl text-white ml-1"></i>
+              {module.contenu_texte ? (
+                <div className="p-4 sm:p-5 flex items-center gap-2.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900/50">
+                  <i className="fa-solid fa-clapperboard text-amber-600 dark:text-amber-400 text-sm"></i>
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                    Vidéo à venir — en attendant, lisez la leçon ci-dessous.
+                  </p>
                 </div>
-                <p className="text-xs font-bold text-gray-300">Vidéo à venir</p>
-              </div>
-              <div className="p-4 sm:p-5 flex items-center justify-between gap-3">
+              ) : (
+                <div className="aspect-video bg-gray-900 dark:bg-black flex flex-col items-center justify-center gap-2 text-gray-400">
+                  <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
+                    <i className="fa-solid fa-play text-xl text-white ml-1"></i>
+                  </div>
+                  <p className="text-xs font-bold text-gray-300">Vidéo à venir</p>
+                </div>
+              )}
+
+              {module.contenu_texte && (
+                <p className="p-4 sm:p-5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                  {module.contenu_texte}
+                </p>
+              )}
+
+              <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Le contenu vidéo de ce module n&apos;est pas encore en ligne.
+                  {module.contenu_texte
+                    ? "Le contenu vidéo de ce module n'est pas encore en ligne."
+                    : "Aucun contenu n'est encore disponible pour ce module."}
                 </p>
                 {progression?.vu ? (
                   <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 shrink-0">
                     <i className="fa-solid fa-circle-check"></i>
-                    Vue
+                    {module.contenu_texte ? "Leçon lue" : "Vu"}
                   </span>
                 ) : (
                   <button
@@ -155,7 +175,7 @@ export default function ModuleFormationCvClient({ moduleId }) {
                     disabled={videoEnCours}
                     className="shrink-0 px-4 py-2 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold hover:bg-black dark:hover:bg-gray-200 disabled:opacity-60 transition"
                   >
-                    {videoEnCours ? "…" : "J'ai visionné cette vidéo"}
+                    {videoEnCours ? "…" : module.contenu_texte ? "J'ai terminé cette leçon" : "J'ai visionné cette vidéo"}
                   </button>
                 )}
               </div>

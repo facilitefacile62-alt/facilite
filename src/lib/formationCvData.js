@@ -53,7 +53,7 @@ export async function obtenirModuleEtQuizFormationCv(moduleId) {
   const [{ data: module, error: erreurModule }, { data: questions, error: erreurQuestions }] = await Promise.all([
     supabase
       .from("formation_redaction_cv_modules")
-      .select("id, titre, description, video_url, ordre")
+      .select("id, titre, description, video_url, contenu_texte, ordre")
       .eq("id", moduleId)
       .single(),
     supabase
