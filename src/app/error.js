@@ -1,12 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function Error({ error, reset }) {
+  const [cleaning, setCleaning] = useState(false);
+
   useEffect(() => {
     console.error("[Facilité Error Boundary]:", error);
   }, [error]);
+
+  const handleHardReload = async () => {
+    setCleaning(true);
+    try {
+      if (typeof window !== "undefined") {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        window.location.href = `/?_t=${Date.now()}`;
+        return;
+      }
+    } catch {}
+    reset();
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] flex items-center justify-center p-4">
@@ -16,16 +37,16 @@ export default function Error({ error, reset }) {
         </div>
 
         <h2 className="text-xl font-extrabold text-gray-900 mb-2">
-          Un imprévu est survenu
+          Mise à jour requise
         </h2>
 
         <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed mb-6">
-          Une erreur temporaire est survenue lors de l&apos;affichage de cette page. Cliquez ci-dessous pour recharger l&apos;interface.
+          Une nouvelle version de l&apos;application est déployée. Cliquez sur le bouton pour rafraîchir complètement les composants.
         </p>
 
         {error?.message && (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-6 text-left">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Détail technique</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Détail</span>
             <p className="text-[11px] font-mono text-gray-700 break-words line-clamp-3">
               {error.message}
             </p>
@@ -35,16 +56,11 @@ export default function Error({ error, reset }) {
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.location.reload();
-              } else {
-                reset();
-              }
-            }}
-            className="w-full py-3 px-5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+            disabled={cleaning}
+            onClick={handleHardReload}
+            className="w-full py-3 px-5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer text-center"
           >
-            🔄 Actualiser la page
+            {cleaning ? "Actualisation..." : "🔄 Actualiser la page"}
           </button>
           <Link
             href="/"

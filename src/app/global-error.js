@@ -1,11 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function GlobalError({ error, reset }) {
+  const [cleaning, setCleaning] = useState(false);
+
   useEffect(() => {
     console.error("[Facilité Global Error Boundary]:", error);
   }, [error]);
+
+  const handleHardReload = async () => {
+    setCleaning(true);
+    try {
+      if (typeof window !== "undefined") {
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        window.location.href = `/?_t=${Date.now()}`;
+        return;
+      }
+    } catch {}
+    reset();
+  };
 
   return (
     <html lang="fr">
@@ -20,22 +41,26 @@ export default function GlobalError({ error, reset }) {
           </h2>
 
           <p className="text-xs sm:text-sm text-gray-600 font-medium leading-relaxed mb-6">
-            L&apos;application a rencontré un blocage inattendu. Cliquez sur le bouton pour relancer votre session en toute sécurité.
+            Une mise à jour importante de la plateforme est disponible. Cliquez sur le bouton ci-dessous pour renouveler votre session.
           </p>
 
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.location.href = "/";
-                } else {
-                  reset();
-                }
-              }}
-              className="w-full py-3 px-5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+              disabled={cleaning}
+              onClick={handleHardReload}
+              className="w-full py-3.5 px-5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              🔄 Recharger l&apos;application
+              {cleaning ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span>Mise à jour en cours...</span>
+                </>
+              ) : (
+                <>
+                  <span>🔄 Actualiser et renouveler l&apos;application</span>
+                </>
+              )}
             </button>
           </div>
         </div>
