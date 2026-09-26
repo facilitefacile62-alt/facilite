@@ -653,39 +653,41 @@ function OffresContent({ listingType } = {}) {
             <p className="text-sm font-bold text-gray-500">Chargement des offres d'emploi...</p>
           </div>
         ) : feedOffers.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center max-w-lg mx-auto shadow-sm">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-              <i className={`fa-solid ${activeTab === "expired" ? "fa-hourglass-end" : hero.icon}`}></i>
+          listingType === "formation" ? null : (
+            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center max-w-lg mx-auto shadow-sm">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i className={`fa-solid ${activeTab === "expired" ? "fa-hourglass-end" : hero.icon}`}></i>
+              </div>
+              <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">
+                {activeTab === "expired"
+                  ? "Aucune offre expirée pour le moment"
+                  : listingType
+                  ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" disponible`
+                  : "Aucune offre disponible actuellement"}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                {activeTab === "expired"
+                  ? "Toutes les offres publiées sont actuellement actives et prêtes pour vos candidatures !"
+                  : "Essayez de modifier vos termes de recherche ou réinitialisez les filtres."}
+              </p>
+              {activeTab === "expired" ? (
+                <button
+                  onClick={() => setActiveTab("available")}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2 mx-auto"
+                >
+                  <i className="fa-solid fa-bolt"></i>
+                  <span>Voir les offres disponibles</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleResetSearch}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Afficher toutes les offres
+                </button>
+              )}
             </div>
-            <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">
-              {activeTab === "expired"
-                ? "Aucune offre expirée pour le moment"
-                : listingType
-                ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" disponible`
-                : "Aucune offre disponible actuellement"}
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
-              {activeTab === "expired"
-                ? "Toutes les offres publiées sont actuellement actives et prêtes pour vos candidatures !"
-                : "Essayez de modifier vos termes de recherche ou réinitialisez les filtres."}
-            </p>
-            {activeTab === "expired" ? (
-              <button
-                onClick={() => setActiveTab("available")}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2 mx-auto"
-              >
-                <i className="fa-solid fa-bolt"></i>
-                <span>Voir les offres disponibles</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleResetSearch}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
-              >
-                Afficher toutes les offres
-              </button>
-            )}
-          </div>
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {feedOffers.map((offer, idx) => {
