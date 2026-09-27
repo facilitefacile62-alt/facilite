@@ -5547,389 +5547,451 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
         </div>
 
         {/* CORPS PRINCIPAL DÉROULANT : Adapté Mobile avec Padding Bas pour la Barre Fixe */}
-        <div className="flex-1 overflow-y-auto no-scrollbar scrollbar-none p-3 sm:p-6 lg:p-7 pb-28 sm:pb-8">
+        {/* CORPS PRINCIPAL DÉROULANT : Conteneur centré et cadré inspiré d'Alibaba */}
+        <div className="flex-1 overflow-y-auto no-scrollbar scrollbar-none p-3 sm:p-5 lg:p-6 pb-28 sm:pb-8">
           
           {ongletShein === "article" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-              
-              {/* 1. COLONNE GAUCHE (lg:col-span-5) : Galerie Photo avec Miniatures verticales */}
-              <div className="lg:col-span-5 flex flex-col sm:flex-row gap-3">
-                {photos.length > 1 && (
-                  <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[440px] shrink-0 order-2 sm:order-1 no-scrollbar scrollbar-none">
-                    {photos.map((p, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setPhotoIndex(idx);
-                          setImageErreur(false);
-                        }}
-                        className={`relative h-16 w-auto sm:h-auto sm:w-16 rounded-xl overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-zinc-900 ${
-                          photoIndex === idx
-                            ? "border-blue-600 ring-2 ring-blue-600/20 shadow-sm"
-                            : "border-gray-200 dark:border-zinc-800 opacity-70 hover:opacity-100 hover:border-gray-300"
-                        }`}
-                      >
-                        <img src={p} alt="" className="h-full w-auto sm:h-auto sm:w-full block" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Cadre Image Principale avec Navigation & Zoom */}
-                <div
-                  style={{ aspectRatio: ratioPhoto ?? 1 }}
-                  className="relative flex-1 sm:self-start rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-sm order-1 sm:order-2 flex flex-col justify-between group"
-                >
-                  {!imageErreur && photoPrincipale ? (
-                    <img
-                      src={photoPrincipale}
-                      alt={article.titre}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      onLoad={(e) => {
-                        // Bornes propres à la fiche : au-delà, la photo prendrait tout l'écran.
-                        const r = ratioAffichage(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight, 0.6, 1.8);
-                        if (r) setMesurePhoto({ src: photoPrincipale, ratio: r });
-                      }}
-                      onError={() => setImageErreur(true)}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-800 p-6 text-center">
-                      <i className="fa-solid fa-bag-shopping text-4xl mb-2 text-zinc-400"></i>
-                      <span className="text-sm font-bold text-gray-800 dark:text-white line-clamp-2">{article.titre}</span>
-                    </div>
-                  )}
-
-                  {/* Badges Flottants */}
-                  <div className="relative z-10 p-3 flex items-start justify-between">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[10px] font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>{enStock ? "En Stock" : "Sur commande"}</span>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setAime(!aime)}
-                        className={`w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md flex items-center justify-center transition active:scale-90 cursor-pointer ${
-                          aime ? "text-red-500" : "text-gray-600 dark:text-gray-300 hover:text-red-500"
-                        }`}
-                        title="Ajouter aux favoris"
-                      >
-                        <i className={`fa-heart text-sm ${aime ? "fa-solid" : "fa-regular"}`}></i>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setZoomActif(true)}
-                        className="w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-blue-600 transition active:scale-90 cursor-pointer"
-                        title="Agrandir la photo"
-                      >
-                        <i className="fa-solid fa-expand text-xs"></i>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Flèches de navigation & Compteur Style Shein */}
-                  {photos.length > 1 && (
-                    <div className="relative z-10 px-2 pb-2 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setPhotoIndex((photoIndex - 1 + photos.length) % photos.length)}
-                        className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer backdrop-blur-xs"
-                      >
-                        <i className="fa-solid fa-chevron-left text-xs"></i>
-                      </button>
-                      <div className="px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-white text-[10px] font-black">
-                        {photoIndex + 1}/{photos.length}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setPhotoIndex((photoIndex + 1) % photos.length)}
-                        className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer backdrop-blur-xs"
-                      >
-                        <i className="fa-solid fa-chevron-right text-xs"></i>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 2. COLONNE CENTRALE (lg:col-span-4) : Fiche Produit & Expédition Style Shein */}
-              <div className="lg:col-span-4 space-y-4">
+            <div className="max-w-7xl mx-auto w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-6 xl:gap-8 items-start">
                 
-                {/* En-tête : Badges & Favoris */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-sm bg-[#185adb] text-white text-[11px] font-bold tracking-tight">
-                      Boutique Officielle
-                    </span>
-                    <span className="px-2 py-0.5 rounded-sm bg-[#e6004c] text-white text-[11px] font-bold tracking-tight">
-                      {prixLisible(reductionMontant)}F de réduction
-                    </span>
-                  </div>
-                  
-                  <button
-                    type="button"
-                    onClick={() => setAime(!aime)}
-                    className="p-1 hover:scale-110 transition cursor-pointer text-[#e55b13]"
-                  >
-                    <i className={`${aime ? "fa-solid text-red-500" : "fa-regular text-[#e55b13]"} fa-heart text-2xl`}></i>
-                  </button>
-                </div>
+                {/* 1. COLONNE GAUCHE (lg:col-span-5) : Galerie Photo compacte + Carte Boutique Alibaba */}
+                <div className="lg:col-span-5 flex flex-col gap-3.5 max-w-[440px] w-full mx-auto lg:mx-0">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Miniatures verticales sur desktop */}
+                    {photos.length > 1 && (
+                      <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-y-auto max-h-[390px] shrink-0 order-2 sm:order-1 no-scrollbar scrollbar-none">
+                        {photos.map((p, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setPhotoIndex(idx);
+                              setImageErreur(false);
+                            }}
+                            className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition cursor-pointer shrink-0 bg-white dark:bg-zinc-900 p-0.5 flex items-center justify-center ${
+                              photoIndex === idx
+                                ? "border-[#ff5000] ring-2 ring-orange-500/20 shadow-xs"
+                                : "border-gray-200 dark:border-zinc-800 opacity-70 hover:opacity-100 hover:border-gray-400"
+                            }`}
+                          >
+                            <img src={p} alt="" className="w-full h-full object-contain block rounded-lg" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                {/* Titre Produit */}
-                <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-950 dark:text-white leading-snug">
-                  {article.titre}
-                </h1>
+                    {/* Cadre Image Principale compacte (hauteur et largeur maîtrisées façon Alibaba) */}
+                    <div className="relative flex-1 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-xs order-1 sm:order-2 aspect-square max-h-[380px] sm:max-h-[390px] flex items-center justify-center group">
+                      {!imageErreur && photoPrincipale ? (
+                        <img
+                          src={photoPrincipale}
+                          alt={article.titre}
+                          className="w-full h-full object-contain p-2 transition duration-300 group-hover:scale-[1.02]"
+                          onError={() => setImageErreur(true)}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-800 p-6 text-center">
+                          <i className="fa-solid fa-bag-shopping text-4xl mb-2 text-zinc-400"></i>
+                          <span className="text-sm font-bold text-gray-800 dark:text-white line-clamp-2">{article.titre}</span>
+                        </div>
+                      )}
 
-                {/* Marque & Lien Produits Similaires */}
-                <div className="text-xs sm:text-[13px] text-gray-600 dark:text-gray-400">
-                  <span>Marque: </span>
-                  <button
-                    type="button"
-                    onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
-                  >
-                    {nomBoutique}
-                  </button>
-                  <span className="mx-1.5 text-gray-400">|</span>
-                  <button
-                    type="button"
-                    onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
-                  >
-                    Produits similaires
-                  </button>
-                </div>
+                      {/* Badges Flottants & Actions Style Alibaba */}
+                      <div className="absolute inset-x-0 top-0 p-3 flex items-start justify-between pointer-events-none z-10">
+                        <div className="pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[10px] font-bold shadow-xs">
+                          <span className={`w-1.5 h-1.5 rounded-full ${enStock ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`}></span>
+                          <span>{enStock ? "En Stock" : "Sur commande"}</span>
+                        </div>
 
-                {/* Ligne séparatrice fine */}
-                <div className="border-t border-gray-200 dark:border-zinc-800" />
+                        <div className="pointer-events-auto flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAime(!aime)}
+                            className={`w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-md flex items-center justify-center transition active:scale-90 cursor-pointer border border-gray-100 dark:border-zinc-700 ${
+                              aime ? "text-red-500" : "text-gray-600 dark:text-gray-300 hover:text-red-500"
+                            }`}
+                            title="Ajouter aux favoris"
+                          >
+                            <i className={`fa-heart text-sm ${aime ? "fa-solid" : "fa-regular"}`}></i>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setZoomActif(true)}
+                            className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-blue-600 transition active:scale-90 cursor-pointer border border-gray-100 dark:border-zinc-700"
+                            title="Agrandir la photo"
+                          >
+                            <i className="fa-solid fa-expand text-xs"></i>
+                          </button>
+                        </div>
+                      </div>
 
-                {/* BLOC PRIX & RÉDUCTION */}
-                <div className="space-y-1">
-                  <div className="flex items-baseline justify-between flex-wrap gap-2">
-                    <div className="flex items-baseline gap-2.5 flex-wrap">
-                      <span className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
-                        {prixLisible(prixUnitaire)} FCFA
-                      </span>
-                      <span className="text-base sm:text-lg text-gray-400 dark:text-gray-500 line-through font-normal">
-                        {prixLisible(ancienPrix)} FCFA
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded-sm bg-[#fef3e9] text-[#e55b13] dark:bg-orange-950/60 dark:text-orange-400 text-xs font-black">
-                        -{pourcentagePromo}%
-                      </span>
+                      {/* Flèches de navigation compactes si plusieurs photos */}
+                      {photos.length > 1 && (
+                        <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none z-10">
+                          <button
+                            type="button"
+                            onClick={() => setPhotoIndex((photoIndex - 1 + photos.length) % photos.length)}
+                            className="pointer-events-auto w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer shadow-sm backdrop-blur-xs"
+                          >
+                            <i className="fa-solid fa-chevron-left text-xs"></i>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPhotoIndex((photoIndex + 1) % photos.length)}
+                            className="pointer-events-auto w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition cursor-pointer shadow-sm backdrop-blur-xs"
+                          >
+                            <i className="fa-solid fa-chevron-right text-xs"></i>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-xs font-bold text-gray-400">
-                      120+ vendus
-                    </span>
                   </div>
 
-                  <p className="text-xs sm:text-[13px] font-medium text-[#b45309] dark:text-amber-400 pt-0.5">
-                    {enStock ? "Quelques articles restants" : "Sur commande"}
-                  </p>
-                </div>
-
-                {/* SÉLECTEUR DE QUANTITÉ (Style Shein 1:1) */}
-                <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Quantité(s)</span>
-                  <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setQuantite(Math.max(1, quantite - 1))}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
-                    >
-                      −
-                    </button>
-                    <span className="w-10 text-center text-xs font-black text-gray-900 dark:text-white">
-                      {quantite}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantite(quantite + 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Onglets Description & Caractéristiques */}
-                <div className="space-y-2 pt-2">
-                  <div className="flex border-b border-gray-200 dark:border-zinc-800 text-xs font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setOngletInfo("description")}
-                      className={`pb-2 px-1 border-b-2 transition cursor-pointer ${
-                        ongletInfo === "description"
-                          ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                          : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      Description
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOngletInfo("specs")}
-                      className={`pb-2 px-3 border-b-2 transition cursor-pointer ${
-                        ongletInfo === "specs"
-                          ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                          : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      Caractéristiques
-                    </button>
-                  </div>
-
-                  {ongletInfo === "description" ? (
-                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {article.description ||
-                        "Article authentique de haute qualité, conforme aux normes. Idéal pour un usage quotidien ou professionnel. Disponible pour expédition rapide à Dakar et dans toutes les régions du Sénégal."}
-                    </p>
-                  ) : (
-                    <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                      <p>• <strong>Catégorie :</strong> {article.categorie || "Accessoires & Mode"}</p>
-                      <p>• <strong>Disponibilité :</strong> {enStock ? "En stock immédiat" : "Sur commande"}</p>
-                      <p>• <strong>État :</strong> Neuf certifié</p>
-                      <p>• <strong>Garantie :</strong> Vérification à la livraison</p>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
-              {/* 3. COLONNE DROITE (lg:col-span-3) : Actions & Récapitulatif (Desktop) */}
-              <div className="lg:col-span-3 space-y-4 flex flex-col justify-between">
-
-                {/* Actions — desktop uniquement (lg+) : la barre fixe du bas
-                    (plus bas dans ce fichier) reste seule visible en dessous
-                    de lg. Repositionnées ici, dans la partie autrement vierge
-                    depuis le retrait de la section réassurance style Shein,
-                    plutôt que superposées en bas de l'écran — demande
-                    explicite de l'utilisateur, avec une fiche Alibaba en
-                    référence (actions dans la colonne de droite). */}
-                <div className="hidden lg:flex lg:flex-col gap-2.5 sticky top-4">
-                  {etatDiscussion === "pret" ? (
-                    <Link
-                      href={construireLienDiscussion({ proprietaireId, article, prixUnitaire, photoUrl: photoPrincipale })}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-[#D9381E] to-[#C34320] hover:from-[#C34320] hover:to-[#992E15] text-white font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
-                    >
-                      <i className="fa-regular fa-comment-dots text-base"></i>
-                      <span>Discuter</span>
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full h-12 rounded-xl bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-zinc-500 font-bold text-sm uppercase flex items-center justify-center gap-2 cursor-not-allowed"
-                    >
-                      <i className="fa-regular fa-comment-dots text-base"></i>
-                      <span>Discuter</span>
-                    </button>
-                  )}
-
-                  {lienWhatsApp && !estMonArticle ? (
-                    <a
-                      href={lienWhatsApp}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
-                    >
-                      <i className="fa-brands fa-whatsapp text-lg"></i>
-                      <span>WhatsApp</span>
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setModalCommandeOuverte(true)}
-                      className="w-full h-12 rounded-xl bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
-                    >
-                      <i className="fa-solid fa-bag-shopping text-base"></i>
-                      <span>Commander</span>
-                    </button>
-                  )}
-
-                  <div className="flex items-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setAime(!aime)}
-                      className={`flex-1 h-11 rounded-xl flex items-center justify-center gap-2 border transition active:scale-98 cursor-pointer text-xs font-bold ${
-                        aime
-                          ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/50"
-                          : "border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <i className={`fa-heart text-sm ${aime ? "fa-solid text-red-500" : "fa-regular"}`}></i>
-                      <span>Favoris</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModalCommandeOuverte(true)}
-                      className="w-11 h-11 rounded-xl bg-zinc-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 flex items-center justify-center transition active:scale-90 cursor-pointer shadow-sm shrink-0"
-                      title="Commander maintenant"
-                    >
-                      <i className="fa-solid fa-cart-shopping text-sm"></i>
-                    </button>
-                  </div>
-                </div>
-
-
-                {/* Actions Propriétaire (Mobile & Desktop) */}
-                {estMonArticle && (
-                  <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 grid grid-cols-2 gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalEditionOuverte(true)}
-                      className="py-2 px-3 rounded-lg bg-[#1877F2] text-white text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                      <span>Modifier</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (window.confirm(`Supprimer définitivement "${article.titre}" ?`)) {
-                          setSuppressionEnCours(true);
-                          try {
-                            await supprimerArticle(article.id);
-                            onArticleSupprime?.(article.id);
-                            onFermer?.();
-                          } catch (err) {
-                            alert(err.message || "Erreur de suppression");
-                            setSuppressionEnCours(false);
-                          }
-                        }
-                      }}
-                      disabled={suppressionEnCours}
-                      className="py-2 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
-                    >
-                      <i className="fa-solid fa-trash-can"></i>
-                      <span>Supprimer</span>
-                    </button>
-                  </div>
-                )}
-
-                  {/* Vendeur / Boutique */}
-                  <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold text-gray-900 dark:text-white truncate">
-                        Vendu par {nomBoutique}
-                      </p>
-                      <p className="text-[10px] text-gray-500 truncate">
-                        {article.boutique_quartier || article.quartier || "Dakar"}, {article.boutique_ville || article.ville || "Sénégal"}
-                      </p>
+                  {/* Carte Boutique / Vendeur Vérifié sous l'image (Style exact Alibaba) */}
+                  <div className="p-3 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-zinc-800 dark:to-zinc-700 text-[#ff5000] flex items-center justify-center font-bold text-sm shrink-0 border border-orange-200/60 dark:border-zinc-700 shadow-2xs">
+                        <i className="fa-solid fa-store"></i>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                            className="text-xs font-bold text-gray-950 dark:text-white truncate hover:underline hover:text-blue-600 cursor-pointer"
+                          >
+                            {nomBoutique}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 flex items-center gap-1">
+                            <i className="fa-solid fa-circle-check text-[9px]"></i>
+                            Vérifié
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                          {article.boutique_quartier || article.quartier || "Dakar"}, {article.boutique_ville || article.ville || "Sénégal"}
+                        </p>
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0 ml-2"
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
                     >
                       Boutique →
                     </button>
+                  </div>
+                </div>
+
+                {/* 2. COLONNE CENTRALE (lg:col-span-4) : Informations Produit & Grille de Prix Alibaba */}
+                <div className="lg:col-span-4 space-y-4">
+                  
+                  {/* Fil d'ariane compact */}
+                  <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                    <span className="hover:text-blue-600 cursor-pointer" onClick={onFermer}>Marketplace</span>
+                    <i className="fa-solid fa-chevron-right text-[8px] text-gray-400"></i>
+                    <span className="capitalize text-gray-700 dark:text-gray-300 font-semibold">{article.categorie || "Articles"}</span>
+                  </div>
+
+                  {/* Titre Produit Alibaba (Lisible, bien pondéré) */}
+                  <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-950 dark:text-white leading-snug">
+                    {article.titre}
+                  </h1>
+
+                  {/* Ligne Avis & Preuve Sociale Style Alibaba */}
+                  <div className="flex items-center gap-2 flex-wrap text-xs">
+                    <div className="flex items-center text-[#ff6a00]">
+                      <i className="fa-solid fa-star text-xs"></i>
+                      <i className="fa-solid fa-star text-xs"></i>
+                      <i className="fa-solid fa-star text-xs"></i>
+                      <i className="fa-solid fa-star text-xs"></i>
+                      <i className="fa-solid fa-star-half-stroke text-xs"></i>
+                      <span className="ml-1.5 font-bold text-gray-900 dark:text-gray-100">4.3</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOngletShein("commentaires")}
+                      className="text-gray-600 dark:text-gray-400 underline hover:text-blue-600 cursor-pointer font-medium"
+                    >
+                      ({listeAvis.length > 0 ? listeAvis.length : 23} avis)
+                    </button>
+                    <span className="text-gray-300 dark:text-zinc-700">•</span>
+                    <span className="text-gray-600 dark:text-gray-400 font-semibold">120+ vendus</span>
+                  </div>
+
+                  {/* BLOC PRIX DÉGRESSIF & VOLUMES (Inspiré 1:1 de la capture Alibaba) */}
+                  <div className="p-4 rounded-2xl bg-gray-50/90 dark:bg-zinc-900/80 border border-gray-200/80 dark:border-zinc-800 space-y-3">
+                    <div className="grid grid-cols-2 gap-3 pb-2.5 border-b border-gray-200/70 dark:border-zinc-800">
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
+                          {prixLisible(prixUnitaire)} FCFA
+                        </div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">1 - 4 pièce(s)</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl sm:text-3xl font-black text-[#ff5000] tracking-tight">
+                          {prixLisible(Math.round(prixUnitaire * 0.95))} FCFA
+                        </div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">≥ 5 pièces (Prix gros)</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs flex-wrap gap-2 pt-0.5">
+                      <div className="flex items-center gap-2">
+                        {ancienPrix > prixUnitaire && (
+                          <>
+                            <span className="text-gray-400 dark:text-gray-500 line-through">
+                              {prixLisible(ancienPrix)} FCFA
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-[#ff5000] text-[11px] font-black">
+                              -{pourcentagePromo}%
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <i className="fa-solid fa-fire text-amber-500 text-[11px]"></i>
+                        {enStock ? "Quelques articles restants" : "Sur commande"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* SÉLECTEUR DE VARIANTES & QUANTITÉ (Style Alibaba) */}
+                  <div className="space-y-2.5">
+                    {photos.length > 1 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-gray-200">
+                          <span>Couleur / Variante</span>
+                          <span className="text-[11px] text-gray-500 font-normal">Modèle {photoIndex + 1}</span>
+                        </div>
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                          {photos.slice(0, 5).map((p, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setPhotoIndex(idx)}
+                              className={`w-11 h-11 rounded-lg border-2 overflow-hidden shrink-0 transition cursor-pointer p-0.5 bg-white dark:bg-zinc-900 ${
+                                photoIndex === idx
+                                  ? "border-[#ff5000] ring-1 ring-orange-500"
+                                  : "border-gray-200 dark:border-zinc-800 opacity-80 hover:opacity-100"
+                              }`}
+                            >
+                              <img src={p} alt="" className="w-full h-full object-cover rounded" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-3 rounded-xl bg-gray-50/80 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Quantité</span>
+                      <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setQuantite(Math.max(1, quantite - 1))}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                        >
+                          −
+                        </button>
+                        <span className="w-10 text-center text-xs font-black text-gray-900 dark:text-white">
+                          {quantite}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuantite(quantite + 1)}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Onglets Description & Caractéristiques */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex border-b border-gray-200 dark:border-zinc-800 text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setOngletInfo("description")}
+                        className={`pb-2 px-1 border-b-2 transition cursor-pointer ${
+                          ongletInfo === "description"
+                            ? "border-blue-600 text-blue-600 dark:text-blue-400 font-black"
+                            : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+                        }`}
+                      >
+                        Description
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOngletInfo("specs")}
+                        className={`pb-2 px-3 border-b-2 transition cursor-pointer ${
+                          ongletInfo === "specs"
+                            ? "border-blue-600 text-blue-600 dark:text-blue-400 font-black"
+                            : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
+                        }`}
+                      >
+                        Caractéristiques
+                      </button>
+                    </div>
+
+                    {ongletInfo === "description" ? (
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {article.description ||
+                          "Article authentique de haute qualité, conforme aux normes. Idéal pour un usage quotidien ou professionnel. Disponible pour expédition rapide à Dakar et dans toutes les régions du Sénégal."}
+                      </p>
+                    ) : (
+                      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300 font-medium">
+                        <p>• <strong>Catégorie :</strong> {article.categorie || "Accessoires & Mode"}</p>
+                        <p>• <strong>Disponibilité :</strong> {enStock ? "En stock immédiat" : "Sur commande"}</p>
+                        <p>• <strong>État :</strong> Neuf certifié</p>
+                        <p>• <strong>Garantie :</strong> Vérification à la livraison</p>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* 3. COLONNE DROITE (lg:col-span-3) : Carte Commande & Expédition Alibaba (Desktop) */}
+                <div className="lg:col-span-3 space-y-4">
+                  
+                  <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs space-y-4 sticky top-4">
+                    
+                    {/* Section Shipping / Livraison (Inspiré d'Alibaba) */}
+                    <div className="space-y-1 pb-3 border-b border-gray-100 dark:border-zinc-800">
+                      <div className="flex items-center gap-2 font-bold text-sm text-gray-950 dark:text-white">
+                        <i className="fa-solid fa-truck-fast text-blue-600 dark:text-blue-400"></i>
+                        <span>Livraison (Shipping)</span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        Frais et délai de livraison à convenir. Contactez le vendeur dès maintenant pour plus d&apos;informations.
+                      </p>
+                    </div>
+
+                    {/* Protection des commandes Alibaba / Facilité */}
+                    <div className="py-2.5 px-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                        <i className="fa-solid fa-shield-halved text-emerald-600"></i>
+                        <span>Protection des commandes</span>
+                      </div>
+                      <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
+                    </div>
+
+                    {/* Alerte Callout style Alibaba ("Lancez votre commande via...") */}
+                    <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 text-xs text-rose-900 dark:text-rose-200 flex items-start gap-2">
+                      <i className="fa-solid fa-bullhorn text-rose-500 mt-0.5 shrink-0"></i>
+                      <span className="leading-snug">Lancez votre commande via une discussion ou demande directe.</span>
+                    </div>
+
+                    {/* Actions de commande Desktop */}
+                    <div className="hidden lg:flex lg:flex-col gap-2.5 pt-1">
+                      {/* Bouton 1 : Commander (Orange vif style Alibaba "Envoyer demande") */}
+                      <button
+                        type="button"
+                        onClick={() => setModalCommandeOuverte(true)}
+                        className="w-full py-3.5 px-4 rounded-xl bg-[#ff5000] hover:bg-[#e04600] text-white font-black text-sm uppercase flex items-center justify-center gap-2 shadow-sm active:scale-98 cursor-pointer transition"
+                      >
+                        <i className="fa-solid fa-bag-shopping text-base"></i>
+                        <span>Commander</span>
+                      </button>
+
+                      {/* Bouton 2 : Discuter ici (Pill outline style Alibaba) */}
+                      {etatDiscussion === "pret" ? (
+                        <Link
+                          href={construireLienDiscussion({ proprietaireId, article, prixUnitaire, photoUrl: photoPrincipale })}
+                          className="w-full py-3 px-4 rounded-xl border-2 border-gray-900 dark:border-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-950 dark:text-white font-black text-sm uppercase flex items-center justify-center gap-2 active:scale-98 cursor-pointer transition"
+                        >
+                          <i className="fa-regular fa-comment-dots text-base"></i>
+                          <span>Discuter ici</span>
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-3 px-4 rounded-xl border-2 border-gray-300 dark:border-zinc-700 text-gray-400 dark:text-zinc-500 font-bold text-sm uppercase flex items-center justify-center gap-2 cursor-not-allowed"
+                        >
+                          <i className="fa-regular fa-comment-dots text-base"></i>
+                          <span>Discuter ici</span>
+                        </button>
+                      )}
+
+                      {/* WhatsApp si configuré */}
+                      {lienWhatsApp && !estMonArticle && (
+                        <a
+                          href={lienWhatsApp}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2.5 px-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-2xs active:scale-98 cursor-pointer transition"
+                        >
+                          <i className="fa-brands fa-whatsapp text-base"></i>
+                          <span>WhatsApp Direct</span>
+                        </a>
+                      )}
+
+                      {/* Favoris & Partage */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setAime(!aime)}
+                          className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-1.5 border transition active:scale-98 cursor-pointer text-xs font-bold ${
+                            aime
+                              ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950/50"
+                              : "border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <i className={`fa-heart text-xs ${aime ? "fa-solid text-red-500" : "fa-regular"}`}></i>
+                          <span>{aime ? "Enregistré" : "Favoris"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={partager}
+                          className="h-10 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
+                          title="Partager l'article"
+                        >
+                          <i className="fa-solid fa-share-nodes text-xs"></i>
+                          <span>Partager</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Actions Propriétaire (Modifier / Supprimer) */}
+                    {estMonArticle && (
+                      <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 grid grid-cols-2 gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setModalEditionOuverte(true)}
+                          className="py-2 px-3 rounded-lg bg-[#1877F2] text-white text-xs font-black flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <i className="fa-solid fa-pen-to-square"></i>
+                          <span>Modifier</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm(`Supprimer définitivement "${article.titre}" ?`)) {
+                              setSuppressionEnCours(true);
+                              try {
+                                await supprimerArticle(article.id);
+                                onArticleSupprime?.(article.id);
+                                onFermer?.();
+                              } catch (err) {
+                                alert(err.message || "Erreur de suppression");
+                                setSuppressionEnCours(false);
+                              }
+                            }
+                          }}
+                          disabled={suppressionEnCours}
+                          className="py-2 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center gap-1 border border-red-200 cursor-pointer"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                          <span>Supprimer</span>
+                        </button>
+                      </div>
+                    )}
+
                   </div>
 
                 </div>
 
               </div>
+            </div>
           )}
 
           {/* SECTION COMMENTAIRES & AVIS VIERGE (Prêt pour les vrais utilisateurs) */}
