@@ -718,7 +718,7 @@ function OffresContent({ listingType } = {}) {
                       </span>
                     </div>
 
-                    {/* Ligne Tarif & Bouton "Commencer" */}
+                    {/* Ligne Tarif & Boutons d'Action (Partager + Commencer) */}
                     <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
                       <div className="flex flex-col">
                         <span className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-tight">
@@ -729,31 +729,32 @@ function OffresContent({ listingType } = {}) {
                         </span>
                       </div>
 
-                      <Link
-                        href={offerDetailHref}
-                        className="px-4 sm:px-5 py-2 sm:py-2.5 bg-white dark:bg-gray-900 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-white border-2 border-purple-600 dark:border-purple-500 font-black text-xs sm:text-sm rounded-xl shadow-xs transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
-                      >
-                        <span>Commencer</span>
-                        <i className="fa-solid fa-arrow-right text-[11px]"></i>
-                      </Link>
-                    </div>
+                      <div className="flex items-center gap-2">
+                        {/* Bouton Partager (Ouverture du menu de partage universel) */}
+                        <SocialShareButtons
+                          offer={{
+                            ...offer,
+                            id: offer.id,
+                            title: offer.title,
+                            company: offer.company || "Facilité Academy",
+                            location: offer.location || "En ligne / Dakar, Sénégal",
+                            external_link: offer.external_link,
+                            externalLink: offer.external_link,
+                          }}
+                          variant="share-only"
+                          isExpired={false}
+                          onToast={triggerToast}
+                        />
 
-                    {/* Barre de partage social universel & réactions */}
-                    <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
-                      <SocialShareButtons
-                        offer={{
-                          ...offer,
-                          id: offer.id,
-                          title: offer.title,
-                          company: offer.company || "Facilité Academy",
-                          location: offer.location || "En ligne / Dakar, Sénégal",
-                          external_link: offer.external_link,
-                          externalLink: offer.external_link,
-                        }}
-                        variant="compact"
-                        isExpired={false}
-                        onToast={triggerToast}
-                      />
+                        {/* Bouton Commencer */}
+                        <Link
+                          href={offerDetailHref}
+                          className="px-4 sm:px-5 py-2 sm:py-2.5 bg-white dark:bg-gray-900 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-white border-2 border-purple-600 dark:border-purple-500 font-black text-xs sm:text-sm rounded-xl shadow-xs transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+                        >
+                          <span>Commencer</span>
+                          <i className="fa-solid fa-arrow-right text-[11px]"></i>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );
