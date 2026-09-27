@@ -450,8 +450,8 @@ function OffresContent({ listingType } = {}) {
           </p>
         </div>
 
-        {/* Barre de Recherche & Filtres (Filtres sur les offres d'emploi & Recherche IA) */}
-        {(checkFeatureAllowed("feat_offres_filtres") || checkFeatureAllowed("feat_offres_recherche_ia")) && (
+        {/* Barre de Recherche & Filtres (Filtres sur les offres d'emploi & Recherche IA) - Masquée sur la page formations */}
+        {listingType !== "formation" && (checkFeatureAllowed("feat_offres_filtres") || checkFeatureAllowed("feat_offres_recherche_ia")) && (
           <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200 shadow-xs mb-4 sm:mb-8">
             <div className="flex flex-col md:flex-row items-center gap-2.5 sm:gap-4">
               {checkFeatureAllowed("feat_offres_filtres") && (
@@ -535,8 +535,8 @@ function OffresContent({ listingType } = {}) {
           </div>
         )}
 
-        {/* Système d'onglets FOMO : Offres disponibles vs Offres expirées */}
-        {checkFeatureAllowed("feat_offres_onglets_status") && (
+        {/* Système d'onglets FOMO : Offres disponibles vs Offres expirées - Masqué sur la page formations */}
+        {listingType !== "formation" && checkFeatureAllowed("feat_offres_onglets_status") && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white dark:bg-gray-900 p-2 sm:p-2.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
             <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl w-full sm:w-auto">
               <button
@@ -549,7 +549,7 @@ function OffresContent({ listingType } = {}) {
                 }`}
               >
                 <i className="fa-solid fa-bolt text-emerald-500"></i>
-                <span>{listingType === "formation" ? "Formations disponibles" : "Offres disponibles"}</span>
+                <span>Offres disponibles</span>
                 <span
                   className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
                     activeTab === "available"
@@ -571,7 +571,7 @@ function OffresContent({ listingType } = {}) {
                 }`}
               >
                 <i className="fa-solid fa-hourglass-end text-rose-500"></i>
-                <span>{listingType === "formation" ? "Formations archivées" : "Offres expirées"}</span>
+                <span>Offres expirées</span>
                 <span
                   className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
                     activeTab === "expired"
@@ -588,12 +588,12 @@ function OffresContent({ listingType } = {}) {
             {activeTab === "expired" ? (
               <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
                 <i className="fa-solid fa-clock-rotate-left"></i>
-                <span>{listingType === "formation" ? "Ces sessions de formation sont clôturées." : "Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !"}</span>
+                <span>Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50">
                 <i className="fa-solid fa-fire text-amber-500"></i>
-                <span>{listingType === "formation" ? "Formations certifiantes tendance : lancez votre apprentissage !" : "Recrutements en cours : postulez rapidement avant clôture !"}</span>
+                <span>Recrutements en cours : postulez rapidement avant clôture !</span>
               </div>
             )}
           </div>
