@@ -5854,34 +5854,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   
                   <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs space-y-4 sticky top-4">
                     
-                    {/* Section Shipping / Livraison (Inspiré d'Alibaba) */}
-                    <div className="space-y-1 pb-3 border-b border-gray-100 dark:border-zinc-800">
-                      <div className="flex items-center gap-2 font-bold text-sm text-gray-950 dark:text-white">
-                        <i className="fa-solid fa-truck-fast text-blue-600 dark:text-blue-400"></i>
-                        <span>Livraison (Shipping)</span>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                        Frais et délai de livraison à convenir. Contactez le vendeur dès maintenant pour plus d&apos;informations.
-                      </p>
-                    </div>
-
-                    {/* Protection des commandes Alibaba / Facilité */}
-                    <div className="py-2.5 px-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
-                        <i className="fa-solid fa-shield-halved text-emerald-600"></i>
-                        <span>Protection des commandes</span>
-                      </div>
-                      <i className="fa-solid fa-chevron-right text-gray-400 text-[10px]"></i>
-                    </div>
-
-                    {/* Alerte Callout style Alibaba ("Lancez votre commande via...") */}
-                    <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 text-xs text-rose-900 dark:text-rose-200 flex items-start gap-2">
-                      <i className="fa-solid fa-bullhorn text-rose-500 mt-0.5 shrink-0"></i>
-                      <span className="leading-snug">Lancez votre commande via une discussion ou demande directe.</span>
-                    </div>
-
                     {/* Actions de commande Desktop */}
-                    <div className="hidden lg:flex lg:flex-col gap-2.5 pt-1">
+                    <div className="hidden lg:flex lg:flex-col gap-2.5">
                       {/* Bouton 1 : Commander (Orange vif style Alibaba "Envoyer demande") */}
                       <button
                         type="button"
