@@ -434,18 +434,18 @@ function OffresContent({ listingType } = {}) {
       </div>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 pb-12 flex-1 w-full">
-        {/* Hero Banner */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white mb-4 sm:mb-6 shadow-md sm:shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 sm:p-8 opacity-10 pointer-events-none">
-            <i className={`fa-solid ${hero.icon} text-5xl sm:text-9xl`}></i>
+        {/* Hero Banner (Format Compact & Raffiné) */}
+        <div className={`bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 rounded-2xl sm:rounded-3xl ${listingType === "formation" ? "p-3.5 sm:py-4 sm:px-6 mb-4" : "p-4 sm:p-6 mb-4 sm:mb-6"} text-white shadow-sm sm:shadow-md relative overflow-hidden`}>
+          <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 pointer-events-none">
+            <i className={`fa-solid ${hero.icon} ${listingType === "formation" ? "text-4xl sm:text-6xl" : "text-5xl sm:text-7xl"}`}></i>
           </div>
-          <span className="text-[10px] sm:text-xs font-extrabold text-emerald-300 uppercase tracking-widest block mb-1 sm:mb-1.5 relative z-10">
+          <span className="text-[9px] sm:text-[11px] font-extrabold text-emerald-300 uppercase tracking-widest block mb-0.5 sm:mb-1 relative z-10">
             {hero.eyebrow}
           </span>
-          <h1 className="text-lg sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-1 sm:mb-2 relative z-10 leading-snug">
+          <h1 className={`${listingType === "formation" ? "text-base sm:text-xl md:text-2xl" : "text-lg sm:text-2xl md:text-3xl"} font-extrabold tracking-tight mb-1 relative z-10 leading-snug`}>
             {hero.title}
           </h1>
-          <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
+          <p className="text-[11px] sm:text-xs text-emerald-100 font-medium leading-relaxed max-w-2xl relative z-10">
             {hero.description}
           </p>
         </div>
