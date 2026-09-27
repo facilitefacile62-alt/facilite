@@ -53,9 +53,10 @@ const OFFICIAL_FORMATION_OFFERS = [
     id: "formation-redaction-cv",
     title: "Formation Rédaction de CV Professionnel & Certification ATS",
     company: "Facilité Academy",
+    instructor: "Facilité Academy · Experts Recrutement ATS",
     contract_type: "Formation Certifiante",
     location: "En ligne / Dakar, Sénégal",
-    description: "🎓 Masterclass Officielle Facilité : Maîtrisez la conception de CV d'élite à fort impact, optimisés pour franchir les filtres ATS et convaincre les recruteurs en moins de 10 secondes. Certification de rédacteur professionnel délivrée.",
+    description: "🎓 Masterclass Officielle : Maîtrisez la conception de CV d'élite à fort impact, optimisés pour franchir les filtres ATS et convaincre les recruteurs en moins de 10 secondes. Certification professionnelle délivrée.",
     image_url: "/affiche_cv_pro.jpg",
     created_at: new Date().toISOString(),
     is_active: true,
@@ -64,7 +65,12 @@ const OFFICIAL_FORMATION_OFFERS = [
     sponsor_priority: 100,
     sector: "Formation Numérique & E-learning",
     external_link: "/formation-redaction-cv",
-    external_button_label: "S'inscrire à la formation",
+    external_button_label: "Commencer",
+    price: "15 000 FCFA",
+    original_price: "25 000 FCFA",
+    rating: 4.9,
+    reviews_count: 321,
+    badge_label: "Meilleure vente",
     contact_phone: "+221 77 140 08 32",
     contact_email: "contact@ffacilite.com",
   },
@@ -543,7 +549,7 @@ function OffresContent({ listingType } = {}) {
                 }`}
               >
                 <i className="fa-solid fa-bolt text-emerald-500"></i>
-                <span>Offres disponibles</span>
+                <span>{listingType === "formation" ? "Formations disponibles" : "Offres disponibles"}</span>
                 <span
                   className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
                     activeTab === "available"
@@ -565,7 +571,7 @@ function OffresContent({ listingType } = {}) {
                 }`}
               >
                 <i className="fa-solid fa-hourglass-end text-rose-500"></i>
-                <span>Offres expirées</span>
+                <span>{listingType === "formation" ? "Formations archivées" : "Offres expirées"}</span>
                 <span
                   className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold transition ${
                     activeTab === "expired"
@@ -582,18 +588,18 @@ function OffresContent({ listingType } = {}) {
             {activeTab === "expired" ? (
               <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-3.5 py-2 rounded-xl border border-rose-200/80 dark:border-rose-900/50">
                 <i className="fa-solid fa-clock-rotate-left"></i>
-                <span>Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !</span>
+                <span>{listingType === "formation" ? "Ces sessions de formation sont clôturées." : "Ces opportunités sont clôturées. Consultez les offres disponibles pour postuler à temps !"}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50">
                 <i className="fa-solid fa-fire text-amber-500"></i>
-                <span>Recrutements en cours : postulez rapidement avant clôture !</span>
+                <span>{listingType === "formation" ? "Formations certifiantes tendance : lancez votre apprentissage !" : "Recrutements en cours : postulez rapidement avant clôture !"}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Grille des Offres d'Emploi */}
+        {/* Grille des Offres / Formations */}
         {loading ? (
           <div className="py-20 text-center">
             <i className="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-3"></i>
@@ -606,14 +612,14 @@ function OffresContent({ listingType } = {}) {
             </div>
             <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">
               {activeTab === "expired"
-                ? "Aucune offre expirée pour le moment"
+                ? "Aucune session archivée pour le moment"
                 : listingType
                 ? `Aucune offre "${LISTING_TYPE_LABELS[listingType] || hero.title}" disponible`
-                : "Aucune offre disponible actuellement"}
+                : "Aucune opportunité disponible actuellement"}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
               {activeTab === "expired"
-                ? "Toutes les opportunités publiées sont actuellement actives et prêtes pour vos candidatures !"
+                ? "Toutes les sessions publiées sont actuellement actives !"
                 : "Essayez de modifier vos termes de recherche ou réinitialisez les filtres."}
             </p>
             {activeTab === "expired" ? (
@@ -636,11 +642,126 @@ function OffresContent({ listingType } = {}) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {feedOffers.map((offer, idx) => {
-              // `offer.required_education_level` n'existe pas : la colonne
-              // s'appelle min_education_level.
+              const isFormation = offer.listing_type === "formation" || listingType === "formation";
+              const isExpired = isOfferExpired(offer);
+              const offerImg = getOfferImage(offer, idx);
+              const offerDetailHref = offer.external_link && isFormation
+                ? offer.external_link
+                : `/offres/${offer.id}`;
+
+              // 1. CARTE DE FORMATION E-LEARNING (Style E-Learning / Udemy Haute Conversion)
+              if (isFormation) {
+                return (
+                  <div
+                    key={`${offer.id}-${idx}`}
+                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 overflow-hidden flex flex-col p-4 sm:p-5 group"
+                  >
+                    {/* Vignette Formation avec ratio 16:9 & Badges */}
+                    <div className="relative mb-3.5 rounded-xl overflow-hidden bg-gray-950 aspect-video flex items-center justify-center group/img shadow-xs">
+                      <img
+                        src={offerImg}
+                        alt={offer.title}
+                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      {/* Badge Langue & Format */}
+                      <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 bg-black/70 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg">
+                        <span className="text-xs">🇫🇷</span>
+                        <span>Français</span>
+                      </div>
+
+                      <div className="absolute top-2.5 left-2.5 z-10">
+                        <span className="bg-[#10E688] text-gray-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-xs">
+                          Certifiante
+                        </span>
+                      </div>
+
+                      {/* Bouton Agrandir l'affiche */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewImageModal({ isOpen: true, url: offerImg });
+                        }}
+                        className="absolute bottom-2.5 right-2.5 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/75 hover:bg-black text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md cursor-pointer"
+                      >
+                        <i className="fa-solid fa-expand text-[10px]"></i>
+                        <span>Agrandir</span>
+                      </button>
+                    </div>
+
+                    {/* Titre du Cours / Formation */}
+                    <Link
+                      href={offerDetailHref}
+                      className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white leading-snug hover:text-purple-600 dark:hover:text-purple-400 transition-colors block line-clamp-2 min-h-[44px]"
+                      title={offer.title}
+                    >
+                      {offer.title}
+                    </Link>
+
+                    {/* Auteur / Organisme Formateur */}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-1">
+                      {offer.instructor || offer.company || "Facilité Academy · Experts Recrutement ATS"}
+                    </p>
+
+                    {/* Badges & Notes (Meilleure vente, ⭐ 4,9, 321 avis) */}
+                    <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                      <span className="bg-[#d1f2e8] text-[#005c45] dark:bg-teal-950 dark:text-teal-300 font-black text-[10px] uppercase px-2 py-0.5 rounded-md tracking-wider">
+                        {offer.badge_label || "Meilleure vente"}
+                      </span>
+                      <div className="flex items-center gap-1 text-xs font-black text-amber-500 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-900/40">
+                        <i className="fa-solid fa-star text-[10px]"></i>
+                        <span>{offer.rating ? String(offer.rating).replace(".", ",") : "4,9"}</span>
+                      </div>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold">
+                        ({offer.reviews_count || 321} avis)
+                      </span>
+                    </div>
+
+                    {/* Ligne Tarif & Bouton "Commencer" */}
+                    <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+                      <div className="flex flex-col">
+                        <span className="text-base sm:text-lg font-black text-gray-900 dark:text-white leading-tight">
+                          {offer.price || "15 000 FCFA"}
+                        </span>
+                        <span className="text-xs text-gray-400 font-medium line-through">
+                          {offer.original_price || "25 000 FCFA"}
+                        </span>
+                      </div>
+
+                      <Link
+                        href={offerDetailHref}
+                        className="px-4 sm:px-5 py-2 sm:py-2.5 bg-white dark:bg-gray-900 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-white border-2 border-purple-600 dark:border-purple-500 font-black text-xs sm:text-sm rounded-xl shadow-xs transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+                      >
+                        <span>Commencer</span>
+                        <i className="fa-solid fa-arrow-right text-[11px]"></i>
+                      </Link>
+                    </div>
+
+                    {/* Barre de partage social universel & réactions */}
+                    <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
+                      <SocialShareButtons
+                        offer={{
+                          ...offer,
+                          id: offer.id,
+                          title: offer.title,
+                          company: offer.company || "Facilité Academy",
+                          location: offer.location || "En ligne / Dakar, Sénégal",
+                          external_link: offer.external_link,
+                          externalLink: offer.external_link,
+                        }}
+                        variant="compact"
+                        isExpired={false}
+                        onToast={triggerToast}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+
+              // 2. CARTE STANDARD D'OFFRE D'EMPLOI / RECRUTEMENT
               const verdictNiveau = comparerNiveaux(niveauxEtudes, candidateEducationCode, offer.min_education_level_code);
               const eligible = verdictNiveau.statut !== "insuffisant";
-              const isExpired = isOfferExpired(offer);
               const initials = offer.company ? offer.company.substring(0, 2).toUpperCase() : "CO";
               const logoColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
               const dateFormatted = offer.created_at
@@ -648,9 +769,6 @@ function OffresContent({ listingType } = {}) {
                 : "Récent";
 
               const isActivelySponsored = isOfferActivelySponsored(offer);
-              const offerDetailHref = offer.external_link && offer.listing_type === "formation"
-                ? offer.external_link
-                : `/offres/${offer.id}`;
 
               return (
                 <div
@@ -799,7 +917,7 @@ function OffresContent({ listingType } = {}) {
                         href={offerDetailHref}
                         className="text-[11px] font-bold text-gray-500 hover:text-emerald-700 dark:hover:text-[#10E688] transition inline-flex items-center gap-1"
                       >
-                        <span>{offer.listing_type === "formation" ? "Découvrir la formation" : "Voir la fiche détaillée"}</span>
+                        <span>Voir la fiche détaillée</span>
                         <i className="fa-solid fa-arrow-right text-[9px]"></i>
                       </Link>
                     </div>
