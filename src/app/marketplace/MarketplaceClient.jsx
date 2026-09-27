@@ -5717,34 +5717,43 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                     <span className="text-gray-600 dark:text-gray-400 font-semibold">120+ vendus</span>
                   </div>
 
-                  {/* BLOC PRIX DÉGRESSIF & VOLUMES (Inspiré 1:1 de la capture Alibaba) */}
-                  <div className="p-4 rounded-2xl bg-gray-50/90 dark:bg-zinc-900/80 border border-gray-200/80 dark:border-zinc-800 space-y-3">
-                    <div className="grid grid-cols-2 gap-3 pb-2.5 border-b border-gray-200/70 dark:border-zinc-800">
-                      <div>
-                        <div className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white tracking-tight">
-                          {prixLisible(prixUnitaire)} FCFA
-                        </div>
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">1 - 4 pièce(s)</div>
+                  {/* SÉLECTEUR DE VARIANTES (Si plusieurs photos) */}
+                  {photos.length > 1 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-gray-200">
+                        <span>Couleur / Variante</span>
+                        <span className="text-[11px] text-gray-500 font-normal">Modèle {photoIndex + 1}</span>
                       </div>
-                      <div>
-                        <div className="text-2xl sm:text-3xl font-black text-[#ff5000] tracking-tight">
-                          {prixLisible(Math.round(prixUnitaire * 0.95))} FCFA
-                        </div>
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">≥ 5 pièces (Prix gros)</div>
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        {photos.slice(0, 5).map((p, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setPhotoIndex(idx)}
+                            className={`w-11 h-11 rounded-lg border-2 overflow-hidden shrink-0 transition cursor-pointer p-0.5 bg-white dark:bg-zinc-900 ${
+                              photoIndex === idx
+                                ? "border-[#ff5000] ring-1 ring-orange-500"
+                                : "border-gray-200 dark:border-zinc-800 opacity-80 hover:opacity-100"
+                            }`}
+                          >
+                            <img src={p} alt="" className="w-full h-full object-cover rounded" />
+                          </button>
+                        ))}
                       </div>
                     </div>
+                  )}
 
-                    <div className="flex items-center justify-between text-xs flex-wrap gap-2 pt-0.5">
-                      <div className="flex items-center gap-2">
+                  {/* Aperçu Prix & Quantité pour Mobile uniquement (< lg) */}
+                  <div className="lg:hidden space-y-2.5">
+                    <div className="p-3.5 rounded-2xl bg-gray-50/90 dark:bg-zinc-900/80 border border-gray-200/80 dark:border-zinc-800 space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-2xl font-black text-gray-950 dark:text-white">
+                          {prixLisible(prixUnitaire)} FCFA
+                        </span>
                         {ancienPrix > prixUnitaire && (
-                          <>
-                            <span className="text-gray-400 dark:text-gray-500 line-through">
-                              {prixLisible(ancienPrix)} FCFA
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-[#ff5000] text-[11px] font-black">
-                              -{pourcentagePromo}%
-                            </span>
-                          </>
+                          <span className="px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-[#ff5000] text-[11px] font-black">
+                            -{pourcentagePromo}%
+                          </span>
                         )}
                       </div>
                       <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
@@ -5752,36 +5761,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                         {enStock ? "Quelques articles restants" : "Sur commande"}
                       </span>
                     </div>
-                  </div>
 
-                  {/* SÉLECTEUR DE VARIANTES & QUANTITÉ (Style Alibaba) */}
-                  <div className="space-y-2.5">
-                    {photos.length > 1 && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-gray-200">
-                          <span>Couleur / Variante</span>
-                          <span className="text-[11px] text-gray-500 font-normal">Modèle {photoIndex + 1}</span>
-                        </div>
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                          {photos.slice(0, 5).map((p, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setPhotoIndex(idx)}
-                              className={`w-11 h-11 rounded-lg border-2 overflow-hidden shrink-0 transition cursor-pointer p-0.5 bg-white dark:bg-zinc-900 ${
-                                photoIndex === idx
-                                  ? "border-[#ff5000] ring-1 ring-orange-500"
-                                  : "border-gray-200 dark:border-zinc-800 opacity-80 hover:opacity-100"
-                              }`}
-                            >
-                              <img src={p} alt="" className="w-full h-full object-cover rounded" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="p-3 rounded-xl bg-gray-50/80 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
+                    <div className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Quantité</span>
                       <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
                         <button
@@ -5805,55 +5786,119 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                     </div>
                   </div>
 
-                  {/* Onglets Description & Caractéristiques */}
-                  <div className="space-y-2 pt-2">
-                    <div className="flex border-b border-gray-200 dark:border-zinc-800 text-xs font-bold">
-                      <button
-                        type="button"
-                        onClick={() => setOngletInfo("description")}
-                        className={`pb-2 px-1 border-b-2 transition cursor-pointer ${
-                          ongletInfo === "description"
-                            ? "border-blue-600 text-blue-600 dark:text-blue-400 font-black"
-                            : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-                        }`}
-                      >
-                        Description
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOngletInfo("specs")}
-                        className={`pb-2 px-3 border-b-2 transition cursor-pointer ${
-                          ongletInfo === "specs"
-                            ? "border-blue-600 text-blue-600 dark:text-blue-400 font-black"
-                            : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400"
-                        }`}
-                      >
-                        Caractéristiques
-                      </button>
+                  {/* CARACTÉRISTIQUES DU PRODUIT (Remontées en haut dans la colonne centrale) */}
+                  <div className="p-4 rounded-2xl bg-gray-50/90 dark:bg-zinc-900/80 border border-gray-200/80 dark:border-zinc-800 space-y-2.5">
+                    <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-gray-900 dark:text-white">
+                      <i className="fa-solid fa-list-check text-blue-600 dark:text-blue-400"></i>
+                      <span>Caractéristiques</span>
                     </div>
-
-                    {ongletInfo === "description" ? (
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                        {article.description ||
-                          "Article authentique de haute qualité, conforme aux normes. Idéal pour un usage quotidien ou professionnel. Disponible pour expédition rapide à Dakar et dans toutes les régions du Sénégal."}
-                      </p>
-                    ) : (
-                      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                        <p>• <strong>Catégorie :</strong> {article.categorie || "Accessoires & Mode"}</p>
-                        <p>• <strong>Disponibilité :</strong> {enStock ? "En stock immédiat" : "Sur commande"}</p>
-                        <p>• <strong>État :</strong> Neuf certifié</p>
-                        <p>• <strong>Garantie :</strong> Vérification à la livraison</p>
+                    <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex items-center justify-between py-1 border-b border-gray-200/60 dark:border-zinc-800">
+                        <span className="text-gray-400">Catégorie</span>
+                        <span className="font-bold text-gray-900 dark:text-white capitalize">{article.categorie || "Accessoires & Mode"}</span>
                       </div>
-                    )}
+                      <div className="flex items-center justify-between py-1 border-b border-gray-200/60 dark:border-zinc-800">
+                        <span className="text-gray-400">Disponibilité</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          {enStock ? "En stock immédiat" : "Sur commande"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-gray-200/60 dark:border-zinc-800">
+                        <span className="text-gray-400">État</span>
+                        <span className="font-bold text-gray-900 dark:text-white">Neuf certifié</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-gray-200/60 dark:border-zinc-800">
+                        <span className="text-gray-400">Garantie</span>
+                        <span className="font-bold text-gray-900 dark:text-white">Contrôle à la livraison</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-gray-400">Expédition</span>
+                        <span className="font-bold text-gray-900 dark:text-white">Dakar & Régions</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description du produit */}
+                  <div className="space-y-2 pt-1">
+                    <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <i className="fa-solid fa-align-left text-gray-400"></i>
+                      <span>Description</span>
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                      {article.description ||
+                        "Article authentique de haute qualité, conforme aux normes. Idéal pour un usage quotidien ou professionnel. Disponible pour expédition rapide à Dakar et dans toutes les régions du Sénégal."}
+                    </p>
                   </div>
 
                 </div>
 
-                {/* 3. COLONNE DROITE (lg:col-span-3) : Carte Commande & Expédition Alibaba (Desktop) */}
+                {/* 3. COLONNE DROITE (lg:col-span-3) : Carte Prix, Quantité & Commande (Sur le côté) */}
                 <div className="lg:col-span-3 space-y-4">
                   
                   <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs space-y-4 sticky top-4">
                     
+                    {/* BLOC PRIX DÉGRESSIF & VOLUMES (Placé sur le côté) */}
+                    <div className="p-3.5 rounded-2xl bg-gray-50/90 dark:bg-zinc-900/80 border border-gray-200/80 dark:border-zinc-800 space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2 pb-2.5 border-b border-gray-200/70 dark:border-zinc-800">
+                        <div>
+                          <div className="text-xl sm:text-2xl font-black text-gray-950 dark:text-white tracking-tight">
+                            {prixLisible(prixUnitaire)} FCFA
+                          </div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">1 - 4 pièce(s)</div>
+                        </div>
+                        <div>
+                          <div className="text-xl sm:text-2xl font-black text-[#ff5000] tracking-tight">
+                            {prixLisible(Math.round(prixUnitaire * 0.95))} FCFA
+                          </div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">≥ 5 pièces (Prix gros)</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs flex-wrap gap-1.5 pt-0.5">
+                        <div className="flex items-center gap-1.5">
+                          {ancienPrix > prixUnitaire && (
+                            <>
+                              <span className="text-gray-400 dark:text-gray-500 line-through text-[11px]">
+                                {prixLisible(ancienPrix)} FCFA
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded bg-orange-100 dark:bg-orange-950/60 text-[#ff5000] text-[10px] font-black">
+                                -{pourcentagePromo}%
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <i className="fa-solid fa-fire text-amber-500 text-[10px]"></i>
+                          {enStock ? "Quelques articles restants" : "Sur commande"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* SÉLECTEUR DE QUANTITÉ (Placé sur le côté sous le prix) */}
+                    <div className="p-3 rounded-xl bg-gray-50/80 dark:bg-zinc-900/60 border border-gray-200/80 dark:border-zinc-800 flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Quantité</span>
+                      <div className="inline-flex items-center border border-gray-300 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setQuantite(Math.max(1, quantite - 1))}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                        >
+                          −
+                        </button>
+                        <span className="w-10 text-center text-xs font-black text-gray-900 dark:text-white">
+                          {quantite}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuantite(quantite + 1)}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 font-bold transition cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Actions de commande Desktop */}
                     <div className="hidden lg:flex lg:flex-col gap-2.5">
                       {/* Bouton 1 : Commander (Orange vif style Alibaba "Envoyer demande") */}
