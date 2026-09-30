@@ -38,6 +38,34 @@ const COULEUR_VERDICT = {
   "Adéquation partielle": "bg-gray-100 text-gray-600 border-gray-200",
 };
 
+// Une couleur par secteur : badge de la carte ET fond de la vignette de
+// repli (CV sans aperçu généré — DOCX, ou rendu PDF ayant échoué à
+// l'import). "degrade" sert uniquement à cette vignette de repli.
+const COULEUR_CATEGORIE = {
+  informatique_numerique: { badge: "bg-indigo-100 text-indigo-800 border-indigo-200", degrade: "from-indigo-500 to-indigo-700" },
+  comptabilite_finance: { badge: "bg-emerald-100 text-emerald-800 border-emerald-200", degrade: "from-emerald-500 to-emerald-700" },
+  commerce_vente: { badge: "bg-orange-100 text-orange-800 border-orange-200", degrade: "from-orange-500 to-orange-700" },
+  marketing_communication: { badge: "bg-pink-100 text-pink-800 border-pink-200", degrade: "from-pink-500 to-pink-700" },
+  rh_administration: { badge: "bg-purple-100 text-purple-800 border-purple-200", degrade: "from-purple-500 to-purple-700" },
+  btp_ingenierie: { badge: "bg-amber-100 text-amber-800 border-amber-200", degrade: "from-amber-500 to-amber-700" },
+  sante: { badge: "bg-rose-100 text-rose-800 border-rose-200", degrade: "from-rose-500 to-rose-700" },
+  education_formation: { badge: "bg-sky-100 text-sky-800 border-sky-200", degrade: "from-sky-500 to-sky-700" },
+  logistique_transport: { badge: "bg-teal-100 text-teal-800 border-teal-200", degrade: "from-teal-500 to-teal-700" },
+  juridique: { badge: "bg-slate-100 text-slate-800 border-slate-200", degrade: "from-slate-500 to-slate-700" },
+  hotellerie_restauration: { badge: "bg-yellow-100 text-yellow-800 border-yellow-200", degrade: "from-yellow-500 to-yellow-600" },
+  agriculture_environnement: { badge: "bg-lime-100 text-lime-800 border-lime-200", degrade: "from-lime-600 to-lime-800" },
+  artisanat_metiers_manuels: { badge: "bg-stone-100 text-stone-800 border-stone-200", degrade: "from-stone-500 to-stone-700" },
+  autre: { badge: "bg-gray-100 text-gray-600 border-gray-200", degrade: "from-gray-400 to-gray-600" },
+};
+const COULEUR_CATEGORIE_DEFAUT = { badge: "bg-gray-100 text-gray-600 border-gray-200", degrade: "from-gray-400 to-gray-600" };
+
+function initialesDe(nom) {
+  const mots = (nom || "").trim().split(/\s+/).filter(Boolean);
+  if (mots.length === 0) return "?";
+  if (mots.length === 1) return mots[0].slice(0, 2).toUpperCase();
+  return (mots[0][0] + mots[mots.length - 1][0]).toUpperCase();
+}
+
 async function jeton() {
   const { data } = await supabase.auth.getSession();
   return data?.session?.access_token || null;
@@ -550,21 +578,21 @@ export default function BanqueCvTab() {
         )}
       </section>
 
-      {/* --- Liste --- */}
+      {/* --- Galerie --- */}
       <section>
-        <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <h3 className="text-sm font-black text-gray-900">
             Contenu de la banque <span className="text-gray-400 font-bold">({totalListe})</span>
           </h3>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="relative">
-              <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400"></i>
+              <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] text-gray-400"></i>
               <input
                 type="text"
                 value={rechercheNomSaisie}
                 onChange={(e) => setRechercheNomSaisie(e.target.value)}
                 placeholder="Chercher un nom…"
-                className="text-xs font-medium border border-gray-200 rounded-xl pl-8 pr-3 py-2 w-40 focus:outline-none focus:ring-2 focus:ring-[#10E688]"
+                className="text-xs font-medium bg-white border border-gray-200 rounded-full pl-9 pr-4 py-2.5 w-44 focus:outline-none focus:ring-2 focus:ring-[#10E688] shadow-xs"
               />
             </div>
             <select
@@ -573,7 +601,7 @@ export default function BanqueCvTab() {
                 setCategorieListe(e.target.value);
                 setPageListe(0);
               }}
-              className="text-xs font-bold border border-gray-200 rounded-xl px-3 py-2 cursor-pointer"
+              className="text-xs font-bold bg-white border border-gray-200 rounded-full px-4 py-2.5 cursor-pointer shadow-xs"
             >
               <option value="">Toutes catégories</option>
               {CATEGORIES.map((c) => (
@@ -584,96 +612,74 @@ export default function BanqueCvTab() {
         </div>
 
         {chargementListe ? (
-          <p className="text-[11px] text-gray-400">Chargement…</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-gray-200 bg-gray-50 animate-pulse aspect-[3/4]" />
+            ))}
+          </div>
         ) : liste.length === 0 ? (
           <p className="text-[11px] text-gray-500">Aucun CV importé pour l&apos;instant.</p>
         ) : (
-          <ul className="divide-y divide-gray-100 border border-gray-200 rounded-2xl overflow-hidden">
-            {liste.map((c, idx) => {
-              // Sans filtre de catégorie, la liste est déjà triée
-              // catégorie puis nom (voir la route) : un en-tête apparaît
-              // simplement quand la catégorie change d'une ligne à l'autre —
-              // pas de requête supplémentaire, le classement retombe du tri.
-              const categoriePrecedente = idx > 0 ? liste[idx - 1].categorie : undefined;
-              const debutDeGroupe = !categorieListe && c.categorie !== categoriePrecedente;
-              return (
-                <li key={c.id}>
-                  {debutDeGroupe && (
-                    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
-                        {LIBELLE_CATEGORIE[c.categorie] || "Non catégorisé"}
-                      </span>
-                    </div>
+          <div className="space-y-6">
+            {(() => {
+              // Sans filtre de catégorie, la liste est déjà triée catégorie
+              // puis nom (voir la route) : on la re-découpe en groupes
+              // consécutifs pour un en-tête par section, sans requête
+              // supplémentaire — même principe que l'ancien affichage en
+              // liste, juste rendu en grille de cartes par groupe.
+              const groupes = [];
+              for (const c of liste) {
+                const dernier = groupes[groupes.length - 1];
+                if (!categorieListe && dernier && dernier.categorie === c.categorie) {
+                  dernier.items.push(c);
+                } else {
+                  groupes.push({ categorie: c.categorie, items: [c] });
+                }
+              }
+              return groupes.map((groupe, gi) => (
+                <div key={gi}>
+                  {!categorieListe && (
+                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2.5">
+                      {LIBELLE_CATEGORIE[groupe.categorie] || "Non catégorisé"}
+                    </p>
                   )}
-                  <div
-                    onClick={() => ouvrirDetail(c.id)}
-                    className="p-3 flex items-start gap-3 bg-white hover:bg-gray-50 cursor-pointer transition"
-                  >
-                    {c.apercuUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- vignette d'un fichier privé signé, pas un asset à optimiser par next/image
-                      <img
-                        src={c.apercuUrl}
-                        alt={`Aperçu du CV de ${c.nom_complet || "candidat"}`}
-                        className="shrink-0 w-12 h-16 rounded-lg object-cover border border-gray-200 bg-gray-50"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {groupe.items.map((c) => (
+                      <CarteCv
+                        key={c.id}
+                        cv={c}
+                        onOuvrir={() => ouvrirDetail(c.id)}
+                        onSupprimer={() => supprimer(c.id)}
+                        suppressionEnCours={suppressionEnCours === c.id}
                       />
-                    ) : (
-                      <div className="shrink-0 w-12 h-16 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
-                        <i className="fa-solid fa-file-lines text-gray-300"></i>
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-black text-gray-900 truncate">{c.nom_complet || "Nom non renseigné"}</span>
-                        {c.statut === "erreur" ? (
-                          <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[9px] font-black uppercase">
-                            Analyse échouée
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[9px] font-black uppercase">
-                            {LIBELLE_CATEGORIE[c.categorie] || "Non catégorisé"}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
-                        {c.resume_profil || c.erreur_analyse || "—"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        supprimer(c.id);
-                      }}
-                      disabled={suppressionEnCours === c.id}
-                      className="shrink-0 w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer disabled:opacity-40"
-                      aria-label="Retirer ce CV"
-                    >
-                      <i className={`fa-solid ${suppressionEnCours === c.id ? "fa-spinner fa-spin" : "fa-trash-can"} text-xs`}></i>
-                    </button>
+                    ))}
                   </div>
-                </li>
-              );
-            })}
-          </ul>
+                </div>
+              ));
+            })()}
+          </div>
         )}
 
         {totalListe > 24 && (
-          <div className="flex items-center justify-center gap-3 mt-3">
+          <div className="flex items-center justify-center gap-3 mt-6">
             <button
               type="button"
               onClick={() => setPageListe((p) => Math.max(0, p - 1))}
               disabled={pageListe === 0}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 cursor-pointer"
+              className="text-xs font-bold px-4 py-2 rounded-full border border-gray-200 bg-white disabled:opacity-40 cursor-pointer shadow-xs"
             >
-              Précédent
+              <i className="fa-solid fa-chevron-left mr-1.5 text-[10px]"></i>Précédent
             </button>
+            <span className="text-[11px] font-bold text-gray-400">
+              Page {pageListe + 1} / {Math.max(1, Math.ceil(totalListe / 24))}
+            </span>
             <button
               type="button"
               onClick={() => setPageListe((p) => p + 1)}
               disabled={(pageListe + 1) * 24 >= totalListe}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40 cursor-pointer"
+              className="text-xs font-bold px-4 py-2 rounded-full border border-gray-200 bg-white disabled:opacity-40 cursor-pointer shadow-xs"
             >
-              Suivant
+              Suivant<i className="fa-solid fa-chevron-right ml-1.5 text-[10px]"></i>
             </button>
           </div>
         )}
@@ -688,6 +694,82 @@ export default function BanqueCvTab() {
           onFermer={() => setDetail(null)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Carte visuelle d'un CV — aperçu en haut (vraie vignette de la 1ère page
+ * si générée à l'import, sinon un visuel de repli propre : dégradé coloré
+ * par secteur + initiales, jamais un simple fichier/icône générique). Toute
+ * la carte ouvre le détail, sauf le bouton supprimer (stopPropagation) qui
+ * reste dans son coin plutôt que superposé sur toute la zone cliquable.
+ */
+function CarteCv({ cv, onOuvrir, onSupprimer, suppressionEnCours }) {
+  const couleur = COULEUR_CATEGORIE[cv.categorie] || COULEUR_CATEGORIE_DEFAUT;
+
+  return (
+    <div
+      onClick={onOuvrir}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOuvrir();
+        }
+      }}
+      className="group bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer transition hover:shadow-lg hover:-translate-y-0.5 flex flex-col"
+    >
+      <div className="relative aspect-[3/4] bg-gray-50">
+        {cv.apercuUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- vignette d'un fichier privé signé, pas un asset à optimiser par next/image
+          <img
+            src={cv.apercuUrl}
+            alt={`Aperçu du CV de ${cv.nom_complet || "candidat"}`}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+          />
+        ) : (
+          <div className={`absolute inset-0 bg-gradient-to-br ${couleur.degrade} flex flex-col items-center justify-center gap-2 px-4 text-center`}>
+            <span className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-white text-lg font-black">
+              {initialesDe(cv.nom_complet)}
+            </span>
+            <i className="fa-solid fa-file-lines text-white/50 text-sm"></i>
+          </div>
+        )}
+
+        {cv.statut === "erreur" && (
+          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black uppercase shadow-sm">
+            Analyse échouée
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSupprimer();
+          }}
+          disabled={suppressionEnCours}
+          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur text-gray-500 hover:text-red-600 hover:bg-white cursor-pointer disabled:opacity-40 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
+          aria-label="Retirer ce CV"
+        >
+          <i className={`fa-solid ${suppressionEnCours ? "fa-spinner fa-spin" : "fa-trash-can"} text-[11px]`}></i>
+        </button>
+      </div>
+
+      <div className="p-3 flex-1 flex flex-col">
+        <p className="text-xs font-black text-gray-900 truncate">{cv.nom_complet || "Nom non renseigné"}</p>
+        <span className={`inline-block w-fit mt-1.5 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase ${couleur.badge}`}>
+          {LIBELLE_CATEGORIE[cv.categorie] || "Non catégorisé"}
+        </span>
+        <p className="text-[11px] text-gray-500 mt-2 leading-snug line-clamp-2 flex-1">
+          {cv.resume_profil || cv.erreur_analyse || "—"}
+        </p>
+        <p className="text-[10px] font-bold text-[#047857] mt-2.5 pt-2 border-t border-gray-100 flex items-center gap-1.5">
+          <i className="fa-solid fa-eye"></i>Voir le CV complet
+        </p>
+      </div>
     </div>
   );
 }
