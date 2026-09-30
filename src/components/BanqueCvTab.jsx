@@ -181,7 +181,7 @@ export default function BanqueCvTab() {
       setNomSaisi("");
       if (champCv.current) champCv.current.value = "";
       if (champLettre.current) champLettre.current.value = "";
-      chargerListe();
+      chargerPage(0, { remplacer: true });
     } catch (err) {
       setMessageImport({ type: "erreur", texte: err.message });
     } finally {
@@ -245,61 +245,99 @@ export default function BanqueCvTab() {
       }
     }
     setGroupeEnCours(false);
-    chargerListe();
+    chargerPage(0, { remplacer: true });
   };
 
-  // --- Liste des CV déjà importés ---
+  // --- Liste des CV déjà importés — défilement continu (accumulation des
+  // pages de 24 chargées au fur et à mesure), pas de clic "page suivante".
+  // `liste` grandit au fil du scroll ; un changement de recherche/catégorie
+  // repart de zéro (vidée puis rechargée), jamais un ajout au résultat
+  // précédent.
   const [liste, setListe] = useState([]);
   const [totalListe, setTotalListe] = useState(0);
-  const [pageListe, setPageListe] = useState(0);
+  const [pageChargee, setPageChargee] = useState(-1); // dernière page effectivement reçue
   const [categorieListe, setCategorieListe] = useState("");
   const [rechercheNomSaisie, setRechercheNomSaisie] = useState("");
   const [rechercheNomListe, setRechercheNomListe] = useState("");
-  const [chargementListe, setChargementListe] = useState(true);
+  const [chargementListe, setChargementListe] = useState(true); // premier chargement / changement de filtre
+  const [chargementPageSuivante, setChargementPageSuivante] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(null);
+  const sentinelleRef = useRef(null);
 
   // Débounce : un appel réseau par pause de frappe, pas un par lettre tapée.
   useEffect(() => {
-    const delai = setTimeout(() => {
-      setPageListe(0);
-      setRechercheNomListe(rechercheNomSaisie);
-    }, 350);
+    const delai = setTimeout(() => setRechercheNomListe(rechercheNomSaisie), 350);
     return () => clearTimeout(delai);
   }, [rechercheNomSaisie]);
 
-  const chargerListe = useCallback(async () => {
-    setChargementListe(true);
-    try {
-      const token = await jeton();
-      const params = new URLSearchParams({ page: String(pageListe) });
-      if (categorieListe) params.set("categorie", categorieListe);
-      if (rechercheNomListe.trim()) params.set("q", rechercheNomListe.trim());
-      const res = await fetch(`/api/admin/banque-cv?${params}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setListe(data.cvs || []);
-        setTotalListe(data.total || 0);
+  const chargerPage = useCallback(
+    async (page, { remplacer }) => {
+      if (remplacer) setChargementListe(true);
+      else setChargementPageSuivante(true);
+      try {
+        const token = await jeton();
+        const params = new URLSearchParams({ page: String(page) });
+        if (categorieListe) params.set("categorie", categorieListe);
+        if (rechercheNomListe.trim()) params.set("q", rechercheNomListe.trim());
+        const res = await fetch(`/api/admin/banque-cv?${params}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setListe((prev) => (remplacer ? data.cvs || [] : [...prev, ...(data.cvs || [])]));
+          setTotalListe(data.total || 0);
+          setPageChargee(page);
+        }
+      } finally {
+        setChargementListe(false);
+        setChargementPageSuivante(false);
       }
-    } finally {
-      setChargementListe(false);
-    }
-  }, [pageListe, categorieListe, rechercheNomListe]);
+    },
+    [categorieListe, rechercheNomListe]
+  );
 
+  // Filtre changé (catégorie ou recherche) : on repart de la page 0, jamais
+  // un ajout à l'ancien résultat.
   useEffect(() => {
-    chargerListe();
-  }, [chargerListe]);
+    chargerPage(0, { remplacer: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chargerPage change déjà avec categorieListe/rechercheNomListe, le déclaration ici suffit
+  }, [categorieListe, rechercheNomListe]);
+
+  const encoreDesPages = liste.length < totalListe;
+
+  // Défilement continu : une sentinelle invisible en bas de la grille charge
+  // la page suivante dès qu'elle entre dans le viewport — pas de bouton ni
+  // de clic requis, juste continuer à descendre dans la page.
+  useEffect(() => {
+    const cible = sentinelleRef.current;
+    if (!cible) return;
+    const observateur = new IntersectionObserver(
+      (entrees) => {
+        if (entrees[0].isIntersecting && encoreDesPages && !chargementListe && !chargementPageSuivante) {
+          chargerPage(pageChargee + 1, { remplacer: false });
+        }
+      },
+      { rootMargin: "600px" } // déclenche avant que la sentinelle soit réellement visible, pour un chargement fluide
+    );
+    observateur.observe(cible);
+    return () => observateur.disconnect();
+  }, [encoreDesPages, chargementListe, chargementPageSuivante, pageChargee, chargerPage]);
 
   const supprimer = async (id) => {
     setSuppressionEnCours(id);
     try {
       const token = await jeton();
-      await fetch(`/api/admin/banque-cv?id=${id}`, {
+      const res = await fetch(`/api/admin/banque-cv?id=${id}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      chargerListe();
+      if (res.ok) {
+        // Retrait local plutôt qu'un rechargement complet : avec le
+        // défilement continu, recharger depuis la page 0 ferait perdre tout
+        // ce qui a déjà été accumulé par le scroll.
+        setListe((prev) => prev.filter((c) => c.id !== id));
+        setTotalListe((prev) => Math.max(0, prev - 1));
+      }
     } finally {
       setSuppressionEnCours(null);
     }
@@ -597,10 +635,7 @@ export default function BanqueCvTab() {
             </div>
             <select
               value={categorieListe}
-              onChange={(e) => {
-                setCategorieListe(e.target.value);
-                setPageListe(0);
-              }}
+              onChange={(e) => setCategorieListe(e.target.value)}
               className="text-xs font-bold bg-white border border-gray-200 rounded-full px-4 py-2.5 cursor-pointer shadow-xs"
             >
               <option value="">Toutes catégories</option>
@@ -612,76 +647,48 @@ export default function BanqueCvTab() {
         </div>
 
         {chargementListe ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="rounded-2xl border border-gray-200 bg-gray-50 animate-pulse aspect-[3/4]" />
             ))}
           </div>
         ) : liste.length === 0 ? (
           <p className="text-[11px] text-gray-500">Aucun CV importé pour l&apos;instant.</p>
         ) : (
-          <div className="space-y-6">
-            {(() => {
-              // Sans filtre de catégorie, la liste est déjà triée catégorie
-              // puis nom (voir la route) : on la re-découpe en groupes
-              // consécutifs pour un en-tête par section, sans requête
-              // supplémentaire — même principe que l'ancien affichage en
-              // liste, juste rendu en grille de cartes par groupe.
-              const groupes = [];
-              for (const c of liste) {
-                const dernier = groupes[groupes.length - 1];
-                if (!categorieListe && dernier && dernier.categorie === c.categorie) {
-                  dernier.items.push(c);
-                } else {
-                  groupes.push({ categorie: c.categorie, items: [c] });
-                }
-              }
-              return groupes.map((groupe, gi) => (
-                <div key={gi}>
-                  {!categorieListe && (
-                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2.5">
-                      {LIBELLE_CATEGORIE[groupe.categorie] || "Non catégorisé"}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {groupe.items.map((c) => (
-                      <CarteCv
-                        key={c.id}
-                        cv={c}
-                        onOuvrir={() => ouvrirDetail(c.id)}
-                        onSupprimer={() => supprimer(c.id)}
-                        suppressionEnCours={suppressionEnCours === c.id}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
-        )}
+          <>
+            {/* Une seule grille continue, sans en-tête de section par
+                catégorie : un regroupement par catégorie laissait des
+                rangées incomplètes (une catégorie avec peu de CV ne remplit
+                jamais toute la largeur) — la catégorie de chaque CV reste
+                visible via son badge sur la carte. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {liste.map((c) => (
+                <CarteCv
+                  key={c.id}
+                  cv={c}
+                  onOuvrir={() => ouvrirDetail(c.id)}
+                  onSupprimer={() => supprimer(c.id)}
+                  suppressionEnCours={suppressionEnCours === c.id}
+                />
+              ))}
+            </div>
 
-        {totalListe > 24 && (
-          <div className="flex items-center justify-center gap-3 mt-6">
-            <button
-              type="button"
-              onClick={() => setPageListe((p) => Math.max(0, p - 1))}
-              disabled={pageListe === 0}
-              className="text-xs font-bold px-4 py-2 rounded-full border border-gray-200 bg-white disabled:opacity-40 cursor-pointer shadow-xs"
-            >
-              <i className="fa-solid fa-chevron-left mr-1.5 text-[10px]"></i>Précédent
-            </button>
-            <span className="text-[11px] font-bold text-gray-400">
-              Page {pageListe + 1} / {Math.max(1, Math.ceil(totalListe / 24))}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPageListe((p) => p + 1)}
-              disabled={(pageListe + 1) * 24 >= totalListe}
-              className="text-xs font-bold px-4 py-2 rounded-full border border-gray-200 bg-white disabled:opacity-40 cursor-pointer shadow-xs"
-            >
-              Suivant<i className="fa-solid fa-chevron-right ml-1.5 text-[10px]"></i>
-            </button>
-          </div>
+            {/* Sentinelle de défilement continu : pas de bouton "page
+                suivante", la page suivante charge d'elle-même en descendant. */}
+            <div ref={sentinelleRef} className="h-1" />
+            {chargementPageSuivante && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 mt-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl border border-gray-200 bg-gray-50 animate-pulse aspect-[3/4]" />
+                ))}
+              </div>
+            )}
+            {!encoreDesPages && (
+              <p className="text-center text-[11px] text-gray-400 mt-6">
+                {totalListe} CV{totalListe > 1 ? "s" : ""} — fin de la liste.
+              </p>
+            )}
+          </>
         )}
       </section>
 
