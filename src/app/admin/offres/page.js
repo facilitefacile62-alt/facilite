@@ -174,7 +174,9 @@ export default function AdminOffresPage() {
 
     setOfferImageFiles((prev) => [...prev, ...fileList]);
     setOfferImagePreviews((prev) => [...prev, ...newPreviews]);
-    setExamenPasse(false);
+    // En mode manuel, ajouter une photo n'invalide rien à revérifier (il n'y
+    // a pas d'analyse IA) : le mode lui-même reste la confirmation.
+    if (publishMode !== "manual") setExamenPasse(false);
     setScanSuccess(false);
     setScanMessage("");
 
@@ -863,7 +865,10 @@ export default function AdminOffresPage() {
           <div className="flex items-center bg-gray-100 p-1.5 rounded-2xl border border-gray-200">
             <button
               type="button"
-              onClick={() => setPublishMode("ai_scanner")}
+              onClick={() => {
+                setPublishMode("ai_scanner");
+                setExamenPasse(false);
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
                 publishMode === "ai_scanner"
                   ? "bg-emerald-600 text-white shadow-sm"
@@ -875,7 +880,13 @@ export default function AdminOffresPage() {
             </button>
             <button
               type="button"
-              onClick={() => setPublishMode("manual")}
+              onClick={() => {
+                setPublishMode("manual");
+                // Choisir ce mode EST la confirmation : pas besoin du clic
+                // supplémentaire "J'ai vérifié", qui n'a de sens que pour
+                // relire ce qu'une IA a rempli à notre place.
+                setExamenPasse(true);
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer ${
                 publishMode === "manual"
                   ? "bg-gray-900 text-white shadow-sm"
@@ -894,8 +905,11 @@ export default function AdminOffresPage() {
           {/* Colonne Gauche : Formulaire & Zone de Scanner IA */}
           <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-8 space-y-6">
             
-            {/* Zone Affiche : Sélecteur d'Onglets (Upload vs Générateur IA) */}
-            <div>
+            {/* Zone Affiche : Sélecteur d'Onglets (Upload vs Générateur IA) —
+                cachée en mode Saisie Manuelle : le scanner, le générateur IA
+                et les boutons Examinateur/Publier avec l'IA n'ont rien à
+                faire dans ce mode, voir le panneau manuel juste après. */}
+            <div className={publishMode === "manual" ? "hidden" : ""}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-2xl border border-gray-200">
                   <button
@@ -1289,6 +1303,54 @@ export default function AdminOffresPage() {
                 </div>
               </div>
             </div>
+
+            {/* Panneau Saisie Manuelle — remplace le scanner IA dans ce
+                mode : juste une photo facultative (aucun scan automatique,
+                handleFilesSelect ne déclenche l'IA qu'en mode ai_scanner)
+                puis directement le formulaire plus bas. */}
+            {publishMode === "manual" && (
+              <div className="p-5 bg-gray-50 border border-gray-200 rounded-3xl space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-xl bg-gray-900 text-white flex items-center justify-center text-sm shadow-xs">
+                    <i className="fa-solid fa-pen-to-square"></i>
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">Saisie manuelle</h4>
+                    <p className="text-[11px] text-gray-500 font-medium">
+                      Remplissez le formulaire ci-dessous et publiez directement — aucun appel à l&apos;IA.
+                    </p>
+                  </div>
+                </div>
+
+                <label
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-2xl py-6 cursor-pointer hover:border-gray-400 hover:bg-white transition"
+                >
+                  <i className="fa-solid fa-image text-gray-400 text-lg"></i>
+                  <span className="text-[11px] font-bold text-gray-600">Photo de l&apos;offre (facultatif) — cliquez ou glissez</span>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileInputChange} />
+                </label>
+
+                {offerImagePreviews.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {offerImagePreviews.map((previewUrl, idx) => (
+                      <div key={idx} className="relative group/thumb h-16 rounded-xl overflow-hidden border border-gray-200">
+                        <img src={previewUrl} alt={`Photo ${idx + 1}`} className="h-full w-auto block" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSingleImage(idx)}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-600/90 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-[10px] transition shadow-xs cursor-pointer"
+                          title="Supprimer cette photo"
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Message de statut du Scanner */}
             {scanMessage && (
