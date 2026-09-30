@@ -42,7 +42,11 @@ function BienvenueContent() {
   const choisirFacilite = () => {
     setEnCours(true);
     marquerChoixFait();
-    router.push(safeRedirect);
+    // Un pas de plus avant l'accueil : proposer de scanner un document
+    // (CNI/passeport/CV) pour compléter le profil tout de suite. Seulement
+    // côté Facilité (candidat) — la Marketplace n'a pas besoin de ça à
+    // l'inscription, voir choisirBusiness ci-dessous, inchangé.
+    router.push(`/bienvenue/document?redirect=${encodeURIComponent(safeRedirect)}`);
   };
 
   const choisirBusiness = () => {
