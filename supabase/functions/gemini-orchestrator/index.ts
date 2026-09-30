@@ -18,7 +18,12 @@
 // et gemini-flash-latest répondent effectivement. On réutilise donc ici la
 // même liste déjà vérifiée en production plutôt que des modèles qui
 // échoueraient systématiquement.
-const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.0-flash"];
+//
+// Mise à jour : gemini-2.0-flash renvoie maintenant 404 "no longer
+// available" (retiré du catalogue Google, pas seulement à quota nul comme
+// au constat initial) — remplacé par gemini-3.8-flash, vérifié comme un
+// modèle réel (répond 402 crédits épuisés, pas 404) via un appel direct.
+const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.8-flash"];
 // text-embedding-004 (mentionné dans la demande initiale) n'existe pas pour
 // ce compte — confirmé par un appel réel à ListModels une fois la fonction
 // déployée (404 "is not found for API version v1beta"). Seuls les modèles

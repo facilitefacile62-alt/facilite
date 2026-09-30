@@ -74,10 +74,12 @@ Format JSON strict attendu :
   "mots_cles": ["creme", "visage", "hydratation", "bio", "soin", "dakar"]
 }`;
 
+// gemini-2.0-flash retiré (404 "no longer available") au profit de
+// gemini-3.8-flash — voir le constat daté dans documentParser.js.
 const GEMINI_VISION_MODELS = [
   "gemini-3.6-flash",
   "gemini-flash-latest",
-  "gemini-2.0-flash",
+  "gemini-3.8-flash",
   "gemini-flash-lite-latest",
 ];
 

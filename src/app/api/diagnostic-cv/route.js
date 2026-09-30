@@ -59,7 +59,9 @@ const DEFAULT_SYSTEM_PROMPT = buildDiagnosticSystemPrompt();
 // suit la version courante : les identifiants figés utilisés auparavant ne
 // répondaient plus (`gemini-1.5-flash` retiré, `gemini-2.5-flash` fermé aux
 // nouveaux comptes), ce qui rendait tout le diagnostic par image inopérant.
-const GEMINI_VISION_MODELS = ["gemini-flash-latest", "gemini-2.0-flash"];
+// gemini-2.0-flash retiré (404 "no longer available") au profit de
+// gemini-3.8-flash — voir le constat daté dans documentParser.js.
+const GEMINI_VISION_MODELS = ["gemini-flash-latest", "gemini-3.8-flash"];
 
 async function callGeminiVision(base64Data, mimeType, customRules = null) {
   const geminiApiKey = process.env.GEMINI_API_KEY;

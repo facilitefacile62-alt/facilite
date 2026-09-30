@@ -31,9 +31,15 @@ function withTimeout(promise, ms, errorMessage) {
 //     réellement répondu avec succès à un appel generateContent réel.
 // Alias "-latest" plutôt que des noms de modèles datés : Google les repointe
 // automatiquement vers la version courante, ce qui évite de revivre cette
-// panne à chaque dépréciation. gemini-2.0-flash est gardé en dernier repli
-// au cas où son quota serait réactivé sur ce projet.
-const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.0-flash"];
+// panne à chaque dépréciation.
+//
+// Mise à jour (constat sur /admin/offres, extraction d'affiche) :
+// gemini-2.0-flash renvoie désormais 404 "no longer available" — retiré du
+// catalogue, plus seulement à quota nul comme au constat initial ci-dessus.
+// Remplacé par gemini-3.8-flash (suggestion de l'erreur Google elle-même,
+// vérifiée : répond 402 crédits épuisés sur ce projet, donc un modèle
+// réellement existant, pas un nom halluciné par le message d'erreur).
+const CANDIDATE_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.8-flash"];
 
 /**
  * Extraction et OCR d'image avec l'API Gemini (appel REST direct, sans le
