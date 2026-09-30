@@ -445,8 +445,13 @@ export default function AdminOffresPage() {
     try {
       let currentOfferData = { ...offerForm };
 
-      // Si le formulaire n'a pas encore été analysé / pré-rempli, lancer l'IA
-      if (!hasFormFilled || hasFiles || hasText) {
+      // Si le formulaire a déjà été rempli à la main (titre + entreprise),
+      // on ne tente plus l'IA du tout, même si une photo est jointe — avant
+      // ce correctif, une photo attachée déclenchait quand même un appel
+      // Gemini voué à l'échec pendant la panne de facturation (402/404),
+      // avec une erreur 400 visible en console pour rien : le formulaire
+      // rempli à la main doit suffire à publier, sans dépendre de l'IA.
+      if (!hasFormFilled) {
         const formData = new FormData();
         if (offerImageFiles.length > 0) formData.append("file", offerImageFiles[0]);
         if (hasText) formData.append("accompanying_text", accompanyingText.trim());
