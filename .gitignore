@@ -89,6 +89,11 @@ supabase/test-schema-dump*
 scripts/prod-schema-dump.sql
 scripts/prod-schema-dump.functions.json
 
+# Fichiers d'état des imports ponctuels admin (banque_cv, etc.) — contiennent
+# des noms de candidats (données personnelles), jamais destinés au dépôt.
+# Convention : préfixe "_" pour tout script/donnée jetable de ce type.
+scripts/_*
+
 # Cache de build Gradle (projet android/ natif) — généré localement,
 # jamais le même d'une machine à l'autre
 android/.gradle/
