@@ -47,7 +47,7 @@ export default function ModulesFormationCvClient() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10 sm:py-14">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <Link
           href="/formation-redaction-cv"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-6"
@@ -86,7 +86,7 @@ export default function ModulesFormationCvClient() {
             <p className="text-sm text-gray-500 dark:text-gray-400">Aucun module publié pour le moment.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {modules.map((module, index) => {
               const p = progressionParModule.get(module.id);
               const vu = p?.vu === true;
@@ -96,16 +96,19 @@ export default function ModulesFormationCvClient() {
                 <Link
                   key={module.id}
                   href={`/formation-redaction-cv/modules/${module.id}`}
-                  className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs p-5 sm:p-6 flex items-start gap-4 hover:border-gray-300 dark:hover:border-gray-700 transition"
+                  className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs p-5 sm:p-6 flex flex-col gap-4 hover:border-gray-300 dark:hover:border-gray-700 transition"
                 >
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
-                      p?.quiz_reussi
-                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                    }`}
-                  >
-                    {p?.quiz_reussi ? <i className="fa-solid fa-check"></i> : index + 1}
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
+                        p?.quiz_reussi
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
+                      {p?.quiz_reussi ? <i className="fa-solid fa-check"></i> : index + 1}
+                    </div>
+                    <i className="fa-solid fa-chevron-right text-xs text-gray-300 dark:text-gray-600 shrink-0 mt-2.5"></i>
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -113,32 +116,30 @@ export default function ModulesFormationCvClient() {
                     {module.description && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{module.description}</p>
                     )}
-
-                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                          vu
-                            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {vu ? "Vu" : "Pas encore vu"}
-                      </span>
-                      {quizTente && (
-                        <span
-                          className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                            p.quiz_reussi
-                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
-                              : "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
-                          }`}
-                        >
-                          Quiz {p.quiz_reussi ? "réussi" : "à refaire"} · {p.quiz_score_pourcent}%
-                        </span>
-                      )}
-                    </div>
                   </div>
 
-                  <i className="fa-solid fa-chevron-right text-xs text-gray-300 dark:text-gray-600 shrink-0 mt-2"></i>
+                  <div className="flex items-center gap-2 mt-auto flex-wrap">
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                        vu
+                          ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
+                      {vu ? "Vu" : "Pas encore vu"}
+                    </span>
+                    {quizTente && (
+                      <span
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                          p.quiz_reussi
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
+                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        Quiz {p.quiz_reussi ? "réussi" : "à refaire"} · {p.quiz_score_pourcent}%
+                      </span>
+                    )}
+                  </div>
                 </Link>
               );
             })}
