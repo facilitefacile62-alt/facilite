@@ -213,7 +213,13 @@ function OffresContent({ listingType } = {}) {
     try {
       const { data, count, error } = await requeteOffres(offers.length, offers.length + TAILLE_PAGE - 1);
       if (!error) {
-        const nouvelles = (data || []).filter((o) => o.is_active !== false);
+        // "draft" seulement (jamais is_active === false en général) : une
+        // offre approuvée puis désactivée par un admin doit rester dans la
+        // liste pour pouvoir apparaître dans l'onglet "Offres expirées"
+        // (isOfferExpired la couvre déjà, critère 2) — l'exclure ici
+        // l'empêchait d'y apparaître, même une fois toutes les offres
+        // chargées.
+        const nouvelles = (data || []).filter((o) => (o.status || "").toLowerCase() !== "draft");
         setOffers((prev) => {
           // Dédoublonnage : une offre publiée entre deux pages décale la
           // fenêtre et pourrait renvoyer une ligne déjà affichée.
@@ -240,7 +246,7 @@ function OffresContent({ listingType } = {}) {
     try {
       const { data, count, error } = await requeteOffres(0, Math.max((totalOffres || 1000) - 1, TAILLE_PAGE - 1));
       if (!error) {
-        setOffers((data || []).filter((o) => o.is_active !== false));
+        setOffers((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
         if (typeof count === "number") setTotalOffres(count);
         setToutCharge(true);
       }
@@ -267,7 +273,7 @@ function OffresContent({ listingType } = {}) {
         if (error) {
           console.error("Erreur chargement des offres:", error);
         } else {
-          const activeOffers = (data || []).filter((o) => o.is_active !== false);
+          const activeOffers = (data || []).filter((o) => (o.status || "").toLowerCase() !== "draft");
           setOffers(activeOffers);
           setTotalOffres(typeof count === "number" ? count : null);
           setToutCharge(typeof count === "number" ? activeOffers.length >= count : true);
@@ -563,7 +569,16 @@ function OffresContent({ listingType } = {}) {
 
               <button
                 type="button"
-                onClick={() => setActiveTab("expired")}
+                onClick={() => {
+                  setActiveTab("expired");
+                  // Sans ce chargement, l'onglet n'évalue que la première
+                  // page (12 offres les plus récentes, voir TAILLE_PAGE) —
+                  // une offre fraîchement publiée n'a presque jamais une
+                  // deadline déjà dépassée, donc l'onglet semblait toujours
+                  // vide malgré de vraies offres expirées plus loin dans la
+                  // liste. Idempotent si déjà tout chargé (toutCharge).
+                  chargerToutesLesOffres();
+                }}
                 className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-black text-xs sm:text-sm transition-all cursor-pointer select-none ${
                   activeTab === "expired"
                     ? "bg-white dark:bg-gray-900 text-rose-600 dark:text-rose-400 shadow-xs"
