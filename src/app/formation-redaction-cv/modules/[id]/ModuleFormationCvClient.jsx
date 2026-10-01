@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
+  obtenirModulesFormationCv,
   obtenirModuleEtQuizFormationCv,
   obtenirMaProgressionModuleFormationCv,
   marquerModuleVuFormationCv,
@@ -43,9 +45,11 @@ function decouperEnPages(texte) {
 // 20260925160000) — pas de vérification paye ici.
 export default function ModuleFormationCvClient({ moduleId }) {
   const { user } = useAuth();
+  const router = useRouter();
 
   const [chargement, setChargement] = useState(true);
   const [module, setModule] = useState(null);
+  const [tousLesModules, setTousLesModules] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [progression, setProgression] = useState(null);
   const [erreur, setErreur] = useState("");
@@ -53,6 +57,8 @@ export default function ModuleFormationCvClient({ moduleId }) {
   const [videoEnCours, setVideoEnCours] = useState(false);
   const [erreurVideo, setErreurVideo] = useState("");
   const [pageLecon, setPageLecon] = useState(0);
+  const [enRouteVersSuivant, setEnRouteVersSuivant] = useState(false);
+  const minuteurSuivantRef = useRef(null);
 
   const [reponses, setReponses] = useState({}); // { [question_id]: choix_index }
   const [quizEnCours, setQuizEnCours] = useState(false);
@@ -67,14 +73,17 @@ export default function ModuleFormationCvClient({ moduleId }) {
     setChargement(true);
     setErreur("");
     setPageLecon(0);
+    setEnRouteVersSuivant(false);
     try {
-      const [{ module: monModule, questions: mesQuestions }, maProgression] = await Promise.all([
+      const [{ module: monModule, questions: mesQuestions }, maProgression, listeModules] = await Promise.all([
         obtenirModuleEtQuizFormationCv(moduleId),
         obtenirMaProgressionModuleFormationCv(moduleId),
+        obtenirModulesFormationCv(),
       ]);
       setModule(monModule);
       setQuestions(mesQuestions);
       setProgression(maProgression);
+      setTousLesModules(listeModules);
     } catch (err) {
       setErreur(err.message || "Impossible de charger ce module.");
     } finally {
@@ -86,12 +95,46 @@ export default function ModuleFormationCvClient({ moduleId }) {
     queueMicrotask(() => chargerTout());
   }, [chargerTout]);
 
+  // Nettoie le minuteur d'avancement si l'utilisateur quitte la page
+  // (lien "Modules", navigateur) avant la fin du délai d'affichage du
+  // message de transition.
+  useEffect(() => {
+    return () => {
+      if (minuteurSuivantRef.current) clearTimeout(minuteurSuivantRef.current);
+    };
+  }, []);
+
+  const moduleSuivant = useMemo(() => {
+    const indexActuel = tousLesModules.findIndex((m) => m.id === moduleId);
+    return indexActuel >= 0 ? (tousLesModules[indexActuel + 1] ?? null) : null;
+  }, [tousLesModules, moduleId]);
+
+  // Avancement demandé explicitement : une fois une leçon (ou son quiz)
+  // réussie, on enchaîne sur le module suivant plutôt que de laisser
+  // l'utilisateur revenir manuellement à la liste. Même délai (1400ms) que
+  // le patron déjà utilisé pour bienvenue/scanner avant une redirection de
+  // succès, pour laisser le temps de voir la confirmation.
+  const naviguerVersSuivant = useCallback(() => {
+    setEnRouteVersSuivant(true);
+    minuteurSuivantRef.current = setTimeout(() => {
+      router.push(
+        moduleSuivant
+          ? `/formation-redaction-cv/modules/${moduleSuivant.id}`
+          : "/formation-redaction-cv/modules"
+      );
+    }, 1400);
+  }, [moduleSuivant, router]);
+
   const marquerVu = async () => {
     setErreurVideo("");
     setVideoEnCours(true);
     try {
       await marquerModuleVuFormationCv(moduleId);
       setProgression((p) => ({ ...(p || {}), vu: true, vu_le: new Date().toISOString() }));
+      // Si ce module n'a pas de quiz, marquer la leçon vue est l'étape
+      // finale — sinon on laisse l'utilisateur enchaîner sur le quiz
+      // ci-dessous avant d'avancer.
+      if (questions.length === 0) naviguerVersSuivant();
     } catch (err) {
       setErreurVideo(err.message || "Impossible d'enregistrer votre progression.");
     } finally {
@@ -120,6 +163,9 @@ export default function ModuleFormationCvClient({ moduleId }) {
         quiz_reussi: resultat.reussi,
         quiz_tente_le: new Date().toISOString(),
       }));
+      // N'avance que si le quiz est réussi — en cas d'échec, l'utilisateur
+      // doit pouvoir le retenter (bouton "Valider le quiz" toujours actif).
+      if (resultat.reussi) naviguerVersSuivant();
     } catch (err) {
       setErreurQuiz(err.message || "Impossible de soumettre le quiz.");
     } finally {
@@ -317,6 +363,13 @@ export default function ModuleFormationCvClient({ moduleId }) {
                   {quizEnCours ? "Envoi…" : "Valider le quiz"}
                 </button>
                 {erreurQuiz && <p className="text-xs text-red-600 dark:text-red-400 text-center">{erreurQuiz}</p>}
+              </div>
+            )}
+
+            {enRouteVersSuivant && (
+              <div className="flex items-center justify-center gap-2.5 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="w-3.5 h-3.5 border-2 border-emerald-500/40 border-t-emerald-500 rounded-full animate-spin inline-block"></span>
+                {moduleSuivant ? `Module suivant : ${moduleSuivant.titre}…` : "Formation terminée — retour aux modules…"}
               </div>
             )}
           </div>
