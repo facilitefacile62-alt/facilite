@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -9,6 +9,35 @@ import {
   marquerModuleVuFormationCv,
   soumettreQuizFormationCv,
 } from "@/lib/formationCvData";
+
+// Découpe une leçon en plusieurs pages de lecture plutôt qu'un seul bloc de
+// texte continu (demande explicite) : regroupe les paragraphes (séparés par
+// une ligne vide dans le texte source) jusqu'à un budget de caractères par
+// page, sans jamais couper un paragraphe en deux. Calcul pur, aucune
+// dépendance — un paragraphe à lui seul plus long que le budget reste sur sa
+// propre page plutôt que d'être tronqué.
+// 1100 : donne 2 à 4 pages pour les leçons les plus longues (4400 car.
+// max constaté) sans fragmenter à l'excès ; les plus courtes (sous 650 car.)
+// tiennent sur une seule page, pas de navigation affichée pour elles.
+const CARACTERES_PAR_PAGE = 1100;
+function decouperEnPages(texte) {
+  if (!texte) return [];
+  const paragraphes = texte.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const pages = [];
+  let page = [];
+  let longueur = 0;
+  for (const p of paragraphes) {
+    if (page.length > 0 && longueur + p.length > CARACTERES_PAR_PAGE) {
+      pages.push(page.join("\n\n"));
+      page = [];
+      longueur = 0;
+    }
+    page.push(p);
+    longueur += p.length;
+  }
+  if (page.length > 0) pages.push(page.join("\n\n"));
+  return pages;
+}
 
 // Accès temporairement ouvert à tout compte connecté (migration
 // 20260925160000) — pas de vérification paye ici.
@@ -23,6 +52,7 @@ export default function ModuleFormationCvClient({ moduleId }) {
 
   const [videoEnCours, setVideoEnCours] = useState(false);
   const [erreurVideo, setErreurVideo] = useState("");
+  const [pageLecon, setPageLecon] = useState(0);
 
   const [reponses, setReponses] = useState({}); // { [question_id]: choix_index }
   const [quizEnCours, setQuizEnCours] = useState(false);
@@ -36,6 +66,7 @@ export default function ModuleFormationCvClient({ moduleId }) {
     }
     setChargement(true);
     setErreur("");
+    setPageLecon(0);
     try {
       const [{ module: monModule, questions: mesQuestions }, maProgression] = await Promise.all([
         obtenirModuleEtQuizFormationCv(moduleId),
@@ -73,6 +104,7 @@ export default function ModuleFormationCvClient({ moduleId }) {
   };
 
   const toutesLesQuestionsRepondues = questions.length > 0 && questions.every((q) => reponses[q.id] !== undefined);
+  const pagesLecon = useMemo(() => decouperEnPages(module?.contenu_texte), [module?.contenu_texte]);
 
   const validerQuiz = async () => {
     setErreurQuiz("");
@@ -151,11 +183,40 @@ export default function ModuleFormationCvClient({ moduleId }) {
                 </div>
               )}
 
-              {module.contenu_texte && (
-                <p className="p-4 sm:p-5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                  {module.contenu_texte}
-                </p>
-              )}
+              {module.contenu_texte && (() => {
+                const pages = pagesLecon;
+                const derniere = pageLecon >= pages.length - 1;
+                return (
+                  <>
+                    <p className="p-4 sm:p-5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                      {pages[pageLecon] ?? pages[0]}
+                    </p>
+                    {pages.length > 1 && (
+                      <div className="px-4 sm:px-5 pb-4 flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setPageLecon((p) => Math.max(0, p - 1))}
+                          disabled={pageLecon === 0}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          <i className="fa-solid fa-chevron-left mr-1.5 text-[10px]"></i>Précédent
+                        </button>
+                        <span className="text-[11px] font-bold text-gray-400">
+                          Page {pageLecon + 1} / {pages.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPageLecon((p) => Math.min(pages.length - 1, p + 1))}
+                          disabled={derniere}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          Suivant<i className="fa-solid fa-chevron-right ml-1.5 text-[10px]"></i>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               <div className="p-4 sm:p-5 flex items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -168,6 +229,8 @@ export default function ModuleFormationCvClient({ moduleId }) {
                     <i className="fa-solid fa-circle-check"></i>
                     {module.contenu_texte ? "Leçon lue" : "Vu"}
                   </span>
+                ) : module.contenu_texte && pageLecon < pagesLecon.length - 1 ? (
+                  <span className="text-xs font-medium text-gray-400 shrink-0">Lisez jusqu&apos;à la dernière page</span>
                 ) : (
                   <button
                     type="button"
