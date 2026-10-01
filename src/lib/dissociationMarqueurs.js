@@ -121,3 +121,59 @@ export function calculerDecalagesDissociation(points, { echelle = 1 } = {}) {
 
   return { decalages, groupes };
 }
+
+/**
+ * Sélection des boutiques affichées selon le zoom — même esprit que Google
+ * Maps, qui réduit le nombre de points d'intérêt affichés en dézoomant et en
+ * révèle progressivement plus en zoomant (demande explicite de
+ * l'utilisateur, captures d'écran Google Maps à l'appui). Calcul PUR (aucune
+ * dépendance à Leaflet), travaille directement en degrés lat/lng — une
+ * approximation euclidienne suffit pour ce déclutter à l'échelle d'une
+ * ville, pas besoin de la précision d'une formule haversine.
+ *
+ * Contrairement à calculerDecalagesDissociation ci-dessus (qui déplace des
+ * marqueurs déjà affichés pour qu'ils ne se superposent pas visuellement à
+ * l'écran), cette fonction décide en amont LESQUELS sont affichés — les deux
+ * mécanismes sont complémentaires et agissent à des étapes différentes.
+ *
+ * @param {Array<{id: string, position: [number, number], estPremium?: boolean}>} boutiques
+ * @param {number} zoom zoom Leaflet courant
+ * @param {{zoomSansFiltre?: number, distanceBaseDegres?: number}} options
+ *   zoomSansFiltre : à partir de ce niveau, toutes les boutiques sont
+ *   affichées (14, même référence que echelleAvatarPourZoom). distanceBaseDegres :
+ *   écart minimal (en degrés) entre deux boutiques retenues à zoomSansFiltre-1,
+ *   doublé à chaque niveau de zoom en moins (0.0025° ≈ 250-280 m à la
+ *   latitude de Dakar).
+ * @returns {Array} sous-ensemble de `boutiques`, dans l'ordre d'origine.
+ */
+export function selectionnerBoutiquesVisibles(boutiques, zoom, { zoomSansFiltre = 14, distanceBaseDegres = 0.0025 } = {}) {
+  if (!Array.isArray(boutiques) || boutiques.length === 0) return boutiques;
+  if (!Number.isFinite(zoom) || zoom >= zoomSansFiltre) return boutiques;
+
+  const distanceMin = distanceBaseDegres * Math.pow(2, zoomSansFiltre - zoom);
+
+  // Les boutiques premium sont retenues en priorité (seul signal de mise en
+  // avant réellement disponible aujourd'hui, voir boutiquesAffichees) ; au
+  // sein d'un même rang, l'ordre d'origine fait foi pour un résultat stable
+  // d'un rendu à l'autre.
+  const ordreTri = boutiques
+    .map((b, index) => ({ b, index }))
+    .sort((x, y) => (y.b.estPremium ? 1 : 0) - (x.b.estPremium ? 1 : 0) || x.index - y.index);
+
+  const retenues = [];
+  for (const { b } of ordreTri) {
+    const [lat, lng] = b.position || [];
+    if (lat == null || lng == null) continue;
+    const tropProche = retenues.some((r) => {
+      const [rLat, rLng] = r.position;
+      return Math.hypot(rLat - lat, rLng - lng) < distanceMin;
+    });
+    if (!tropProche) retenues.push(b);
+  }
+
+  // Ordre d'origine restauré : boutiquesAffichees fixe déjà l'ordre
+  // d'affichage (carrousel, etc.), cette fonction ne doit que retirer des
+  // éléments, jamais réordonner ce qui reste.
+  const idsRetenus = new Set(retenues.map((b) => b.id));
+  return boutiques.filter((b) => idsRetenus.has(b.id));
+}

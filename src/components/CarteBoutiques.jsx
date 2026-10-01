@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, calculerStatutOuverture, urlPhoto } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
+import { selectionnerBoutiquesVisibles } from "@/lib/dissociationMarqueurs";
 
 const COULEUR = "#1877F2";
 const COULEUR_SERVICE = "#F59E0B";
@@ -86,6 +87,12 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const groupeRef = useRef(null);
+  // Mémorise (versionCarte, depart) déjà centrés/ajustés : fitBounds ne doit
+  // se redéclencher que pour de VRAIES nouvelles données, jamais pour un
+  // changement de boutiquesAffichees dû au seul déclutter par zoom
+  // (sélectionnerBoutiquesVisibles) — sinon chaque zoom de l'utilisateur
+  // provoquerait un recentrage qui annule son propre geste.
+  const dernierAjustementRef = useRef(null);
   // Incrémenté à chaque création de carte : déclenche la (re)pose des
   // marqueurs sur la NOUVELLE carte (voir l'effet des marqueurs plus bas).
   const [versionCarte, setVersionCarte] = useState(0);
@@ -242,6 +249,11 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
   // Explorer, "Autour de moi" n'est pas un filtre mais une action (recentrer
   // sur `depart`, déjà connu ici — pas besoin de re-géolocaliser).
   const [filtreActif, setFiltreActif] = useState("tous");
+  // Zoom courant, suivi en state pour déclencher boutiquesAffichees (donc
+  // reconstruire les marqueurs) à chaque palier — voir selectionnerBoutiquesVisibles
+  // ci-dessous. 14 par défaut : correspond à zoomSansFiltre (aucun filtrage
+  // tant que le vrai zoom n'a pas encore été lu une première fois).
+  const [zoomActuel, setZoomActuel] = useState(14);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -319,7 +331,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
 
   // Boutiques affichées selon la pastille active — filtre à la fois les
   // marqueurs dessinés sur la carte et le carrousel du bas, comme Explorer.
-  const boutiquesAffichees = useMemo(() => {
+  const boutiquesSelonFiltre = useMemo(() => {
     if (filtreActif === "live") {
       return boutiques.filter((b) => b.articles.some((a) => a.statut === "en_stock"));
     }
@@ -328,6 +340,16 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
     }
     return boutiques;
   }, [boutiques, filtreActif]);
+
+  // Déclutter par zoom (demande explicite, référence Google Maps) : en plus
+  // du filtre par pastille ci-dessus, moins de boutiques à faible zoom,
+  // davantage en zoomant — voir selectionnerBoutiquesVisibles. Agit AVANT la
+  // dissociation en cercle plus bas (effet séparé, inchangé) : les deux
+  // mécanismes se complètent, l'un décide qui est affiché, l'autre où.
+  const boutiquesAffichees = useMemo(
+    () => selectionnerBoutiquesVisibles(boutiquesSelonFiltre, zoomActuel),
+    [boutiquesSelonFiltre, zoomActuel]
+  );
 
   // Pendant de boutiquesAffichees pour la vue "Articles" du dock (Bascule
   // Boutiques / Articles) — même logique de filtre par pastille, appliquée
@@ -1086,12 +1108,32 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
           }, 0);
         carte.on("zoomend", declencherRecalculerDissociations);
         carte.on("moveend", declencherRecalculerDissociations);
+
+        // Suivi du zoom en state React (séparé de declencherRecalculerDissociations
+        // ci-dessus, qui ne fait que repositionner les marqueurs déjà créés) :
+        // déclenche boutiquesAffichees -> reconstruit les marqueurs eux-mêmes
+        // quand le palier de déclutter change. Lecture directe (pas de
+        // setTimeout) : carte.getZoom() est déjà à jour à "zoomend", aucun
+        // des soucis de bounds-en-cours-de-réinitialisation qui justifient le
+        // délai ci-dessus.
+        const suivreZoom = () => setZoomActuel(carte.getZoom());
+        carte.on("zoomend", suivreZoom);
+        nettoyages.push(() => carte.off("zoomend", suivreZoom));
+
         nettoyages.push(() => {
           carte.off("zoomend", declencherRecalculerDissociations);
           carte.off("moveend", declencherRecalculerDissociations);
         });
 
-        carte.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 15 });
+        // filtreActif inclus : changer de pastille (ex. "Live") doit encore
+        // recentrer sur le nouveau sous-ensemble, comme avant ce correctif —
+        // seul le déclutter par zoom (zoomActuel, pas dans cette clé) ne doit
+        // plus provoquer de recentrage.
+        const cleAjustement = `${versionCarte}|${depart?.latitude ?? ""}|${depart?.longitude ?? ""}|${filtreActif}`;
+        if (dernierAjustementRef.current !== cleAjustement) {
+          dernierAjustementRef.current = cleAjustement;
+          carte.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 15 });
+        }
         // Application initiale, une fois la carte réellement centrée/zoomée
         // — également différée pour la même raison que ci-dessus (fitBounds
         // ci-dessus a pu redéclencher "moveend" de façon encore en cours).
