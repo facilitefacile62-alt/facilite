@@ -2986,6 +2986,37 @@ export default function ProfilPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Actions du profil (Modifier / Paramètres / Partager) —
+                      alignées à droite, même conteneur justify-between que
+                      le bloc nom/badges ci-dessus. */}
+                  <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTab("about")}
+                      className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-extrabold transition cursor-pointer"
+                    >
+                      Modifier le profil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTab("settings")}
+                      title="Paramètres"
+                      aria-label="Paramètres"
+                      className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-gear text-sm"></i>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => triggerToast("Partage du profil — bientôt disponible", "fa-share-nodes")}
+                      title="Partager mon profil"
+                      aria-label="Partager mon profil"
+                      className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer"
+                    >
+                      <i className="fa-solid fa-arrow-up-from-bracket text-sm"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
               {/* BARRE D'ONGLETS HORIZONTALE STYLE FACEBOOK/LINKEDIN */}
