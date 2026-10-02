@@ -47,8 +47,11 @@ export default function ConfidentialitePage() {
     { nom: "Sentry", role: "Rapports d'erreur", detail: "Reçoit les erreurs techniques. Les champs sensibles sont retirés avant envoi." },
     { nom: "Google (Gemini)", role: "Traitement par intelligence artificielle", detail: "Assistant, analyse de CV, extraction d'annonces et lecture des pièces d'identité." },
     { nom: "Groq et DeepSeek", role: "Traitement par intelligence artificielle", detail: "Modèles de secours lorsque le service principal est indisponible." },
+    { nom: "OpenAI", role: "Traitement par intelligence artificielle", detail: "Diagnostic de CV, scan et optimisation des annonces Marketplace, extraction et classification de documents, matching recruteur et amélioration de texte de CV." },
     { nom: "KPay et PayDunya", role: "Paiement", detail: "Encaissement des commandes. Vos coordonnées bancaires sont saisies chez eux et ne transitent jamais par Facilité." },
+    { nom: "Orange Money (Orange Sonatel)", role: "Paiement", detail: "Intégration directe (contrairement à Wave, qui passe par le paiement hébergé de KPay/PayDunya) pour la formation de rédaction de CV et l'achat de jetons. Vos coordonnées de paiement sont saisies chez eux et ne transitent jamais par Facilité." },
     { nom: "Resend", role: "Envoi des e-mails", detail: "Confirmations d'inscription, alertes et notifications de candidature." },
+    { nom: "Twilio", role: "Notifications WhatsApp", detail: "Envoi des confirmations d'achat par WhatsApp : votre numéro de téléphone, votre nom complet et les détails de la facture lui sont transmis." },
     { nom: "Daily.co", role: "Entretiens vidéo", detail: "Transport des flux audio et vidéo pendant un entretien." },
     { nom: "Cloudflare R2", role: "Stockage de fichiers", detail: "Stockage complémentaire des documents." },
     { nom: "OpenStreetMap", role: "Fonds de carte", detail: "Fournit les images de carte affichées avec un itinéraire de transport. Votre adresse IP et la zone affichée lui parviennent au chargement de la carte ; votre position GPS ne lui est jamais transmise." },
@@ -103,9 +106,9 @@ export default function ConfidentialitePage() {
             La protection de vos données personnelles et de votre vie privée est une priorité absolue pour <strong>Facilité</strong> (ffacilite.com). Découvrez nos engagements en matière de transparence, de sécurité et d&apos;utilisation responsable.
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-gray-500 dark:text-gray-400 flex-wrap">
-            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 29 Août 2026</span>
+            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 2 Octobre 2026</span>
             <span>•</span>
-            <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.6</span>
+            <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.7</span>
           </div>
         </div>
 
