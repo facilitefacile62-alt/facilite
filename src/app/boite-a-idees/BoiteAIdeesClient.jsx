@@ -849,20 +849,20 @@ export default function BoiteAIdees() {
                 <span>{t.navRecruitment}</span>
               </Link>
 
-              {/* Option 1: Paramètres (Indisponible) */}
+              {/* Option 1: Paramètres — ouvre le vrai onglet Paramètres de
+                  /profil (?tab=settings, déjà lu par cette page) plutôt
+                  qu'un stub "Indisponible" alors que la fonctionnalité
+                  existe réellement. Link (pas router.push) : useRouter
+                  n'est pas importé dans ce fichier. */}
               <div className="flex flex-col">
-                <button
-                  type="button"
-                  disabled
-                  onClick={() => triggerToast("Paramètres — fonctionnalité bientôt disponible", "fa-gear")}
-                  className="w-full px-5 py-3.5 flex items-center justify-between text-left text-xs font-bold text-gray-400 bg-gray-100/90 opacity-50 grayscale cursor-not-allowed border-y border-gray-200/60 select-none shadow-none"
+                <Link
+                  href="/profil?tab=settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full px-5 py-3.5 flex items-center space-x-3 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition cursor-pointer border-y border-gray-200/60"
                 >
-                  <div className="flex items-center space-x-3">
-                    <i className="fa-solid fa-gear text-gray-400 text-base"></i>
-                    <span>Paramètres et confidentialité</span>
-                  </div>
-                  <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[9px] font-black rounded-md uppercase tracking-wider">Indisponible</span>
-                </button>
+                  <i className="fa-solid fa-gear text-gray-400 text-base"></i>
+                  <span>Paramètres et confidentialité</span>
+                </Link>
               </div>
 
               {/* Option 2: Aide (WhatsApp direct) */}
