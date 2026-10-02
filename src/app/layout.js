@@ -3,6 +3,7 @@ import Script from "next/script";
 import { cookies } from "next/headers";
 import "./globals.css";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import GlobalModals from "@/components/GlobalModals";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
@@ -229,6 +230,7 @@ export default async function RootLayout({ children }) {
             <AuthProvider>
               {!dansAppMobile && <Header />}
               {children}
+              {!dansAppMobile && <Footer />}
               <GlobalModals />
             </AuthProvider>
           </ThemeProvider>
