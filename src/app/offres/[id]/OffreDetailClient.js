@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { TexteAvecLiens } from "@/lib/liens";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -255,6 +255,24 @@ export default function OffreDetailClient({ initialOffer }) {
     alert("L'offre d'emploi a été supprimée avec succès.");
     router.push("/offres");
   };
+
+  // Stabilise la référence de l'objet job passé à ApplyModal (même patron
+  // que OffreApplySection.jsx) — sans ça, cet objet littéral était recréé à
+  // chaque rendu, et le useEffect de réinitialisation d'ApplyModal (déclenché
+  // par toute nouvelle référence de job, y compris après le propre toast de
+  // succès de cette page) effaçait le message "Candidature envoyée !"
+  // immédiatement après l'avoir affiché, alors que la candidature était bien
+  // enregistrée en base.
+  const stableJob = useMemo(
+    () => ({
+      ...offer,
+      titleFR: offer.title,
+      titleEN: offer.title,
+      recruiterEmail: offer.contact_email,
+      contact_email: offer.contact_email,
+    }),
+    [offer]
+  );
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] font-sans flex flex-col">
@@ -702,13 +720,7 @@ export default function OffreDetailClient({ initialOffer }) {
                 <ApplyModal
                   isOpen={applyOpen}
                   onClose={() => setApplyOpen(false)}
-                  job={{
-                    ...offer,
-                    titleFR: offer.title,
-                    titleEN: offer.title,
-                    recruiterEmail: offer.contact_email,
-                    contact_email: offer.contact_email,
-                  }}
+                  job={stableJob}
                   selectedLang="FR"
                   triggerToast={(msg) => {
                     setToast(msg);
