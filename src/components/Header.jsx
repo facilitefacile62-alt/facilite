@@ -947,7 +947,7 @@ export default function Header() {
                 title: off.title || "Offre d'emploi",
                 type: "Offre d'emploi",
                 subtitle: `${off.company || "Recruteur confidentiel"} • 📍 ${off.location || "Sénégal"} (${off.contract_type || "CDI"})`,
-                targetUrl: `/offres?id=${off.id}`,
+                targetUrl: `/offres/${off.id}`,
                 icon: "fa-briefcase",
                 badgeColor: "blue",
               });
