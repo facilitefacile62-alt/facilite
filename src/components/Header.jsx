@@ -924,7 +924,7 @@ export default function Header() {
                 title: comp.company,
                 type: "Spontané",
                 subtitle: `📍 ${comp.rawContact || "Sénégal"} • ${comp.domains || "Secteur d'activité"}`,
-                targetUrl: `/recrutement-spontane?entreprise=${encodeURIComponent(comp.company)}`,
+                targetUrl: `/recrutement-spontane/${comp.slug}`,
                 icon: "fa-building-user",
                 badgeColor: "emerald",
               });
