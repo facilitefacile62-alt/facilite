@@ -2987,16 +2987,23 @@ export default function ProfilPage() {
                     )}
                   </div>
 
-                  {/* Actions du profil (Modifier / Paramètres / Partager) —
-                      alignées à droite, même conteneur justify-between que
-                      le bloc nom/badges ci-dessus. */}
+                  {/* Actions du profil (Modifier / Paramètres / Plus d'options) —
+                      inspirées de la rangée d'icônes d'un en-tête de profil
+                      Facebook (crayon / ⋯), alignées à droite, même
+                      conteneur justify-between que le bloc nom/badges
+                      ci-dessus. L'icône "étoile" de la référence n'a pas
+                      d'équivalent évident sur son propre profil Facilité
+                      (pas de notion de "mise en favori" ici) — volontairement
+                      pas reprise plutôt que d'inventer une action creuse. */}
                   <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
                     <button
                       type="button"
                       onClick={() => handleSelectTab("about")}
-                      className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-extrabold transition cursor-pointer"
+                      title="Modifier le profil"
+                      aria-label="Modifier le profil"
+                      className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer"
                     >
-                      Modifier le profil
+                      <i className="fa-solid fa-pen text-sm"></i>
                     </button>
                     <button
                       type="button"
@@ -3009,12 +3016,12 @@ export default function ProfilPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => triggerToast("Partage du profil — bientôt disponible", "fa-share-nodes")}
-                      title="Partager mon profil"
-                      aria-label="Partager mon profil"
+                      onClick={() => triggerToast("Plus d'options — bientôt disponible", "fa-ellipsis")}
+                      title="Plus d'options"
+                      aria-label="Plus d'options"
                       className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition cursor-pointer"
                     >
-                      <i className="fa-solid fa-arrow-up-from-bracket text-sm"></i>
+                      <i className="fa-solid fa-bars text-sm"></i>
                     </button>
                   </div>
                 </div>
