@@ -15,10 +15,14 @@ const DEMO_EMAIL = "demo.investisseur@facilite-demo.local";
 const DEMO_PASSWORD = "CompteDemoNonUtilisable2026!";
 
 async function loginAsDemo(page) {
+  // /login est un flux en 2 écrans (e-mail, puis mot de passe) depuis la
+  // refonte de src/app/login/page.js — les anciens placeholders anglais
+  // et le bouton "Log In" n'existent plus.
   await page.goto("/login");
-  await page.getByPlaceholder("Enter your Email").fill(DEMO_EMAIL);
-  await page.getByPlaceholder("Enter your password").fill(DEMO_PASSWORD);
-  await page.getByRole("button", { name: "Log In" }).click();
+  await page.getByPlaceholder("nom@exemple.com").fill(DEMO_EMAIL);
+  await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+  await page.getByPlaceholder("Saisissez votre mot de passe").fill(DEMO_PASSWORD);
+  await page.getByRole("button", { name: "Se connecter" }).click();
   // Un compte badgé verified_recruiter est redirigé directement vers
   // /recruteur après connexion (src/app/login/page.js) — pas /messagerie.
   await page.waitForURL("**/recruteur", { timeout: 20_000 });
@@ -56,9 +60,10 @@ test.describe("Tableau de bord recruteur — Vue d'ensemble (KPI + entonnoir)", 
 
     try {
       await page.goto("/login");
-      await page.getByPlaceholder("Enter your Email").fill("e2e-test-security@facilite-demo.local");
-      await page.getByPlaceholder("Enter your password").fill("FaciliteE2ETest2026!");
-      await page.getByRole("button", { name: "Log In" }).click();
+      await page.getByPlaceholder("nom@exemple.com").fill("e2e-test-security@facilite-demo.local");
+      await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+      await page.getByPlaceholder("Saisissez votre mot de passe").fill("FaciliteE2ETest2026!");
+      await page.getByRole("button", { name: "Se connecter" }).click();
       await page.waitForURL("**/recruteur", { timeout: 20_000 });
       await page.waitForLoadState("networkidle");
       await expect(page.getByText("Aucune statistique pour le moment")).toBeVisible();

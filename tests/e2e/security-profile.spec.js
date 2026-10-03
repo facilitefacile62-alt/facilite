@@ -15,10 +15,14 @@ const SECURITY_EMAIL = process.env.E2E_SECURITY_EMAIL || "e2e-test-security@faci
 const SECURITY_PASSWORD = process.env.E2E_SECURITY_PASSWORD || "FaciliteE2ETest2026!";
 
 async function loginAndOpenSecurityTab(page, password = SECURITY_PASSWORD) {
+  // /login est un flux en 2 écrans (e-mail, puis mot de passe) depuis la
+  // refonte de src/app/login/page.js — les anciens placeholders anglais
+  // et le bouton "Log In" n'existent plus.
   await page.goto("/login");
-  await page.getByPlaceholder("Enter your Email").fill(SECURITY_EMAIL);
-  await page.getByPlaceholder("Enter your password").fill(password);
-  await page.getByRole("button", { name: "Log In" }).click();
+  await page.getByPlaceholder("nom@exemple.com").fill(SECURITY_EMAIL);
+  await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+  await page.getByPlaceholder("Saisissez votre mot de passe").fill(password);
+  await page.getByRole("button", { name: "Se connecter" }).click();
   await page.waitForURL(/\/(messagerie|recruteur|profil)/, { timeout: 20_000 });
 
   await page.goto("/profil?tab=securite");

@@ -64,9 +64,10 @@ test.describe("Catalogue - Édition et suppression d'offres", () => {
 
     // 1. Connexion en tant qu'admin
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(ADMIN_EMAIL);
-    await page.getByPlaceholder("Enter your password").fill(ADMIN_PASSWORD);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(ADMIN_EMAIL);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(ADMIN_PASSWORD);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     await page.waitForURL("**/messagerie", { timeout: 20000 });
 
     // 2. Aller sur le catalogue d'offres

@@ -100,18 +100,20 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
 
   test("3. un compte admin voit le lien Admin, un compte non-admin ne le voit pas", async ({ page }) => {
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(adminUser.email);
-    await page.getByPlaceholder("Enter your password").fill(adminUser.password);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(adminUser.email);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(adminUser.password);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     await page.waitForURL(/\/(admin|messagerie)/, { timeout: 20000 });
 
     await expect(page.getByRole("link", { name: "Admin" }).first()).toBeVisible({ timeout: 10000 });
 
     // Comparaison directe : un compte simple ne doit pas voir ce lien.
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(plainUser.email);
-    await page.getByPlaceholder("Enter your password").fill(plainUser.password);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(plainUser.email);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(plainUser.password);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     await page.waitForURL("**/messagerie", { timeout: 20000 });
 
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
@@ -119,9 +121,10 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
 
   test("4. un compte badgé voit Recruteur, un compte sans badge ne le voit pas ET ne peut pas accéder à l'API directement", async ({ page }) => {
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(badgedRecruiter.email);
-    await page.getByPlaceholder("Enter your password").fill(badgedRecruiter.password);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(badgedRecruiter.email);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(badgedRecruiter.password);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     // Un recruteur badgé est redirigé vers /recruteur, pas /messagerie —
     // contrairement à un compte simple (voir plus bas). Puis retour sur une
     // page neutre : le header ne montre pas nécessairement de raccourci vers
@@ -131,9 +134,10 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
     await expect(page.getByRole("link", { name: "Recruteur" }).first()).toBeVisible({ timeout: 10000 });
 
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(plainUser.email);
-    await page.getByPlaceholder("Enter your password").fill(plainUser.password);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(plainUser.email);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(plainUser.password);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     await page.waitForURL("**/messagerie", { timeout: 20000 });
     await expect(page.getByRole("link", { name: "Recruteur" })).toHaveCount(0);
 
@@ -182,9 +186,10 @@ test.describe("Sécurité navigation, badges et accès CV (Partie 9)", () => {
   test("7. le badge n'est cliquable que sur son propre profil", async ({ page, browser }) => {
     // Sur son propre profil (authentifié) : cliquable.
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(badgedRecruiter.email);
-    await page.getByPlaceholder("Enter your password").fill(badgedRecruiter.password);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(badgedRecruiter.email);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(badgedRecruiter.password);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     await page.waitForURL(/\/(recruteur|messagerie)$/, { timeout: 20000 });
     await page.goto("/profil");
     const ownBadge = page.getByText("Recruteur vérifié").first();

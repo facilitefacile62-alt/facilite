@@ -31,9 +31,10 @@ test.describe("Parcours candidat : vitrine recruteur -> candidature", () => {
   test("connexion, consultation d'une offre, vérification d'éligibilité et candidature", async ({ page }) => {
     // 1. Connexion du candidat de test.
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(CANDIDATE_EMAIL);
-    await page.getByPlaceholder("Enter your password").fill(CANDIDATE_PASSWORD);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(CANDIDATE_EMAIL);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(CANDIDATE_PASSWORD);
+    await page.getByRole("button", { name: "Se connecter" }).click();
 
     // Connexion réussie : src/app/login/page.js redirige via
     // window.location.replace() après un délai fixe de 500ms (setTimeout).

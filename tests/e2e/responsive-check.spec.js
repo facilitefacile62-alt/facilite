@@ -7,10 +7,15 @@ const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-test-admin@facilite-demo
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "FaciliteE2ETest2026!";
 
 async function loginAs(page, email, password, expectedUrlPattern) {
+  // /login est un flux en 2 écrans (e-mail, puis mot de passe) depuis la
+  // refonte de src/app/login/page.js — les anciens placeholders anglais
+  // ("Enter your Email"/"Enter your password") et le bouton "Log In"
+  // n'existent plus, ce qui faisait attendre ce helper 60s pour rien.
   await page.goto("/login");
-  await page.getByPlaceholder("Enter your Email").fill(email);
-  await page.getByPlaceholder("Enter your password").fill(password);
-  await page.getByRole("button", { name: "Log In" }).click();
+  await page.getByPlaceholder("nom@exemple.com").fill(email);
+  await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+  await page.getByPlaceholder("Saisissez votre mot de passe").fill(password);
+  await page.getByRole("button", { name: "Se connecter" }).click();
   await page.waitForURL(expectedUrlPattern, { timeout: 20_000 });
   await page.waitForLoadState("networkidle");
 }
@@ -72,9 +77,10 @@ test.describe("Tests de responsivité et de conformité Mobile UX", () => {
       // (8 offres, ~38 candidatures) pour que le graphique et l'entonnoir
       // rendent leur pire cas de largeur (nombreuses barres, longs titres).
       await page.goto("/login");
-      await page.getByPlaceholder("Enter your Email").fill("demo.investisseur@facilite-demo.local");
-      await page.getByPlaceholder("Enter your password").fill("CompteDemoNonUtilisable2026!");
-      await page.getByRole("button", { name: "Log In" }).click();
+      await page.getByPlaceholder("nom@exemple.com").fill("demo.investisseur@facilite-demo.local");
+      await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+      await page.getByPlaceholder("Saisissez votre mot de passe").fill("CompteDemoNonUtilisable2026!");
+      await page.getByRole("button", { name: "Se connecter" }).click();
       await page.waitForURL("**/recruteur", { timeout: 20_000 });
       await page.waitForLoadState("networkidle");
       await expectNoHorizontalOverflow(page, "/recruteur (vue d'ensemble, démo)");
@@ -225,7 +231,7 @@ test.describe("Tests de responsivité et de conformité Mobile UX", () => {
       await page.goto("/login");
       await page.waitForLoadState("networkidle");
 
-      const emailInput = page.getByPlaceholder("Enter your Email");
+      const emailInput = page.getByPlaceholder("nom@exemple.com");
       const fontSize = await emailInput.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
       expect(fontSize, "font-size du champ e-mail (anti-zoom iOS)").toBeGreaterThanOrEqual(16);
     });
@@ -234,9 +240,9 @@ test.describe("Tests de responsivité et de conformité Mobile UX", () => {
       await page.goto("/login");
       await page.waitForLoadState("networkidle");
 
-      const loginButton = page.getByRole("button", { name: "Log In" });
+      const loginButton = page.getByRole("button", { name: "Continuer avec l'e-mail" });
       const box = await loginButton.boundingBox();
-      expect(box.height, "hauteur du bouton Log In").toBeGreaterThanOrEqual(44);
+      expect(box.height, "hauteur du bouton Continuer avec l'e-mail").toBeGreaterThanOrEqual(44);
     });
   });
 });

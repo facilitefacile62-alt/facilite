@@ -26,9 +26,10 @@ test.describe("Tarification, paiement et facturation", () => {
   test("choix d'une formule, redirection réelle vers KPay, et commande visible dans l'historique de facturation", async ({ page }) => {
     // 1. Connexion du candidat de test.
     await page.goto("/login");
-    await page.getByPlaceholder("Enter your Email").fill(CANDIDATE_EMAIL);
-    await page.getByPlaceholder("Enter your password").fill(CANDIDATE_PASSWORD);
-    await page.getByRole("button", { name: "Log In" }).click();
+    await page.getByPlaceholder("nom@exemple.com").fill(CANDIDATE_EMAIL);
+    await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+    await page.getByPlaceholder("Saisissez votre mot de passe").fill(CANDIDATE_PASSWORD);
+    await page.getByRole("button", { name: "Se connecter" }).click();
     await page.waitForURL("**/messagerie", { timeout: 20_000 });
     await page.waitForLoadState("networkidle");
 
