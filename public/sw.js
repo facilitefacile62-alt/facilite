@@ -142,7 +142,7 @@
 // v142 (22/09/2026) : relevé de position (boutique/activité) - sur iPhone/iPad, les instructions de deblocage de la localisation s'affichent enfin apres un refus (l'API navigator.permissions ne couvre pas "geolocation" sur iOS, le bloc d'aide restait invisible), et s'ouvrent automatiquement au lieu de rester cachees dans un menu repliable
 // v143 (22/09/2026) : app mobile - pont de session (POST /auth/mobile-bridge) pour ouvrir /creer-cv deja connecte depuis une WebView de l'app ; les 3 modeles de CV (Moderne/Minimaliste/Classique) de l'Accueil mobile y menent desormais reellement
 // v154 (26/09/2026) : Purge totale du cache pour éliminer l'erreur Next.js 'This page couldn't load' causée par des chunks périmés en cache.
-const VERSION_CACHE = "facilite-v154";
+const VERSION_CACHE = "facilite-v155";
 const PAGE_HORS_LIGNE = "/hors-ligne.html";
 
 // Volontairement court : uniquement ce qui est nécessaire pour afficher
