@@ -719,6 +719,11 @@ export default function MarketplaceClient() {
         {boutiqueModal && (
           <ModalFicheBoutique
             boutique={boutiqueModal}
+            onMyRendre={(b) => {
+              setBoutiqueModal(null);
+              setItineraireCible({ id: b.id, nom: b.nom, lat: Number(b.lat), lng: Number(b.lng) });
+              setGlobeOuvert(true);
+            }}
             articles={mesArticles}
             profile={profile}
             userId={userId}
@@ -780,6 +785,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
+  const [itineraireCible, setItineraireCible] = useState(null);
   // Vue « Autour de moi » : "mini" = carte compacte au-dessus des catégories (défaut), "liste" = articles proches sans carte.
   // La pleine carte est le globe (globeOuvert).
   const [vueProches, setVueProches] = useState("mini");
@@ -1166,6 +1172,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           boutiques={boutiquesPourGlobe}
           tousArticles={resultats}
           positionInitiale={position}
+          itineraireCible={itineraireCible}
           onVoirBoutique={(b) => {
             setGlobeOuvert(false);
             onVoirBoutique?.(b);
@@ -1174,7 +1181,10 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             setGlobeOuvert(false);
             onVoirArticle?.(art);
           }}
-          onFermer={() => setGlobeOuvert(false)}
+          onFermer={() => {
+            setGlobeOuvert(false);
+            setItineraireCible(null);
+          }}
         />
       )}
 
@@ -6578,6 +6588,7 @@ const LIBELLES_CATEGORIE_ETABLISSEMENT = {
  */
 function ModalFicheBoutique({
   boutique,
+  onMyRendre = null,
   articles = [],
   profile = null,
   userId = null,
@@ -8210,7 +8221,7 @@ function ModalFicheBoutique({
                   {boutique?.lat != null && boutique?.lng != null && (
                     <button
                       type="button"
-                      onClick={() => setItineraireOuvert(true)}
+                      onClick={() => (onMyRendre ? onMyRendre(boutique) : setItineraireOuvert(true))}
                       className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition"
                     >
                       <i className="fa-solid fa-diamond-turn-right text-base"></i>

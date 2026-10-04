@@ -10,6 +10,7 @@ import {
   obtenirDateHeureDakar,
   JOURS_SEMAINE,
 } from "@/lib/marketplaceData";
+import { supabase } from "@/lib/supabase";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation } from "@/lib/dissociationMarqueurs";
@@ -140,6 +141,9 @@ export default function GlobeExplorateurBoutiques({
   // de géolocalisation une seconde fois quand ce composant remplace
   // désormais aussi la carte "Autour de moi" mobile.
   positionInitiale = null,
+  // Boutique vers laquelle l'utilisateur veut se rendre : trace l'itinéraire
+  // depuis sa position (route serveur, ou ligne droite à défaut).
+  itineraireCible = null,
 }) {
   const conteneurRef = useRef(null);
   const carteRef = useRef(null);
@@ -216,6 +220,104 @@ export default function GlobeExplorateurBoutiques({
   const [erreurLocalisation, setErreurLocalisation] = useState("");
   const [vueBoutiqueDetails, setVueBoutiqueDetails] = useState(false);
   const [cartePrete, setCartePrete] = useState(false);
+  const [trajetInfo, setTrajetInfo] = useState(null);
+
+  useEffect(() => {
+    if (!itineraireCible || !cartePrete || !carteRef.current) return undefined;
+    let annule = false;
+    const carte = carteRef.current;
+    const couches = [];
+    const destination = [Number(itineraireCible.lat), Number(itineraireCible.lng)];
+
+    const obtenirOrigine = () =>
+      positionInitiale
+        ? Promise.resolve([positionInitiale.latitude, positionInitiale.longitude])
+        : new Promise((resoudre, rejeter) => {
+            if (!navigator.geolocation) return rejeter(new Error("geoloc"));
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resoudre([pos.coords.latitude, pos.coords.longitude]),
+              rejeter,
+              { timeout: 15000, maximumAge: 60000 }
+            );
+          });
+
+    (async () => {
+      try {
+        const origine = await obtenirOrigine();
+        if (annule) return;
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        const L = (await import("leaflet")).default;
+        if (annule) return;
+
+        let points = [origine, destination];
+        let resume = null;
+        if (session) {
+          try {
+            const reponse = await fetch("/api/marketplace/itineraire", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                depart: { lat: origine[0], lng: origine[1] },
+                arrivee: { lat: destination[0], lng: destination[1] },
+                profil: "pieton",
+              }),
+            });
+            const donnees = reponse.ok ? await reponse.json() : null;
+            if (donnees && Array.isArray(donnees.points) && donnees.points.length > 1) {
+              points = donnees.points;
+              resume = donnees;
+            }
+          } catch {
+            // repli ci-dessous
+          }
+        }
+        if (annule) return;
+
+        if (resume) {
+          setTrajetInfo({
+            texte: `À pied : ${String(resume.distance_km).replace(".", ",")} km · environ ${resume.duree_min} min`,
+          });
+        } else {
+          const rad = (d) => (d * Math.PI) / 180;
+          const dLat = rad(destination[0] - origine[0]);
+          const dLng = rad(destination[1] - origine[1]);
+          const h =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(rad(origine[0])) * Math.cos(rad(destination[0])) * Math.sin(dLng / 2) ** 2;
+          const km = 2 * 6371 * Math.asin(Math.sqrt(h));
+          const lisible = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1).replace(".", ",")} km`;
+          setTrajetInfo({
+            texte: `À vol d'oiseau : ${lisible}`,
+            note: session
+              ? "Itinéraire routier indisponible pour le moment."
+              : "Connecte-toi pour voir l'itinéraire routier.",
+          });
+        }
+
+        const trace = L.polyline(points, {
+          color: "#2563eb",
+          weight: 5,
+          dashArray: resume ? null : "6 8",
+        }).addTo(carte);
+        couches.push(trace);
+        couches.push(
+          L.circleMarker(destination, { radius: 10, color: "#ffffff", weight: 3, fillColor: "#10b981", fillOpacity: 1 }).addTo(carte)
+        );
+        carte.fitBounds(trace.getBounds(), { padding: [60, 60] });
+      } catch {
+        if (!annule) setTrajetInfo({ texte: "Position indisponible : autorise la localisation." });
+      }
+    })();
+
+    return () => {
+      annule = true;
+      couches.forEach((c) => c.remove());
+    };
+  }, [itineraireCible, cartePrete, positionInitiale]);
   const [horaires, setHoraires] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
   // Recherche mot-clé de la carte (Point C) — filtre local, sur les
@@ -1703,6 +1805,14 @@ export default function GlobeExplorateurBoutiques({
       aria-modal="true"
       aria-label="Facilité Snap Map Sénégal"
     >
+      {itineraireCible && trajetInfo && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 px-4 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 shadow-xl text-center max-w-[90%] pointer-events-none">
+          <p className="text-sm font-black text-zinc-900 dark:text-white truncate">{itineraireCible.nom}</p>
+          <p className="text-xs font-bold text-blue-600">{trajetInfo.texte}</p>
+          {trajetInfo.note && <p className="text-[11px] text-zinc-500 mt-0.5">{trajetInfo.note}</p>}
+        </div>
+      )}
+
       {/* 1. EN-TÊTE SUPÉRIEUR SNAP MAP (Sombre, Météo Dakar/Thiès & Filtres) */}
       <header
         ref={headerRef}
