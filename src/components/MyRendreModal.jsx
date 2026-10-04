@@ -87,10 +87,6 @@ export default function MyRendreModal({ boutique, onFermer }) {
         ? "ok"
         : "chargement";
 
-  const lienGoogleMaps = coordonneesOk
-    ? `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`
-    : null;
-
   return (
     <div className="fixed inset-0 z-[80] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onFermer}>
       <div
@@ -125,19 +121,6 @@ export default function MyRendreModal({ boutique, onFermer }) {
 
         <div ref={conteneur} className="w-full h-72 bg-gray-100 dark:bg-zinc-800" style={{ display: etat === "refuse" || etat === "indisponible" ? "none" : "block" }} />
 
-        {lienGoogleMaps && (
-          <div className="p-4">
-            <a
-              href={lienGoogleMaps}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-diamond-turn-right"></i>
-              Itinéraire dans Google Maps
-            </a>
-          </div>
-        )}
       </div>
     </div>
   );
