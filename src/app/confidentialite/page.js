@@ -54,6 +54,7 @@ export default function ConfidentialitePage() {
     { nom: "Twilio", role: "Notifications WhatsApp", detail: "Envoi des confirmations d'achat par WhatsApp : votre numéro de téléphone, votre nom complet et les détails de la facture lui sont transmis." },
     { nom: "Daily.co", role: "Entretiens vidéo", detail: "Transport des flux audio et vidéo pendant un entretien." },
     { nom: "Cloudflare R2", role: "Stockage de fichiers", detail: "Stockage complémentaire des documents." },
+    { nom: "OpenRouteService", role: "Calcul d'itinéraire routier", detail: "Lorsque vous utilisez « M'y rendre » sur une boutique, votre position et celle de la boutique lui sont transmises pour calculer le trajet à pied. Facilité ne conserve pas votre position." },
     { nom: "OpenStreetMap", role: "Fonds de carte", detail: "Fournit les images de carte affichées avec un itinéraire de transport. Votre adresse IP et la zone affichée lui parviennent au chargement de la carte ; votre position GPS ne lui est jamais transmise." },
   ];
 
@@ -106,9 +107,9 @@ export default function ConfidentialitePage() {
             La protection de vos données personnelles et de votre vie privée est une priorité absolue pour <strong>Facilité</strong> (ffacilite.com). Découvrez nos engagements en matière de transparence, de sécurité et d&apos;utilisation responsable.
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-gray-500 dark:text-gray-400 flex-wrap">
-            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 2 Octobre 2026</span>
+            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 4 Octobre 2026</span>
             <span>•</span>
-            <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.7</span>
+            <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.8</span>
           </div>
         </div>
 
@@ -200,7 +201,7 @@ export default function ConfidentialitePage() {
                       collectent. Google recoupe la fiche Data Safety avec cette
                       page : une donnée déclarée là et absente ici est un motif
                       de rejet. */}
-                  <li><strong>Position :</strong> Votre position GPS est demandée uniquement pour calculer un itinéraire de transport ou trouver une boutique proche. Elle sert au calcul puis est <strong>immédiatement oubliée</strong> : elle n&apos;est jamais enregistrée dans votre historique.</li>
+                  <li><strong>Position :</strong> Votre position GPS est demandée uniquement pour calculer un itinéraire de transport ou trouver une boutique proche. Elle sert au calcul (y compris le trajet routier « M'y rendre », transmis à OpenRouteService) puis est <strong>immédiatement oubliée</strong> : elle n&apos;est jamais enregistrée dans votre historique.</li>
                   <li><strong>Boutique &amp; annonces (Marketplace) :</strong> Si vous ouvrez une boutique, son nom, son quartier, son numéro WhatsApp et sa position sont enregistrés et <strong>rendus publics</strong> — c&apos;est ce qui permet aux acheteurs de vous trouver. Vos annonces comprennent photos, prix et disponibilité.</li>
                 </ul>
               </div>
