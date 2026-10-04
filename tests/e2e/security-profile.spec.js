@@ -25,8 +25,11 @@ async function loginAndOpenSecurityTab(page, password = SECURITY_PASSWORD) {
   await page.getByRole("button", { name: "Se connecter" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
 
-  await page.goto("/profil?tab=securite");
-  await expect(page.getByText("Mes identifiants de connexion")).toBeVisible({ timeout: 15_000 });
+  // La sécurité n'est plus un onglet : c'est l'entrée "Sécurité & Connexion"
+  // de la barre latérale de l'onglet À propos (src/app/profil/page.js).
+  await page.goto("/profil");
+  await page.getByText("Sécurité & Connexion", { exact: true }).first().click();
+  await expect(page.getByText(/Changer le mot de passe|Créer un mot de passe/).first()).toBeVisible({ timeout: 15_000 });
 }
 
 test.describe("Profil : onglet Sécurité", () => {
