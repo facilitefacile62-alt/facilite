@@ -977,6 +977,17 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     };
   }, []);
 
+  // Icône de localisation d'une carte article : ouvre la carte avec le trajet.
+  useEffect(() => {
+    const handleItineraire = (e) => {
+      const b = e.detail;
+      setItineraireCible({ id: b.id, nom: b.nom, lat: Number(b.lat), lng: Number(b.lng) });
+      setGlobeOuvert(true);
+    };
+    window.addEventListener("facilite:marketplace-itineraire", handleItineraire);
+    return () => window.removeEventListener("facilite:marketplace-itineraire", handleItineraire);
+  }, []);
+
   // Consomme UNE fois chaque demande venue du parent (demande.id unique,
   // évite un double déclenchement au double montage React du mode dev).
   const derniereDemandeRef = useRef(null);
@@ -1421,6 +1432,29 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
           </p>
         </div>
 
+        {article.boutique_lat != null && article.boutique_lng != null && (
+          <button
+            type="button"
+            title="M'y rendre"
+            aria-label="M'y rendre"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent("facilite:marketplace-itineraire", {
+                  detail: {
+                    id: article.boutique_id,
+                    nom: article.boutique_nom,
+                    lat: article.boutique_lat,
+                    lng: article.boutique_lng,
+                  },
+                })
+              );
+            }}
+            className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm transition"
+          >
+            <i className="fa-solid fa-location-dot text-sm"></i>
+          </button>
+        )}
         {/* Colonne droite : Bouton gris 'Acheter' (1:1 Capture) */}
         <button
           type="button"
@@ -8223,14 +8257,15 @@ function ModalFicheBoutique({
                     </a>
                   )}
 
-                  {boutique?.lat != null && boutique?.lng != null && (
+                  {boutique?.lat != null && boutique?.lng != null && !(userId && boutique?.owner_id && boutique.owner_id === userId) && (
                     <button
                       type="button"
+                      title="M'y rendre"
+                      aria-label="M'y rendre"
                       onClick={() => (onMyRendre ? onMyRendre(boutique) : setItineraireOuvert(true))}
-                      className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition"
+                      className="w-11 h-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg transition"
                     >
-                      <i className="fa-solid fa-diamond-turn-right text-base"></i>
-                      <span>M&apos;y rendre</span>
+                      <i className="fa-solid fa-location-dot text-base"></i>
                     </button>
                   )}
                   {itineraireOuvert && (
