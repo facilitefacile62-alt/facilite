@@ -5661,7 +5661,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
-                            onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                            onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique, lat: article.boutique_lat, lng: article.boutique_lng })}
                             className="text-xs font-bold text-gray-950 dark:text-white truncate hover:underline hover:text-blue-600 cursor-pointer"
                           >
                             {nomBoutique}
@@ -5678,7 +5678,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                     </div>
                     <button
                       type="button"
-                      onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                      onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique, lat: article.boutique_lat, lng: article.boutique_lng })}
                       className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
                     >
                       Boutique →
@@ -6215,7 +6215,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
 
                 <button
                   type="button"
-                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique })}
+                  onClick={() => onVoirBoutique?.({ id: article.boutique_id, nom: nomBoutique, lat: article.boutique_lat, lng: article.boutique_lng })}
                   className="text-xs font-bold text-blue-600 hover:underline cursor-pointer shrink-0"
                 >
                   Voir toute la boutique →
