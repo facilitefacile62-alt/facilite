@@ -36,6 +36,9 @@ import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 // Chargé en dynamique, sans SSR : maplibre-gl (~257 Ko compressés) touche
 // `window`/WebGL et ne doit être téléchargé que par les personnes qui
 // ouvrent réellement "Explorer", pas par chaque visite du Marketplace.
+import { createPortal } from "react-dom";
+import MyRendreModal from "@/components/MyRendreModal";
+
 const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
   ssr: false,
 });
@@ -1348,6 +1351,8 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
         ville: article.ville,
         telephone_whatsapp: article.telephone_whatsapp,
         whatsappUrl: article.whatsappUrl,
+        lat: article.boutique_lat,
+        lng: article.boutique_lng,
       });
     }
   };
@@ -6618,6 +6623,7 @@ function ModalFicheBoutique({
 
   // États éditables du profil boutique
   const [nom, setNom] = useState(boutique?.nom || boutique?.boutique_nom || profile?.full_name || "facile demo");
+  const [itineraireOuvert, setItineraireOuvert] = useState(false);
   const [quartier, setQuartier] = useState(boutique?.quartier || profile?.quartier || "Sénégal");
   const [ville, setVille] = useState(boutique?.ville || profile?.city || profile?.location || "Dakar");
   const [telephone, setTelephone] = useState(boutique?.telephone_whatsapp || profile?.phone || "+221773014510");
@@ -8201,6 +8207,22 @@ function ModalFicheBoutique({
                       <span>WhatsApp</span>
                     </a>
                   )}
+
+                  {boutique?.lat != null && boutique?.lng != null && (
+                    <button
+                      type="button"
+                      onClick={() => setItineraireOuvert(true)}
+                      className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition"
+                    >
+                      <i className="fa-solid fa-diamond-turn-right text-base"></i>
+                      <span>M&apos;y rendre</span>
+                    </button>
+                  )}
+                  {itineraireOuvert &&
+                    createPortal(
+                      <MyRendreModal boutique={boutique} onFermer={() => setItineraireOuvert(false)} />,
+                      document.body
+                    )}
                 </div>
               </div>
             </div>
