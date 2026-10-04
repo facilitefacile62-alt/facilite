@@ -23,7 +23,7 @@ async function loginAndOpenSecurityTab(page, password = SECURITY_PASSWORD) {
   await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
   await page.getByPlaceholder("Saisissez votre mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();
-  await page.waitForURL(/\/(messagerie|recruteur|profil)/, { timeout: 20_000 });
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
 
   await page.goto("/profil?tab=securite");
   await expect(page.getByText("Mes identifiants de connexion")).toBeVisible({ timeout: 15_000 });
