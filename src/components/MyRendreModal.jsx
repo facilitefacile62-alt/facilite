@@ -2,11 +2,13 @@
 
 // « M'y rendre » depuis la fiche d'une boutique Marketplace.
 //
-// Distance à vol d'oiseau, calculée dans le navigateur : la position de
-// l'utilisateur n'est envoyée à aucun service et n'est jamais enregistrée (voir
-// la politique de confidentialité, section 2). Pas d'API d'itinéraire externe
-// ici, pour ne pas transmettre la position à un tiers.
+// L'itinéraire routier est calculé par /api/marketplace/itineraire, réservé aux
+// comptes connectés. La position de l'utilisateur n'est transmise qu'à ce calcul
+// et n'est pas conservée (politique de confidentialité, sections 2 et 8). Si le
+// calcul échoue, on affiche la distance à vol d'oiseau, calculée dans le navigateur.
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { supabase } from "@/lib/supabase";
 
 const RAYON_TERRE_KM = 6371;
 
@@ -28,9 +30,12 @@ const coordonneeValide = (v) => v !== null && v !== undefined && v !== "" && Num
 
 export default function MyRendreModal({ boutique, onFermer }) {
   const conteneur = useRef(null);
-  const [position, setPosition] = useState(null); // [lat, lng] une fois autorisée
+  const [position, setPosition] = useState(null);
   const [refus, setRefus] = useState(false);
-  const [km, setKm] = useState(null);
+  const [session, setSession] = useState(undefined); // undefined = pas encore vérifiée
+  const [itineraire, setItineraire] = useState(null); // { distance_km, duree_min, points } ou null
+  const [distanceVolOiseau, setDistanceVolOiseau] = useState(null);
+  const [itineraireIndisponible, setItineraireIndisponible] = useState(false);
 
   const coordonneesOk = coordonneeValide(boutique?.lat) && coordonneeValide(boutique?.lng);
   const destLat = coordonneesOk ? Number(boutique.lat) : null;
@@ -38,7 +43,17 @@ export default function MyRendreModal({ boutique, onFermer }) {
   const pasDeGeolocalisation = typeof navigator === "undefined" || !navigator.geolocation;
 
   useEffect(() => {
-    if (!coordonneesOk || pasDeGeolocalisation) return undefined;
+    let annule = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!annule) setSession(data?.session ?? null);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session === undefined || !session || !coordonneesOk || pasDeGeolocalisation) return undefined;
     const destination = [destLat, destLng];
     let annule = false;
     let carte = null;
@@ -48,7 +63,36 @@ export default function MyRendreModal({ boutique, onFermer }) {
         if (annule) return;
         const moi = [pos.coords.latitude, pos.coords.longitude];
         setPosition(moi);
-        setKm(distanceKm(moi, destination));
+        const volOiseau = distanceKm(moi, destination);
+        setDistanceVolOiseau(volOiseau);
+
+        // Itinéraire routier : la position ne sert qu'à ce calcul.
+        let trace = [moi, destination];
+        try {
+          const reponse = await fetch("/api/marketplace/itineraire", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              depart: { lat: moi[0], lng: moi[1] },
+              arrivee: { lat: destination[0], lng: destination[1] },
+              profil: "pieton",
+            }),
+          });
+          if (!reponse.ok) throw new Error("itineraire_indisponible");
+          const donnees = await reponse.json();
+          if (!annule && Array.isArray(donnees.points) && donnees.points.length > 1) {
+            setItineraire(donnees);
+            trace = donnees.points;
+          } else {
+            setItineraireIndisponible(true);
+          }
+        } catch {
+          if (!annule) setItineraireIndisponible(true);
+        }
+        if (annule) return;
 
         const L = (await import("leaflet")).default;
         if (annule || !conteneur.current) return;
@@ -59,8 +103,7 @@ export default function MyRendreModal({ boutique, onFermer }) {
           maxZoom: 19,
         }).addTo(carte);
 
-        const trace = [moi, destination];
-        L.polyline(trace, { color: "#2563eb", weight: 4, dashArray: "6 8" }).addTo(carte);
+        L.polyline(trace, { color: "#2563eb", weight: 5 }).addTo(carte);
         // Cercles vectoriels plutôt que marqueurs par défaut : les PNG par défaut
         // sont bloqués par la CSP du site sans erreur visible.
         L.circleMarker(moi, { radius: 8, color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }).addTo(carte);
@@ -77,17 +120,22 @@ export default function MyRendreModal({ boutique, onFermer }) {
       annule = true;
       if (carte) carte.remove();
     };
-  }, [coordonneesOk, pasDeGeolocalisation, destLat, destLng]);
+  }, [session, coordonneesOk, pasDeGeolocalisation, destLat, destLng]);
 
-  const etat = !coordonneesOk
-    ? "indisponible"
-    : pasDeGeolocalisation || refus
-      ? "refuse"
-      : position
-        ? "ok"
-        : "chargement";
+  const etat =
+    session === undefined
+      ? "chargement"
+      : !session
+        ? "connexion"
+        : !coordonneesOk
+          ? "indisponible"
+          : pasDeGeolocalisation || refus
+            ? "refuse"
+            : position
+              ? "ok"
+              : "chargement";
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[80] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onFermer}>
       <div
         className="w-full sm:max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
@@ -110,18 +158,30 @@ export default function MyRendreModal({ boutique, onFermer }) {
 
         <div className="px-5 py-3 text-sm font-bold text-zinc-800 dark:text-zinc-200">
           {etat === "chargement" && "Localisation en cours…"}
-          {etat === "ok" && (
+          {etat === "connexion" && "Connecte-toi pour voir l'itinéraire jusqu'à cette boutique."}
+          {etat === "ok" && itineraire && (
             <>
-              À vol d&apos;oiseau : <span className="text-blue-600">{distanceLisible(km)}</span>
+              À pied : <span className="text-blue-600">{distanceLisible(itineraire.distance_km)}</span>
+              {itineraire.duree_min ? <span className="text-zinc-500"> · environ {itineraire.duree_min} min</span> : null}
+            </>
+          )}
+          {etat === "ok" && !itineraire && distanceVolOiseau !== null && (
+            <>
+              À vol d&apos;oiseau : <span className="text-blue-600">{distanceLisible(distanceVolOiseau)}</span>
+              {itineraireIndisponible && <span className="block text-xs text-zinc-500 mt-1">Itinéraire routier indisponible pour le moment.</span>}
             </>
           )}
           {etat === "refuse" && "Autorise la localisation de ton navigateur pour voir la distance."}
           {etat === "indisponible" && "Cette boutique n'a pas encore de position enregistrée."}
         </div>
 
-        <div ref={conteneur} className="w-full h-72 bg-gray-100 dark:bg-zinc-800" style={{ display: etat === "refuse" || etat === "indisponible" ? "none" : "block" }} />
-
+        <div
+          ref={conteneur}
+          className="w-full h-72 bg-gray-100 dark:bg-zinc-800"
+          style={{ display: etat === "ok" ? "block" : "none" }}
+        />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

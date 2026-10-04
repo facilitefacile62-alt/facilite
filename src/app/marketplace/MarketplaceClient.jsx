@@ -36,7 +36,6 @@ import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 // Chargé en dynamique, sans SSR : maplibre-gl (~257 Ko compressés) touche
 // `window`/WebGL et ne doit être téléchargé que par les personnes qui
 // ouvrent réellement "Explorer", pas par chaque visite du Marketplace.
-import { createPortal } from "react-dom";
 import MyRendreModal from "@/components/MyRendreModal";
 
 const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
@@ -8218,11 +8217,9 @@ function ModalFicheBoutique({
                       <span>M&apos;y rendre</span>
                     </button>
                   )}
-                  {itineraireOuvert &&
-                    createPortal(
-                      <MyRendreModal boutique={boutique} onFermer={() => setItineraireOuvert(false)} />,
-                      document.body
-                    )}
+                  {itineraireOuvert && (
+                    <MyRendreModal boutique={boutique} onFermer={() => setItineraireOuvert(false)} />
+                  )}
                 </div>
               </div>
             </div>
