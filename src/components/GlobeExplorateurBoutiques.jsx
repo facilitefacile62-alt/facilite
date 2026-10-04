@@ -221,11 +221,6 @@ export default function GlobeExplorateurBoutiques({
   const [vueBoutiqueDetails, setVueBoutiqueDetails] = useState(false);
   const [cartePrete, setCartePrete] = useState(false);
   const [trajetInfo, setTrajetInfo] = useState(null);
-  // Lu dans l'effet de trajet sans le relancer à chaque mise à jour de la liste.
-  const boutiquesRef = useRef(boutiques);
-  useEffect(() => {
-    boutiquesRef.current = boutiques;
-  }, [boutiques]);
 
   useEffect(() => {
     if (!itineraireCible || !cartePrete || !carteRef.current) return undefined;
@@ -313,17 +308,6 @@ export default function GlobeExplorateurBoutiques({
           L.circleMarker(destination, { radius: 10, color: "#ffffff", weight: 3, fillColor: "#10b981", fillOpacity: 1 }).addTo(carte)
         );
         carte.fitBounds(trace.getBounds(), { padding: [60, 60] });
-
-        // Le vendeur est sélectionné et sa fiche s'ouvre : « Voir la boutique » y mène.
-        const boutiqueCible =
-          boutiquesRef.current.find((b) => String(b.id) === String(itineraireCible.id)) || {
-            id: itineraireCible.id,
-            nom: itineraireCible.nom,
-            lat: itineraireCible.lat,
-            lng: itineraireCible.lng,
-          };
-        setBoutiqueSelectionnee(boutiqueCible);
-        setVueBoutiqueDetails(true);
       } catch {
         if (!annule) setTrajetInfo({ texte: "Position indisponible : autorise la localisation." });
       }
