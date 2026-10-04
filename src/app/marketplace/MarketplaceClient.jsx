@@ -4970,6 +4970,11 @@ function VueVendeur({
       {/* Modal Aperçu Public de ma boutique */}
       {modalApercuOuverte && (
         <ModalFicheBoutique
+          onMyRendre={(b) => {
+            setModalApercuOuverte(false);
+            setItineraireCible({ id: b.id, nom: b.nom, lat: Number(b.lat), lng: Number(b.lng) });
+            setGlobeOuvert(true);
+          }}
           boutique={
             boutiqueActive || {
               id: "facilite_shop",
