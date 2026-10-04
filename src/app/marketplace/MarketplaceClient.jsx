@@ -5838,8 +5838,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                 </div>
 
                 {/* 3. COLONNE DROITE (lg:col-span-3) : Carte Prix, Quantité & Commande (Sur le côté) */}
-                <div className="lg:col-span-3 space-y-4">
-                  
+                <div className="hidden lg:block lg:col-span-3 space-y-4">
+
                   <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-xs space-y-4 sticky top-4">
                     
                     {/* BLOC PRIX DÉGRESSIF & VOLUMES (Placé sur le côté) */}
