@@ -698,6 +698,66 @@ export default function MarketplaceClient() {
             </aside>
           )}
 
+          {/* Actions rapides (mobile uniquement) : l'aside ci-dessus est
+              desktop uniquement (hidden md:flex) — sans ce bloc, "Devenir
+              Vendeur" / "Mes commandes" / "Devenir livreur" étaient
+              invisibles sur téléphone (trouvé en testant en vrai le
+              chantier livraison). Mêmes actions, version compacte en
+              pastilles défilables, pas de duplication de la carte profil
+              ni du menu catégories (déjà servi sur mobile par la barre
+              horizontale plus bas dans VueAcheteur). */}
+          {onglet === "acheter" && (
+            <div className="flex md:hidden w-full gap-2 overflow-x-auto no-scrollbar pb-1">
+              {userId || profile ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (maBoutiqueActive) {
+                        setBoutiqueModal({ ...maBoutiqueActive, ongletActifInitial: "publier" });
+                      } else {
+                        setOnglet("vendre");
+                        setOngletVendeurInitial("parametres");
+                        setSectionReglagesInitial("infos_perso");
+                      }
+                    }}
+                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
+                  >
+                    <i className={`fa-solid ${maBoutiqueActive ? "fa-plus" : "fa-store"} text-[10px] text-gray-500`}></i>
+                    {maBoutiqueActive ? "Publier" : "Devenir Vendeur"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCommandesAcheteurOuvert(true)}
+                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
+                  >
+                    <i className="fa-solid fa-box text-[10px] text-gray-500"></i>
+                    Mes commandes
+                  </button>
+
+                  {isLivreurAllowed && (
+                    <button
+                      type="button"
+                      onClick={() => setOnglet("livrer")}
+                      className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
+                    >
+                      <i className="fa-solid fa-motorcycle text-[10px] text-gray-500"></i>
+                      Devenir livreur
+                    </button>
+                  )}
+                </>
+              ) : (
+                <Link
+                  href="/login?redirect=%2Fmarketplace"
+                  className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#10E688] text-gray-950 font-extrabold text-[11px]"
+                >
+                  Se connecter pour vendre
+                </Link>
+              )}
+            </div>
+          )}
+
           {/* ZONE PRINCIPALE : Reste de la largeur disponible (flex-1) ou centré max-w-4xl en mode Vendeur */}
           <main className={`min-w-0 w-full ${onglet === "vendre" || onglet === "livrer" ? "max-w-4xl mx-auto" : "flex-1"}`}>
             {onglet === "acheter" ? (
