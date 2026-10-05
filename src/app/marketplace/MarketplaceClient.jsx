@@ -1804,6 +1804,13 @@ function VueReglages({
   const [modalActive, setModalActive] = useState(sectionInitiale); // null | 'infos_perso' | 'details_entreprise' | 'informations_personnelles' | 'coordonnees' | 'confidentialite' | 'langue' | 'notifs' | 'securite'
   const [toastMessage, setToastMessage] = useState("");
   const [enCours, setEnCours] = useState(false);
+  // Un visiteur sans boutique n'a vu jusqu'ici qu'un seul écran lui
+  // demandant d'un coup prénom/nom/téléphone PUIS position GPS/sexe/
+  // description — signalé par l'utilisateur comme trop lourd pour
+  // "Devenir Vendeur". Découpé en 2 : identité d'abord, reste de la
+  // boutique ensuite. Sans objet pour une boutique déjà créée (edition
+  // directe, un seul écran comme avant).
+  const [etapeCreation, setEtapeCreation] = useState(boutique ? "complet" : "identite");
 
   useEffect(() => {
     if (sectionInitiale) {
@@ -1961,6 +1968,7 @@ function VueReglages({
           full_name: nomComplet,
           headline: descriptionEntreprise,
           phone: telephone,
+          contact_email: coordEmail || null,
           city: emplacement || "Dakar",
           location: emplacement || "Dakar",
           date_naissance: anniversaire || null,
@@ -2174,16 +2182,18 @@ function VueReglages({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              disabled={enCours}
-              onClick={handleSaveInfosPerso}
-              className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
-              title="Enregistrer les modifications"
-            >
-              <i className="fa-solid fa-check text-xs"></i>
-              <span>{enCours ? "..." : "Enregistrer"}</span>
-            </button>
+            {etapeCreation === "complet" && (
+              <button
+                type="button"
+                disabled={enCours}
+                onClick={handleSaveInfosPerso}
+                className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                title="Enregistrer les modifications"
+              >
+                <i className="fa-solid fa-check text-xs"></i>
+                <span>{enCours ? "..." : "Enregistrer"}</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -2279,6 +2289,47 @@ function VueReglages({
               />
             </div>
 
+            {/* Email de contact, facultatif — demandé par l'utilisateur en
+                plus de prénom/nom/téléphone pour l'étape "identité". */}
+            <div className="relative border border-gray-300 dark:border-zinc-700 rounded-xl px-3.5 pt-2 pb-1.5 focus-within:border-emerald-500 transition bg-white dark:bg-zinc-900">
+              <div className="flex justify-between items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                <span>E-mail</span>
+                <span className="text-gray-400 font-normal">Facultatif</span>
+              </div>
+              <input
+                type="email"
+                value={coordEmail}
+                onChange={(e) => setCoordEmail(e.target.value)}
+                placeholder="vous@exemple.com"
+                className="w-full bg-transparent text-sm font-semibold text-gray-900 dark:text-white outline-none pt-0.5"
+              />
+            </div>
+
+            {/* Étape 1 (visiteur sans boutique) : juste identité + email
+                ci-dessus, on s'arrête là tant que "Continuer" n'est pas
+                cliqué — la position GPS/le type d'activité/etc. (étape 2)
+                n'apparaissent qu'ensuite. */}
+            {etapeCreation === "identite" && (
+              <div className="pt-4 pb-20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!prenom.trim() || !nomFamille.trim() || !telephone.trim()) {
+                      showToast("Prénom, nom et numéro WhatsApp sont obligatoires.");
+                      return;
+                    }
+                    setEtapeCreation("complet");
+                  }}
+                  className="w-full py-4 rounded-2xl bg-[#0b1329] hover:bg-black text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 font-black text-sm shadow-xl transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                >
+                  <span>Continuer</span>
+                  <i className="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+              </div>
+            )}
+
+            {etapeCreation === "complet" && (
+              <>
             {/* Type d'activité — UNIQUEMENT à la création (pas de vraie
                 boutique). Ce choix devient définitif dès l'enregistrement :
                 fermait jusqu'ici un vrai trou du produit, seul
@@ -2672,6 +2723,8 @@ function VueReglages({
                 <span>{enCours ? "Enregistrement en cours..." : "Enregistrer les modifications"}</span>
               </button>
             </div>
+              </>
+            )}
           </form>
         </div>
       </div>
@@ -2726,41 +2779,47 @@ function VueReglages({
         )}
       </div>
 
-      {/* GROUPE 1 : Boutique, Vitrine & Ventes */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setModalActive("profit")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <span>🤑</span>
-            <span>Faire profit &amp; Boost</span>
+      {/* GROUPE 1 : Boutique, Vitrine & Ventes — réservé à qui a une vraie
+          boutique (un visiteur sans boutique n'a rien à "booster"/aucun
+          abonné/avis à voir — signalé par l'utilisateur). */}
+      {boutique && (
+        <>
+          <div>
+            <button
+              type="button"
+              onClick={() => setModalActive("profit")}
+              className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span>🤑</span>
+                <span>Faire profit &amp; Boost</span>
+              </div>
+              <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModalActive("abonnes")}
+              className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+            >
+              <span>Abonnés</span>
+              <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModalActive("avis")}
+              className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+            >
+              <span>Avis clients</span>
+              <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </button>
           </div>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
 
-        <button
-          type="button"
-          onClick={() => setModalActive("abonnes")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Abonnés</span>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setModalActive("avis")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
-        >
-          <span>Avis clients</span>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-      </div>
-
-      {/* SÉPARATEUR 1 (1:1 Capture exacte) */}
-      <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
+          {/* SÉPARATEUR 1 (1:1 Capture exacte) */}
+          <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
+        </>
+      )}
 
       {/* GROUPE 2 : Informations personnelles, Coordonnées, Contact, FAQ & Langue */}
       <div>
@@ -2782,14 +2841,18 @@ function VueReglages({
           <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setModalActive("contact_livraison")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Contact &amp; Livraison</span>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
+        {/* Spécifique à une boutique réelle (zone de retrait/livraison) —
+            sans objet pour un visiteur. */}
+        {boutique && (
+          <button
+            type="button"
+            onClick={() => setModalActive("contact_livraison")}
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+          >
+            <span>Contact &amp; Livraison</span>
+            <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+          </button>
+        )}
 
         <button
           type="button"
