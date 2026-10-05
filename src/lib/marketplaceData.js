@@ -624,7 +624,8 @@ export async function chargerTousLesArticles({
         latitude,
         longitude,
         avatar_config,
-        owner_id
+        owner_id,
+        verifie
       )
     `)
     .eq("actif", true)
@@ -663,6 +664,7 @@ export async function chargerTousLesArticles({
     boutique_lng: r.store?.longitude,
     boutique_avatar_config: r.store?.avatar_config || null,
     boutique_owner_id: r.store?.owner_id || null,
+    boutique_verifie: r.store?.verifie || false,
     whatsapp: r.store?.telephone_whatsapp,
     whatsappUrl: lienWhatsapp(r.store?.telephone_whatsapp, r.titre),
     distance_km: null,
@@ -701,7 +703,8 @@ export async function obtenirArticleParId(itemId) {
           latitude,
           longitude,
           avatar_config,
-          owner_id
+          owner_id,
+          verifie
         )
       `)
       .eq("id", itemId)
@@ -739,6 +742,7 @@ export async function obtenirArticleParId(itemId) {
       boutique_lng: data.store?.longitude,
       boutique_avatar_config: data.store?.avatar_config || null,
       boutique_owner_id: data.store?.owner_id || null,
+      boutique_verifie: data.store?.verifie || false,
       telephone_whatsapp: data.store?.telephone_whatsapp,
       whatsapp: data.store?.telephone_whatsapp,
       whatsappUrl: lienWhatsapp(data.store?.telephone_whatsapp, data.titre),

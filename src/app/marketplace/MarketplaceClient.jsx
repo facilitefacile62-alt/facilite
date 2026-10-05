@@ -1408,8 +1408,12 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
 
 
 
-        {/* Statut Stock si non dispo */}
-        {!enStock && (
+        {/* Statut Stock : « Live » si disponible, « Épuisé » sinon */}
+        {enStock ? (
+          <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black uppercase tracking-wider shadow-sm">
+            Live
+          </div>
+        ) : (
           <div className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-zinc-300 text-[9px] font-bold">
             Épuisé
           </div>
@@ -1447,6 +1451,15 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
           tronqué, c'est l'information la plus critique de la carte) ; titre
           et bouton Acheter se partagent la ligne du dessous. */}
       <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900">
+        {/* Boutique + localisation */}
+        <p className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-gray-700 dark:text-gray-300 truncate">
+          <span className="truncate">{article.boutique_nom || "facilite shop"}</span>
+          {article.boutique_verifie && (
+            <i className="fa-solid fa-circle-check text-[#1877F2] text-[9px] shrink-0"></i>
+          )}
+        </p>
+        <p className="text-[10px] text-gray-400 dark:text-zinc-500 truncate mb-1">{localisationBadge}</p>
+
         <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight whitespace-nowrap">
           {prixLisible(article.prix_xof)}{" "}
           <span className="text-xs sm:text-[13px] font-black">CFA</span>
