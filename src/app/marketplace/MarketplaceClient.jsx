@@ -1419,37 +1419,12 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
           </div>
         )}
 
-        {/* Icône « M'y rendre » posée sur la photo (coin bas-gauche) : ne
-            prend aucune place dans le pied de carte, où le prix se faisait
-            écraser sur les petits écrans (signalé par l'utilisateur). */}
-        {article.boutique_lat != null && article.boutique_lng != null && (
-          <button
-            type="button"
-            title="M'y rendre"
-            aria-label="M'y rendre"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(
-                new CustomEvent("facilite:marketplace-itineraire", {
-                  detail: {
-                    id: article.boutique_id,
-                    nom: article.boutique_nom,
-                    lat: article.boutique_lat,
-                    lng: article.boutique_lng,
-                  },
-                })
-              );
-            }}
-            className="absolute bottom-2 left-2 z-10 w-8 h-8 rounded-full bg-blue-600/95 hover:bg-blue-700 text-white flex items-center justify-center shadow-md transition"
-          >
-            <i className="fa-solid fa-location-dot text-xs"></i>
-          </button>
-        )}
       </div>
 
       {/* 2. Pied de carte : le prix a sa propre ligne pleine largeur (jamais
-          tronqué, c'est l'information la plus critique de la carte) ; titre
-          et bouton Acheter se partagent la ligne du dessous. */}
+          tronqué, c'est l'information la plus critique de la carte — un tap
+          dessus ouvre la fiche, comme le faisait l'ancien bouton Acheter) ;
+          titre et pastille « M'y rendre » se partagent la ligne du dessous. */}
       <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900">
         {/* Boutique + localisation */}
         <p className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-gray-700 dark:text-gray-300 truncate">
@@ -1473,17 +1448,30 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
             {article.titre}
           </p>
 
-          {/* Bouton gris 'Acheter' */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              ouvrirFiche();
-            }}
-            className="px-3.5 py-1.5 rounded-lg bg-[#E2E8F0] hover:bg-[#CBD5E1] dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs"
-          >
-            Acheter
-          </button>
+          {/* Pastille « M'y rendre » : prend la place de l'ancien bouton Acheter */}
+          {article.boutique_lat != null && article.boutique_lng != null && (
+            <button
+              type="button"
+              title="M'y rendre"
+              aria-label="M'y rendre"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(
+                  new CustomEvent("facilite:marketplace-itineraire", {
+                    detail: {
+                      id: article.boutique_id,
+                      nom: article.boutique_nom,
+                      lat: article.boutique_lat,
+                      lng: article.boutique_lng,
+                    },
+                  })
+                );
+              }}
+              className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 flex items-center justify-center shrink-0 transition"
+            >
+              <i className="fa-solid fa-location-dot text-[11px]"></i>
+            </button>
+          )}
         </div>
       </div>
 
