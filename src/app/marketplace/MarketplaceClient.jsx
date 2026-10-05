@@ -1377,12 +1377,6 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
     }
   };
 
-  const localisationBadge = article.quartier
-    ? `${article.quartier}, ${article.ville || "Pikine"}`
-    : article.ville
-    ? `${article.ville}, Sénégal`
-    : "guinaw rail nord, Pikine";
-
   return (
     <article
       id={ancre ? `boutique-${article.boutique_id}` : undefined}
@@ -1421,34 +1415,25 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
 
       </div>
 
-      {/* 2. Pied de carte : le prix a sa propre ligne pleine largeur (jamais
-          tronqué, c'est l'information la plus critique de la carte — un tap
-          dessus ouvre la fiche, comme le faisait l'ancien bouton Acheter) ;
-          titre et pastille « M'y rendre » se partagent la ligne du dessous. */}
+      {/* 2. Pied de carte : le nom du produit (pas celui du vendeur — inutile
+          hors de sa boutique) en haut, prix + pastille « M'y rendre » sur la
+          ligne du dessous. Le prix n'est jamais tronqué (information la plus
+          critique) ; un tap sur la carte ouvre la fiche. */}
       <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900">
-        {/* Boutique + localisation */}
-        <p className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-gray-700 dark:text-gray-300 truncate">
-          <span className="truncate">{article.boutique_nom || "facilite shop"}</span>
-          {article.boutique_verifie && (
-            <i className="fa-solid fa-circle-check text-[#1877F2] text-[9px] shrink-0"></i>
-          )}
-        </p>
-        <p className="text-[10px] text-gray-400 dark:text-zinc-500 truncate mb-1">{localisationBadge}</p>
-
-        <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight whitespace-nowrap">
-          {prixLisible(article.prix_xof)}{" "}
-          <span className="text-xs sm:text-[13px] font-black">CFA</span>
+        <p
+          className="text-[11px] sm:text-xs text-gray-700 dark:text-gray-300 font-bold truncate"
+          title={article.titre}
+        >
+          {article.titre}
         </p>
 
-        <div className="flex items-center justify-between gap-2 mt-1">
-          <p
-            className="min-w-0 flex-1 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium truncate"
-            title={article.titre}
-          >
-            {article.titre}
+        <div className="flex items-center justify-between gap-2 mt-1.5">
+          <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight whitespace-nowrap">
+            {prixLisible(article.prix_xof)}{" "}
+            <span className="text-xs sm:text-[13px] font-black">CFA</span>
           </p>
 
-          {/* Pastille « M'y rendre » : prend la place de l'ancien bouton Acheter */}
+          {/* Pastille « M'y rendre » */}
           {article.boutique_lat != null && article.boutique_lng != null && (
             <button
               type="button"
