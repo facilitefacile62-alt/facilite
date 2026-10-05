@@ -493,6 +493,39 @@ export function lienWhatsapp(numero, titreArticle) {
 // Articles
 // ---------------------------------------------------------------------------
 
+/**
+ * État d'accréditation livreur de l'utilisateur courant : sa ligne
+ * `livreurs` si elle existe, et sa plus récente demande (pending ou
+ * rejected — utile pour afficher le motif de refus et permettre de
+ * redéposer). Les deux requêtes sont RLS-filtrées à soi-même.
+ */
+export async function chargerMonStatutLivreur(userId) {
+  if (!userId) return { livreur: null, demande: null };
+  const [{ data: livreur }, { data: demande }] = await Promise.all([
+    supabase.from("livreurs").select("*").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("livreurs_demandes")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  return { livreur: livreur || null, demande: demande || null };
+}
+
+export async function demanderDevenirLivreur(champs) {
+  const { data, error } = await supabase.rpc("demander_devenir_livreur", {
+    p_nom_complet: champs.nomComplet,
+    p_telephone: champs.telephone,
+    p_ville_zone: champs.villeZone,
+    p_type_vehicule: champs.typeVehicule,
+    p_document_urls: champs.documentUrls || [],
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Commandes reçues sur une boutique, les plus récentes d'abord. */
 export async function chargerCommandesBoutique(storeId) {
   if (!storeId) return [];

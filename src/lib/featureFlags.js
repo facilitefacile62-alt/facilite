@@ -41,6 +41,18 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Bouton dans l'en-tête, carte du fil d'accueil et accès à la plateforme Marketplace",
       },
       {
+        id: "nav_marketplace_livreur",
+        name: "Marketplace — Devenir livreur",
+        path: "/marketplace?onglet=livrer",
+        icon: "🛵",
+        // Interrupteur de rollout du circuit livreur (migration
+        // 20261005120000) — coupe le bouton "Devenir livreur" et l'onglet
+        // correspondant sans déploiement, le temps de valider la fonctionnalité.
+        enabled: true,
+        roles: { user: true, recruiter: true, visitor: false },
+        description: "Formulaire d'accréditation livreur et accès à l'onglet « Livrer » du Marketplace",
+      },
+      {
         id: "feat_offres_filtres",
         name: "Filtres sur les offres d'emploi",
         path: null,

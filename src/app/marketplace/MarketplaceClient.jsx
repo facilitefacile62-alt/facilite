@@ -81,6 +81,8 @@ import {
   retirerArticle,
   creerCommandeMarketplace,
   chargerCommandesBoutique,
+  chargerMonStatutLivreur,
+  demanderDevenirLivreur,
   supprimerPhoto,
   urlPhoto,
 } from "@/lib/marketplaceData";
@@ -191,9 +193,9 @@ export default function MarketplaceClient() {
 
   const [onglet, setOnglet] = useState(() => {
     if (actionParam === "publier") return "vendre";
-    if (urlOnglet === "vendre" || urlOnglet === "acheter") return urlOnglet;
+    if (urlOnglet === "vendre" || urlOnglet === "acheter" || urlOnglet === "livrer") return urlOnglet;
     return "acheter";
-  }); // 'acheter' | 'vendre'
+  }); // 'acheter' | 'vendre' | 'livrer'
 
   const [ongletVendeurInitial, setOngletVendeurInitial] = useState(() => tabParam || "annonces");
   // Sous-section de "Réglages" à ouvrir au montage de VueVendeur — sert
@@ -211,6 +213,7 @@ export default function MarketplaceClient() {
   const userId = session?.user?.id || null;
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
+  const isLivreurAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace_livreur", userRole);
 
   // Compteur de génération : sans lui, un changement rapide de session
   // (déconnexion pendant que ce chargement est en vol, ou reconnexion sous
@@ -317,6 +320,8 @@ export default function MarketplaceClient() {
           setOngletVendeurInitial("annonces");
         } else if (e.detail === "acheter") {
           setOnglet("acheter");
+        } else if (e.detail === "livrer") {
+          setOnglet("livrer");
         }
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -449,8 +454,8 @@ export default function MarketplaceClient() {
       localStorage.setItem("facilite_marketplace_onglet", onglet);
     } catch {}
     const params = new URLSearchParams(window.location.search);
-    if (onglet === "vendre") {
-      params.set("onglet", "vendre");
+    if (onglet === "vendre" || onglet === "livrer") {
+      params.set("onglet", onglet);
     } else {
       params.delete("onglet");
     }
@@ -494,7 +499,7 @@ export default function MarketplaceClient() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-3 sm:px-5 py-5">
         {/* Layout avec barre latérale (mode Catalogue/Acheteur) et zone principale */}
-        <div className={`flex flex-col md:flex-row gap-6 items-start w-full ${onglet === "vendre" ? "justify-center" : ""}`}>
+        <div className={`flex flex-col md:flex-row gap-6 items-start w-full ${onglet === "vendre" || onglet === "livrer" ? "justify-center" : ""}`}>
           {/* BARRE DU PROFIL & CATÉGORIES : Fixe (sticky) au défilement en mode Catalogue (Acheter) */}
           {onglet === "acheter" && (
             <aside className="w-full md:w-[215px] flex-shrink-0 flex flex-col gap-2 hidden md:flex sticky top-20 self-start max-h-[calc(100vh-90px)] overflow-y-auto no-scrollbar pr-0.5 z-20">
@@ -618,6 +623,17 @@ export default function MarketplaceClient() {
                             <i className={`fa-solid ${estVraieBoutique ? "fa-plus" : "fa-store"} text-[8px] text-gray-500`}></i>
                             <span>{estVraieBoutique ? "Publier un article" : "Devenir Vendeur"}</span>
                           </button>
+
+                          {isLivreurAllowed && (
+                            <button
+                              type="button"
+                              onClick={() => setOnglet("livrer")}
+                              className="w-full mt-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                            >
+                              <i className="fa-solid fa-motorcycle text-[8px] text-gray-500"></i>
+                              <span>Devenir livreur</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -664,7 +680,7 @@ export default function MarketplaceClient() {
           )}
 
           {/* ZONE PRINCIPALE : Reste de la largeur disponible (flex-1) ou centré max-w-4xl en mode Vendeur */}
-          <main className={`min-w-0 w-full ${onglet === "vendre" ? "max-w-4xl mx-auto" : "flex-1"}`}>
+          <main className={`min-w-0 w-full ${onglet === "vendre" || onglet === "livrer" ? "max-w-4xl mx-auto" : "flex-1"}`}>
             {onglet === "acheter" ? (
               <VueAcheteur
                 onVoirBoutique={(b) => setBoutiqueModal(b)}
@@ -681,7 +697,7 @@ export default function MarketplaceClient() {
                 demande={demandeAcheteur}
                 onDemandeTraitee={() => setDemandeAcheteur(null)}
               />
-            ) : (
+            ) : onglet === "vendre" ? (
               <VueVendeur
                 userId={userId}
                 onBoutiqueChange={rechargerBoutique}
@@ -691,6 +707,10 @@ export default function MarketplaceClient() {
                 sectionReglagesInitial={sectionReglagesInitial}
                 onRetourCatalogue={() => setOnglet("acheter")}
               />
+            ) : isLivreurAllowed ? (
+              <VueLivreur userId={userId} />
+            ) : (
+              <div className="py-16 text-center text-xs text-gray-400">Fonctionnalité momentanément indisponible.</div>
             )}
           </main>
         </div>
@@ -5146,6 +5166,261 @@ function VueVendeur({
           onVoirArticle={(art) => {}}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Accréditation livreur : dépôt de la demande (nom, téléphone, zone,
+ * véhicule, pièce justificative optionnelle), puis affichage du statut
+ * (en attente / refusée / active). Le tableau des livraisons disponibles
+ * arrive dans un point ultérieur — ici seulement l'accréditation.
+ */
+function VueLivreur({ userId }) {
+  const [statut, setStatut] = useState(null);
+  const [chargement, setChargement] = useState(true);
+  const [form, setForm] = useState({ nomComplet: "", telephone: "", villeZone: "", typeVehicule: "moto" });
+  const [fichier, setFichier] = useState(null);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
+
+  const recharger = async () => {
+    if (!userId) return;
+    try {
+      setStatut(await chargerMonStatutLivreur(userId));
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  // Appel direct de chargerMonStatutLivreur (pas via recharger) : un effet
+  // dont le seul contenu est l'appel d'une fonction qui pose du setState
+  // déclenche react-hooks/set-state-in-effect, même en async — voir le même
+  // correctif sur l'effet « commandesBoutique » de VueVendeur plus haut.
+  useEffect(() => {
+    let annule = false;
+    if (!userId) {
+      queueMicrotask(() => {
+        if (!annule) setChargement(false);
+      });
+      return () => {
+        annule = true;
+      };
+    }
+    chargerMonStatutLivreur(userId)
+      .then((s) => {
+        if (!annule) setStatut(s);
+      })
+      .catch((e) => {
+        if (!annule) setErreur(e.message);
+      })
+      .finally(() => {
+        if (!annule) setChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
+
+  const soumettre = async (e) => {
+    e.preventDefault();
+    if (!form.nomComplet.trim() || !form.telephone.trim() || !form.villeZone.trim()) {
+      setErreur("Nom, téléphone et zone sont obligatoires.");
+      return;
+    }
+    setEnvoi(true);
+    setErreur("");
+    try {
+      const documentUrls = [];
+      if (fichier) {
+        const ext = fichier.name.split(".").pop().toLowerCase();
+        const chemin = `${userId}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("livreur-documents")
+          .upload(chemin, fichier, { contentType: fichier.type });
+        if (uploadError) throw new Error("Échec du téléversement : " + uploadError.message);
+        documentUrls.push(chemin);
+      }
+      await demanderDevenirLivreur({ ...form, documentUrls });
+      await recharger();
+    } catch (err) {
+      setErreur(err.message || "Une erreur est survenue.");
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  if (!userId) {
+    return (
+      <div className="py-16 text-center space-y-3">
+        <p className="text-sm text-gray-500">Connectez-vous pour devenir livreur.</p>
+        <Link
+          href="/login?redirect=%2Fmarketplace%3Fonglet%3Dlivrer"
+          className="inline-block px-5 py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black"
+        >
+          Se connecter
+        </Link>
+      </div>
+    );
+  }
+
+  if (chargement) {
+    return <div className="py-16 text-center text-xs text-gray-400">Chargement…</div>;
+  }
+
+  if (statut?.livreur?.statut === "actif") {
+    return (
+      <div className="py-16 text-center space-y-3">
+        <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-2xl mx-auto">
+          <i className="fa-solid fa-circle-check"></i>
+        </div>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Vous êtes livreur actif</h3>
+        <p className="text-xs text-gray-500 max-w-sm mx-auto">
+          Le tableau des livraisons disponibles arrive très bientôt sur cette page.
+        </p>
+      </div>
+    );
+  }
+
+  if (statut?.livreur?.statut === "suspendu") {
+    return (
+      <div className="py-16 text-center space-y-3">
+        <div className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-950 text-red-600 flex items-center justify-center text-2xl mx-auto">
+          <i className="fa-solid fa-ban"></i>
+        </div>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Votre compte livreur est suspendu</h3>
+        {statut.livreur.motif_suspension && (
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">{statut.livreur.motif_suspension}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (statut?.demande?.status === "pending") {
+    return (
+      <div className="py-16 text-center space-y-3">
+        <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-2xl mx-auto">
+          <i className="fa-solid fa-hourglass-half"></i>
+        </div>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Votre demande est en cours de traitement</h3>
+        <p className="text-xs text-gray-500 max-w-sm mx-auto">
+          Notre équipe la traite sous peu. Vous recevrez une notification dès qu&apos;elle sera validée.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto space-y-4 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm p-5 sm:p-6">
+      <div>
+        <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+          <i className="fa-solid fa-motorcycle text-[#1877F2]"></i>
+          Devenir livreur
+        </h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          Récupérez des articles chez les vendeurs et livrez-les aux acheteurs.
+        </p>
+      </div>
+
+      {statut?.demande?.status === "rejected" && (
+        <p className="text-[11px] font-bold text-red-600 dark:text-red-400 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40">
+          Votre précédente demande a été refusée
+          {statut.demande.rejection_reason ? ` : ${statut.demande.rejection_reason}` : "."} Vous pouvez déposer une nouvelle
+          demande ci-dessous.
+        </p>
+      )}
+
+      <form onSubmit={soumettre} className="space-y-3">
+        <div>
+          <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1">Nom & Prénom *</label>
+          <input
+            type="text"
+            required
+            value={form.nomComplet}
+            onChange={(e) => setForm({ ...form, nomComplet: e.target.value })}
+            placeholder="Ex: Moussa Diop"
+            className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-gray-900 dark:text-white focus:outline-blue-600"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1">Téléphone (WhatsApp de préférence) *</label>
+          <input
+            type="tel"
+            required
+            value={form.telephone}
+            onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+            placeholder="Ex: +221 77 000 00 00"
+            className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-gray-900 dark:text-white focus:outline-blue-600"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1">Ville / Zone principale *</label>
+          <input
+            type="text"
+            required
+            value={form.villeZone}
+            onChange={(e) => setForm({ ...form, villeZone: e.target.value })}
+            placeholder="Ex: Dakar, Pikine"
+            className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-gray-900 dark:text-white focus:outline-blue-600"
+          />
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1">Véhicule</label>
+          <div className="grid grid-cols-4 gap-2 text-[11px] font-bold">
+            {[
+              { id: "pied", label: "À pied", icon: "fa-person-walking" },
+              { id: "velo", label: "Vélo", icon: "fa-bicycle" },
+              { id: "moto", label: "Moto", icon: "fa-motorcycle" },
+              { id: "voiture", label: "Voiture", icon: "fa-car" },
+            ].map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setForm({ ...form, typeVehicule: v.id })}
+                className={`p-2 rounded-xl border transition flex flex-col items-center gap-1 ${
+                  form.typeVehicule === v.id
+                    ? "border-blue-600 bg-blue-50 dark:bg-blue-950 text-blue-600"
+                    : "border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                <i className={`fa-solid ${v.icon}`}></i>
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block mb-1">
+            Pièce d&apos;identité (facultatif, accélère la validation)
+          </label>
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => setFichier(e.target.files?.[0] || null)}
+            className="w-full text-[11px] text-gray-600 dark:text-gray-300 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-gray-100 dark:file:bg-zinc-800 file:text-gray-700 dark:file:text-gray-300 file:text-[11px] file:font-bold file:cursor-pointer cursor-pointer"
+          />
+        </div>
+
+        {erreur && (
+          <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400">
+            {erreur}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={envoi}
+          className="w-full py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black shadow-md hover:bg-zinc-800 transition cursor-pointer disabled:opacity-60"
+        >
+          {envoi ? "Envoi…" : "Envoyer ma demande"}
+        </button>
+      </form>
     </div>
   );
 }
