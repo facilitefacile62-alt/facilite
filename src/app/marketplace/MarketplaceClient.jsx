@@ -83,6 +83,8 @@ import {
   chargerCommandesBoutique,
   chargerMonStatutLivreur,
   demanderDevenirLivreur,
+  listerLivraisonsDisponibles,
+  reclamerLivraison,
   supprimerPhoto,
   urlPhoto,
 } from "@/lib/marketplaceData";
@@ -5271,17 +5273,7 @@ function VueLivreur({ userId }) {
   }
 
   if (statut?.livreur?.statut === "actif") {
-    return (
-      <div className="py-16 text-center space-y-3">
-        <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-2xl mx-auto">
-          <i className="fa-solid fa-circle-check"></i>
-        </div>
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Vous êtes livreur actif</h3>
-        <p className="text-xs text-gray-500 max-w-sm mx-auto">
-          Le tableau des livraisons disponibles arrive très bientôt sur cette page.
-        </p>
-      </div>
-    );
+    return <TableauLivraisonsDisponibles />;
   }
 
   if (statut?.livreur?.statut === "suspendu") {
@@ -5421,6 +5413,171 @@ function VueLivreur({ userId }) {
           {envoi ? "Envoi…" : "Envoyer ma demande"}
         </button>
       </form>
+    </div>
+  );
+}
+
+/**
+ * Tableau de réclamation manuelle des livraisons disponibles (livreur actif
+ * uniquement) : géolocalisation navigateur (même patron que MyRendreModal),
+ * liste triée par distance, bouton « Réclamer ». Ni adresse ni téléphone de
+ * l'acheteur ne sont montrés ici — révélés seulement après réclamation
+ * (lister_livraisons_disponibles ne les renvoie pas).
+ */
+function TableauLivraisonsDisponibles() {
+  const [position, setPosition] = useState(null);
+  const [livraisons, setLivraisons] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState("");
+  const [reclamationEnCours, setReclamationEnCours] = useState(null);
+  const [derniereReclamee, setDerniereReclamee] = useState(null);
+
+  useEffect(() => {
+    let annule = false;
+    if (!navigator.geolocation) {
+      queueMicrotask(() => {
+        if (!annule) {
+          setErreur("Géolocalisation indisponible sur cet appareil.");
+          setChargement(false);
+        }
+      });
+      return () => {
+        annule = true;
+      };
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (!annule) setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {
+        if (!annule) {
+          setErreur("Position indisponible : autorisez la localisation pour voir les livraisons proches.");
+          setChargement(false);
+        }
+      },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+    );
+    return () => {
+      annule = true;
+    };
+  }, []);
+
+  const rechargerListe = async (pos) => {
+    try {
+      const liste = await listerLivraisonsDisponibles({ lat: pos.lat, lng: pos.lng });
+      setLivraisons(liste);
+      setErreur("");
+    } catch (e) {
+      setErreur(e.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!position) return;
+    let annule = false;
+    queueMicrotask(() => {
+      if (!annule) setChargement(true);
+    });
+    listerLivraisonsDisponibles({ lat: position.lat, lng: position.lng })
+      .then((liste) => {
+        if (!annule) {
+          setLivraisons(liste);
+          setErreur("");
+        }
+      })
+      .catch((e) => {
+        if (!annule) setErreur(e.message);
+      })
+      .finally(() => {
+        if (!annule) setChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [position]);
+
+  const reclamer = async (id) => {
+    setReclamationEnCours(id);
+    setErreur("");
+    try {
+      await reclamerLivraison(id);
+      setDerniereReclamee(id);
+      setTimeout(() => setDerniereReclamee(null), 5000);
+      if (position) await rechargerListe(position);
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setReclamationEnCours(null);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div>
+        <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+          <i className="fa-solid fa-box-open text-[#1877F2]"></i>
+          Livraisons disponibles
+        </h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          Triées par distance depuis votre position actuelle.
+        </p>
+      </div>
+
+      {derniereReclamee && (
+        <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40">
+          Livraison réclamée ! Rendez-vous chez le vendeur pour la récupérer.
+        </p>
+      )}
+
+      {erreur && (
+        <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40">
+          {erreur}
+        </p>
+      )}
+
+      {chargement ? (
+        <div className="py-16 text-center text-xs text-gray-400">Chargement…</div>
+      ) : livraisons.length === 0 ? (
+        <div className="py-16 text-center space-y-2">
+          <i className="fa-regular fa-compass text-2xl text-gray-300 dark:text-zinc-700"></i>
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Aucune livraison disponible près de vous pour l&apos;instant</p>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {livraisons.map((l) => (
+            <li
+              key={l.id}
+              className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-start justify-between gap-3 flex-wrap"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-black text-gray-900 dark:text-white truncate">{l.item_titre}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {l.quantite} pièce(s) · {prixLisible(l.prix_total_xof)} FCFA
+                  {l.frais_livraison_xof > 0 ? ` · Frais : ${prixLisible(l.frais_livraison_xof)} FCFA` : ""}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  <i className="fa-solid fa-store text-[10px] text-gray-400 mr-1"></i>
+                  {l.boutique_nom}
+                  {l.boutique_quartier ? ` · ${l.boutique_quartier}` : ""}
+                  {l.boutique_ville ? `, ${l.boutique_ville}` : ""}
+                </p>
+                <p className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-1">
+                  {l.distance_km != null ? `${String(l.distance_km).replace(".", ",")} km` : ""}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => reclamer(l.id)}
+                disabled={reclamationEnCours === l.id}
+                className="shrink-0 px-4 py-2 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black disabled:opacity-60 cursor-pointer"
+              >
+                {reclamationEnCours === l.id ? "…" : "Réclamer"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -514,6 +514,25 @@ export async function chargerMonStatutLivreur(userId) {
   return { livreur: livreur || null, demande: demande || null };
 }
 
+/** Commandes en attente de livreur, triées par distance (sans adresse ni
+ * téléphone acheteur — révélés seulement après reclamerLivraison). */
+export async function listerLivraisonsDisponibles({ lat, lng, rayonKm = 15, limite = 40 }) {
+  const { data, error } = await supabase.rpc("lister_livraisons_disponibles", {
+    p_lat: lat,
+    p_lng: lng,
+    p_rayon_km: rayonKm,
+    p_limite: limite,
+  });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function reclamerLivraison(commandeId) {
+  const { data, error } = await supabase.rpc("reclamer_livraison", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function demanderDevenirLivreur(champs) {
   const { data, error } = await supabase.rpc("demander_devenir_livreur", {
     p_nom_complet: champs.nomComplet,
