@@ -5295,12 +5295,7 @@ function VueLivreur({ userId }) {
   }
 
   if (statut?.livreur?.statut === "actif") {
-    return (
-      <div className="space-y-6">
-        <MesLivraisonsEnCours userId={userId} />
-        <TableauLivraisonsDisponibles />
-      </div>
-    );
+    return <VueLivreurActif userId={userId} />;
   }
 
   if (statut?.livreur?.statut === "suspendu") {
@@ -5445,12 +5440,29 @@ function VueLivreur({ userId }) {
 }
 
 /**
+ * Coordonne les deux sections du livreur actif : sans ce composant commun,
+ * "Mes livraisons en cours" (chargée une fois au montage) ne sait jamais
+ * qu'une réclamation vient d'avoir lieu dans le tableau juste en dessous —
+ * bug constaté en testant en direct (la section restait vide après avoir
+ * cliqué "Réclamer"). `declencheur` force son rechargement.
+ */
+function VueLivreurActif({ userId }) {
+  const [declencheur, setDeclencheur] = useState(0);
+  return (
+    <div className="space-y-6">
+      <MesLivraisonsEnCours userId={userId} declencheur={declencheur} />
+      <TableauLivraisonsDisponibles onReclamee={() => setDeclencheur((n) => n + 1)} />
+    </div>
+  );
+}
+
+/**
  * Livraisons déjà réclamées par le livreur courant, avec le bouton
  * d'action correspondant à leur statut. Adresse/téléphone acheteur
  * visibles ici seulement (après réclamation) — jamais dans le tableau des
  * livraisons disponibles.
  */
-function MesLivraisonsEnCours({ userId }) {
+function MesLivraisonsEnCours({ userId, declencheur = 0 }) {
   const { session } = useAuth();
   const [liste, setListe] = useState([]);
   const [chargement, setChargement] = useState(true);
@@ -5488,7 +5500,7 @@ function MesLivraisonsEnCours({ userId }) {
     return () => {
       annule = true;
     };
-  }, [userId]);
+  }, [userId, declencheur]);
 
   const agir = async (action, commandeId) => {
     setActionEnCours(commandeId);
@@ -5646,7 +5658,7 @@ function MesLivraisonsEnCours({ userId }) {
  * l'acheteur ne sont montrés ici — révélés seulement après réclamation
  * (lister_livraisons_disponibles ne les renvoie pas).
  */
-function TableauLivraisonsDisponibles() {
+function TableauLivraisonsDisponibles({ onReclamee }) {
   const [position, setPosition] = useState(null);
   const [livraisons, setLivraisons] = useState([]);
   const [chargement, setChargement] = useState(true);
@@ -5725,6 +5737,7 @@ function TableauLivraisonsDisponibles() {
       await reclamerLivraison(id);
       setDerniereReclamee(id);
       setTimeout(() => setDerniereReclamee(null), 5000);
+      onReclamee?.();
       if (position) await rechargerListe(position);
     } catch (e) {
       setErreur(e.message);
