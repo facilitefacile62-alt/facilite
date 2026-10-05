@@ -79,6 +79,7 @@ import {
   modifierArticle,
   supprimerArticle,
   retirerArticle,
+  creerCommandeMarketplace,
   supprimerPhoto,
   urlPhoto,
 } from "@/lib/marketplaceData";
@@ -5354,6 +5355,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
   const [modalCommandeOuverte, setModalCommandeOuverte] = useState(false);
   const [commandeEnvoyee, setCommandeEnvoyee] = useState(false);
   const [erreurCommande, setErreurCommande] = useState("");
+  const [enregistrementCommandeEchoue, setEnregistrementCommandeEchoue] = useState(false);
   const [livraisonNom, setLivraisonNom] = useState(profile?.full_name || "");
   const [livraisonTel, setLivraisonTel] = useState(profile?.phone || "");
   const [livraisonAdresse, setLivraisonAdresse] = useState(profile?.city ? `${profile?.quartier || ""}, ${profile?.city}` : "");
@@ -5474,6 +5476,24 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
       return;
     }
     setErreurCommande("");
+
+    // Persistance en base, en plus du message WhatsApp ci-dessous (jamais à
+    // la place) : c'est elle qui active le circuit livreur. Volontairement
+    // pas de `await` avant `window.open` — un `window.open` qui n'est plus
+    // synchrone avec le clic déclenche le bloqueur de pop-up du navigateur.
+    setEnregistrementCommandeEchoue(false);
+    creerCommandeMarketplace({
+      itemId: article.id,
+      quantite,
+      livraisonNom,
+      livraisonTelephone: livraisonTel,
+      livraisonAdresse,
+      moyenPaiement,
+    }).catch((err) => {
+      console.warn("[Commande Marketplace] persistance échouée", err);
+      setEnregistrementCommandeEchoue(true);
+    });
+
     const libellePaiement = { wave: "Wave", om: "Orange Money", livraison: "Paiement à la livraison" }[moyenPaiement] || moyenPaiement;
     const messageCommande = encodeURIComponent(
       `Bonjour ${nomBoutique},\nJe souhaite commander depuis Facilité :\n- *Produit* : ${article.titre}\n- *Quantité* : ${quantite} pièce(s)\n- *Prix unitaire* : ${prixLisible(prixUnitaire)} FCFA\n- *Total* : ${prixLisible(prixTotal)} FCFA\n\n*Livraison*\n- Nom : ${livraisonNom}\n- Téléphone : ${livraisonTel}\n- Adresse : ${livraisonAdresse}\n- Paiement souhaité : ${libellePaiement}\n\nLien du produit : ${urlPartage}`
@@ -6420,6 +6440,11 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                 <p className="text-xs text-gray-500">
                   WhatsApp vient de s&apos;ouvrir avec votre commande pré-remplie. {nomBoutique} ne la recevra qu&apos;une fois le message envoyé.
                 </p>
+                {enregistrementCommandeEchoue && (
+                  <p className="text-[11px] text-gray-400">
+                    (La commande n&apos;a pas pu être enregistrée dans votre historique, mais le message WhatsApp est bien prêt à être envoyé.)
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => {

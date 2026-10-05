@@ -543,6 +543,25 @@ export async function majStock(itemId, quantite) {
   return data;
 }
 
+/**
+ * Persiste une commande Marketplace (en plus du message WhatsApp existant,
+ * qui reste le filet de sécurité connu des vendeurs). Prérequis au circuit
+ * livreur : un livreur ne peut réclamer que ce qui existe en base.
+ */
+export async function creerCommandeMarketplace(champs) {
+  const { data, error } = await supabase.rpc("creer_commande_marketplace", {
+    p_item_id: champs.itemId,
+    p_quantite: champs.quantite,
+    p_livraison_nom: champs.livraisonNom,
+    p_livraison_telephone: champs.livraisonTelephone,
+    p_livraison_adresse: champs.livraisonAdresse,
+    p_moyen_paiement: champs.moyenPaiement,
+    p_frais_livraison_xof: champs.fraisLivraisonXof || 0,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function retirerArticle(itemId) {
   const { error } = await supabase.rpc("retirer_mon_article", { p_id: itemId });
   if (error) throw new Error(error.message);
