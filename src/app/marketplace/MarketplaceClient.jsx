@@ -4429,6 +4429,10 @@ function VueVendeur({
                 <FormulaireArticle
                   userId={userId || profile?.id || "anonymous"}
                   storeId={boutiqueActive?.id || "facilite_shop"}
+                  boutiqueNom={boutiqueActive?.nom}
+                  boutiqueVille={boutiqueActive?.ville}
+                  boutiqueQuartier={boutiqueActive?.quartier}
+                  boutiqueVerifie={boutiqueActive?.verifie}
                   onPublie={async () => {
                     await recharger();
                     setOngletVendeur("annonces");
@@ -6575,6 +6579,9 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
             <FormulaireArticle
               userId={userId || article.boutique_owner_id || article.owner_id}
               storeId={article.boutique_id || article.store_id}
+              boutiqueNom={article.boutique_nom}
+              boutiqueVille={article.boutique_ville}
+              boutiqueQuartier={article.boutique_quartier}
               articleAEditer={article}
               onPublie={() => {
                 setModalEditionOuverte(false);
@@ -7115,6 +7122,10 @@ function ModalFicheBoutique({
             <FormulaireArticle
               userId={userId}
               storeId={boutique?.id || "facilite_shop"}
+              boutiqueNom={boutique?.nom}
+              boutiqueVille={boutique?.ville}
+              boutiqueQuartier={boutique?.quartier}
+              boutiqueVerifie={boutique?.verifie}
               jetonAutoScan={jetonAutoScan}
               onAutoScanDeclenche={() => setJetonAutoScan(0)}
               onPublie={async () => {
@@ -8961,6 +8972,10 @@ function ModalFicheBoutique({
               <FormulaireArticle
                 userId={userId}
                 storeId={boutique?.id || "facilite_shop"}
+                boutiqueNom={boutique?.nom}
+                boutiqueVille={boutique?.ville}
+                boutiqueQuartier={boutique?.quartier}
+                boutiqueVerifie={boutique?.verifie}
                 onPublie={async () => {
                   if (boutique?.id && boutique?.id !== "facilite_shop") {
                     try {
@@ -9933,6 +9948,10 @@ function FormulaireArticle({
   articleAEditer = null,
   onAnnuler = null,
   onSupprime = null,
+  boutiqueNom = null,
+  boutiqueVille = null,
+  boutiqueQuartier = null,
+  boutiqueVerifie = false,
 }) {
   const { session } = useAuth();
   const estEdition = Boolean(articleAEditer?.id);
@@ -10356,6 +10375,57 @@ function FormulaireArticle({
             <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"} text-violet-600 dark:text-violet-400`}></i>
             {optimisationIA ? "Optimisation..." : "Optimiser texte SEO"}
           </button>
+        </div>
+      </div>
+
+      {/* Aperçu en direct : à quoi ressemblera l'annonce publiée, mis à jour
+          au fil de la saisie (photo, titre, prix) sans attendre la publication. */}
+      <div className="mb-5">
+        <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+          <i className="fa-solid fa-eye text-[10px] text-gray-400"></i>
+          Aperçu en direct de l&apos;annonce
+        </p>
+        <div className="w-[190px] rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-sm">
+          <div className="relative aspect-square w-full">
+            {photos[0]?.apercu ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photos[0].apercu} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-center px-3 border-2 border-dashed border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/60">
+                <i className="fa-solid fa-image text-xl text-gray-300 dark:text-zinc-600"></i>
+                <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400">Photo produit</p>
+                <p className="text-[10px] text-gray-400 dark:text-zinc-500">ou importez un fichier</p>
+              </div>
+            )}
+
+            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black uppercase tracking-wider shadow-sm">
+              Live
+            </span>
+
+            <span className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-zinc-900/90 text-gray-500 dark:text-gray-300 flex items-center justify-center shadow-sm">
+              <i className="fa-solid fa-location-dot text-xs"></i>
+            </span>
+          </div>
+
+          <div className="p-2.5 space-y-1">
+            <p className="flex items-center gap-1 text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate">
+              <span className="truncate">{boutiqueNom || "facilite shop"}</span>
+              {boutiqueVerifie && <i className="fa-solid fa-circle-check text-[#1877F2] text-[10px] shrink-0"></i>}
+            </p>
+            <p className="text-[10px] text-gray-400 dark:text-zinc-500 truncate">
+              {boutiqueQuartier ? `${boutiqueQuartier}, ${boutiqueVille || "Dakar"}` : `${boutiqueVille || "Dakar"}, Sénégal`}
+            </p>
+            <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+              {champs.titre || <span className="text-gray-400 dark:text-zinc-600 font-medium italic">Titre de l&apos;article</span>}
+            </p>
+            <p className="text-sm font-black text-[#1877F2]">
+              {champs.prix_xof ? (
+                <>{prixLisible(champs.prix_xof)} <span className="text-xs">CFA</span></>
+              ) : (
+                <span className="text-gray-400 dark:text-zinc-600 text-xs font-medium italic">Prix non défini</span>
+              )}
+            </p>
+          </div>
         </div>
       </div>
 
