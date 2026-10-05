@@ -2875,58 +2875,79 @@ function VueReglages({
       {/* SÉPARATEUR 2 (1:1 Capture exacte) */}
       <div className="bg-[#F0F2F5] dark:bg-zinc-950 h-5 border-y border-gray-100/80 dark:border-zinc-800/50"></div>
 
-      {/* GROUPE 3 : Confidentialité, Toggles Chat, Commentaires & Notifs */}
+      {/* GROUPE 3 : Confidentialité, Toggles Chat, Commentaires & Notifs.
+          Sans boutique, "Confidentialité" n'a plus de sens au sens
+          Marketplace (le toggle ouvre "Rendre ma boutique visible") — pour
+          un visiteur, ce lien pointe vers la vraie page de confidentialité
+          du site (/confidentialite) à la place. Les 3 autres réglages
+          (chat, commentaires, notifications de commandes) sont propres à
+          une boutique : masqués tant qu'il n'y en a pas. Signalé par
+          l'utilisateur. */}
       <div>
-        <button
-          type="button"
-          onClick={() => setModalActive("confidentialite")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
-        >
-          <span>Confidentialité</span>
-          <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-
-        <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            Désactiver le chat
-          </span>
+        {boutique ? (
           <button
             type="button"
-            onClick={() => setChatDesactive(!chatDesactive)}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-              chatDesactive
-                ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-            }`}
+            onClick={() => setModalActive("confidentialite")}
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
           >
-            {chatDesactive ? "Désactivé" : "Actif"}
+            <span>Confidentialité</span>
+            <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
           </button>
-        </div>
-
-        <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            Désactiver les commentaires
-          </span>
-          <button
-            type="button"
-            onClick={() => setCommentairesDesactives(!commentairesDesactives)}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
-              commentairesDesactives
-                ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-            }`}
+        ) : (
+          <Link
+            href="/confidentialite"
+            className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
           >
-            {commentairesDesactives ? "Désactivés" : "Actifs"}
-          </button>
-        </div>
+            <span>Confidentialité</span>
+            <i className="fa-solid fa-arrow-up-right-from-square text-xs text-gray-400"></i>
+          </Link>
+        )}
 
-        <button
-          type="button"
-          onClick={() => setModalActive("notifs")}
-          className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
-        >
-          <span>Gérer les notifications</span>
-        </button>
+        {boutique && (
+          <>
+            <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Désactiver le chat
+              </span>
+              <button
+                type="button"
+                onClick={() => setChatDesactive(!chatDesactive)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                  chatDesactive
+                    ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                }`}
+              >
+                {chatDesactive ? "Désactivé" : "Actif"}
+              </button>
+            </div>
+
+            <div className="w-full px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800">
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Désactiver les commentaires
+              </span>
+              <button
+                type="button"
+                onClick={() => setCommentairesDesactives(!commentairesDesactives)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                  commentairesDesactives
+                    ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                }`}
+              >
+                {commentairesDesactives ? "Désactivés" : "Actifs"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setModalActive("notifs")}
+              className="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+            >
+              <span>Gérer les notifications</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* SÉPARATEUR 3 (1:1 Capture exacte) */}
