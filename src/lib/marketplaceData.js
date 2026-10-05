@@ -493,6 +493,18 @@ export function lienWhatsapp(numero, titreArticle) {
 // Articles
 // ---------------------------------------------------------------------------
 
+/** Commandes reçues sur une boutique, les plus récentes d'abord. */
+export async function chargerCommandesBoutique(storeId) {
+  if (!storeId) return [];
+  const { data, error } = await supabase
+    .from("marketplace_commandes")
+    .select("*, item:marketplace_items(titre)")
+    .eq("store_id", storeId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
 export async function chargerMesArticles(storeId) {
   if (!storeId) return [];
   const { data, error } = await supabase

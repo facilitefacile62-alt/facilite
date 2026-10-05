@@ -80,6 +80,7 @@ import {
   supprimerArticle,
   retirerArticle,
   creerCommandeMarketplace,
+  chargerCommandesBoutique,
   supprimerPhoto,
   urlPhoto,
 } from "@/lib/marketplaceData";
@@ -159,6 +160,17 @@ const VILLES = DEPARTEMENTS_SENEGAL;
 const RAYONS = [2, 5, 10, 25, 50];
 
 const prixLisible = (v) => new Intl.NumberFormat("fr-FR").format(Number(v) || 0);
+
+/** Statuts de marketplace_commandes, lisibles côté vendeur/acheteur/livreur. */
+const LIBELLES_STATUT_COMMANDE = {
+  en_attente_livreur: "En attente d'un livreur",
+  assignee: "Livreur en route vers vous",
+  recuperee: "Récupérée par le livreur",
+  en_livraison: "En cours de livraison",
+  livree_declaree: "Livrée (en attente de confirmation)",
+  livree: "Livrée",
+  annulee: "Annulée",
+};
 
 /** « il y a 2 h » : c'est la fraîcheur du stock qui décide d'un déplacement. */
 function depuis(dateIso) {
@@ -3811,6 +3823,34 @@ function VueVendeur({
     };
   }, [choisie, ongletVendeur]);
 
+  // Même raison que l'effet Premium ci-dessus : seulement quand l'onglet
+  // Commandes est ouvert, pas à chaque rechargement de boutique.
+  const [commandesBoutique, setCommandesBoutique] = useState([]);
+  const [chargementCommandes, setChargementCommandes] = useState(false);
+  useEffect(() => {
+    if (!choisie || ongletVendeur !== "commandes") return;
+    let annule = false;
+    // queueMicrotask plutôt qu'un appel direct : un setState synchrone au
+    // sommet du corps de l'effet déclenche react-hooks/set-state-in-effect
+    // (même patron que etapeScanIA dans FormulaireArticle).
+    queueMicrotask(() => {
+      if (!annule) setChargementCommandes(true);
+    });
+    chargerCommandesBoutique(choisie)
+      .then((liste) => {
+        if (!annule) setCommandesBoutique(liste);
+      })
+      .catch(() => {
+        // Best-effort : l'onglet affiche simplement une liste vide.
+      })
+      .finally(() => {
+        if (!annule) setChargementCommandes(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [choisie, ongletVendeur]);
+
   const boutiqueActive = boutiques.find((b) => b.id === choisie) || boutiques[0] || null;
   const nomVendeur = boutiqueActive?.nom || profile?.full_name || "Facilite Facile";
   const telephoneVendeur = boutiqueActive?.telephone_whatsapp || profile?.phone || "";
@@ -4128,6 +4168,25 @@ function VueVendeur({
                     )}
                   </button>
 
+                  {/* 1.0bis Mes commandes */}
+                  <button
+                    type="button"
+                    onClick={() => setOngletVendeur("commandes")}
+                    className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
+                      ongletVendeur === "commandes"
+                        ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <i className="fa-solid fa-box text-sm text-gray-700 dark:text-gray-300"></i>
+                    <span className="flex-1">Mes commandes</span>
+                    {commandesBoutique.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black">
+                        {commandesBoutique.length}
+                      </span>
+                    )}
+                  </button>
+
                   {/* 1.1 Service / métier */}
                   <button
                     type="button"
@@ -4285,6 +4344,7 @@ function VueVendeur({
           {ongletVendeur !== "annonces" && ongletVendeur !== "publier" && ongletVendeur !== "parametres" && (
             <div className="px-6 py-4.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
+                {ongletVendeur === "commandes" && "Mes commandes"}
                 {ongletVendeur === "service" && "Service / Métier & Prestations"}
                 {ongletVendeur === "etablissement" && "Établissement & Commerces"}
                 {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
@@ -4423,6 +4483,67 @@ function VueVendeur({
                     setOngletVendeur("annonces");
                   }}
                 />
+              </div>
+            )}
+
+            {/* VUE COMMANDES */}
+            {ongletVendeur === "commandes" && (
+              <div className="space-y-3">
+                {chargementCommandes ? (
+                  <div className="py-12 text-center text-xs text-gray-400">Chargement…</div>
+                ) : commandesBoutique.length === 0 ? (
+                  <div className="py-12 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center text-2xl mx-auto">
+                      <i className="fa-solid fa-box"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white">Aucune commande pour l&apos;instant</h3>
+                      <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                        Les commandes passées depuis la fiche d&apos;un de vos articles apparaîtront ici.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  commandesBoutique.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                          {c.item?.titre || "Article"}
+                        </p>
+                        <span
+                          className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            c.statut === "annulee"
+                              ? "bg-red-50 dark:bg-red-950 text-red-600"
+                              : c.statut === "livree"
+                              ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-600"
+                              : "bg-blue-50 dark:bg-blue-950 text-blue-600"
+                          }`}
+                        >
+                          {LIBELLES_STATUT_COMMANDE[c.statut] || c.statut}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {c.quantite} pièce(s) · {prixLisible(c.prix_total_xof)} FCFA
+                      </p>
+                      <div className="text-xs text-gray-600 dark:text-gray-300 space-y-0.5">
+                        <p>
+                          <i className="fa-solid fa-user text-[10px] text-gray-400 mr-1.5"></i>
+                          {c.livraison_nom} · {c.livraison_telephone}
+                        </p>
+                        <p>
+                          <i className="fa-solid fa-location-dot text-[10px] text-gray-400 mr-1.5"></i>
+                          {c.livraison_adresse}
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-gray-400">
+                        {new Date(c.created_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
