@@ -533,6 +533,49 @@ export async function reclamerLivraison(commandeId) {
   return data;
 }
 
+/** Commandes assignées au livreur courant, pas encore closes. */
+export async function chargerMesLivraisonsEnCours(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from("marketplace_commandes")
+    .select("*, item:marketplace_items(titre), store:marketplace_stores(nom, quartier, ville, latitude, longitude)")
+    .eq("livreur_id", userId)
+    .in("statut", ["assignee", "recuperee", "en_livraison", "livree_declaree"])
+    .order("assignee_le", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function libererLivraison(commandeId) {
+  const { data, error } = await supabase.rpc("liberer_livraison", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function marquerLivraisonRecuperee(commandeId) {
+  const { data, error } = await supabase.rpc("marquer_livraison_recuperee", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function demarrerLivraison(commandeId) {
+  const { data, error } = await supabase.rpc("demarrer_livraison", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function marquerLivraisonLivree(commandeId) {
+  const { data, error } = await supabase.rpc("marquer_livraison_livree", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function confirmerReceptionCommande(commandeId) {
+  const { data, error } = await supabase.rpc("confirmer_reception_commande", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function demanderDevenirLivreur(champs) {
   const { data, error } = await supabase.rpc("demander_devenir_livreur", {
     p_nom_complet: champs.nomComplet,

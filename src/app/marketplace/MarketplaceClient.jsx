@@ -85,6 +85,11 @@ import {
   demanderDevenirLivreur,
   listerLivraisonsDisponibles,
   reclamerLivraison,
+  chargerMesLivraisonsEnCours,
+  libererLivraison,
+  marquerLivraisonRecuperee,
+  demarrerLivraison,
+  marquerLivraisonLivree,
   supprimerPhoto,
   urlPhoto,
 } from "@/lib/marketplaceData";
@@ -5273,7 +5278,12 @@ function VueLivreur({ userId }) {
   }
 
   if (statut?.livreur?.statut === "actif") {
-    return <TableauLivraisonsDisponibles />;
+    return (
+      <div className="space-y-6">
+        <MesLivraisonsEnCours userId={userId} />
+        <TableauLivraisonsDisponibles />
+      </div>
+    );
   }
 
   if (statut?.livreur?.statut === "suspendu") {
@@ -5413,6 +5423,158 @@ function VueLivreur({ userId }) {
           {envoi ? "Envoi…" : "Envoyer ma demande"}
         </button>
       </form>
+    </div>
+  );
+}
+
+/**
+ * Livraisons déjà réclamées par le livreur courant, avec le bouton
+ * d'action correspondant à leur statut. Adresse/téléphone acheteur
+ * visibles ici seulement (après réclamation) — jamais dans le tableau des
+ * livraisons disponibles.
+ */
+function MesLivraisonsEnCours({ userId }) {
+  const [liste, setListe] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState("");
+  const [actionEnCours, setActionEnCours] = useState(null);
+
+  const recharger = async () => {
+    try {
+      setListe(await chargerMesLivraisonsEnCours(userId));
+    } catch (e) {
+      setErreur(e.message);
+    }
+  };
+
+  useEffect(() => {
+    let annule = false;
+    if (!userId) {
+      queueMicrotask(() => {
+        if (!annule) setChargement(false);
+      });
+      return () => {
+        annule = true;
+      };
+    }
+    chargerMesLivraisonsEnCours(userId)
+      .then((data) => {
+        if (!annule) setListe(data);
+      })
+      .catch((e) => {
+        if (!annule) setErreur(e.message);
+      })
+      .finally(() => {
+        if (!annule) setChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
+
+  const agir = async (action, commandeId) => {
+    setActionEnCours(commandeId);
+    setErreur("");
+    try {
+      await action(commandeId);
+      await recharger();
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
+  if (chargement || liste.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+        <i className="fa-solid fa-route text-[#1877F2]"></i>
+        Mes livraisons en cours ({liste.length})
+      </h2>
+
+      {erreur && (
+        <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400">
+          {erreur}
+        </p>
+      )}
+
+      <ul className="space-y-3">
+        {liste.map((c) => (
+          <li
+            key={c.id}
+            className="p-4 rounded-2xl border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/20 space-y-2"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-black text-gray-900 dark:text-white truncate">{c.item?.titre}</p>
+              <span className="shrink-0 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-[10px] font-black uppercase">
+                {LIBELLES_STATUT_COMMANDE[c.statut] || c.statut}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              <i className="fa-solid fa-store text-[10px] text-gray-400 mr-1"></i>
+              Retrait : {c.store?.nom}
+              {c.store?.quartier ? `, ${c.store.quartier}` : ""}
+              {c.store?.ville ? `, ${c.store.ville}` : ""}
+            </p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              <i className="fa-solid fa-user text-[10px] text-gray-400 mr-1"></i>
+              {c.livraison_nom} · {c.livraison_telephone}
+            </p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              <i className="fa-solid fa-location-dot text-[10px] text-gray-400 mr-1"></i>
+              {c.livraison_adresse}
+            </p>
+
+            <div className="flex gap-2 pt-2">
+              {c.statut === "assignee" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => agir(marquerLivraisonRecuperee, c.id)}
+                    disabled={actionEnCours === c.id}
+                    className="flex-1 py-2 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black disabled:opacity-60 cursor-pointer"
+                  >
+                    J&apos;ai récupéré l&apos;article
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => agir(libererLivraison, c.id)}
+                    disabled={actionEnCours === c.id}
+                    className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold disabled:opacity-60 cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                </>
+              )}
+              {c.statut === "recuperee" && (
+                <button
+                  type="button"
+                  onClick={() => agir(demarrerLivraison, c.id)}
+                  disabled={actionEnCours === c.id}
+                  className="flex-1 py-2 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black disabled:opacity-60 cursor-pointer"
+                >
+                  Je démarre la livraison
+                </button>
+              )}
+              {c.statut === "en_livraison" && (
+                <button
+                  type="button"
+                  onClick={() => agir(marquerLivraisonLivree, c.id)}
+                  disabled={actionEnCours === c.id}
+                  className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black disabled:opacity-60 cursor-pointer"
+                >
+                  Marquer comme livré
+                </button>
+              )}
+              {c.statut === "livree_declaree" && (
+                <p className="text-[11px] text-gray-500 italic">En attente de confirmation de l&apos;acheteur…</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
