@@ -37,6 +37,7 @@ import { dataUriAvatarBoutique } from "@/lib/avatarBoutique";
 // `window`/WebGL et ne doit être téléchargé que par les personnes qui
 // ouvrent réellement "Explorer", pas par chaque visite du Marketplace.
 import MyRendreModal from "@/components/MyRendreModal";
+import SuiviLivraisonModal from "@/components/SuiviLivraisonModal";
 
 const GlobeExplorateurBoutiques = dynamic(() => import("@/components/GlobeExplorateurBoutiques"), {
   ssr: false,
@@ -90,6 +91,7 @@ import {
   marquerLivraisonRecuperee,
   demarrerLivraison,
   marquerLivraisonLivree,
+  chargerMesCommandesAcheteur,
   supprimerPhoto,
   urlPhoto,
 } from "@/lib/marketplaceData";
@@ -215,6 +217,7 @@ export default function MarketplaceClient() {
   const [mesArticles, setMesArticles] = useState([]);
   const [chargementBoutique, setChargementBoutique] = useState(true);
   const [boutiqueModal, setBoutiqueModal] = useState(null);
+  const [commandesAcheteurOuvert, setCommandesAcheteurOuvert] = useState(false);
   const [articleSelectionne, setArticleSelectionne] = useState(null);
 
   const userId = session?.user?.id || null;
@@ -631,6 +634,15 @@ export default function MarketplaceClient() {
                             <span>{estVraieBoutique ? "Publier un article" : "Devenir Vendeur"}</span>
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => setCommandesAcheteurOuvert(true)}
+                            className="w-full mt-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                          >
+                            <i className="fa-solid fa-box text-[8px] text-gray-500"></i>
+                            <span>Mes commandes</span>
+                          </button>
+
                           {isLivreurAllowed && (
                             <button
                               type="button"
@@ -753,6 +765,11 @@ export default function MarketplaceClient() {
               setBoutiqueModal(b);
             }}
           />
+        )}
+
+        {/* Mes commandes (acheteur) : historique + suivi en direct */}
+        {commandesAcheteurOuvert && (
+          <ModalMesCommandesAcheteur userId={userId} onFermer={() => setCommandesAcheteurOuvert(false)} />
         )}
 
         {/* Modal / Fiche Profil Boutique (Style Profil & Catalogue complet) */}
@@ -6073,6 +6090,142 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
             </button>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Mes commandes (acheteur) : historique + accès au suivi en direct pour
+ * toute commande encore active (assignee/recuperee/en_livraison/
+ * livree_declaree) via SuiviLivraisonModal.
+ */
+function ModalMesCommandesAcheteur({ userId, onFermer }) {
+  const [liste, setListe] = useState([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState("");
+  const [suivie, setSuivie] = useState(null);
+
+  const recharger = async () => {
+    try {
+      setListe(await chargerMesCommandesAcheteur(userId));
+    } catch (e) {
+      setErreur(e.message);
+    }
+  };
+
+  useEffect(() => {
+    let annule = false;
+    if (!userId) {
+      queueMicrotask(() => {
+        if (!annule) setChargement(false);
+      });
+      return () => {
+        annule = true;
+      };
+    }
+    chargerMesCommandesAcheteur(userId)
+      .then((data) => {
+        if (!annule) setListe(data);
+      })
+      .catch((e) => {
+        if (!annule) setErreur(e.message);
+      })
+      .finally(() => {
+        if (!annule) setChargement(false);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
+
+  const SUIVABLE = ["assignee", "recuperee", "en_livraison", "livree_declaree"];
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4" onClick={onFermer}>
+      <div
+        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+            <i className="fa-solid fa-box text-[#1877F2]"></i>
+            Mes commandes
+          </h3>
+          <button
+            type="button"
+            onClick={onFermer}
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-black dark:hover:text-white flex items-center justify-center cursor-pointer"
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        {erreur && (
+          <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400">
+            {erreur}
+          </p>
+        )}
+
+        {chargement ? (
+          <div className="py-12 text-center text-xs text-gray-400">Chargement…</div>
+        ) : liste.length === 0 ? (
+          <div className="py-12 text-center space-y-2">
+            <i className="fa-regular fa-box text-2xl text-gray-300 dark:text-zinc-700"></i>
+            <p className="text-xs font-bold text-gray-500 dark:text-gray-400">Vous n&apos;avez pas encore de commande</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {liste.map((c) => (
+              <li
+                key={c.id}
+                className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-black text-gray-900 dark:text-white truncate">{c.item?.titre}</p>
+                  <span
+                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      c.statut === "annulee"
+                        ? "bg-red-50 dark:bg-red-950 text-red-600"
+                        : c.statut === "livree"
+                        ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-600"
+                        : "bg-blue-50 dark:bg-blue-950 text-blue-600"
+                    }`}
+                  >
+                    {LIBELLES_STATUT_COMMANDE[c.statut] || c.statut}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {c.quantite} pièce(s) · {prixLisible(c.prix_total_xof)} FCFA
+                </p>
+                <p className="text-[10px] text-gray-400">
+                  {new Date(c.created_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
+                </p>
+
+                {SUIVABLE.includes(c.statut) && (
+                  <button
+                    type="button"
+                    onClick={() => setSuivie(c)}
+                    className="w-full py-2 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-900 text-xs font-black cursor-pointer"
+                  >
+                    {c.statut === "livree_declaree" ? "Confirmer la réception" : "Suivre la livraison"}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {suivie && (
+        <SuiviLivraisonModal
+          commande={suivie}
+          onFermer={() => setSuivie(null)}
+          onConfirme={() => {
+            setSuivie(null);
+            recharger();
+          }}
+        />
       )}
     </div>
   );

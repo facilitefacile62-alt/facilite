@@ -588,6 +588,18 @@ export async function demanderDevenirLivreur(champs) {
   return data;
 }
 
+/** Commandes passées par l'acheteur courant, les plus récentes d'abord. */
+export async function chargerMesCommandesAcheteur(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from("marketplace_commandes")
+    .select("*, item:marketplace_items(titre)")
+    .eq("acheteur_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
 /** Commandes reçues sur une boutique, les plus récentes d'abord. */
 export async function chargerCommandesBoutique(storeId) {
   if (!storeId) return [];
