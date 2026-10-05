@@ -1414,24 +1414,10 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
             Épuisé
           </div>
         )}
-      </div>
 
-      {/* 2. Pied de carte ultra-compact : Prix & Titre à gauche, Bouton Acheter à droite (1:1 Capture) */}
-      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 bg-white dark:bg-zinc-900">
-        {/* Colonne gauche : Prix en gros + Titre tronqué en dessous */}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight truncate">
-            {prixLisible(article.prix_xof)}{" "}
-            <span className="text-xs sm:text-[13px] font-black">CFA</span>
-          </p>
-          <p
-            className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-0.5"
-            title={article.titre}
-          >
-            {article.titre}
-          </p>
-        </div>
-
+        {/* Icône « M'y rendre » posée sur la photo (coin bas-gauche) : ne
+            prend aucune place dans le pied de carte, où le prix se faisait
+            écraser sur les petits écrans (signalé par l'utilisateur). */}
         {article.boutique_lat != null && article.boutique_lng != null && (
           <button
             type="button"
@@ -1450,11 +1436,29 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
                 })
               );
             }}
-            className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm transition"
+            className="absolute bottom-2 left-2 z-10 w-8 h-8 rounded-full bg-blue-600/95 hover:bg-blue-700 text-white flex items-center justify-center shadow-md transition"
           >
-            <i className="fa-solid fa-location-dot text-sm"></i>
+            <i className="fa-solid fa-location-dot text-xs"></i>
           </button>
         )}
+      </div>
+
+      {/* 2. Pied de carte ultra-compact : Prix & Titre à gauche, Bouton Acheter à droite (1:1 Capture) */}
+      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 bg-white dark:bg-zinc-900">
+        {/* Colonne gauche : Prix en gros + Titre tronqué en dessous */}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight truncate">
+            {prixLisible(article.prix_xof)}{" "}
+            <span className="text-xs sm:text-[13px] font-black">CFA</span>
+          </p>
+          <p
+            className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-0.5"
+            title={article.titre}
+          >
+            {article.titre}
+          </p>
+        </div>
+
         {/* Colonne droite : Bouton gris 'Acheter' (1:1 Capture) */}
         <button
           type="button"
