@@ -10400,10 +10400,6 @@ function FormulaireArticle({
               </div>
             )}
 
-            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black uppercase tracking-wider shadow-sm">
-              Live
-            </span>
-
             <span className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/90 dark:bg-zinc-900/90 text-gray-500 dark:text-gray-300 flex items-center justify-center shadow-sm">
               <i className="fa-solid fa-location-dot text-xs"></i>
             </span>
