@@ -5434,6 +5434,7 @@ function VueLivreur({ userId }) {
  * livraisons disponibles.
  */
 function MesLivraisonsEnCours({ userId }) {
+  const { session } = useAuth();
   const [liste, setListe] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
@@ -5484,6 +5485,48 @@ function MesLivraisonsEnCours({ userId }) {
       setActionEnCours(null);
     }
   };
+
+  // Diffusion de la position pendant une livraison en cours : un seul
+  // watchPosition partagé (même position GPS peu importe combien de
+  // commandes 'en_livraison' sont actives en parallèle), throttlé à 12 s
+  // pour ne pas saturer le rate limit de l'endpoint. enableHighAccuracy:true
+  // délibérément ici (contrairement aux relevés ponctuels ailleurs dans ce
+  // fichier) : le coût batterie est accepté le temps d'une livraison active.
+  const idsEnLivraison = liste
+    .filter((c) => c.statut === "en_livraison")
+    .map((c) => c.id)
+    .join(",");
+
+  useEffect(() => {
+    if (!idsEnLivraison || !session?.access_token || !navigator.geolocation) return undefined;
+    const commandeIds = idsEnLivraison.split(",");
+    let dernierEnvoi = 0;
+    const THROTTLE_MS = 12000;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const maintenant = Date.now();
+        if (maintenant - dernierEnvoi < THROTTLE_MS) return;
+        dernierEnvoi = maintenant;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        commandeIds.forEach((commandeId) => {
+          fetch("/api/marketplace/livraison-position", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ commandeId, lat, lng }),
+          }).catch(() => {});
+        });
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [idsEnLivraison, session]);
 
   if (chargement || liste.length === 0) return null;
 
