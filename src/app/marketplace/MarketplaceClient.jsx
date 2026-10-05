@@ -1402,12 +1402,8 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
 
 
 
-        {/* Statut Stock : « Live » si disponible, « Épuisé » sinon */}
-        {enStock ? (
-          <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black uppercase tracking-wider shadow-sm">
-            Live
-          </div>
-        ) : (
+        {/* Statut Stock si non dispo */}
+        {!enStock && (
           <div className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-zinc-300 text-[9px] font-bold">
             Épuisé
           </div>
