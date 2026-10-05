@@ -1443,33 +1443,35 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
         )}
       </div>
 
-      {/* 2. Pied de carte ultra-compact : Prix & Titre à gauche, Bouton Acheter à droite (1:1 Capture) */}
-      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 bg-white dark:bg-zinc-900">
-        {/* Colonne gauche : Prix en gros + Titre tronqué en dessous */}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight truncate">
-            {prixLisible(article.prix_xof)}{" "}
-            <span className="text-xs sm:text-[13px] font-black">CFA</span>
-          </p>
+      {/* 2. Pied de carte : le prix a sa propre ligne pleine largeur (jamais
+          tronqué, c'est l'information la plus critique de la carte) ; titre
+          et bouton Acheter se partagent la ligne du dessous. */}
+      <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900">
+        <p className="text-sm sm:text-[15px] font-black text-gray-950 dark:text-white leading-tight whitespace-nowrap">
+          {prixLisible(article.prix_xof)}{" "}
+          <span className="text-xs sm:text-[13px] font-black">CFA</span>
+        </p>
+
+        <div className="flex items-center justify-between gap-2 mt-1">
           <p
-            className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-0.5"
+            className="min-w-0 flex-1 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium truncate"
             title={article.titre}
           >
             {article.titre}
           </p>
-        </div>
 
-        {/* Colonne droite : Bouton gris 'Acheter' (1:1 Capture) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            ouvrirFiche();
-          }}
-          className="px-3.5 py-1.5 rounded-lg bg-[#E2E8F0] hover:bg-[#CBD5E1] dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs"
-        >
-          Acheter
-        </button>
+          {/* Bouton gris 'Acheter' */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              ouvrirFiche();
+            }}
+            className="px-3.5 py-1.5 rounded-lg bg-[#E2E8F0] hover:bg-[#CBD5E1] dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs"
+          >
+            Acheter
+          </button>
+        </div>
       </div>
 
       {signalementOuvert && (
