@@ -34,36 +34,6 @@ import { ouvrirConversation } from '@/lib/messages';
 
 const VERT_PROFOND = '#0d3b34';
 
-const AVIS_SHEIN = [
-  {
-    id: 'av-1',
-    auteur: 'J***n',
-    note: 5,
-    variante: 'Modèle Noir Standard',
-    date: 'Il y a 2 jours',
-    texte: 'Ganda nya super ! Exactement comme sur les photos, livraison très rapide à Dakar. Vendeur très réactif sur WhatsApp.',
-    likes: 44,
-  },
-  {
-    id: 'av-2',
-    auteur: 'r***6',
-    note: 5,
-    variante: 'Édition Sport',
-    date: 'Il y a 4 jours',
-    texte: 'The product was good! It looks expensive, which what I liked. Qualité impeccable, je recommande à 100%.',
-    likes: 38,
-  },
-  {
-    id: 'av-3',
-    auteur: 'M***a',
-    note: 4,
-    variante: 'Standard',
-    date: 'Il y a 1 semaine',
-    texte: 'Super satisfait ! Emballage soigné et produit 100% conforme. Très bon rapport qualité/prix.',
-    likes: 19,
-  },
-];
-
 export default function ArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -78,13 +48,6 @@ export default function ArticleScreen() {
   const [ouverture, setOuverture] = useState(false);
   const [favori, setFavori] = useState(false);
   const [onglet, setOnglet] = useState<'article' | 'commentaires' | 'recommander'>('article');
-  const [filtreAvis, setFiltreAvis] = useState<string>('Tous');
-  const [avisLikes, setAvisLikes] = useState<{ [id: string]: number }>({
-    'av-1': 44,
-    'av-2': 38,
-    'av-3': 19,
-  });
-  const [avisAimes, setAvisAimes] = useState<{ [id: string]: boolean }>({});
   const [commandeOuverte, setCommandeOuverte] = useState(false);
 
   useEffect(() => {
@@ -104,17 +67,6 @@ export default function ArticleScreen() {
 
   function surDefilement(e: NativeSyntheticEvent<NativeScrollEvent>) {
     setPhotoActive(Math.round(e.nativeEvent.contentOffset.x / width));
-  }
-
-  function toggleLikeAvis(idAvis: string) {
-    setAvisAimes((prev) => {
-      const aime = !prev[idAvis];
-      setAvisLikes((likes) => ({
-        ...likes,
-        [idAvis]: (likes[idAvis] || 0) + (aime ? 1 : -1),
-      }));
-      return { ...prev, [idAvis]: aime };
-    });
   }
 
   if (article === undefined) {
@@ -277,39 +229,14 @@ export default function ArticleScreen() {
 
         {/* Section Infos & Prix */}
         <View className="bg-white p-4">
-          <View className="flex-row items-baseline gap-2">
-            <Text className="text-[26px] font-black text-[#1A1A1A]">
-              {prixLisible(article.prixXof)}{' '}
-              <Text className="text-[14px] font-bold text-gray-500">FCFA</Text>
-            </Text>
-            <Text className="text-[14px] line-through text-gray-400">
-              {prixLisible(Math.round(article.prixXof * 1.15))} FCFA
-            </Text>
-            <View className="bg-red-50 px-2 py-0.5 rounded">
-              <Text className="text-[11px] font-bold text-red-600">-15%</Text>
-            </View>
-          </View>
+          <Text className="text-[26px] font-black text-[#1A1A1A]">
+            {prixLisible(article.prixXof)} <Text className="text-[14px] font-bold text-gray-500">FCFA</Text>
+          </Text>
 
           <Text className="text-[16px] font-bold text-[#1A1A1A] mt-2 leading-[22px]">
             {article.titre}
           </Text>
 
-          {/* Étoiles & Best seller */}
-          <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-gray-100">
-            <View className="flex-row items-center gap-1.5">
-              <Text className="text-[13px] font-black text-amber-500">4.48</Text>
-              <View className="flex-row">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Ionicons key={s} name="star" size={13} color="#F59E0B" />
-                ))}
-              </View>
-              <Text className="text-[12px] text-gray-500 font-medium">(600+ avis)</Text>
-            </View>
-            <View className="bg-amber-50 px-2 py-0.5 rounded-full flex-row items-center gap-1">
-              <Ionicons name="trophy" size={12} color="#D97706" />
-              <Text className="text-[11px] font-bold text-amber-800">#1 Bestseller</Text>
-            </View>
-          </View>
         </View>
 
 
@@ -326,9 +253,11 @@ export default function ArticleScreen() {
               </View>
               <Text className="text-[12px] text-gray-500">{lieuBoutique(article)}</Text>
             </View>
-            <View className="bg-emerald-50 px-2.5 py-1 rounded-full">
-              <Text className="text-[11px] font-bold text-emerald-700">Vendeur Vérifié</Text>
-            </View>
+            {article.boutiqueVerifie && (
+              <View className="bg-emerald-50 px-2.5 py-1 rounded-full">
+                <Text className="text-[11px] font-bold text-emerald-700">Vendeur Vérifié</Text>
+              </View>
+            )}
           </View>
         </View>
 
