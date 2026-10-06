@@ -68,6 +68,27 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
   return data ?? [];
 }
 
+/**
+ * Étape 1 de « Devenir Vendeur » : prénom, nom, téléphone et e-mail du
+ * compte. Même écriture que « Informations personnelles » (table profiles,
+ * RLS : chacun ne modifie que sa propre ligne).
+ */
+export async function enregistrerIdentiteVendeur(
+  userId: string,
+  champs: { prenom: string; nom: string; telephone: string; email: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: `${champs.prenom.trim()} ${champs.nom.trim()}`.trim(),
+      phone: champs.telephone.trim(),
+      contact_email: champs.email.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+  if (error) throw new Error("Impossible d'enregistrer vos informations pour le moment.");
+}
+
 export async function chargerMesArticles(storeId: string): Promise<MonArticle[]> {
   if (!storeId) return [];
   const { data, error } = await supabase

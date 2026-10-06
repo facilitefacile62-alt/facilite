@@ -2,18 +2,30 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, Switch, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  TextInput,
+  type TextInputProps,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
-import { enStock, prixLisible, urlPhoto } from '@/lib/marketplace';
+import { enStock, prixLisible, urlPhoto, type Position } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
 import {
   chargerMesArticles,
   chargerMesBoutiques,
   creerBoutique,
   definirVisibiliteBoutique,
+  enregistrerIdentiteVendeur,
   majStock,
   retirerArticle,
   type MaBoutique,
@@ -28,13 +40,74 @@ import {
 // le retrait — voir src/lib/vendeur.ts), ni faux avis/notes.
 const VERT_PROFOND = '#0d3b34';
 
+function decouperNom(nomComplet: string | null | undefined): { prenom: string; nom: string } {
+  const morceaux = (nomComplet ?? '').trim().split(/\s+/).filter(Boolean);
+  return { prenom: morceaux[0] ?? '', nom: morceaux.slice(1).join(' ') };
+}
+
+function Champ({ libelle, ...props }: TextInputProps & { libelle: string }) {
+  return (
+    <View className="gap-1.5">
+      <Text className="text-[12.5px] font-bold text-gray-700">{libelle}</Text>
+      <TextInput
+        placeholderTextColor="#9CA3AF"
+        className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
+        {...props}
+      />
+    </View>
+  );
+}
+
+// « Devenir Vendeur » en deux étapes, comme sur le site : d'abord l'identité
+// du compte (prénom, nom, téléphone, e-mail facultatif), puis la boutique.
+// L'identité est enregistrée dès « Continuer » : une étape 2 abandonnée ne
+// fait pas perdre les informations saisies.
 function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree: () => void }) {
+  const { user, profile } = useAuth();
   const { activer } = useLocalisation();
+  const [etape, setEtape] = useState<'identite' | 'boutique'>('identite');
+  const connu = decouperNom(profile?.full_name as string | undefined);
+  const [prenom, setPrenom] = useState(connu.prenom);
+  const [nomFamille, setNomFamille] = useState(connu.nom);
+  const [telephone, setTelephone] = useState((profile?.phone as string | undefined) ?? '');
+  const [email, setEmail] = useState((profile?.contact_email as string | undefined) || user?.email || '');
   const [nom, setNom] = useState('');
   const [ville, setVille] = useState<string | null>(null);
   const [quartier, setQuartier] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [position, setPosition] = useState<Position | null>(null);
+  const [relevePosition, setRelevePosition] = useState<'aucun' | 'en_cours' | 'ok' | 'echec'>('aucun');
   const [enregistrement, setEnregistrement] = useState(false);
+
+  async function continuerIdentite() {
+    if (!prenom.trim() || !nomFamille.trim()) {
+      Alert.alert('Informations manquantes', 'Le prénom et le nom sont obligatoires.');
+      return;
+    }
+    if (!telephone.trim()) {
+      Alert.alert('Téléphone manquant', 'Indiquez votre numéro WhatsApp pour que les acheteurs puissent vous joindre.');
+      return;
+    }
+    setEnregistrement(true);
+    try {
+      await enregistrerIdentiteVendeur(userId, { prenom, nom: nomFamille, telephone, email });
+      setWhatsapp((actuel) => actuel || telephone);
+      setEtape('boutique');
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : "Impossible d'enregistrer vos informations.");
+    } finally {
+      setEnregistrement(false);
+    }
+  }
+
+  // Position facultative : sans elle la boutique existe, mais n'apparaît pas
+  // dans « Autour de moi ». Le relevé est explicite (bouton), jamais imposé.
+  async function releverPosition() {
+    setRelevePosition('en_cours');
+    const { position: releve } = await activer().catch(() => ({ position: null }));
+    setPosition(releve);
+    setRelevePosition(releve ? 'ok' : 'echec');
+  }
 
   async function creer() {
     if (!nom.trim()) {
@@ -42,9 +115,6 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
       return;
     }
     setEnregistrement(true);
-    // Position best-effort : une boutique sans position reste utilisable
-    // (elle n'apparaît simplement pas dans "Autour de moi").
-    const { position } = await activer().catch(() => ({ position: null }));
     try {
       await creerBoutique(userId, { nom, ville, quartier, telephoneWhatsapp: whatsapp, position });
       onCree();
@@ -55,65 +125,106 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     }
   }
 
+  const libelleBouton = etape === 'identite' ? 'Continuer' : 'Créer ma boutique';
+
   return (
-    <View className="px-5 pt-2 gap-4">
-      <View className="items-center gap-2 py-4">
+    <ScrollView contentContainerClassName="px-5 pt-2 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <View className="items-center gap-2 py-3">
         <View className="w-16 h-16 rounded-2xl items-center justify-center" style={{ backgroundColor: VERT_PROFOND }}>
-          <Ionicons name="storefront" size={30} color="#6ee7c9" />
+          <Ionicons name={etape === 'identite' ? 'person' : 'storefront'} size={30} color="#6ee7c9" />
         </View>
-        <Text className="text-[18px] font-extrabold text-[#1A1A1A]">Créez votre boutique</Text>
-        <Text className="text-[13px] text-gray-500 text-center px-4">
-          Une boutique gratuite pour publier vos articles sur le Marketplace Facilité.
+        <Text className="text-[11.5px] font-bold tracking-wide text-gray-500">
+          {etape === 'identite' ? 'ÉTAPE 1 SUR 2 · VOTRE IDENTITÉ' : 'ÉTAPE 2 SUR 2 · VOTRE BOUTIQUE'}
+        </Text>
+        <Text className="text-[18px] font-extrabold text-[#1A1A1A]">
+          {etape === 'identite' ? 'Qui êtes-vous ?' : 'Créez votre boutique'}
         </Text>
       </View>
 
-      <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Nom de la boutique</Text>
-        <TextInput
-          value={nom}
-          onChangeText={setNom}
-          placeholder="Ex. Boutique Awa"
-          placeholderTextColor="#9CA3AF"
-          className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
-        />
-      </View>
+      {etape === 'identite' ? (
+        <>
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Champ libelle="Prénom *" value={prenom} onChangeText={setPrenom} placeholder="Ex. Moussa" />
+            </View>
+            <View className="flex-1">
+              <Champ libelle="Nom *" value={nomFamille} onChangeText={setNomFamille} placeholder="Ex. Diop" />
+            </View>
+          </View>
+          <Champ
+            libelle="Téléphone (WhatsApp) *"
+            value={telephone}
+            onChangeText={setTelephone}
+            placeholder="77 123 45 67"
+            keyboardType="phone-pad"
+          />
+          <Champ
+            libelle="E-mail (facultatif)"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="vous@exemple.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </>
+      ) : (
+        <>
+          <Pressable onPress={() => setEtape('identite')} className="flex-row items-center gap-1" hitSlop={8}>
+            <Ionicons name="chevron-back" size={16} color="#6B7280" />
+            <Text className="text-[12.5px] font-semibold text-gray-500">Modifier mes informations</Text>
+          </Pressable>
 
-      <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Département</Text>
-        <SelecteurDepartement valeur={ville} onChoisir={setVille} />
-      </View>
+          <Champ libelle="Nom de la boutique *" value={nom} onChangeText={setNom} placeholder="Ex. Boutique Awa" />
 
-      <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Quartier (facultatif)</Text>
-        <TextInput
-          value={quartier}
-          onChangeText={setQuartier}
-          placeholder="Ex. Plateau"
-          placeholderTextColor="#9CA3AF"
-          className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
-        />
-      </View>
+          <View className="gap-1.5">
+            <Text className="text-[12.5px] font-bold text-gray-700">Département</Text>
+            <SelecteurDepartement valeur={ville} onChoisir={setVille} />
+          </View>
 
-      <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">WhatsApp (facultatif)</Text>
-        <TextInput
-          value={whatsapp}
-          onChangeText={setWhatsapp}
-          placeholder="77 123 45 67"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="phone-pad"
-          className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
-        />
-      </View>
+          <Champ libelle="Quartier (facultatif)" value={quartier} onChangeText={setQuartier} placeholder="Ex. Plateau" />
+          <Champ
+            libelle="WhatsApp (facultatif)"
+            value={whatsapp}
+            onChangeText={setWhatsapp}
+            placeholder="77 123 45 67"
+            keyboardType="phone-pad"
+          />
+
+          <View className="gap-1.5">
+            <Text className="text-[12.5px] font-bold text-gray-700">Position de la boutique (facultatif)</Text>
+            <Pressable
+              onPress={releverPosition}
+              disabled={relevePosition === 'en_cours'}
+              className="flex-row items-center gap-3 rounded-2xl border border-gray-300 px-3.5 py-3 disabled:opacity-60">
+              {relevePosition === 'en_cours' ? (
+                <ActivityIndicator color="#0d3b34" />
+              ) : (
+                <Ionicons name="location-outline" size={20} color="#0d3b34" />
+              )}
+              <Text className="flex-1 text-[13.5px] font-semibold text-[#1A1A1A]">
+                {relevePosition === 'ok'
+                  ? 'Position relevée'
+                  : relevePosition === 'echec'
+                    ? 'Position indisponible, réessayez'
+                    : 'Relever ma position actuelle'}
+              </Text>
+            </Pressable>
+          </View>
+        </>
+      )}
 
       <Pressable
-        onPress={creer}
+        onPress={etape === 'identite' ? continuerIdentite : creer}
         disabled={enregistrement}
         className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60"
         style={{ backgroundColor: VERT_PROFOND }}>
-        {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Créer ma boutique</Text>}
+        {enregistrement ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white text-[14.5px] font-bold">{libelleBouton}</Text>
+        )}
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -261,7 +372,7 @@ export default function MaBoutiqueScreen() {
             className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
             <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
           </Pressable>
-          <Text className="text-[18px] font-black text-[#1A1A1A]">Ma boutique</Text>
+          <Text className="text-[18px] font-black text-[#1A1A1A]">{boutique === null ? 'Devenir Vendeur' : 'Ma boutique'}</Text>
         </View>
 
         {chargement || boutique === undefined ? (
