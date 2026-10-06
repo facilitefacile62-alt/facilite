@@ -12,6 +12,7 @@ function VendeurInformationsPersonnellesContent() {
 
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
+  const [email, setEmail] = useState("");
   const [nomBoutique, setNomBoutique] = useState("");
   const [telephone, setTelephone] = useState("");
   const [ville, setVille] = useState("");
@@ -20,6 +21,11 @@ function VendeurInformationsPersonnellesContent() {
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState("");
+  // Identité d'abord (prénom/nom/téléphone/email), nom de boutique + position
+  // GPS seulement après "Continuer" — même découpage que "Devenir Vendeur"
+  // dans VueReglages (MarketplaceClient.jsx), signalé par l'utilisateur comme
+  // trop lourd d'un coup pour qui n'a pas encore de boutique.
+  const [etape, setEtape] = useState("identite");
 
   const rawRedirect = searchParams.get("redirect") || "/";
   const safeRedirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
@@ -35,7 +41,7 @@ function VendeurInformationsPersonnellesContent() {
         if (!annule && user) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("full_name, phone, address_city")
+            .select("full_name, phone, address_city, contact_email")
             .eq("id", user.id)
             .maybeSingle();
 
@@ -47,6 +53,7 @@ function VendeurInformationsPersonnellesContent() {
           }
           if (profile?.phone) setTelephone(profile.phone);
           if (profile?.address_city) setVille(profile.address_city);
+          if (profile?.contact_email) setEmail(profile.contact_email);
 
           // Pré-remplir le nom de la boutique si déjà existante
           const mesBoutiques = await chargerMesBoutiques(user.id).catch(() => []);
@@ -95,6 +102,7 @@ function VendeurInformationsPersonnellesContent() {
         .update({
           full_name: nomComplet,
           phone: telephone.trim() || null,
+          contact_email: email.trim() || null,
           address_city: ville.trim() || null,
           updated_at: new Date().toISOString(),
         })
@@ -233,6 +241,58 @@ function VendeurInformationsPersonnellesContent() {
               </div>
             </div>
 
+            {/* Téléphone & E-mail — identité, étape 1 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Téléphone (WhatsApp)
+                </label>
+                <input
+                  type="tel"
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  placeholder="Ex. +221 77 000 00 00"
+                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  E-mail <span className="font-normal text-gray-400">(facultatif)</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="vous@exemple.com"
+                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                />
+              </div>
+            </div>
+
+            {/* Étape 1 (identité) seulement : on s'arrête là tant que
+                "Continuer" n'est pas cliqué — nom de boutique/position GPS/
+                ville (étape 2) n'apparaissent qu'ensuite. Signalé par
+                l'utilisateur comme trop lourd d'un coup. */}
+            {etape === "identite" && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!prenom.trim() || !nom.trim()) {
+                    setErreur("Veuillez renseigner votre nom et prénom.");
+                    return;
+                  }
+                  setErreur("");
+                  setEtape("boutique");
+                }}
+                className="w-full py-3.5 px-4 bg-[#10E688] hover:bg-[#0ed37c] text-gray-950 font-black text-sm rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Continuer</span>
+                <i className="fa-solid fa-arrow-right text-sm"></i>
+              </button>
+            )}
+
+            {etape === "boutique" && (
+              <>
             {/* Nom de la boutique */}
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
@@ -261,32 +321,18 @@ function VendeurInformationsPersonnellesContent() {
               }}
             />
 
-            {/* Téléphone & Ville */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Téléphone (WhatsApp)
-                </label>
-                <input
-                  type="tel"
-                  value={telephone}
-                  onChange={(e) => setTelephone(e.target.value)}
-                  placeholder="Ex. +221 77 000 00 00"
-                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Ville / Commune
-                </label>
-                <input
-                  type="text"
-                  value={ville}
-                  onChange={(e) => setVille(e.target.value)}
-                  placeholder="Ex. Dakar, Abidjan..."
-                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                />
-              </div>
+            {/* Ville */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                Ville / Commune
+              </label>
+              <input
+                type="text"
+                value={ville}
+                onChange={(e) => setVille(e.target.value)}
+                placeholder="Ex. Dakar, Abidjan..."
+                className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              />
             </div>
 
             <div className="pt-2 space-y-2.5">
@@ -317,6 +363,8 @@ function VendeurInformationsPersonnellesContent() {
                 Passer et configurer plus tard
               </button>
             </div>
+              </>
+            )}
           </form>
         </div>
       </main>
