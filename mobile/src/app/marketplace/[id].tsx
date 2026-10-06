@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import CommandeRapideModal from '@/components/CommandeRapideModal';
 import { useAuth } from '@/context/AuthContext';
 import { ratioAffichage } from '@/lib/formatImage';
 import {
@@ -84,6 +85,7 @@ export default function ArticleScreen() {
     'av-3': 19,
   });
   const [avisAimes, setAvisAimes] = useState<{ [id: string]: boolean }>({});
+  const [commandeOuverte, setCommandeOuverte] = useState(false);
 
   useEffect(() => {
     let annule = false;
@@ -181,18 +183,15 @@ export default function ArticleScreen() {
     Linking.openURL(whatsapp).catch(() => Alert.alert('WhatsApp', "Impossible d'ouvrir WhatsApp."));
   }
 
+  // Commander : la commande est enregistrée au nom du compte, donc connexion
+  // obligatoire. Le formulaire envoie ensuite le message WhatsApp du vendeur.
   function commanderDirect() {
-    if (whatsapp) {
-      const msg = encodeURIComponent(
-        `Bonjour, je souhaite commander immédiatement l'article : ${article?.titre} (${prixLisible(article?.prixXof || 0)} FCFA). Êtes-vous disponible ?`
-      );
-      const url = whatsapp.includes('?') ? `${whatsapp}&text=${msg}` : `${whatsapp}?text=${msg}`;
-      Linking.openURL(url).catch(() => {
-        Alert.alert('Commande Express', `Contactez le vendeur au ${article?.whatsapp || 'WhatsApp'}`);
-      });
-    } else {
-      discuter();
+    if (!user?.id) {
+      router.push('/login');
+      return;
     }
+    if (estMonArticle) return;
+    setCommandeOuverte(true);
   }
 
   // Photo affichée au format réel ; tant qu'elle n'est pas mesurée, le carré légèrement allongé d'avant.
@@ -412,6 +411,13 @@ export default function ArticleScreen() {
           </Pressable>
         </View>
       </View>
+
+      <CommandeRapideModal
+        visible={commandeOuverte}
+        article={article}
+        lienWhatsapp={whatsapp ? whatsapp.split('?')[0] : null}
+        onFermer={() => setCommandeOuverte(false)}
+      />
     </View>
   );
 }

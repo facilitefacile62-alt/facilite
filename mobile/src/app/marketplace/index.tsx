@@ -147,6 +147,13 @@ export default function MarketplaceScreen() {
             <Text className="text-[20px] font-black text-[#1A1A1A] -mt-0.5">Marketplace</Text>
           </View>
           <Pressable
+            onPress={() => router.push('/marketplace/commandes')}
+            accessibilityLabel="Mes commandes"
+            hitSlop={6}
+            className="w-10 h-10 rounded-full border border-gray-300 items-center justify-center">
+            <Ionicons name="receipt-outline" size={17} color="#1A1A1A" />
+          </Pressable>
+          <Pressable
             onPress={() => router.push('/marketplace/vendre')}
             className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border border-gray-300">
             <Ionicons name="storefront-outline" size={15} color="#1A1A1A" />

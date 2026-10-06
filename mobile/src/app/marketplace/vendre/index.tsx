@@ -18,6 +18,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
+import {
+  chargerCommandesBoutique,
+  couleurStatut,
+  dateCourte,
+  LIBELLES_PAIEMENT,
+  LIBELLES_STATUT,
+  type MaCommande,
+} from '@/lib/commandes';
 import { enStock, prixLisible, urlPhoto, type Position } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
 import {
@@ -307,12 +315,49 @@ function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: 
   );
 }
 
+// Commande reçue : lecture seule pour le vendeur. Il voit le nom, le
+// téléphone et l'adresse de l'acheteur, nécessaires pour la remise ; le
+// livreur, lui, ne voit ces coordonnées qu'après avoir réclamé la livraison.
+function CarteCommandeVendeur({ commande }: { commande: MaCommande }) {
+  const statut = couleurStatut(commande.statut);
+  return (
+    <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2">
+      <View className="flex-row items-start justify-between gap-2">
+        <Text className="flex-1 text-[13.5px] font-bold text-[#1A1A1A]" numberOfLines={2}>
+          {commande.item?.titre ?? 'Article'}
+        </Text>
+        <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: statut.fond }}>
+          <Text className="text-[11px] font-bold" style={{ color: statut.texte }}>
+            {LIBELLES_STATUT[commande.statut]}
+          </Text>
+        </View>
+      </View>
+      <Text className="text-[12.5px] text-gray-700">
+        {commande.quantite} × {prixLisible(commande.prix_unitaire_xof)} FCFA ·{' '}
+        <Text className="font-extrabold" style={{ color: VERT_PROFOND }}>
+          {prixLisible(commande.prix_total_xof)} FCFA
+        </Text>
+      </Text>
+      <Text className="text-[12px] text-gray-500">
+        {LIBELLES_PAIEMENT[commande.moyen_paiement]} · {dateCourte(commande.created_at)}
+      </Text>
+      <View className="border-t border-black/[0.05] pt-2 gap-0.5">
+        <Text className="text-[12.5px] font-semibold text-gray-800">{commande.livraison_nom}</Text>
+        <Text className="text-[12px] text-gray-600">{commande.livraison_telephone}</Text>
+        <Text className="text-[12px] text-gray-600">{commande.livraison_adresse}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function MaBoutiqueScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [chargement, setChargement] = useState(true);
   const [boutique, setBoutique] = useState<MaBoutique | null | undefined>(undefined); // undefined = chargement, null = aucune
   const [articles, setArticles] = useState<MonArticle[]>([]);
+  const [commandes, setCommandes] = useState<MaCommande[]>([]);
+  const [onglet, setOnglet] = useState<'articles' | 'commandes'>('articles');
   const [bascule, setBascule] = useState(false);
 
   // Fonction volontairement non mémoïsée (pas de useCallback) : l'effet de
@@ -326,6 +371,7 @@ export default function MaBoutiqueScreen() {
       const active = liste[0] ?? null;
       setBoutique(active);
       setArticles(active ? await chargerMesArticles(active.id) : []);
+      setCommandes(active ? await chargerCommandesBoutique(active.id) : []);
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Chargement impossible.');
     } finally {
@@ -387,7 +433,7 @@ export default function MaBoutiqueScreen() {
           <FormulaireCreationBoutique userId={user.id} onCree={recharger} />
         ) : (
           <FlatList
-            data={articles}
+            data={onglet === 'articles' ? articles : []}
             keyExtractor={(a) => a.id}
             contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 10 }}
             showsVerticalScrollIndicator={false}
@@ -452,18 +498,51 @@ export default function MaBoutiqueScreen() {
                   </Pressable>
                 </View>
 
-                <Text className="text-[12.5px] font-extrabold tracking-wide text-gray-500 mt-5">
-                  MES ARTICLES ({articles.length})
-                </Text>
+                <View className="flex-row gap-2 mt-5">
+                  {(['articles', 'commandes'] as const).map((o) => {
+                    const actif = onglet === o;
+                    const libelle = o === 'articles' ? `Mes articles (${articles.length})` : `Commandes reçues (${commandes.length})`;
+                    return (
+                      <Pressable
+                        key={o}
+                        onPress={() => setOnglet(o)}
+                        className={`flex-1 rounded-full py-2 items-center border ${
+                          actif ? 'border-[#0d3b34] bg-[#0d3b34]' : 'border-gray-300 bg-white'
+                        }`}>
+                        <Text className={`text-[12px] font-bold ${actif ? 'text-white' : 'text-gray-700'}`}>{libelle}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
             }
             ListEmptyComponent={
-              <View className="items-center pt-6 pb-10 gap-2">
-                <Ionicons name="pricetags-outline" size={36} color="#9CA3AF" />
-                <Text className="text-[13.5px] text-gray-500 text-center px-6">
-                  Aucun article publié pour l&apos;instant.
-                </Text>
-              </View>
+              onglet === 'articles' ? (
+                <View className="items-center pt-6 pb-10 gap-2">
+                  <Ionicons name="pricetags-outline" size={36} color="#9CA3AF" />
+                  <Text className="text-[13.5px] text-gray-500 text-center px-6">
+                    Aucun article publié pour l&apos;instant.
+                  </Text>
+                </View>
+              ) : null
+            }
+            ListFooterComponent={
+              onglet === 'commandes' ? (
+                commandes.length === 0 ? (
+                  <View className="items-center pt-6 pb-10 gap-2">
+                    <Ionicons name="receipt-outline" size={36} color="#9CA3AF" />
+                    <Text className="text-[13.5px] text-gray-500 text-center px-6">
+                      Aucune commande reçue pour l&apos;instant.
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="gap-2.5">
+                    {commandes.map((c) => (
+                      <CarteCommandeVendeur key={c.id} commande={c} />
+                    ))}
+                  </View>
+                )
+              ) : null
             }
             renderItem={({ item }) => <LigneArticle article={item} onChanger={recharger} />}
           />
