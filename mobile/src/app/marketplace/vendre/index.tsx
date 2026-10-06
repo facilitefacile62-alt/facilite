@@ -498,6 +498,17 @@ export default function MaBoutiqueScreen() {
                   </Pressable>
                 </View>
 
+                <Pressable
+                  onPress={() => router.push('/marketplace/vendre/livreur')}
+                  className="flex-row items-center gap-3 mt-3 rounded-2xl border border-gray-300 px-3.5 py-3">
+                  <Ionicons name="bicycle-outline" size={20} color={VERT_PROFOND} />
+                  <View className="flex-1">
+                    <Text className="text-[13px] font-bold text-[#1A1A1A]">Service · Devenir livreur</Text>
+                    <Text className="text-[11.5px] text-gray-500">Livrer les commandes du Marketplace</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </Pressable>
+
                 <View className="flex-row gap-2 mt-5">
                   {(['articles', 'commandes'] as const).map((o) => {
                     const actif = onglet === o;
