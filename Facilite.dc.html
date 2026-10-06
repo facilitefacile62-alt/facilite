@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>body{margin:0}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:center;gap:36px;background:#e7e4de;padding:48px;box-sizing:border-box;font-family:'Roboto',system-ui,sans-serif">
+  <sc-for list="{{ screens }}" as="s" hint-placeholder-count="6">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <div style="font-size:14px;font-weight:700;color:#1A1A1A">{{ s.label }}</div>
+      <div style="width:412px;height:892px;overflow:hidden;border-radius:36px;position:relative;background:#0B0D10">
+        <dc-import name="PhonePreview" initial-tab="{{ s.tab }}" initial-view="{{ s.view }}" initial-admin-section="{{ s.adminSection }}" initial-auth-screen="{{ s.authScreen }}" initial-job-id="{{ s.jobId }}" initial-company-id="{{ s.companyId }}" initial-chat-id="{{ s.chatId }}" initial-menu-open="{{ s.menuOpen }}" initial-notifs-open="{{ s.notifsOpen }}" initial-product-id="{{ s.productId }}" initial-seller-chat="{{ s.sellerChat }}" initial-shop-open="{{ s.shopOpen }}" initial-mk-msg="{{ s.mkMsg }}" initial-vp="{{ s.vp }}" initial-shop-tab="{{ s.shopTab }}" initial-shop-edit="{{ s.shopEdit }}" initial-shop-menu="{{ s.shopMenu }}" initial-ob-step="{{ s.obStep }}" initial-admin-tab="{{ s.adminTab }}" initial-edit-page="{{ s.editPage }}" initial-doc-id="{{ s.docId }}" initial-media-viewer="{{ s.mediaViewer }}" initial-around="{{ s.around }}" initial-mk-search="{{ s.mkSearch }}" initial-pub="{{ s.pub }}" hint-size="412,892"></dc-import>
+      </div>
+    </div>
+  </sc-for>
+  <div style="flex-basis:100%;font-size:20px;font-weight:800;color:#1A1A1A;padding-top:24px">Marketplace — Visiteur, Vendeur, Livreur</div>
+  <sc-for list="{{ roleScreens }}" as="r" hint-placeholder-count="6">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <div style="font-size:14px;font-weight:700;color:#1A1A1A">{{ r.label }}</div>
+      <div style="width:412px;height:892px;overflow:hidden;border-radius:36px;position:relative;background:#F2F0EA">
+        <dc-import name="MarketRolesPhone" screen="{{ r.key }}" hint-size="412,892"></dc-import>
+      </div>
+    </div>
+  </sc-for>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  screensData = [
+    { key: 'home', label: 'Accueil', tab: 'home' },
+    { key: 'extracteur', label: 'Extracteur', tab: 'extracteur' },
+    { key: 'offres', label: 'Offres', tab: 'offres' },
+    { key: 'search', label: 'Recherche', tab: 'search' },
+    { key: 'chat', label: 'Messages', tab: 'chat' },
+    { key: 'chatDetail', label: 'Conversation (Support RH)', tab: 'chat', chatId: '1' },
+    { key: 'jobDetail', label: 'Fiche offre', tab: 'home', jobId: '1' },
+    { key: 'menu', label: 'Menu profil', tab: 'home', menuOpen: 'true' },
+    { key: 'outils', label: 'Fonctionnalités', tab: 'outils' },
+    { key: 'candidature', label: 'Candidature Spontanée', tab: 'candidature' },
+    { key: 'marketplace', label: 'Marketplace', tab: 'marketplace' },
+    { key: 'marketArticle', label: 'Marketplace — Article', tab: 'marketplace', productId: '1' },
+    { key: 'marketSearch', label: 'Marketplace — Recherche', tab: 'marketplace', mkSearch: 'true' },
+    { key: 'marketPub1', label: 'Publier — Étape 1 Catégorie', tab: 'marketplace', pub: '1' },
+    { key: 'marketPub2', label: 'Publier — Étape 2 Détails', tab: 'marketplace', pub: '2' },
+    { key: 'marketAround', label: 'Marketplace — Autour de moi', tab: 'marketplace', around: 'true' },
+    { key: 'marketMedia', label: 'Marketplace — Photos & vidéo', tab: 'marketplace', productId: '1', mediaViewer: 'true' },
+    { key: 'ob_univers', label: 'Onboarding — Bienvenue', tab: 'onboarding', obStep: 'univers' },
+    { key: 'ob_document', label: 'Onboarding — Choix du document', tab: 'onboarding', obStep: 'document' },
+    { key: 'ob_role', label: 'Onboarding — Rôle Marketplace', tab: 'onboarding', obStep: 'role' },
+    { key: 'ob_visiteur', label: 'Onboarding — Profil express', tab: 'onboarding', obStep: 'visiteur' },
+    { key: 'ob_vendeur', label: 'Onboarding — Infos vendeur', tab: 'onboarding', obStep: 'vendeur' },
+    { key: 'marketShop', label: 'Marketplace — Ma boutique', tab: 'marketplace', shopOpen: 'true' },
+    { key: 'shopService', label: 'Boutique — Service', tab: 'marketplace', shopOpen: 'true', shopTab: 'service' },
+    { key: 'shopEtab', label: 'Boutique — Établissement', tab: 'marketplace', shopOpen: 'true', shopTab: 'etab' },
+    { key: 'shopMenu', label: 'Boutique — Réglages', tab: 'marketplace', shopOpen: 'true', shopMenu: 'true' },
+    { key: 'shopEdit', label: 'Boutique — Modifier le profil', tab: 'marketplace', shopOpen: 'true', shopEdit: 'true' },
+    { key: 'mkVisitor', label: 'Marketplace — Profil visiteur', tab: 'marketplace', vp: 'true' },
+    { key: 'mkVisitorEdit', label: 'Marketplace — Modifier profil visiteur', tab: 'marketplace', vp: 'edit' },
+    { key: 'mkMessages', label: 'Marketplace — Discussions', tab: 'marketplace', mkMsg: 'true' },
+    { key: 'marketChat', label: 'Marketplace — Discussion vendeur', tab: 'marketplace', productId: '1', sellerChat: 'true' },
+    { key: 'admin', label: 'Profil — Documents', tab: 'admin' },
+    { key: 'profilFonc', label: 'Profil — Fonctionnalités', tab: 'admin', adminTab: 'fonctionnalites' },
+    { key: 'profilDoc', label: 'Profil — Visionneuse PDF', tab: 'admin', docId: '1' },
+    { key: 'profilEdit', label: 'Modifier infos — À propos', tab: 'admin', adminTab: 'apropos', editPage: 'true' },
+    { key: 'profilParam', label: 'Modifier infos — Paramètres', tab: 'admin', adminTab: 'parametres', editPage: 'true' },
+    { key: 'notifs', label: 'Notifications', tab: 'home', notifsOpen: 'true' },
+    { key: 'login', label: 'Connexion', tab: 'auth', authScreen: 'login' },
+    { key: 'authOtp', label: 'Connexion — Code SMS', tab: 'auth', authScreen: 'otp' },
+    { key: 'authEmail', label: 'Connexion — E-mail / Google', tab: 'auth', authScreen: 'email' },
+    { key: 'ficheEntreprise', label: "Fiche entreprise", tab: 'candidature', companyId: '1' },
+    { key: 'profilApropos', label: 'Profil — À propos', tab: 'admin', adminSection: 'intro' },
+    { key: 'profilInfosPerso', label: 'Profil — Infos perso', tab: 'admin', adminSection: 'infoPerso' },
+    { key: 'profilLangues', label: 'Profil — Langues', tab: 'admin', adminSection: 'langues' },
+    { key: 'profilExperiences', label: 'Profil — Expériences', tab: 'admin', adminSection: 'experiences' },
+    { key: 'profilFormation', label: 'Profil — Formation', tab: 'admin', adminSection: 'formation' },
+    { key: 'profilCompetences', label: 'Profil — Compétences', tab: 'admin', adminSection: 'competences' },
+    { key: 'profilInterets', label: "Profil — Centres d'intérêt", tab: 'admin', adminSection: 'interets' },
+    { key: 'profilCoord', label: 'Profil — Coordonnées', tab: 'admin', adminSection: 'coordonnees' },
+    { key: 'profilConf', label: 'Profil — Confidentialité', tab: 'admin', adminSection: 'confidentialite' },
+    { key: 'profilSecu', label: 'Profil — Sécurité & Connexion', tab: 'admin', adminSection: 'securite' },
+    { key: 'motDePasseOublie', label: 'Mot de passe oublié', tab: 'auth', authScreen: 'forgot' },
+    { key: 'inscription', label: 'Inscription', tab: 'auth', authScreen: 'signup' },
+  ];
+
+  renderVals() {
+    const R = [['v_profil','Visiteur — Profil'],['v_hub','Visiteur — À propos'],['v_market','Visiteur — Marketplace (actions rapides)'],['v_seller1','Devenir Vendeur — Étape 1 Identité'],['v_seller2','Devenir Vendeur — Étape 2 Boutique'],['v_courier','Service — Devenir livreur'],['v_courier_wait','Service — Devenir livreur (en attente)'],['v_orders','Mes commandes (acheteur)'],['v_track','Suivi de livraison'],['v_track_done','Suivi — Livraison déclarée'],['v_settings','Réglages (visiteur)'],['s_profil','Vendeur — Profil'],['s_shop','Vendeur — Aperçu boutique'],['s_shop_service','Vendeur — Boutique · Service'],['s_shop_etab','Vendeur — Boutique · Établissement'],['s_dash','Vendeur — Tableau de bord'],['s_ads','Vendeur — Mes annonces'],['s_publish','Vendeur — Publier un article'],['s_edit',"Vendeur — Modifier l'article"],['s_orders','Vendeur — Commandes reçues'],['s_settings','Réglages (vendeur)'],['d_active','Livreur — Livraisons en cours'],['d_available','Livreur — Livraisons disponibles']];
+    return { screens: this.screensData, roleScreens: R.map(([key, label]) => ({ key, label })) };
+  }
+}
+</script>
+</body>
+</html>

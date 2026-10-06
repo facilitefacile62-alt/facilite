@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>body{margin:0} a{color:#047857} a:hover{color:#065F46}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;align-items:flex-start;gap:36px;background:#e7e4de;padding:48px;box-sizing:border-box;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
+  <sc-for list="{{ screens }}" as="r" hint-placeholder-count="6">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <div style="font-size:14px;font-weight:700;color:#1A1A1A">{{ r.label }}</div>
+      <div style="width:412px;height:892px;overflow:hidden;border-radius:36px;position:relative;background:#F2F0EA">
+        <dc-import name="MarketRolesPhone" screen="{{ r.key }}" hint-size="412,892"></dc-import>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const R = [['v_profil','Visiteur — Profil'],['v_hub','Visiteur — À propos'],['v_market','Visiteur — Marketplace (actions rapides)'],['v_seller1','Devenir Vendeur — Étape 1 Identité'],['v_seller2','Devenir Vendeur — Étape 2 Boutique'],['v_courier','Service — Devenir livreur'],['v_courier_wait','Service — Devenir livreur (en attente)'],['v_orders','Mes commandes (acheteur)'],['v_track','Suivi de livraison'],['v_track_done','Suivi — Livraison déclarée'],['v_settings','Réglages (visiteur)'],['s_profil','Vendeur — Profil'],['s_shop','Vendeur — Aperçu boutique'],['s_shop_service','Vendeur — Boutique · Service'],['s_shop_etab','Vendeur — Boutique · Établissement'],['s_dash','Vendeur — Tableau de bord'],['s_ads','Vendeur — Mes annonces'],['s_publish','Vendeur — Publier un article'],['s_edit',"Vendeur — Modifier l'article"],['s_orders','Vendeur — Commandes reçues'],['s_settings','Réglages (vendeur)'],['d_active','Livreur — Livraisons en cours'],['d_available','Livreur — Livraisons disponibles']];
+    return { screens: R.map(([key, label]) => ({ key, label })) };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0} a{color:#047857} a:hover{color:#065F46}</style>
+</helmet>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#F2F0EA;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1A1A1A;overflow:hidden">
+
+<sc-if value="{{ hasTop }}" hint-placeholder-val="{{ true }}">
+  <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 14px;background:#e3dbcc;border-bottom:1px solid rgba(0,0,0,0.08)">
+    <div onClick="{{ back }}" style="width:40px;height:40px;border-radius:20px;background:rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" style-active="background:rgba(0,0,0,0.14)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#1A1A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:16px;font-weight:800;color:#1A1A1A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ topTitle }}</div>
+      <sc-if value="{{ topSub }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;font-weight:700;color:#047857">{{ topSub }}</div></sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden">
+
+<sc-if value="{{ isProfil }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Profil" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+    <div style="background:#fff;border-radius:18px;border:1px solid rgba(0,0,0,0.06);padding:16px;display:flex;align-items:center;gap:14px">
+      <div style="width:60px;height:60px;border-radius:30px;background:#D9D4C7;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:18px;font-weight:800">{{ fullName }}</span>
+          <sc-if value="{{ isVisitor }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;font-weight:800;letter-spacing:0.04em;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;border-radius:100px;padding:2px 8px">VISITEUR</span></sc-if>
+          <sc-if value="{{ isVendor }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:800;letter-spacing:0.04em;color:#047857;background:#D1FAE5;border:1px solid #A7F3D0;border-radius:100px;padding:2px 8px">BOUTIQUE</span></sc-if>
+        </div>
+        <div style="font-size:13px;color:rgba(0,0,0,0.5);margin-top:3px">+221 77 140 08 32</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:18px;border:1px solid rgba(0,0,0,0.06);overflow:hidden">
+      <div onClick="{{ goShopRow }}" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;cursor:pointer" style-hover="background:#F7F7F5">
+        <div style="width:36px;height:36px;border-radius:10px;background:#D7F2EA;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🏪</div>
+        <div style="flex:1;font-size:14.5px;font-weight:700">Ma boutique</div>
+        <span style="font-size:13px;font-weight:800;color:#047857">{{ shopRowLabel }}</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <sc-for list="{{ profilRows }}" as="r" hint-placeholder-count="4">
+        <div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-top:1px solid rgba(0,0,0,0.05);cursor:pointer" style-hover="background:#F7F7F5">
+          <div style="width:36px;height:36px;border-radius:10px;background:#F1F2EE;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">{{ r.icon }}</div>
+          <div style="flex:1;font-size:14.5px;font-weight:700">{{ r.label }}</div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isHub }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="À propos visiteur" style="padding:12px;display:flex;flex-direction:column;gap:12px">
+    <div style="background:#fff;border-radius:20px;border:1px solid rgba(0,0,0,0.06);overflow:hidden">
+      <div style="height:110px;background:repeating-linear-gradient(135deg,#DDD7CA 0 10px,#E6E1D6 10px 20px);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:11px;color:rgba(0,0,0,0.45)">bannière</div>
+      <div style="padding:0 16px 16px">
+        <div style="width:68px;height:68px;border-radius:34px;background:#D9D4C7;margin-top:-34px;box-shadow:0 0 0 3px #fff"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="font-size:19px;font-weight:800">{{ fullName }}</span>
+          <span style="font-size:10px;font-weight:800;letter-spacing:0.04em;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;border-radius:100px;padding:2px 8px">VISITEUR</span>
+        </div>
+        <div style="font-size:13px;color:rgba(0,0,0,0.6);margin-top:8px;line-height:1.45">Boutique officielle partenaire sur Facilité Sénégal</div>
+        <div onClick="{{ goSeller1 }}" style="margin-top:16px;min-height:60px;border-radius:14px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:12px;box-sizing:border-box;background:#10B981;border:1.5px solid #10B981;cursor:pointer" style-active="transform:scale(0.98)">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏪</div>
+          <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:#fff">Devenir Vendeur</div><div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:2px">Créez votre boutique en 2 étapes</div></div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <div style="flex:1;min-height:44px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer" style-hover="background:#F7F7F5">❔ Foire aux questions</div>
+          <div onClick="{{ goSettings }}" style="flex:1;min-height:44px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer" style-hover="background:#F7F7F5">⚙ Réglages</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isMarket }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Marketplace actions rapides" style="display:flex;flex-direction:column">
+    <div style="padding:12px 14px 4px">
+      <div style="height:44px;border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;gap:8px;padding:0 14px;font-size:14px;color:rgba(0,0,0,0.4)">🔍 Rechercher un article, une boutique…</div>
+    </div>
+    <div style="display:flex;gap:8px;padding:10px 14px;overflow-x:auto">
+      <div onClick="{{ goSeller1 }}" style="flex-shrink:0;min-height:40px;padding:0 14px;border-radius:100px;background:#D1FAE5;border:1px solid #A7F3D0;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:#047857;cursor:pointer">🏪 Devenir Vendeur</div>
+      <div onClick="{{ goOrders }}" style="flex-shrink:0;min-height:40px;padding:0 14px;border-radius:100px;background:#fff;border:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:#1A1A1A;cursor:pointer">📦 Mes commandes</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:6px 14px 16px">
+      <sc-for list="{{ products }}" as="p" hint-placeholder-count="4">
+        <div style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,0.06)">
+          <div style="aspect-ratio:1/1;background:repeating-linear-gradient(135deg,#DDD7CA 0 10px,#E6E1D6 10px 20px);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:10.5px;color:rgba(0,0,0,0.45)">photo produit</div>
+          <div style="padding:8px 10px 10px">
+            <div style="font-size:12.5px;font-weight:700;line-height:1.3;height:32px;overflow:hidden">{{ p.title }}</div>
+            <div style="font-size:14px;font-weight:900;margin-top:4px">{{ p.price }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isSeller1 }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Devenir Vendeur étape 1" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:6px;margin-bottom:8px"><div style="flex:1;height:5px;border-radius:3px;background:#10B981"></div><div style="flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,0.1)"></div></div>
+    <div style="font-size:13px;font-weight:700">Prénom*</div>
+    <input value="{{ prenom }}" onChange="{{ setPrenom }}" placeholder="Votre prénom" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Nom*</div>
+    <input value="{{ nom }}" onChange="{{ setNom }}" placeholder="Votre nom" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Téléphone (WhatsApp)</div>
+    <input value="{{ tel }}" onChange="{{ setTel }}" inputMode="tel" placeholder="+221 77 000 00 00" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">E-mail <span style="font-weight:500;color:rgba(0,0,0,0.45)">(facultatif)</span></div>
+    <input value="{{ mail }}" onChange="{{ setMail }}" inputMode="email" placeholder="nom@exemple.com" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div onClick="{{ goSeller2 }}" style="{{ continueStyle }}">Continuer →</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isSeller2 }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Devenir Vendeur étape 2" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:6px;margin-bottom:8px"><div style="flex:1;height:5px;border-radius:3px;background:#10B981"></div><div style="flex:1;height:5px;border-radius:3px;background:#10B981"></div></div>
+    <div style="font-size:13px;font-weight:700">Nom de la boutique</div>
+    <input value="{{ shopName }}" onChange="{{ setShopName }}" placeholder="Ex. Moïse Couture" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="margin-top:8px;background:#fff;border:1.5px dashed #34D399;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:10px;background:#D7F2EA;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📍</div>
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800">Positionner ma boutique</div><div style="font-size:12px;color:rgba(0,0,0,0.5);margin-top:1px">{{ gpsSub }}</div></div>
+      </div>
+      <div onClick="{{ startGps }}" style="{{ gpsBtnStyle }}">{{ gpsLabel }}</div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Ville</div>
+    <input value="{{ city }}" onChange="{{ setCity }}" placeholder="Ex. Dakar" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div onClick="{{ saveShop }}" style="margin-top:18px;min-height:56px;border-radius:14px;background:#0F172A;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:800;color:#fff;cursor:pointer" style-active="transform:scale(0.98)">Enregistrer les modifications</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isCourier }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Devenir livreur" style="padding:16px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:13px;font-weight:700">Nom &amp; Prénom</div>
+    <input value="{{ fullName }}" placeholder="Votre nom complet" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Téléphone</div>
+    <input inputMode="tel" placeholder="+221 77 000 00 00" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Ville / Zone</div>
+    <input placeholder="Ex. Dakar, Pikine" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Véhicule</div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+      <sc-for list="{{ vehicles }}" as="v" hint-placeholder-count="4">
+        <div onClick="{{ v.pick }}" style="{{ v.style }}"><span style="font-size:18px">{{ v.icon }}</span><span>{{ v.label }}</span></div>
+      </sc-for>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Pièce d'identité <span style="font-weight:500;color:rgba(0,0,0,0.45)">(facultatif)</span></div>
+    <div style="min-height:72px;border:1.5px dashed rgba(0,0,0,0.2);border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;color:#374151;cursor:pointer">📎 Ajouter une photo ou un PDF</div>
+    <div onClick="{{ goCourierWait }}" style="margin-top:16px;min-height:56px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;cursor:pointer" style-active="transform:scale(0.98)">Envoyer ma demande</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isCourierWait }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Livreur en attente" style="padding:40px 22px;display:flex;flex-direction:column;align-items:center;text-align:center">
+    <div style="width:96px;height:96px;border-radius:48px;background:#FEF3C7;box-shadow:0 0 0 12px rgba(254,243,199,0.5);display:flex;align-items:center;justify-content:center;font-size:42px">⏳</div>
+    <div style="font-size:20px;font-weight:800;margin-top:28px;line-height:1.3;text-wrap:pretty">Votre demande est en cours de traitement</div>
+    <div style="font-size:13.5px;color:rgba(0,0,0,0.55);margin-top:10px;line-height:1.5;text-wrap:pretty">Nous vérifions vos informations. Vous recevrez une notification dès que votre compte livreur sera activé.</div>
+    <div style="margin-top:22px;font-size:11px;font-weight:800;letter-spacing:0.05em;color:#B45309;background:#FEF3C7;border:1px solid #FDE68A;border-radius:100px;padding:5px 12px">EN ATTENTE</div>
+    <div onClick="{{ goProfil }}" style="margin-top:28px;min-height:48px;padding:0 22px;border-radius:14px;border:1.5px solid rgba(0,0,0,0.12);background:#fff;display:flex;align-items:center;font-size:14px;font-weight:800;cursor:pointer">Retour au profil</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isOrders }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Mes commandes" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+    <sc-for list="{{ orderList }}" as="o" hint-placeholder-count="3">
+      <div style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.06);padding:12px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:12px">
+          <div style="width:64px;height:64px;border-radius:12px;background:repeating-linear-gradient(135deg,#DDD7CA 0 8px,#E6E1D6 8px 16px);flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:11.5px;color:rgba(0,0,0,0.45)">{{ o.meta }}</span><span style="{{ o.badgeStyle }}">{{ o.status }}</span></div>
+            <div style="font-size:14px;font-weight:800;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.title }}</div>
+            <div style="font-size:12.5px;color:rgba(0,0,0,0.55);margin-top:2px">{{ o.sub }}</div>
+          </div>
+        </div>
+        <sc-if value="{{ o.hasAction }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ o.act }}" style="{{ o.actStyle }}">{{ o.action }}</div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isTrack }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Suivi de livraison" style="display:flex;flex-direction:column">
+    <div style="position:relative;height:280px;background:repeating-linear-gradient(135deg,#DCE3D8 0 12px,#E5EBE1 12px 24px)">
+      <div style="position:absolute;left:12px;top:12px;font-family:monospace;font-size:11px;color:rgba(0,0,0,0.45)">carte — position du livreur</div>
+      <div style="position:absolute;left:46%;top:44%;width:22px;height:22px;border-radius:11px;background:#2563EB;border:4px solid #fff;box-shadow:0 0 0 10px rgba(37,99,235,0.18)"></div>
+      <div style="position:absolute;left:72%;top:70%;width:16px;height:16px;border-radius:8px;background:#10B981;border:3px solid #fff"></div>
+    </div>
+    <div style="margin:-22px 12px 14px;position:relative;background:#fff;border-radius:18px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 6px 20px rgba(0,0,0,0.08);padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:44px;height:44px;border-radius:22px;background:#D9D4C7;flex-shrink:0"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800">Moussa · Livreur</div><div style="font-size:12.5px;color:rgba(0,0,0,0.5)">🛵 Moto · CMD-1042</div></div>
+        <div style="width:44px;height:44px;border-radius:22px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">📞</div>
+      </div>
+      <div style="font-size:15px;font-weight:800;color:{{ trackColor }}">{{ trackStatus }}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ trackSteps }}" as="t" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;font-weight:{{ t.weight }};color:{{ t.color }}"><span style="width:10px;height:10px;border-radius:5px;background:{{ t.dot }};flex-shrink:0"></span>{{ t.label }}</div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ delivered }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ confirmReceived }}" style="min-height:56px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:800;color:#fff;cursor:pointer" style-active="transform:scale(0.98)">✓ J'ai bien reçu mon colis</div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Réglages" style="padding:12px 0 16px">
+    <sc-for list="{{ settingsGroups }}" as="g" hint-placeholder-count="3">
+      <div style="padding:6px 18px 6px;font-size:11.5px;font-weight:800;letter-spacing:0.06em;color:rgba(0,0,0,0.45)">{{ g.title }}</div>
+      <div style="margin:0 14px 12px;background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.06);overflow:hidden">
+        <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+          <div onClick="{{ r.act }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 14px;border-top:1px solid rgba(0,0,0,0.05);cursor:pointer;box-sizing:border-box" style-hover="background:#F7F7F5">
+            <div style="width:34px;height:34px;border-radius:10px;background:#F1F2EE;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">{{ r.icon }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:700;color:{{ r.color }}">{{ r.label }}</div>
+              <sc-if value="{{ r.sub }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:rgba(0,0,0,0.45);margin-top:1px">{{ r.sub }}</div></sc-if>
+            </div>
+            <sc-if value="{{ r.isToggle }}" hint-placeholder-val="{{ false }}"><div style="{{ r.track }}"><div style="{{ r.knob }}"></div></div></sc-if>
+            <sc-if value="{{ r.isExt }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 4H20V10M20 4L11 13M18 14V19C18 19.6 17.6 20 17 20H5C4.4 20 4 19.6 4 19V7C4 6.4 4.4 6 5 6H10" stroke="rgba(0,0,0,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+            <sc-if value="{{ r.isNav }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isShop }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Aperçu boutique" style="display:flex;flex-direction:column">
+    <div style="height:130px;background:repeating-linear-gradient(135deg,#DDD7CA 0 10px,#E6E1D6 10px 20px);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:11px;color:rgba(0,0,0,0.45)">bannière de la boutique</div>
+    <div style="padding:0 16px 14px;background:#fff;border-bottom:1px solid rgba(0,0,0,0.06)">
+      <div style="width:72px;height:72px;border-radius:36px;background:#D9D4C7;margin-top:-36px;box-shadow:0 0 0 3px #fff"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:19px;font-weight:800">{{ shopTitle }}</span>
+        <span style="font-size:10px;font-weight:800;letter-spacing:0.04em;color:#047857;background:#D1FAE5;border:1px solid #A7F3D0;border-radius:100px;padding:2px 8px">BOUTIQUE</span>
+      </div>
+      <div style="font-size:13px;color:rgba(0,0,0,0.55);margin-top:4px">📍 {{ shopCity }} · Mode &amp; accessoires</div>
+      <div onClick="{{ goDash }}" style="margin-top:12px;min-height:48px;border-radius:14px;background:#F3FBF7;border:1.5px solid #34D399;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;color:#1A1A1A;cursor:pointer">📊 Tableau de bord</div>
+    </div>
+    <div style="display:flex;gap:4px;margin:14px 12px 4px;background:#fff;border-radius:16px;padding:5px">
+      <div onClick="{{ tabArticle }}" style="{{ tabArticleStyle }}">ARTICLE</div>
+      <div onClick="{{ tabService }}" style="{{ tabServiceStyle }}">SERVICE</div>
+      <div onClick="{{ tabEtab }}" style="{{ tabEtabStyle }}">ÉTABLISSEMENT</div>
+    </div>
+    <sc-if value="{{ tabIsService }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:10px 12px 12px;background:#EFF5FF;border:1px solid #BFD3FB;border-radius:16px;padding:16px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:14px;font-weight:800">🛠 Métier / Prestation</span>
+          <sc-if value="{{ metierView }}" hint-placeholder-val="{{ true }}"><span onClick="{{ metierEdit }}" style="font-size:11.5px;font-weight:700;color:#2563EB;background:#DCE8FD;border-radius:7px;padding:5px 9px;cursor:pointer">✎ Modifier</span></sc-if>
+        </div>
+        <sc-if value="{{ metierView }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:17px;font-weight:800;color:#1D4ED8;margin-top:10px">{{ metierLabel }}</div>
+          <div style="font-size:13px;color:#374151;margin-top:6px">{{ metierDesc }}</div>
+        </sc-if>
+        <sc-if value="{{ metierEditing }}" hint-placeholder-val="{{ false }}">
+          <select value="{{ metierDraft }}" onChange="{{ setMetierDraft }}" style="margin-top:12px;height:48px;width:100%;border:1.5px solid #0B3D2A;border-radius:12px;padding:0 10px;font-size:14.5px;font-weight:700;font-family:inherit;background:#fff;outline:none">
+            <option value="">Choisissez votre métier</option>
+            <sc-for list="{{ metiers }}" as="m" hint-placeholder-count="5"><option value="{{ m }}">{{ m }}</option></sc-for>
+          </select>
+          <textarea value="{{ descDraft }}" onChange="{{ setDescDraft }}" placeholder="Spécialités, expérience, zone d'intervention…" style="margin-top:10px;min-height:70px;width:100%;box-sizing:border-box;border:1.5px solid #0B3D2A;border-radius:12px;padding:10px 12px;font-size:14px;font-family:inherit;resize:none;outline:none"></textarea>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <div onClick="{{ metierSave }}" style="flex:2;min-height:46px;border-radius:12px;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;cursor:pointer">Enregistrer</div>
+            <div onClick="{{ metierCancel }}" style="flex:1;min-height:46px;border-radius:12px;background:#F1F2F4;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#374151;cursor:pointer">Annuler</div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="margin:0 12px 12px;background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:16px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800"><span style="width:14px;height:14px;border-radius:7px;border:3px solid #10B981;box-sizing:border-box"></span>Disponibilité</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <div onClick="{{ dispoOn }}" style="{{ dispoOnStyle }}">⚡ Disponible maintenant</div>
+          <div onClick="{{ dispoOff }}" style="{{ dispoOffStyle }}">⏸ Indisponible</div>
+        </div>
+        <div onClick="{{ toggleSched }}" style="margin-top:10px;min-height:44px;border:1.5px dashed rgba(0,0,0,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;color:#6D28D9;cursor:pointer">📅 Programmer des horaires</div>
+        <sc-if value="{{ schedOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:12px;border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:4px 10px;background:#FAFAFA">
+            <sc-for list="{{ schedDays }}" as="d" hint-placeholder-count="7">
+              <div style="display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid rgba(0,0,0,0.05)">
+                <span style="width:76px;font-size:13.5px;font-weight:700">{{ d.day }}</span>
+                <span style="flex:1;font-size:13px;color:{{ d.color }}">{{ d.hours }}</span>
+                <div onClick="{{ d.toggle }}" style="{{ d.track }}"><div style="{{ d.knob }}"></div></div>
+              </div>
+            </sc-for>
+            <div onClick="{{ toggleSched }}" style="margin:10px 0 6px;min-height:44px;border-radius:12px;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;cursor:pointer">Enregistrer les horaires</div>
+          </div>
+        </sc-if>
+      </div>
+      <div onClick="{{ goCourier }}" style="margin:0 12px 16px;min-height:60px;border-radius:14px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:12px;background:#F3FBF7;border:1.5px solid #34D399;cursor:pointer">
+        <div style="width:40px;height:40px;border-radius:10px;background:#D7F2EA;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🛵</div>
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800">Devenir livreur</div><div style="font-size:12px;color:rgba(0,0,0,0.45);margin-top:2px">Livrez les commandes autour de vous</div></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{ tabIsEtab }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:10px 12px 12px;background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:16px;padding:16px">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:0.05em;color:#4B5563">À PROPOS DE {{ shopTitleUpper }}</div>
+        <div style="font-size:13.5px;color:#374151;line-height:1.5;margin-top:8px">Boutique officielle partenaire sur Facilité Sénégal · Vente d'articles &amp; livraison express</div>
+        <div style="height:1px;background:rgba(0,0,0,0.07);margin:14px 0"></div>
+        <div style="font-size:13.5px;font-weight:800">Catégorie de l'établissement :</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span style="font-size:11px;font-weight:800;color:#047857;background:#D1FAE5;border-radius:7px;padding:5px 9px">NON RENSEIGNÉE</span><span style="font-size:12px;color:#047857;background:#ECFDF5;border-radius:7px;padding:4px 7px;cursor:pointer">✎</span></div>
+      </div>
+      <div style="margin:0 12px 12px;background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:16px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800"><span style="width:14px;height:14px;border-radius:7px;border:3px solid #10B981;box-sizing:border-box"></span>Disponibilité</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <div onClick="{{ dispoOn }}" style="{{ dispoOnStyle }}">⚡ Disponible maintenant</div>
+          <div onClick="{{ dispoOff }}" style="{{ dispoOffStyle }}">⏸ Indisponible</div>
+        </div>
+        <div onClick="{{ toggleSched }}" style="margin-top:10px;min-height:44px;border:1.5px dashed rgba(0,0,0,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;color:#6D28D9;cursor:pointer">📅 Programmer des horaires</div>
+        <sc-if value="{{ schedOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:12px;border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:4px 10px;background:#FAFAFA">
+            <sc-for list="{{ schedDays }}" as="d" hint-placeholder-count="7">
+              <div style="display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid rgba(0,0,0,0.05)">
+                <span style="width:76px;font-size:13.5px;font-weight:700">{{ d.day }}</span>
+                <span style="flex:1;font-size:13px;color:{{ d.color }}">{{ d.hours }}</span>
+                <div onClick="{{ d.toggle }}" style="{{ d.track }}"><div style="{{ d.knob }}"></div></div>
+              </div>
+            </sc-for>
+            <div onClick="{{ toggleSched }}" style="margin:10px 0 6px;min-height:44px;border-radius:12px;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;cursor:pointer">Enregistrer les horaires</div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="margin:0 12px 16px;background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:16px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:7px;background:#8B5CF6;flex-shrink:0"></span><span style="flex:1;font-size:14px;font-weight:800">Horaires d'ouverture</span><span onClick="{{ toggleSched }}" style="font-size:11.5px;font-weight:700;color:#2563EB;background:#E8F0FE;border-radius:7px;padding:5px 9px;cursor:pointer">📅 Programmer</span><span style="font-size:10.5px;color:rgba(0,0,0,0.4)">Africa/Dakar</span></div>
+        <div style="margin-top:12px;border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:4px 6px;background:#FAFAFA">
+          <sc-for list="{{ schedDays }}" as="d" hint-placeholder-count="7">
+            <div style="{{ d.rowStyle }}"><span style="font-size:13.5px;font-weight:700">{{ d.day }}</span><sc-if value="{{ d.today }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:800;color:#2563EB;background:#E8F0FE;border-radius:5px;padding:2px 6px">AUJOURD'HUI</span></sc-if><span style="margin-left:auto;font-size:13px;font-weight:{{ d.weight }};color:{{ d.color }}">{{ d.hours }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ tabIsArticle }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px 14px 16px">
+      <sc-for list="{{ ads }}" as="p" hint-placeholder-count="4">
+        <div style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,0.06)">
+          <div style="aspect-ratio:1/1;background:repeating-linear-gradient(135deg,#DDD7CA 0 10px,#E6E1D6 10px 20px)"></div>
+          <div style="padding:8px 10px 10px"><div style="font-size:12.5px;font-weight:700;line-height:1.3;height:32px;overflow:hidden">{{ p.title }}</div><div style="font-size:14px;font-weight:900;margin-top:4px">{{ p.price }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isDash }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Tableau de bord vendeur" style="padding:12px 14px 16px">
+    <div style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.06);overflow:hidden">
+      <sc-for list="{{ dashMenu }}" as="m" hint-placeholder-count="12">
+        <div onClick="{{ m.go }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border-top:1px solid rgba(0,0,0,0.05);cursor:pointer" style-hover="background:#F7F7F5">
+          <div style="width:34px;height:34px;border-radius:10px;background:#F1F2EE;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">{{ m.icon }}</div>
+          <div style="flex:1;font-size:14px;font-weight:700">{{ m.label }}</div>
+          <sc-if value="{{ m.count }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;font-weight:800;color:#047857;background:#D1FAE5;border-radius:100px;padding:2px 8px">{{ m.count }}</span></sc-if>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isAds }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Mes annonces" style="padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="font-size:14px;font-weight:800">{{ adsCount }} articles publiés</div>
+      <div onClick="{{ goPublish }}" style="min-height:44px;padding:0 14px;border-radius:12px;background:#10B981;display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:800;color:#fff;cursor:pointer">+ Publier un article</div>
+    </div>
+    <sc-for list="{{ ads }}" as="p" hint-placeholder-count="4">
+      <div style="background:#fff;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:10px;display:flex;align-items:center;gap:12px">
+        <div style="width:56px;height:56px;border-radius:10px;background:repeating-linear-gradient(135deg,#DDD7CA 0 8px,#E6E1D6 8px 16px);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.title }}</div><div style="font-size:13px;font-weight:900;margin-top:3px">{{ p.price }}</div><div style="font-size:11.5px;color:rgba(0,0,0,0.45);margin-top:2px">{{ p.meta }}</div></div>
+        <div onClick="{{ goEdit }}" style="min-height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);display:flex;align-items:center;font-size:12.5px;font-weight:800;cursor:pointer">✎ Modifier</div>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isPublish }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Publier / Modifier article" style="padding:12px 14px 18px;display:flex;flex-direction:column;gap:8px">
+    <div style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.06);padding:10px;display:flex;gap:12px;align-items:center">
+      <div style="position:relative;width:84px;height:84px;border-radius:12px;background:repeating-linear-gradient(135deg,#DDD7CA 0 8px,#E6E1D6 8px 16px);flex-shrink:0">
+        <span style="position:absolute;top:6px;left:6px;display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;color:#fff;background:#DC2626;border-radius:6px;padding:2px 6px"><span style="width:6px;height:6px;border-radius:3px;background:#fff"></span>LIVE</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:rgba(0,0,0,0.45)">Aperçu · {{ pCat }}</div>
+        <div style="font-size:17px;font-weight:900;margin-top:2px">{{ pPriceLabel }}</div>
+        <div style="font-size:13.5px;font-weight:700;margin-top:2px;line-height:1.3;overflow:hidden;max-height:36px">{{ pTitleLabel }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <div style="width:72px;height:72px;border-radius:12px;border:1.5px dashed rgba(0,0,0,0.2);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#374151;cursor:pointer;flex-shrink:0"><span style="font-size:18px">＋</span>Photos</div>
+      <div style="flex:1;min-height:72px;border-radius:14px;background:#F3FBF7;border:1.5px solid #34D399;display:flex;align-items:center;gap:10px;padding:0 12px;cursor:pointer">
+        <div style="width:36px;height:36px;border-radius:10px;background:#D7F2EA;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📷</div>
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800">Scanner avec l'IA</div><div style="font-size:11.5px;color:rgba(0,0,0,0.45)">Remplit la fiche depuis une photo</div></div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Titre</div>
+    <input value="{{ pTitle }}" onChange="{{ setPTitle }}" placeholder="Ex. Tunique homme en lin" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:6px">
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:13px;font-weight:700">Catégorie</div>
+        <select value="{{ pCat }}" onChange="{{ setPCat }}" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 10px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%">
+          <option>Mode</option><option>Beauté</option><option>Maison</option><option>Électronique</option><option>Alimentation</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:13px;font-weight:700">Quantité</div>
+        <input value="{{ pQty }}" onChange="{{ setPQty }}" inputMode="numeric" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Prix (FCFA)</div>
+    <input value="{{ pPrice }}" onChange="{{ setPPrice }}" inputMode="numeric" placeholder="Ex. 10000" style="height:52px;border:1.5px solid #0B3D2A;border-radius:14px;padding:0 14px;font-size:15px;font-family:inherit;background:#fff;outline:none;box-sizing:border-box;width:100%"></input>
+    <div style="font-size:13px;font-weight:700;margin-top:6px">Description</div>
+    <textarea value="{{ pDesc }}" onChange="{{ setPDesc }}" placeholder="Matière, taille, état…" style="min-height:90px;border:1.5px solid #0B3D2A;border-radius:14px;padding:12px 14px;font-size:14.5px;font-family:inherit;background:#fff;outline:none;resize:none;box-sizing:border-box;width:100%"></textarea>
+    <sc-if value="{{ isEditMode }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <div onClick="{{ goAdsBack }}" style="flex:1;min-height:56px;border-radius:14px;border:1.5px solid #FCA5A5;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;color:#DC2626;cursor:pointer">🗑 Supprimer</div>
+        <div onClick="{{ goAdsBack }}" style="flex:2;min-height:56px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;cursor:pointer">✓ Enregistrer</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isNewMode }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ goAdsBack }}" style="margin-top:12px;min-height:56px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;cursor:pointer">Publier l'article</div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isSOrders }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Commandes reçues" style="padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px">
+    <sc-for list="{{ sOrders }}" as="o" hint-placeholder-count="4">
+      <div style="background:#fff;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:12px;display:flex;align-items:center;gap:12px">
+        <div style="width:44px;height:44px;border-radius:22px;background:#D9D4C7;flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:800">{{ o.buyer }}</div>
+          <div style="font-size:12.5px;color:rgba(0,0,0,0.55);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ o.title }}</div>
+          <div style="font-size:11.5px;color:rgba(0,0,0,0.45);margin-top:2px">{{ o.meta }}</div>
+        </div>
+        <span style="{{ o.badgeStyle }}">{{ o.status }}</span>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isActive }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Mes livraisons en cours" style="padding:12px 14px 16px;display:flex;flex-direction:column;gap:12px">
+    <sc-for list="{{ activeList }}" as="d" hint-placeholder-count="2">
+      <div style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.06);padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:12px;font-weight:800;color:rgba(0,0,0,0.45)">{{ d.id }} · {{ d.fee }}</span><span style="{{ d.badgeStyle }}">{{ d.stepLabel }}</span></div>
+        <div style="font-size:14.5px;font-weight:800">{{ d.article }}</div>
+        <div style="font-size:12.5px;color:rgba(0,0,0,0.55)">Retrait : {{ d.pickup }}</div>
+        <div style="background:#F7F8F6;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:11px;font-weight:800;letter-spacing:0.05em;color:#047857">ACHETEUR</div>
+          <div style="font-size:13.5px;font-weight:800">{{ d.buyer }}</div>
+          <div style="font-size:13px;color:#374151">📞 {{ d.phone }}</div>
+          <div style="font-size:13px;color:#374151">📍 {{ d.address }}</div>
+        </div>
+        <sc-if value="{{ d.hasAction }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ d.next }}" style="min-height:52px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:800;color:#fff;cursor:pointer" style-active="transform:scale(0.98)">{{ d.action }}</div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isAvailable }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Livraisons disponibles" style="padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px">
+    <sc-for list="{{ availList }}" as="a" hint-placeholder-count="3">
+      <div style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.06);padding:12px;display:flex;align-items:center;gap:12px">
+        <div style="width:58px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-size:16px;font-weight:900;color:#047857">{{ a.dist }}</span><span style="font-size:10.5px;color:rgba(0,0,0,0.45)">de vous</span></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.article }}</div>
+          <div style="font-size:12px;color:rgba(0,0,0,0.55);margin-top:2px">{{ a.route }}</div>
+          <div style="font-size:12.5px;font-weight:800;margin-top:3px">{{ a.fee }}</div>
+        </div>
+        <div onClick="{{ a.claim }}" style="{{ a.btnStyle }}">{{ a.btn }}</div>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+</div>
+
+<div style="flex-shrink:0;background:#e3dbcc;border-top:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;padding:6px 4px 12px">
+  <div onClick="{{ goMarket }}" style="flex:1;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:{{ navHome }}">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+    <span style="font-size:10.5px;font-weight:600">Accueil</span>
+  </div>
+  <div style="flex:1;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:rgba(0,0,0,0.6)">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M12 21C12 21 5 14.5 5 9.5C5 5.9 8.1 3 12 3C15.9 3 19 5.9 19 9.5C19 14.5 12 21 12 21Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><circle cx="12" cy="9.5" r="2.5" stroke="currentColor" stroke-width="1.7"></circle></svg>
+    <span style="font-size:10.5px;font-weight:600;white-space:nowrap">Autour de moi</span>
+  </div>
+  <div onClick="{{ goPub }}" style="flex:1;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:{{ navPub }}">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.7"></rect><path d="M12 8.5V15.5M8.5 12H15.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+    <span style="font-size:10.5px;font-weight:600">Publier</span>
+  </div>
+  <div style="flex:1;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:rgba(0,0,0,0.6)">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M12 4C7.6 4 4 7.1 4 11C4 12.9 4.9 14.6 6.3 15.9L5.5 20L9.6 18.2C10.4 18.4 11.2 18.5 12 18.5C16.4 18.5 20 15.4 20 11.3C20 7.1 16.4 4 12 4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+    <span style="font-size:10.5px;font-weight:600">Messages</span>
+  </div>
+  <div onClick="{{ goProfil }}" style="flex:1;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:{{ navProf }}">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.8" stroke="currentColor" stroke-width="1.7"></circle><path d="M4.5 20.5C5.5 16.3 8.4 14.5 12 14.5C15.6 14.5 18.5 16.3 19.5 20.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+    <span style="font-size:10.5px;font-weight:600">Profil</span>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;v_profil&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;v_profil&quot;,&quot;v_hub&quot;,&quot;v_market&quot;,&quot;v_seller1&quot;,&quot;v_seller2&quot;,&quot;v_courier&quot;,&quot;v_courier_wait&quot;,&quot;v_orders&quot;,&quot;v_track&quot;,&quot;v_track_done&quot;,&quot;v_settings&quot;,&quot;s_profil&quot;,&quot;s_shop&quot;,&quot;s_dash&quot;,&quot;s_ads&quot;,&quot;s_publish&quot;,&quot;s_edit&quot;,&quot;s_orders&quot;,&quot;s_settings&quot;,&quot;d_active&quot;,&quot;d_available&quot;]}}">
+class Component extends DCLogic {
+  state = { hist: [], prenom: 'Wassa', nom: 'Diarra', tel: '', mail: '', shopName: '', city: '', gps: 0, vehicle: 'Moto', received: false, delivered: null, toggles: { visible: true, chat: false, comments: false }, steps: { 'LIV-208': 0, 'LIV-211': 1 }, claimed: {}, pTitle: null, pPrice: '', pCat: 'Mode', pQty: '1', pDesc: '' };
+  init() { const s = this.props.screen || 'v_profil'; return s === 'v_track_done' ? 'v_track' : s.startsWith('s_shop_') ? 's_shop' : s; }
+  cur() { return this.state.screen || this.init(); }
+  role() { return this.state.role || (this.init().startsWith('s_') ? 'vendeur' : 'visiteur'); }
+  go(k, extra = {}) { const from = this.cur(); this.setState(st => ({ ...extra, screen: k, hist: [...st.hist, from] })); }
+  back() { const h = [...this.state.hist]; const p = h.pop(); this.setState({ screen: p || (this.role() === 'vendeur' ? 's_profil' : 'v_profil'), hist: h }); }
+  badge(bg, c) { return `font-size:10.5px;font-weight:800;color:${c};background:${bg};border-radius:100px;padding:3px 9px;white-space:nowrap;flex-shrink:0`; }
+  toggle(k) { this.setState(st => ({ toggles: { ...st.toggles, [k]: !st.toggles[k] } })); }
+  row(icon, label, act, o = {}) { return { icon, label, act: act || (() => {}), sub: o.sub || '', color: o.color || '#1A1A1A', isToggle: !!o.tk, isExt: !!o.ext, isNav: !o.tk && !o.ext && !o.red,
+    track: o.tk ? `width:44px;height:26px;border-radius:13px;flex-shrink:0;position:relative;transition:background 0.2s;background:${this.state.toggles[o.tk] ? '#10B981' : 'rgba(0,0,0,0.18)'}` : '',
+    knob: o.tk ? `position:absolute;top:3px;left:${this.state.toggles[o.tk] ? 21 : 3}px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s` : '' }; }
+  renderVals() {
+    const st = this.state, s = this.cur(), role = role0(this), vendor = role === 'vendeur';
+    function role0(t) { return t.role(); }
+    const titles = { v_profil: ['Profil', ''], s_profil: ['Profil', ''], v_hub: ['À propos', ''], v_market: ['Marketplace', ''], v_seller1: ['Devenir Vendeur', 'Étape 1 sur 2 · Identité'], v_seller2: ['Devenir Vendeur', 'Étape 2 sur 2 · Boutique'], v_courier: ['Devenir livreur', 'Votre demande'], v_courier_wait: ['Devenir livreur', ''], v_orders: ['Mes commandes', ''], v_track: ['Suivi de livraison', 'CMD-1042'], v_settings: ['Réglages', ''], s_settings: ['Réglages', 'Boutique'], s_shop: ['Ma boutique', ''], s_dash: ['Tableau de bord', ''], s_ads: ['Mes annonces', ''], s_publish: ['Publier un article', ''], s_edit: ["Modifier l'article", ''], s_orders: ['Commandes reçues', ''], d_active: ['Mes livraisons en cours', 'Livreur actif'], d_available: ['Livraisons disponibles', 'Triées par distance'] };
+    const t = titles[s] || ['', ''];
+    const delivered = st.delivered ?? (this.props.screen === 'v_track_done');
+    const isEdit = s === 's_edit';
+    const pTitle = st.pTitle ?? (isEdit ? 'Tunique Homme Moderne Grise' : '');
+    const pPrice = st.pTitle == null && isEdit ? '10000' : st.pPrice;
+    const ok1 = st.prenom.trim() && st.nom.trim();
+    const pubScreens = ['s_publish', 's_edit', 'v_seller1', 'v_seller2'];
+    const veh = [['À pied', '🚶'], ['Vélo', '🚲'], ['Moto', '🛵'], ['Voiture', '🚗']];
+    const orders = [
+      { meta: 'CMD-1042 · 4 oct.', title: 'Tunique Homme Moderne Grise', sub: 'Moïse Couture · 10 000 FCFA', status: 'En livraison', badgeStyle: this.badge('#DBEAFE', '#1D4ED8'), hasAction: true, action: 'Suivre la livraison', act: () => this.go('v_track', { delivered: false }) },
+      st.received
+        ? { meta: 'CMD-1039 · 2 oct.', title: 'Crème Hydratante CINDYNAL', sub: 'facilite shop · 1 500 FCFA', status: 'Reçue', badgeStyle: this.badge('#D1FAE5', '#047857'), hasAction: false, action: '', act: () => {} }
+        : { meta: 'CMD-1039 · 2 oct.', title: 'Crème Hydratante CINDYNAL', sub: 'facilite shop · 1 500 FCFA', status: 'Livrée par le livreur', badgeStyle: this.badge('#FEF3C7', '#B45309'), hasAction: true, action: 'Confirmer la réception', act: () => this.go('v_track', { delivered: true }) },
+      { meta: 'CMD-1027 · 28 sept.', title: 'Sac en wax fait main', sub: 'Awa Créations · 7 500 FCFA', status: 'Reçue', badgeStyle: this.badge('#D1FAE5', '#047857'), hasAction: false, action: '', act: () => {} },
+    ].map(o => ({ ...o, actStyle: `min-height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;cursor:pointer;${o.action.startsWith('Confirmer') ? 'background:#10B981;color:#fff' : 'background:#F3FBF7;border:1.5px solid #34D399;color:#1A1A1A'}` }));
+    const stepsT = ['Commande confirmée', 'Article récupéré', 'En route vers vous', 'Livraison déclarée par le livreur'];
+    const done = delivered ? 4 : 3;
+    const go = (k, e) => () => this.go(k, e);
+    const visitorGroups = [
+      { title: 'COMPTE', rows: [this.row('👤', 'Informations personnelles'), this.row('🪪', 'Coordonnées')] },
+      { title: 'AIDE', rows: [this.row('❔', 'Foire aux questions'), this.row('🌐', 'Changer la langue', null, { sub: 'Français' })] },
+      { title: 'SÉCURITÉ', rows: [this.row('🛡', 'Confidentialité', () => window.open('https://ffacilite.com', '_blank'), { ext: true, sub: 'Page légale du site' }), this.row('🔒', 'Sécurité & Connexion'), this.row('↪', 'Se déconnecter', null, { red: true, color: '#DC2626' })] },
+    ];
+    const vendorGroups = [
+      { title: 'BOUTIQUE', rows: [this.row('🚀', 'Faire profit & Boost'), this.row('👥', 'Abonnés'), this.row('⭐', 'Avis clients')] },
+      { title: 'COMPTE', rows: [this.row('👤', 'Informations personnelles'), this.row('🪪', 'Coordonnées'), this.row('🚚', 'Contact & Livraison'), this.row('❔', 'Foire aux questions'), this.row('🌐', 'Langue', null, { sub: 'Français' })] },
+      { title: 'CONFIDENTIALITÉ', rows: [this.row('🛡', 'Confidentialité', () => this.toggle('visible'), { tk: 'visible', sub: 'Rendre ma boutique visible' }), this.row('💬', 'Désactiver le chat', () => this.toggle('chat'), { tk: 'chat' }), this.row('🗨', 'Désactiver les commentaires', () => this.toggle('comments'), { tk: 'comments' }), this.row('🔔', 'Gérer les notifications')] },
+      { title: 'SÉCURITÉ', rows: [this.row('🔒', 'Sécurité & Connexion'), this.row('↪', 'Se déconnecter', null, { red: true, color: '#DC2626' })] },
+    ];
+    const actions = ["J'ai récupéré l'article", 'Je démarre la livraison', 'Marquer comme livré'];
+    const stepLbl = [['À récupérer', '#FEF3C7', '#B45309'], ['Article récupéré', '#DBEAFE', '#1D4ED8'], ['En livraison', '#DBEAFE', '#1D4ED8'], ['Livrée', '#D1FAE5', '#047857']];
+    const active = [
+      { id: 'LIV-208', fee: '1 500 FCFA', article: 'Tunique Homme Moderne Grise', pickup: 'Moïse Couture, Pikine', buyer: 'Fatou Ndiaye', phone: '+221 77 412 33 08', address: 'Cité Keur Gorgui, villa 24, Dakar' },
+      { id: 'LIV-211', fee: '2 000 FCFA', article: 'Sac en wax fait main', pickup: 'Awa Créations, Médina', buyer: 'Ibrahima Sow', phone: '+221 78 220 19 45', address: 'Parcelles Assainies U15, Dakar' },
+    ].map(d => { const k = st.steps[d.id]; return { ...d, stepLabel: stepLbl[k][0], badgeStyle: this.badge(stepLbl[k][1], stepLbl[k][2]), hasAction: k < 3, action: actions[k] || '', next: () => this.setState(p => ({ steps: { ...p.steps, [d.id]: Math.min(3, p.steps[d.id] + 1) } })) }; });
+    const avail = [
+      { id: 'A1', dist: '0,8 km', article: 'Crème Hydratante CINDYNAL', route: 'facilite shop → Guinaw Rail', fee: '1 000 FCFA' },
+      { id: 'A2', dist: '1,6 km', article: 'Robe en bazin brodée', route: 'Sokhna Mode → Grand Yoff', fee: '1 500 FCFA' },
+      { id: 'A3', dist: '3,2 km', article: 'Ventilateur sur pied', route: 'Tech Plus → Ouakam', fee: '2 500 FCFA' },
+    ].map(a => { const c = !!st.claimed[a.id]; return { ...a, btn: c ? 'Réclamée ✓' : 'Réclamer', claim: () => !c && this.setState(p => ({ claimed: { ...p.claimed, [a.id]: true } })), btnStyle: `min-height:44px;padding:0 14px;border-radius:12px;display:flex;align-items:center;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;${c ? 'background:#D1FAE5;color:#047857' : 'background:#10B981;color:#fff'}` }; });
+    const ads = [
+      { title: 'Tunique Homme Moderne Grise', price: '10 000 FCFA', meta: '3 en stock · 128 vues' },
+      { title: 'Boubou brodé bleu nuit', price: '25 000 FCFA', meta: '1 en stock · 64 vues' },
+      { title: 'Chemise wax manches courtes', price: '8 500 FCFA', meta: '6 en stock · 210 vues' },
+      { title: 'Pantalon lin beige', price: '9 000 FCFA', meta: '4 en stock · 47 vues' },
+    ];
+    return {
+      back: () => this.back(),
+      hasTop: !['v_profil', 's_profil', 'v_market'].includes(s), topTitle: t[0], topSub: t[1],
+      isProfil: s === 'v_profil' || s === 's_profil', isVisitor: !vendor, isVendor: vendor,
+      fullName: `${st.prenom} ${st.nom}`.trim() || 'Wassa Diarra',
+      shopRowLabel: vendor ? 'Voir ma boutique' : 'Devenir Vendeur',
+      goShopRow: vendor ? go('s_shop') : go('v_seller1'),
+      profilRows: (vendor
+        ? [['📊', 'Tableau de bord', 's_dash'], ['📦', 'Commandes reçues', 's_orders'], ['🛵', 'Mes livraisons', 'd_active'], ['⚙', 'Réglages', 's_settings']]
+        : [['ℹ', 'À propos', 'v_hub'], ['📦', 'Mes commandes', 'v_orders'], ['⚙', 'Réglages', 'v_settings']]).map(([icon, label, k]) => ({ icon, label, go: go(k) })),
+      isHub: s === 'v_hub', isMarket: s === 'v_market', isSeller1: s === 'v_seller1', isSeller2: s === 'v_seller2',
+      isCourier: s === 'v_courier', isCourierWait: s === 'v_courier_wait', isOrders: s === 'v_orders', isTrack: s === 'v_track',
+      isSettings: s === 'v_settings' || s === 's_settings', isShop: s === 's_shop', isDash: s === 's_dash', isAds: s === 's_ads',
+      isPublish: s === 's_publish' || isEdit, isEditMode: isEdit, isNewMode: !isEdit, isSOrders: s === 's_orders', isActive: s === 'd_active', isAvailable: s === 'd_available',
+      goSeller1: go('v_seller1'), goSettings: go(vendor ? 's_settings' : 'v_settings'), goOrders: go('v_orders'), goCourier: go('v_courier'),
+      goCourierWait: go('v_courier_wait'), goDash: go('s_dash'), goPublish: go('s_publish', { pTitle: '', pPrice: '', pQty: '1', pDesc: '' }),
+      goEdit: go('s_edit', { pTitle: 'Tunique Homme Moderne Grise', pPrice: '10000', pCat: 'Mode', pQty: '3', pDesc: 'Tissu léger et respirant, coupe cintrée.' }),
+      goAdsBack: () => this.back(),
+      goMarket: () => this.go(vendor ? 's_shop' : 'v_market'),
+      goPub: () => this.go(vendor ? 's_publish' : 'v_seller1', vendor ? { pTitle: '', pPrice: '', pQty: '1', pDesc: '' } : {}),
+      goProfil: () => this.setState({ screen: vendor ? 's_profil' : 'v_profil', hist: [] }),
+      navHome: s === 'v_market' ? '#10B981' : 'rgba(0,0,0,0.6)',
+      navPub: pubScreens.includes(s) ? '#10B981' : 'rgba(0,0,0,0.6)',
+      navProf: s !== 'v_market' && !pubScreens.includes(s) ? '#10B981' : 'rgba(0,0,0,0.6)',
+      products: [{ title: 'Tunique Homme Moderne Grise', price: '10 000 FCFA' }, { title: 'Crème Hydratante CINDYNAL', price: '1 500 FCFA' }, { title: 'Sac en wax fait main', price: '7 500 FCFA' }, { title: 'Robe en bazin brodée', price: '18 000 FCFA' }],
+      prenom: st.prenom, nom: st.nom, tel: st.tel, mail: st.mail,
+      setPrenom: e => this.setState({ prenom: e.target.value }), setNom: e => this.setState({ nom: e.target.value }),
+      setTel: e => this.setState({ tel: e.target.value }), setMail: e => this.setState({ mail: e.target.value }),
+      continueStyle: `margin-top:18px;min-height:56px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;transition:opacity 0.2s;${ok1 ? 'cursor:pointer' : 'opacity:0.45;cursor:not-allowed'}`,
+      goSeller2: () => ok1 && this.go('v_seller2'),
+      shopName: st.shopName, city: st.city, setShopName: e => this.setState({ shopName: e.target.value }), setCity: e => this.setState({ city: e.target.value }),
+      gpsLabel: st.gps === 2 ? '✓ Position relevée' : st.gps === 1 ? 'Relevé en cours…' : '⌖ Démarrer le relevé',
+      gpsSub: st.gps === 2 ? '14.7645° N, 17.3660° O · précision 8 m' : 'Aidez les acheteurs proches à vous trouver',
+      gpsBtnStyle: `min-height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;cursor:pointer;${st.gps === 2 ? 'background:#D1FAE5;color:#047857' : 'background:#2563EB;color:#fff'}`,
+      startGps: () => { if (st.gps) return; this.setState({ gps: 1 }); setTimeout(() => this.setState({ gps: 2 }), 1800); },
+      saveShop: () => this.setState({ role: 'vendeur', screen: 's_shop', hist: ['s_profil'] }),
+      vehicles: veh.map(([label, icon]) => ({ label, icon, pick: () => this.setState({ vehicle: label }), style: `min-height:64px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:800;cursor:pointer;box-sizing:border-box;${st.vehicle === label ? 'background:#D1FAE5;border:1.5px solid #10B981;color:#047857' : 'background:#fff;border:1.5px solid rgba(0,0,0,0.12);color:#374151'}` })),
+      orderList: orders,
+      delivered, trackStatus: delivered ? 'Le livreur a déclaré la livraison effectuée' : 'En route · arrivée estimée dans 12 min', trackColor: delivered ? '#B45309' : '#1D4ED8',
+      trackSteps: stepsT.map((label, i) => ({ label, dot: i < done ? '#10B981' : 'rgba(0,0,0,0.15)', color: i < done ? '#1A1A1A' : 'rgba(0,0,0,0.4)', weight: i === done - 1 ? 800 : 600 })),
+      confirmReceived: () => { const h = [...st.hist]; h.pop(); this.setState({ received: true, delivered: false, screen: 'v_orders', hist: h }); },
+      settingsGroups: s === 's_settings' ? vendorGroups : visitorGroups,
+      shopTitle: st.shopName || 'Moïse Couture', shopCity: st.city || 'Dakar',
+      dashMenu: [['📋', 'Mes annonces', 's_ads', '4'], ['📦', 'Mes commandes', 's_orders', '2'], ['🛠', 'Service / métier'], ['🏢', 'Établissement'], ['🚀', 'Faire profit & Boost'], ['👑', 'Premium Marketplace'], ['👥', 'Abonnés'], ['⭐', 'Avis'], ['❔', 'FAQ'], ['ℹ', 'À propos'], ['☎', 'Contact'], ['⚙', 'Réglages', 's_settings']].map(([icon, label, k, count]) => ({ icon, label, count: count || '', go: k ? go(k) : () => {} })),
+      ads, adsCount: ads.length,
+      pTitle, pPrice, pCat: st.pCat, pQty: st.pQty, pDesc: st.pTitle == null && isEdit ? 'Tissu léger et respirant, coupe cintrée.' : st.pDesc,
+      pTitleLabel: pTitle || 'Titre de votre article',
+      pPriceLabel: pPrice ? `${Number(String(pPrice).replace(/\D/g, '') || 0).toLocaleString('fr-FR')} FCFA` : 'Prix',
+      setPTitle: e => this.setState({ pTitle: e.target.value }), setPPrice: e => this.setState({ pPrice: e.target.value, pTitle: this.state.pTitle ?? pTitle }),
+      setPCat: e => this.setState({ pCat: e.target.value }), setPQty: e => this.setState({ pQty: e.target.value }), setPDesc: e => this.setState({ pDesc: e.target.value }),
+      sOrders: [
+        { buyer: 'Fatou Ndiaye', title: 'Tunique Homme Moderne Grise · ×1', meta: 'Aujourd’hui 10:24 · 10 000 FCFA', status: 'Nouvelle', badgeStyle: this.badge('#FEE2E2', '#B91C1C') },
+        { buyer: 'Ibrahima Sow', title: 'Chemise wax manches courtes · ×2', meta: 'Hier · 17 000 FCFA', status: 'En préparation', badgeStyle: this.badge('#F1F2EE', '#374151') },
+        { buyer: 'Aminata Diop', title: 'Boubou brodé bleu nuit · ×1', meta: '3 oct. · 25 000 FCFA', status: 'En livraison', badgeStyle: this.badge('#DBEAFE', '#1D4ED8') },
+        { buyer: 'Cheikh Fall', title: 'Pantalon lin beige · ×1', meta: '1 oct. · 9 000 FCFA', status: 'Livrée', badgeStyle: this.badge('#D1FAE5', '#047857') },
+      ],
+      ...(() => { const days = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche']; const hrs = ['08:00 – 18:00','08:00 – 18:00','08:00 – 18:00','08:00 – 18:00','08:00 – 18:00','09:00 – 17:00','08:00 – 18:00']; const open = st.open || [1,1,1,1,1,1,0]; const t = (new Date().getDay() + 6) % 7;
+        const ds = (on, c) => `flex:1;min-height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;cursor:pointer;background:${on ? c : '#F1F2F4'};color:${on ? '#fff' : '#374151'}`;
+        return { metiers: ['Chauffeur','Mécanicien','Livreur','Plombier','Électricien','Maçon','Peintre bâtiment','Menuisier','Femme de ménage','Jardinier','Coiffeur/Coiffeuse','Couturier/Couturière','Pharmacien','Infirmier/Infirmière','Sage-femme','Professeur particulier','Photographe','Autre (précisez)'],
+          metierView: !st.metierEditing, metierEditing: !!st.metierEditing, metierLabel: st.metier || 'Non renseigné', metierDesc: st.metierDesc || 'Prestation de service sur mesure.',
+          metierEdit: () => this.setState({ metierEditing: true, metierDraft: st.metier || '', descDraft: st.metierDesc || '' }), metierCancel: () => this.setState({ metierEditing: false }),
+          metierSave: () => this.setState(p => ({ metierEditing: false, metier: p.metierDraft, metierDesc: p.descDraft })),
+          metierDraft: st.metierDraft || '', descDraft: st.descDraft || '', setMetierDraft: ev => this.setState({ metierDraft: ev.target.value }), setDescDraft: ev => this.setState({ descDraft: ev.target.value }),
+          dispoOn: () => this.setState({ dispo: true }), dispoOff: () => this.setState({ dispo: false }), dispoOnStyle: ds(st.dispo === true, '#10B981'), dispoOffStyle: ds(st.dispo === false, '#6B7280'),
+          schedOpen: !!st.schedOpen, toggleSched: () => this.setState(p => ({ schedOpen: !p.schedOpen })),
+          schedDays: days.map((d, i) => ({ day: d, today: i === t, hours: open[i] ? hrs[i] : 'Fermé', color: open[i] ? (i === t ? '#059669' : '#374151') : '#DC2626', weight: i === t || !open[i] ? 800 : 500,
+            rowStyle: `display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border-radius:10px;${i === t ? 'background:#fff;border:1px solid rgba(0,0,0,0.1);margin:4px 0' : ''}`,
+            toggle: () => this.setState(p => { const o = [...(p.open || [1,1,1,1,1,1,0])]; o[i] = o[i] ? 0 : 1; return { open: o }; }),
+            track: `width:44px;height:26px;border-radius:13px;flex-shrink:0;position:relative;cursor:pointer;transition:background 0.2s;background:${open[i] ? '#10B981' : 'rgba(0,0,0,0.18)'}`,
+            knob: `position:absolute;top:3px;left:${open[i] ? 21 : 3}px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s` })) }; })(),
+      activeList: active, availList: avail,
+      ...(() => { const ps = this.props.screen || ''; const tb = st.shopTab || (ps === 's_shop_service' ? 'service' : ps === 's_shop_etab' ? 'etab' : 'article'); const sty = k => `flex:1;min-height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;letter-spacing:0.03em;cursor:pointer;${tb === k ? 'background:#111;color:#fff' : 'color:#374151'}`;
+        return { tabArticle: () => this.setState({ shopTab: 'article' }), tabService: () => this.setState({ shopTab: 'service' }), tabEtab: () => this.setState({ shopTab: 'etab' }),
+          tabArticleStyle: sty('article'), tabServiceStyle: sty('service'), tabEtabStyle: sty('etab'),
+          tabIsArticle: tb === 'article', tabIsService: tb === 'service', tabIsEtab: tb === 'etab', shopTitleUpper: (st.shopName || 'Moïse Couture').toUpperCase() }; })(),
+    };
+  }
+}
+</script>
+</body>
+</html>

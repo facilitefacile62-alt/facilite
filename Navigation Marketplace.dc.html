@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>body{margin:0;background:#E9E7E1}a{color:#2563EB}a:hover{color:#1D4ED8}</style>
+</helmet>
+<section style="font-family:'Roboto',system-ui,sans-serif;color:#1A1A1A;padding:56px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px">
+    <div style="font-size:28px;font-weight:900">Navigation — espace Marketplace</div>
+    <div style="font-size:15px;line-height:1.5;color:#55595F">Menu latéral sur ordinateur, barre en bas sur tablette et téléphone. L'en-tête du site est représenté par un bloc neutre et n'est pas redessiné. Cliquez sur Messagerie ou Publier en mode non connecté (réglage « connecte ») pour voir la fenêtre de connexion.</div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#1A1A1A;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px">1a</span><span style="font-size:14px;font-weight:700">Ordinateur · 1280 px · clair</span></div>
+      <div style="width:1280px;height:760px;background:#F2F0EA;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;flex-direction:column;position:relative">
+        <div style="height:64px;flex-shrink:0;background:repeating-linear-gradient(135deg,#E4E1D9,#E4E1D9 10px,#DCD9D0 10px,#DCD9D0 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;color:#6B6F76;border-bottom:1px solid rgba(0,0,0,0.08)">en-tête du site (fourni : logo, recherche, cloche, menu)</div>
+        <div style="flex:1;min-height:0;display:flex">
+          <nav style="width:215px;flex-shrink:0;background:#e3dbcc;border-right:1px solid rgba(0,0,0,0.08);padding:16px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+            <div onClick="{{ onPublish }}" style="height:46px;border-radius:100px;background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 12px rgba(37,99,235,0.28)" style-hover="background:#1D4ED8" style-active="background:#1E40AF">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>Publier un article
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#55595F;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>Accueil
+            </div>
+            <div onClick="{{ onMessages }}" style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#55595F;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+              <div style="position:relative;width:22px;height:22px">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+                <sc-if value="{{ hasMsgBadge }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:-6px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #e3dbcc">{{ msgBadge }}</div></sc-if>
+              </div>Messagerie
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#2563EB;background:rgba(37,99,235,0.08);font-size:14px;font-weight:700;cursor:pointer">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4.5H18.5L20 9M4 9H20V10.5C20 12 18.8 13 17.4 13C16 13 14.7 12 14.7 10.5C14.7 12 13.4 13 12 13C10.6 13 9.3 12 9.3 10.5C9.3 12 8 13 6.6 13C5.2 13 4 12 4 10.5V9ZM5.5 13V20H18.5V13M10 20V16H14V20" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>Marketplace
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#55595F;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="4" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="1.3" fill="#10B981"></circle></svg>Autour de moi
+            </div>
+          </nav>
+          <div style="flex:1;margin:20px;border-radius:14px;background:repeating-linear-gradient(135deg,#ECEAE4,#ECEAE4 10px,#E5E2DB 10px,#E5E2DB 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;color:#8A8D92">contenu marketplace (catégories, annonces)</div>
+        </div>
+        <sc-if value="{{ loginOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeLogin }}" style="position:absolute;inset:0;background:rgba(15,17,21,0.45);display:flex;align-items:center;justify-content:center">
+            <div style="width:360px;background:#fff;border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:10px;text-align:center">
+              <div style="font-size:18px;font-weight:800">Connectez-vous pour continuer</div>
+              <div style="font-size:14px;color:#55595F;line-height:1.45">La messagerie et la publication d'articles sont réservées aux membres connectés.</div>
+              <div style="height:46px;border-radius:100px;background:#10B981;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:8px;cursor:pointer">Se connecter</div>
+              <div style="height:44px;font-size:14px;font-weight:700;color:#55595F;display:flex;align-items:center;justify-content:center;cursor:pointer">Plus tard</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#1A1A1A;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px">1b</span><span style="font-size:14px;font-weight:700">Ordinateur · 1280 px · sombre</span></div>
+      <div style="width:1280px;height:760px;background:#0F1115;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column">
+        <div style="height:64px;flex-shrink:0;background:repeating-linear-gradient(135deg,#1A1D23,#1A1D23 10px,#16191E 10px,#16191E 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;color:#7D828A;border-bottom:1px solid rgba(255,255,255,0.06)">en-tête du site (fourni)</div>
+        <div style="flex:1;min-height:0;display:flex">
+          <nav style="width:215px;flex-shrink:0;background:#15181D;border-right:1px solid rgba(255,255,255,0.06);padding:16px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+            <div style="height:46px;border-radius:100px;background:#2563EB;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px" style-hover="background:#1D4ED8" style-active="background:#1E40AF">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>Publier un article
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#A3A8B0;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:rgba(255,255,255,0.06)" style-active="background:rgba(255,255,255,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>Accueil
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#A3A8B0;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:rgba(255,255,255,0.06)" style-active="background:rgba(255,255,255,0.1)">
+              <div style="position:relative;width:22px;height:22px">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+                <sc-if value="{{ hasMsgBadge }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:-6px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #15181D">{{ msgBadge }}</div></sc-if>
+              </div>Messagerie
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#60A5FA;background:rgba(96,165,250,0.12);font-size:14px;font-weight:700;cursor:pointer">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4.5H18.5L20 9M4 9H20V10.5C20 12 18.8 13 17.4 13C16 13 14.7 12 14.7 10.5C14.7 12 13.4 13 12 13C10.6 13 9.3 12 9.3 10.5C9.3 12 8 13 6.6 13C5.2 13 4 12 4 10.5V9ZM5.5 13V20H18.5V13M10 20V16H14V20" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>Marketplace
+            </div>
+            <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#A3A8B0;font-size:14px;font-weight:700;cursor:pointer" style-hover="background:rgba(255,255,255,0.06)" style-active="background:rgba(255,255,255,0.1)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="4" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="1.3" fill="#10B981"></circle></svg>Autour de moi
+            </div>
+          </nav>
+          <div style="flex:1;margin:20px;border-radius:14px;background:repeating-linear-gradient(135deg,#14171C,#14171C 10px,#111318 10px,#111318 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;color:#6B7078">contenu marketplace</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1c" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#1A1A1A;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px">1c</span><span style="font-size:14px;font-weight:700">Tablette · 768 px · clair</span></div>
+      <div style="width:768px;height:620px;background:#F2F0EA;border-radius:22px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;flex-direction:column">
+        <div style="height:64px;flex-shrink:0;background:repeating-linear-gradient(135deg,#E4E1D9,#E4E1D9 10px,#DCD9D0 10px,#DCD9D0 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;color:#6B6F76">en-tête du site (fourni)</div>
+        <div style="flex:1;margin:16px;border-radius:14px;background:repeating-linear-gradient(135deg,#ECEAE4,#ECEAE4 10px,#E5E2DB 10px,#E5E2DB 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;color:#8A8D92">contenu marketplace</div>
+        <div style="flex-shrink:0;background:#e3dbcc;border-top:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;padding:8px 12px 12px;gap:4px">
+          <div style="flex:1;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#55595F;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Accueil</span>
+          </div>
+          <div style="flex:1;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#55595F;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+            <div style="position:relative;width:22px;height:22px">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+              <sc-if value="{{ hasMsgBadge }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:-5px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #e3dbcc">{{ msgBadge }}</div></sc-if>
+            </div><span style="font-size:12px;font-weight:700">Messagerie</span>
+          </div>
+          <div style="flex:1;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#2563EB;cursor:pointer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4.5H18.5L20 9M4 9H20V10.5C20 12 18.8 13 17.4 13C16 13 14.7 12 14.7 10.5C14.7 12 13.4 13 12 13C10.6 13 9.3 12 9.3 10.5C9.3 12 8 13 6.6 13C5.2 13 4 12 4 10.5V9ZM5.5 13V20H18.5V13M10 20V16H14V20" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Marketplace</span>
+          </div>
+          <div style="flex:1;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#55595F;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="4" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="1.3" fill="#10B981"></circle></svg><span style="font-size:12px;font-weight:700">Autour de moi</span>
+          </div>
+          <div style="flex:1.4;display:flex;align-items:center;justify-content:center">
+            <div style="height:44px;padding:0 18px;border-radius:100px;background:#2563EB;color:#fff;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px rgba(37,99,235,0.28)" style-hover="background:#1D4ED8" style-active="background:#1E40AF">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg>Publier un article
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1d" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#1A1A1A;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px">1d</span><span style="font-size:14px;font-weight:700">Téléphone · 375 px · clair</span></div>
+      <div style="width:375px;height:720px;background:#F2F0EA;border-radius:32px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;flex-direction:column;position:relative">
+        <div style="height:60px;flex-shrink:0;background:repeating-linear-gradient(135deg,#E4E1D9,#E4E1D9 10px,#DCD9D0 10px,#DCD9D0 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:11px;color:#6B6F76">en-tête du site (fourni)</div>
+        <div style="flex:1;margin:12px;border-radius:14px;background:repeating-linear-gradient(135deg,#ECEAE4,#ECEAE4 10px,#E5E2DB 10px,#E5E2DB 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:11px;color:#8A8D92">contenu marketplace</div>
+        <div style="flex-shrink:0;background:#e3dbcc;border-top:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;padding:6px 4px 14px">
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#55595F;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Accueil</span>
+          </div>
+          <div onClick="{{ onMessages }}" style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#55595F;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+            <div style="position:relative;width:22px;height:22px">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+              <sc-if value="{{ hasMsgBadge }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:-5px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #e3dbcc">{{ msgBadge }}</div></sc-if>
+            </div><span style="font-size:12px;font-weight:700">Messagerie</span>
+          </div>
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#2563EB;cursor:pointer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4.5H18.5L20 9M4 9H20V10.5C20 12 18.8 13 17.4 13C16 13 14.7 12 14.7 10.5C14.7 12 13.4 13 12 13C10.6 13 9.3 12 9.3 10.5C9.3 12 8 13 6.6 13C5.2 13 4 12 4 10.5V9ZM5.5 13V20H18.5V13M10 20V16H14V20" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Marketplace</span>
+          </div>
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#55595F;cursor:pointer" style-hover="background:rgba(0,0,0,0.05)" style-active="background:rgba(0,0,0,0.09)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="4" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="1.3" fill="#10B981"></circle></svg><span style="font-size:12px;font-weight:700;white-space:nowrap">Autour de moi</span>
+          </div>
+          <div style="flex:1.15;min-width:0;display:flex;align-items:center;justify-content:center">
+            <div onClick="{{ onPublish }}" style="height:44px;padding:0 12px;border-radius:100px;background:#2563EB;color:#fff;display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px rgba(37,99,235,0.3)" style-hover="background:#1D4ED8" style-active="background:#1E40AF">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path></svg>Publier
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ loginOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeLogin }}" style="position:absolute;inset:0;background:rgba(15,17,21,0.45);display:flex;align-items:flex-end">
+            <div style="width:100%;background:#fff;border-radius:22px 22px 0 0;padding:24px 20px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;text-align:center">
+              <div style="font-size:17px;font-weight:800">Connectez-vous pour continuer</div>
+              <div style="font-size:13.5px;color:#55595F;line-height:1.45">La messagerie et la publication d'articles sont réservées aux membres connectés.</div>
+              <div style="height:48px;border-radius:100px;background:#10B981;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:8px">Se connecter</div>
+              <div style="height:44px;font-size:14px;font-weight:700;color:#55595F;display:flex;align-items:center;justify-content:center">Plus tard</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="font-size:12.5px;color:#55595F;max-width:375px;line-height:1.45">Sur téléphone, le libellé du bouton devient « Publier » pour tenir dans la barre ; il reste la seule pilule bleue.</div>
+    </div>
+
+    <div id="1e" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#1A1A1A;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px">1e</span><span style="font-size:14px;font-weight:700">Téléphone · 375 px · sombre</span></div>
+      <div style="width:375px;height:720px;background:#0F1115;border-radius:32px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column">
+        <div style="height:60px;flex-shrink:0;background:repeating-linear-gradient(135deg,#1A1D23,#1A1D23 10px,#16191E 10px,#16191E 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:11px;color:#7D828A">en-tête du site (fourni)</div>
+        <div style="flex:1;margin:12px;border-radius:14px;background:repeating-linear-gradient(135deg,#14171C,#14171C 10px,#111318 10px,#111318 20px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:11px;color:#6B7078">contenu marketplace</div>
+        <div style="flex-shrink:0;background:#15181D;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:6px 4px 14px">
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0;cursor:pointer" style-hover="background:rgba(255,255,255,0.06)" style-active="background:rgba(255,255,255,0.1)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Accueil</span>
+          </div>
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0;cursor:pointer" style-hover="background:rgba(255,255,255,0.06)" style-active="background:rgba(255,255,255,0.1)">
+            <div style="position:relative;width:22px;height:22px">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+              <sc-if value="{{ hasMsgBadge }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:-5px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #15181D">{{ msgBadge }}</div></sc-if>
+            </div><span style="font-size:12px;font-weight:700">Messagerie</span>
+          </div>
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#60A5FA;cursor:pointer">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4.5H18.5L20 9M4 9H20V10.5C20 12 18.8 13 17.4 13C16 13 14.7 12 14.7 10.5C14.7 12 13.4 13 12 13C10.6 13 9.3 12 9.3 10.5C9.3 12 8 13 6.6 13C5.2 13 4 12 4 10.5V9ZM5.5 13V20H18.5V13M10 20V16H14V20" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Marketplace</span>
+          </div>
+          <div style="flex:1;min-width:0;min-height:52px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0;cursor:pointer" style-hover="background:rgba(255,255,255,0.06)" style-active="background:rgba(255,255,255,0.1)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="4" stroke="#10B981" stroke-width="1.8"></circle><circle cx="12" cy="12" r="1.3" fill="#10B981"></circle></svg><span style="font-size:12px;font-weight:700;white-space:nowrap">Autour de moi</span>
+          </div>
+          <div style="flex:1.15;min-width:0;display:flex;align-items:center;justify-content:center">
+            <div style="height:44px;padding:0 12px;border-radius:100px;background:#2563EB;color:#fff;display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap" style-hover="background:#1D4ED8" style-active="background:#1E40AF">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path></svg>Publier
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1f" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#1A1A1A;color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px">1f</span><span style="font-size:14px;font-weight:700">États</span></div>
+      <div style="width:860px;background:#fff;border-radius:18px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;box-shadow:0 10px 30px rgba(0,0,0,0.08)">
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#8A8D92">ÉLÉMENT DU MENU · ORDINATEUR</div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#55595F;font-size:14px;font-weight:700;border:1px dashed rgba(0,0,0,0.12)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>Accueil</div><span style="font-size:12.5px;color:#55595F">Inactif</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#1A1A1A;background:rgba(0,0,0,0.05);font-size:14px;font-weight:700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>Accueil</div><span style="font-size:12.5px;color:#55595F">Survol · fond 5 %</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#1A1A1A;background:rgba(0,0,0,0.09);font-size:14px;font-weight:700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>Accueil</div><span style="font-size:12.5px;color:#55595F">Appui · fond 9 %</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:12px;padding:0 12px;color:#2563EB;background:rgba(37,99,235,0.08);font-size:14px;font-weight:700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4.5H18.5L20 9M4 9H20V10.5C20 12 18.8 13 17.4 13C16 13 14.7 12 14.7 10.5C14.7 12 13.4 13 12 13C10.6 13 9.3 12 9.3 10.5C9.3 12 8 13 6.6 13C5.2 13 4 12 4 10.5V9ZM5.5 13V20H18.5V13M10 20V16H14V20" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>Marketplace</div><span style="font-size:12.5px;color:#55595F">Actif · bleu</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#8A8D92">BOUTON PUBLIER</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><div style="height:46px;padding:0 22px;border-radius:100px;background:#2563EB;color:#fff;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>Publier un article</div><span style="font-size:12.5px;color:#55595F">Repos</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><div style="height:46px;padding:0 22px;border-radius:100px;background:#1D4ED8;color:#fff;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>Publier un article</div><span style="font-size:12.5px;color:#55595F">Survol</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><div style="height:46px;padding:0 22px;border-radius:100px;background:#1E40AF;color:#fff;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>Publier un article</div><span style="font-size:12.5px;color:#55595F">Appui</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#8A8D92">PASTILLE DE NOTIFICATION</div>
+          <div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-end">
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="position:relative;width:26px;height:26px;color:#55595F"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div><span style="font-size:12.5px;color:#55595F">Aucune · pas de pastille</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="position:relative;width:26px;height:26px;color:#55595F"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><div style="position:absolute;top:-6px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff">1</div></div><span style="font-size:12.5px;color:#55595F">Une</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="position:relative;width:26px;height:26px;color:#55595F"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><div style="position:absolute;top:-6px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff">4</div></div><span style="font-size:12.5px;color:#55595F">Plusieurs</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="position:relative;width:26px;height:26px;color:#55595F"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><div style="position:absolute;top:-6px;right:-11px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff">9+</div></div><span style="font-size:12.5px;color:#55595F">Plus de 9</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:center"><div style="position:relative;width:26px;height:26px;color:#55595F"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 0112 0v4l1.5 2.5h-15L6 14v-4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M10 19a2 2 0 004 0" stroke="currentColor" stroke-width="1.7"></path></svg><div style="position:absolute;top:-6px;right:-11px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff">9+</div></div><span style="font-size:12.5px;color:#55595F">Cloche de l'en-tête</span></div>
+          </div>
+          <div style="font-size:12.5px;color:#55595F;line-height:1.45">Pastille rouge #DC2626, chiffre blanc 10 px gras, hauteur 18 px, contour de la couleur de la barre pour la détacher de l'icône. Elle reste à l'intérieur de la zone de 44 px et ne déborde pas de la barre.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#8A8D92">UTILISATEUR NON CONNECTÉ</div>
+          <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;background:#F2F0EA;border-radius:14px;padding:10px">
+              <div style="height:44px;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 12px;color:#55595F;background:rgba(0,0,0,0.09);font-size:14px;font-weight:700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5h11v8h-6l-3.5 3v-3H3.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M17.5 9h3v8h-1.5v3l-3.5-3H10v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>Messagerie</div>
+              <span style="font-size:13px;color:#8A8D92">ou</span>
+              <div style="height:44px;padding:0 18px;border-radius:100px;background:#1E40AF;color:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg>Publier un article</div>
+            </div>
+            <svg width="28" height="16" viewBox="0 0 28 16" fill="none"><path d="M2 8H24M18 2L25 8L18 14" stroke="#8A8D92" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <div style="width:280px;background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,0.08)">
+              <div style="font-size:15px;font-weight:800">Connectez-vous pour continuer</div>
+              <div style="height:42px;border-radius:100px;background:#10B981;color:#fff;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:4px">Se connecter</div>
+              <div style="font-size:13px;font-weight:700;color:#55595F;padding:6px 0">Plus tard</div>
+            </div>
+          </div>
+          <div style="font-size:12.5px;color:#55595F;line-height:1.45">Les deux éléments gardent leur apparence normale ; le clic ouvre la fenêtre de connexion au lieu de la page.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:#8A8D92">RÉFÉRENCE · BARRE ESPACE FACILITÉ (INCHANGÉE)</div>
+          <div style="width:375px;background:#15181D;border-radius:14px;display:flex;align-items:center;padding:8px 4px">
+            <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#10B981"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Accueil</span></div>
+            <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="7" width="17" height="12" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M9 7V5.5C9 4.7 9.7 4 10.5 4H13.5C14.3 4 15 4.7 15 5.5V7" stroke="currentColor" stroke-width="1.7"></path></svg><span style="font-size:12px;font-weight:700">Offres</span></div>
+            <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 13.5H11.5L10.5 21L19 10H12.5L13 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><span style="font-size:12px;font-weight:700">Extracteur</span></div>
+            <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0"><div style="position:relative;width:22px;height:22px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H9l-5 4V5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg><div style="position:absolute;top:-5px;right:-9px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#DC2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #15181D">3</div></div><span style="font-size:12px;font-weight:700">Messages</span></div>
+            <div style="flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#A3A8B0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="3.8" stroke="currentColor" stroke-width="1.7"></circle><path d="M4.5 20C5.5 16.5 8.5 14.5 12 14.5C15.5 14.5 18.5 16.5 19.5 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg><span style="font-size:12px;font-weight:700">Profil</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;connecte&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;nonLus&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:3,&quot;min&quot;:0,&quot;max&quot;:20,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { loginOpen: false };
+  renderVals() {
+    const connecte = this.props.connecte ?? true;
+    const n = this.props.nonLus ?? 3;
+    const guard = () => { if (!connecte) this.setState({ loginOpen: true }); };
+    return {
+      hasMsgBadge: n > 0,
+      msgBadge: n > 9 ? '9+' : String(n),
+      onMessages: guard,
+      onPublish: guard,
+      loginOpen: this.state.loginOpen,
+      closeLogin: () => this.setState({ loginOpen: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>
