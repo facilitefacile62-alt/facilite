@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,6 +14,8 @@ import {
   RAYON_PROCHE_KM,
   type ArticleMarketplace,
 } from '@/lib/marketplace';
+import { useAuth } from '@/context/AuthContext';
+import { chargerMesBoutiques } from '@/lib/vendeur';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -91,6 +93,33 @@ export default function MarketplaceScreen() {
   // Menu « Autour de moi » (comme sur le site) : Articles proches / Mini carte / Pleine carte.
   const [menuAutourOuvert, setMenuAutourOuvert] = useState(false);
 
+  // « Autour de moi » de la barre du bas ouvre cet accueil avec ?autour=1 : on ouvre alors le menu.
+  const { autour } = useLocalSearchParams<{ autour?: string }>();
+  useEffect(() => {
+    if (autour !== '1') return;
+    queueMicrotask(() => setMenuAutourOuvert(true));
+  }, [autour]);
+
+  // Libellé des actions rapides : « Devenir Vendeur » sans boutique, « Ma boutique » avec une.
+  const { user } = useAuth();
+  const userId = user?.id;
+  const [aBoutique, setAboutique] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let annule = false;
+      if (userId) {
+        chargerMesBoutiques(userId)
+          .then((liste) => {
+            if (!annule) setAboutique(liste.length > 0);
+          })
+          .catch(() => {});
+      }
+      return () => {
+        annule = true;
+      };
+    }, [userId])
+  );
+
   // "Autour de moi" : la permission n'est demandée qu'ici, au choix dans le menu.
   async function choisirAutourDeMoi(mode: 'liste' | 'mini' | 'pleine') {
     setMenuAutourOuvert(false);
@@ -146,19 +175,6 @@ export default function MarketplaceScreen() {
             <Text className="text-[10.5px] font-bold tracking-widest text-[#10B981]">FACILITÉ</Text>
             <Text className="text-[20px] font-black text-[#1A1A1A] -mt-0.5">Marketplace</Text>
           </View>
-          <Pressable
-            onPress={() => router.push('/marketplace/commandes')}
-            accessibilityLabel="Mes commandes"
-            hitSlop={6}
-            className="w-10 h-10 rounded-full border border-gray-300 items-center justify-center">
-            <Ionicons name="receipt-outline" size={17} color="#1A1A1A" />
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/marketplace/vendre')}
-            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border border-gray-300">
-            <Ionicons name="storefront-outline" size={15} color="#1A1A1A" />
-            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Vendre</Text>
-          </Pressable>
         </View>
 
         <View className="px-4">
@@ -179,6 +195,22 @@ export default function MarketplaceScreen() {
               </Pressable>
             )}
           </View>
+        </View>
+
+        {/* Actions rapides (maquette « Visiteur — Marketplace ») : Devenir Vendeur / Ma boutique, Mes commandes */}
+        <View className="flex-row gap-2 px-4 mt-3">
+          <Pressable
+            onPress={() => router.push('/marketplace/vendre')}
+            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-[#D1FAE5]">
+            <Ionicons name="storefront-outline" size={15} color="#047857" />
+            <Text className="text-[12.5px] font-bold text-[#047857]">{aBoutique ? 'Ma boutique' : 'Devenir Vendeur'}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/marketplace/commandes')}
+            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-white border border-gray-200">
+            <Ionicons name="receipt-outline" size={15} color="#1A1A1A" />
+            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Mes commandes</Text>
+          </Pressable>
         </View>
 
         <View className="mt-3">

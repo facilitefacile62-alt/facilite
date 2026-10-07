@@ -81,12 +81,11 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
   const [email, setEmail] = useState((profile?.contact_email as string | undefined) || user?.email || '');
   const [nom, setNom] = useState('');
   const [ville, setVille] = useState<string | null>(null);
-  const [quartier, setQuartier] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
   const [position, setPosition] = useState<Position | null>(null);
   const [relevePosition, setRelevePosition] = useState<'aucun' | 'en_cours' | 'ok' | 'echec'>('aucun');
   const [enregistrement, setEnregistrement] = useState(false);
 
+  // Étape 1 (identité) : enregistrée dès « Continuer » pour ne pas perdre la saisie si l'étape 2 est abandonnée.
   async function continuerIdentite() {
     if (!prenom.trim() || !nomFamille.trim()) {
       Alert.alert('Informations manquantes', 'Le prénom et le nom sont obligatoires.');
@@ -99,7 +98,6 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     setEnregistrement(true);
     try {
       await enregistrerIdentiteVendeur(userId, { prenom, nom: nomFamille, telephone, email });
-      setWhatsapp((actuel) => actuel || telephone);
       setEtape('boutique');
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : "Impossible d'enregistrer vos informations.");
@@ -108,8 +106,7 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     }
   }
 
-  // Position facultative : sans elle la boutique existe, mais n'apparaît pas
-  // dans « Autour de moi ». Le relevé est explicite (bouton), jamais imposé.
+  // Position facultative : sans elle la boutique existe, mais n'apparaît pas dans « Autour de moi ».
   async function releverPosition() {
     setRelevePosition('en_cours');
     const { position: releve } = await activer().catch(() => ({ position: null }));
@@ -117,6 +114,7 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     setRelevePosition(releve ? 'ok' : 'echec');
   }
 
+  // Étape 2 : création de la boutique avec le numéro saisi à l'étape 1.
   async function creer() {
     if (!nom.trim()) {
       Alert.alert('Nom manquant', 'Donnez un nom à votre boutique.');
@@ -124,7 +122,7 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     }
     setEnregistrement(true);
     try {
-      await creerBoutique(userId, { nom, ville, quartier, telephoneWhatsapp: whatsapp, position });
+      await creerBoutique(userId, { nom, ville, quartier: null, telephoneWhatsapp: telephone, position });
       onCree();
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Impossible de créer votre boutique.');
@@ -133,19 +131,16 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     }
   }
 
-  const libelleBouton = etape === 'identite' ? 'Continuer' : 'Créer ma boutique';
-
   return (
-    <ScrollView contentContainerClassName="px-5 pt-2 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View className="items-center gap-2 py-3">
-        <View className="w-16 h-16 rounded-2xl items-center justify-center" style={{ backgroundColor: VERT_PROFOND }}>
-          <Ionicons name={etape === 'identite' ? 'person' : 'storefront'} size={30} color="#6ee7c9" />
+    <ScrollView contentContainerClassName="px-4 pt-3 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* Progression en deux segments (maquettes « Devenir Vendeur — Étape 1 / 2 ») */}
+      <View className="gap-1.5">
+        <View className="flex-row gap-2">
+          <View className="flex-1 h-1.5 rounded-full bg-[#10B981]" />
+          <View className={`flex-1 h-1.5 rounded-full ${etape === 'boutique' ? 'bg-[#10B981]' : 'bg-gray-200'}`} />
         </View>
-        <Text className="text-[11.5px] font-bold tracking-wide text-gray-500">
-          {etape === 'identite' ? 'ÉTAPE 1 SUR 2 · VOTRE IDENTITÉ' : 'ÉTAPE 2 SUR 2 · VOTRE BOUTIQUE'}
-        </Text>
-        <Text className="text-[18px] font-extrabold text-[#1A1A1A]">
-          {etape === 'identite' ? 'Qui êtes-vous ?' : 'Créez votre boutique'}
+        <Text className="text-[12px] font-bold text-[#047857]">
+          {etape === 'identite' ? 'Étape 1 sur 2 · Identité' : 'Étape 2 sur 2 · Boutique'}
         </Text>
       </View>
 
@@ -163,21 +158,21 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
             libelle="Téléphone (WhatsApp) *"
             value={telephone}
             onChangeText={setTelephone}
-            placeholder="77 123 45 67"
+            placeholder="+221 77 000 00 00"
             keyboardType="phone-pad"
           />
           <Champ
             libelle="E-mail (facultatif)"
             value={email}
             onChangeText={setEmail}
-            placeholder="vous@exemple.com"
+            placeholder="nom@exemple.com"
             keyboardType="email-address"
             autoCapitalize="none"
           />
         </>
       ) : (
         <>
-          <Pressable onPress={() => setEtape('identite')} className="flex-row items-center gap-1" hitSlop={8}>
+          <Pressable onPress={() => setEtape('identite')} className="flex-row items-center gap-1 self-start" hitSlop={8}>
             <Ionicons name="chevron-back" size={16} color="#6B7280" />
             <Text className="text-[12.5px] font-semibold text-gray-500">Modifier mes informations</Text>
           </Pressable>
@@ -185,21 +180,7 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
           <Champ libelle="Nom de la boutique *" value={nom} onChangeText={setNom} placeholder="Ex. Boutique Awa" />
 
           <View className="gap-1.5">
-            <Text className="text-[12.5px] font-bold text-gray-700">Département</Text>
-            <SelecteurDepartement valeur={ville} onChoisir={setVille} />
-          </View>
-
-          <Champ libelle="Quartier (facultatif)" value={quartier} onChangeText={setQuartier} placeholder="Ex. Plateau" />
-          <Champ
-            libelle="WhatsApp (facultatif)"
-            value={whatsapp}
-            onChangeText={setWhatsapp}
-            placeholder="77 123 45 67"
-            keyboardType="phone-pad"
-          />
-
-          <View className="gap-1.5">
-            <Text className="text-[12.5px] font-bold text-gray-700">Position de la boutique (facultatif)</Text>
+            <Text className="text-[12.5px] font-bold text-gray-700">Position de la boutique</Text>
             <Pressable
               onPress={releverPosition}
               disabled={relevePosition === 'en_cours'}
@@ -214,24 +195,41 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
                   ? 'Position relevée'
                   : relevePosition === 'echec'
                     ? 'Position indisponible, réessayez'
-                    : 'Relever ma position actuelle'}
+                    : 'Positionner ma boutique · Démarrer le relevé'}
               </Text>
             </Pressable>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-[12.5px] font-bold text-gray-700">Ville</Text>
+            <SelecteurDepartement valeur={ville} onChoisir={setVille} />
           </View>
         </>
       )}
 
-      <Pressable
-        onPress={etape === 'identite' ? continuerIdentite : creer}
-        disabled={enregistrement}
-        className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60"
-        style={{ backgroundColor: VERT_PROFOND }}>
-        {enregistrement ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white text-[14.5px] font-bold">{libelleBouton}</Text>
-        )}
-      </Pressable>
+      {etape === 'identite' ? (
+        <Pressable
+          onPress={continuerIdentite}
+          disabled={enregistrement}
+          className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60 bg-[#10B981]">
+          {enregistrement ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-[14.5px] font-bold">Continuer →</Text>
+          )}
+        </Pressable>
+      ) : (
+        <Pressable
+          onPress={creer}
+          disabled={enregistrement}
+          className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60 bg-black">
+          {enregistrement ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-[14.5px] font-bold">Enregistrer les modifications</Text>
+          )}
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
