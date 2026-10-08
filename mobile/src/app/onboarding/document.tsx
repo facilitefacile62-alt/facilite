@@ -22,17 +22,17 @@ export default function OnboardingDocumentScreen() {
           </View>
           <Text className="text-[19px] font-black text-[#1A1A1A] text-center">Un dernier détail</Text>
           <Text className="text-[13px] text-gray-500 text-center px-4">
-            Ajoutez votre CV ou une lettre de motivation : vos candidatures iront plus vite.
+            Importez un document pour compléter votre profil automatiquement.
           </Text>
         </View>
 
         <Pressable
           onPress={() => router.push('/mon-profil/scanner-document')}
-          className="flex-row items-center justify-center gap-2 rounded-2xl py-3.5 mt-2"
-          style={{ backgroundColor: VERT_PROFOND }}>
-          <Ionicons name="add" size={18} color="#6ee7c9" />
-          <Text className="text-white text-[14.5px] font-bold">Ajouter mes documents</Text>
+          className="flex-row items-center justify-center gap-2 rounded-2xl py-3.5 mt-2 bg-white border border-gray-200">
+          <Ionicons name="add" size={18} color="#1A1A1A" />
+          <Text className="text-[#1A1A1A] text-[14.5px] font-bold">Ajouter un document</Text>
         </Pressable>
+        <Text className="text-[11.5px] text-gray-400 text-center -mt-1">CV, lettre de motivation, diplôme… (PDF)</Text>
 
         <Pressable onPress={() => router.replace('/')} className="items-center py-3" hitSlop={8}>
           <Text className="text-[13px] font-bold text-gray-500">Passer cette étape ›</Text>

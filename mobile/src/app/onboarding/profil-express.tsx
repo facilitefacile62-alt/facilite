@@ -41,8 +41,8 @@ export default function OnboardingProfilExpressScreen() {
   return (
     <View className="flex-1 bg-[#FAF6F1]">
       <SafeAreaView className="flex-1 justify-center px-6 gap-4" edges={['top', 'bottom']}>
-        <Text className="text-[19px] font-black text-[#1A1A1A] text-center">Un dernier détail</Text>
-        <Text className="text-[13px] text-gray-500 text-center -mt-2">Comment vous appelez-vous ?</Text>
+        <Text className="text-[19px] font-black text-[#1A1A1A] text-center">Profil express</Text>
+        <Text className="text-[13px] text-gray-500 text-center -mt-2">Juste votre nom pour commencer vos achats.</Text>
 
         <View className="gap-1.5 mt-2">
           <Text className="text-[12.5px] font-bold text-gray-700">Prénom</Text>

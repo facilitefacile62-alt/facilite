@@ -12,7 +12,8 @@ export default function OnboardingRoleScreen() {
   return (
     <View className="flex-1 bg-[#FAF6F1]">
       <SafeAreaView className="flex-1 items-center justify-center px-6 gap-3" edges={['top', 'bottom']}>
-        <Text className="text-[19px] font-black text-[#1A1A1A] text-center">Comment voulez-vous commencer ?</Text>
+        <Text className="text-[21px] font-black text-[#1A1A1A] text-center">Facilité Business</Text>
+        <Text className="text-[13px] text-gray-500 text-center -mt-1">Comment comptez-vous utiliser la Marketplace ?</Text>
 
         <View className="w-full gap-3 mt-4">
           <Pressable
@@ -24,7 +25,7 @@ export default function OnboardingRoleScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-[15px] font-black text-[#1A1A1A]">Je suis Visiteur</Text>
-              <Text className="text-[12px] text-gray-500 mt-0.5">Je viens acheter des articles</Text>
+              <Text className="text-[12px] text-gray-500 mt-0.5">Pour découvrir, acheter et commander des produits</Text>
             </View>
           </Pressable>
 
@@ -37,7 +38,7 @@ export default function OnboardingRoleScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-[15px] font-black text-white">Je suis Vendeur</Text>
-              <Text className="text-[12px] text-white/80 mt-0.5">Je viens vendre mes articles</Text>
+              <Text className="text-[12px] text-white/80 mt-0.5">Pour créer ma boutique et vendre mes articles</Text>
             </View>
           </Pressable>
         </View>
