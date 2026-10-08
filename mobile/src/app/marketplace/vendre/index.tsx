@@ -656,9 +656,18 @@ export default function MaBoutiqueScreen() {
                   </Text>
                 </View>
 
+                {/* « Modifier infos » de la maquette 28 : ouvre l'écran
+                    « Modifier le profil » de la boutique (maquette 32). */}
+                <Pressable
+                  onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)}
+                  className="flex-row items-center justify-center gap-2 rounded-2xl bg-white border border-black/[0.08] py-3 mt-3">
+                  <Ionicons name="pencil" size={14} color="#1A1A1A" />
+                  <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Modifier infos</Text>
+                </Pressable>
+
                 <Pressable
                   onPress={() => router.push('/marketplace/vendre/tableau-de-bord' as Href)}
-                  className="flex-row items-center justify-center gap-2 rounded-2xl border border-[#10B981] py-3 mt-3">
+                  className="flex-row items-center justify-center gap-2 rounded-2xl border border-[#10B981] py-3 mt-2.5">
                   <Ionicons name="bar-chart-outline" size={16} color={VERT_PROFOND} />
                   <Text className="text-[13.5px] font-bold" style={{ color: VERT_PROFOND }}>
                     Tableau de bord

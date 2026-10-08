@@ -12,9 +12,10 @@ import { supabase } from '@/lib/supabase';
 // d'un mot de passe.
 //
 // Les informations viennent du compte d'authentification (user.email,
-// user.phone, email_confirmed_at) et de `profiles` (date_naissance,
-// country) — rien n'est affiché quand la valeur n'existe pas : « Non
-// renseignée », jamais une valeur d'exemple.
+// user.phone, email_confirmed_at) et de `profiles` (birth_date, country —
+// noms vérifiés dans 20260802060000_profiles_deny_by_default.sql) : rien
+// n'est affiché quand la valeur n'existe pas (« Non renseignée »), jamais
+// une valeur d'exemple.
 const LONGUEUR_MIN = 8;
 
 /** "macoumba@gmail.com" -> "m***@gmail.com", comme la maquette. */
@@ -65,7 +66,7 @@ export default function ProfilSecuriteScreen() {
     {
       cle: 'naissance',
       libelle: 'Date de naissance',
-      valeur: texteOuNonRenseigne(profile?.date_naissance),
+      valeur: texteOuNonRenseigne(profile?.birth_date),
       confirme: false,
     },
     {

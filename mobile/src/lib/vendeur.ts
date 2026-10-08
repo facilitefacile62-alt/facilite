@@ -282,3 +282,25 @@ export async function envoyerPhotoArticle(
 }
 
 export { urlPhoto };
+
+/**
+ * Position GPS de la boutique (maquette « Boutique — Modifier le profil »,
+ * 32). `modifier_ma_boutique` ne porte volontairement pas de latitude ni de
+ * longitude : la position est figée au premier relevé (tolérance de 50 m)
+ * pour qu'une boutique ne puisse pas se téléporter après coup. C'est donc
+ * `enregistrer_ma_boutique` qui la pose, la même fonction que le site.
+ */
+export async function enregistrerPositionBoutique(
+  boutique: Pick<MaBoutique, 'nom' | 'quartier' | 'ville' | 'telephone_whatsapp'>,
+  position: Position
+): Promise<void> {
+  const { error } = await supabase.rpc('enregistrer_ma_boutique', {
+    p_nom: boutique.nom,
+    p_quartier: boutique.quartier,
+    p_ville: boutique.ville,
+    p_whatsapp: boutique.telephone_whatsapp,
+    p_lat: position.latitude,
+    p_lng: position.longitude,
+  });
+  if (error) throw new Error(error.message);
+}
