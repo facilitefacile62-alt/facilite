@@ -30,6 +30,10 @@ export type MaBoutique = {
   type_boutique: string;
   latitude: number | null;
   longitude: number | null;
+  metier: string | null;
+  description_prestation: string | null;
+  categorie_etablissement: string | null;
+  disponible_manuel: boolean;
 };
 
 export type MonArticle = {
@@ -61,7 +65,9 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
   if (!userId) return [];
   const { data, error } = await supabase
     .from('marketplace_stores')
-    .select('id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude')
+    .select(
+      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel'
+    )
     .eq('owner_id', userId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
@@ -126,7 +132,20 @@ export async function creerBoutique(
 
 export async function modifierBoutique(
   storeId: string,
-  champs: { nom: string; quartier?: string | null; ville?: string | null; telephoneWhatsapp?: string | null }
+  champs: {
+    nom: string;
+    quartier?: string | null;
+    ville?: string | null;
+    telephoneWhatsapp?: string | null;
+    metier?: string | null;
+    descriptionPrestation?: string | null;
+    categorieEtablissement?: string | null;
+    // 'service' | 'etablissement' : passer l'un des deux bascule le type
+    // principal de la boutique sur cette rubrique (voir modifier_ma_boutique,
+    // 20260917030000) — c'est le mécanisme qui rend Service/Établissement
+    // réellement modifiables pour une boutique créée en « produit ».
+    typeBoutique?: 'produit' | 'service' | 'etablissement' | null;
+  }
 ): Promise<void> {
   const nom = champs.nom.trim();
   if (!nom) throw new Error('Le nom de la boutique est obligatoire.');
@@ -136,11 +155,18 @@ export async function modifierBoutique(
     p_quartier: champs.quartier?.trim() || null,
     p_ville: champs.ville?.trim() || null,
     p_whatsapp: normaliserWhatsapp(champs.telephoneWhatsapp),
-    p_metier: null,
-    p_description_prestation: null,
-    p_categorie_etablissement: null,
-    p_type_boutique: null,
+    p_metier: champs.metier?.trim() || null,
+    p_description_prestation: champs.descriptionPrestation?.trim() || null,
+    p_categorie_etablissement: champs.categorieEtablissement || null,
+    p_mode_horaires: null,
+    p_type_boutique: champs.typeBoutique || null,
   });
+  if (error) throw new Error(error.message);
+}
+
+/** Boutique disponible maintenant, ou indisponible (Service / Établissement). */
+export async function definirDisponibiliteBoutique(storeId: string, disponible: boolean): Promise<void> {
+  const { error } = await supabase.rpc('definir_disponibilite_boutique', { p_store_id: storeId, p_disponible: disponible });
   if (error) throw new Error(error.message);
 }
 
@@ -167,6 +193,30 @@ export async function publierArticle(
   });
   if (error) throw new Error(error.message);
   return data as string;
+}
+
+/**
+ * Modifier un article déjà publié (titre, catégorie, prix, quantité,
+ * description, photos) — même RPC que le site (modifier_mon_article,
+ * appartenance revérifiée côté base). Aucune table n'accorde jamais
+ * d'UPDATE direct à authenticated (invariant 1).
+ */
+export async function modifierArticle(
+  itemId: string,
+  champs: { titre: string; categorie: string; prixXof: number; quantite: number; description?: string; photos: string[] }
+): Promise<void> {
+  const titre = champs.titre.trim();
+  if (!titre) throw new Error('Le titre est obligatoire.');
+  const { error } = await supabase.rpc('modifier_mon_article', {
+    p_id: itemId,
+    p_titre: titre,
+    p_categorie: champs.categorie || 'autre',
+    p_prix: Math.max(0, Math.round(champs.prixXof || 0)),
+    p_quantite: Math.max(0, Math.round(champs.quantite || 0)),
+    p_description: champs.description?.trim() || null,
+    p_photos: champs.photos.slice(0, 6),
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function majStock(itemId: string, quantite: number): Promise<void> {

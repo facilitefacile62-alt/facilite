@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,34 +18,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
-import {
-  chargerCommandesBoutique,
-  couleurStatut,
-  dateCourte,
-  LIBELLES_PAIEMENT,
-  LIBELLES_STATUT,
-  type MaCommande,
-} from '@/lib/commandes';
+import { CATEGORIES_ETABLISSEMENT, METIERS_SERVICE, libelleCategorieEtablissement } from '@/lib/boutiqueCategories';
 import { enStock, prixLisible, urlPhoto, type Position } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
 import {
   chargerMesArticles,
   chargerMesBoutiques,
   creerBoutique,
+  definirDisponibiliteBoutique,
   definirVisibiliteBoutique,
   enregistrerIdentiteVendeur,
   majStock,
+  modifierBoutique,
   retirerArticle,
   type MaBoutique,
   type MonArticle,
 } from '@/lib/vendeur';
 
-// "Ma boutique" (espace vendeur natif). Un vendeur = une boutique gratuite
-// (BOUTIQUES_OFFERTES côté site) : cet écran prend la première trouvée, comme
-// le fait déjà "Ma boutique" côté web pour l'essentiel des vendeurs. Aucune
-// fonctionnalité inventée : ni modification complète d'un article publié
-// (aucune RPC ne l'autorise, seulement la création, l'ajustement du stock et
-// le retrait — voir src/lib/vendeur.ts), ni faux avis/notes.
+// "Ma boutique" (espace vendeur natif) : aperçu public avec les onglets
+// ARTICLE · SERVICE · ÉTABLISSEMENT (maquette « Marketplace — Ma boutique »).
+// La gestion (annonces, commandes, réglages…) vit dans Tableau de bord,
+// accessible depuis ici. Aucune fonctionnalité inventée : les horaires
+// d'ouverture ne sont pas encore modifiables depuis l'app (BIENTOT).
 const VERT_PROFOND = '#0d3b34';
 
 function decouperNom(nomComplet: string | null | undefined): { prenom: string; nom: string } {
@@ -85,7 +79,6 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
   const [relevePosition, setRelevePosition] = useState<'aucun' | 'en_cours' | 'ok' | 'echec'>('aucun');
   const [enregistrement, setEnregistrement] = useState(false);
 
-  // Étape 1 (identité) : enregistrée dès « Continuer » pour ne pas perdre la saisie si l'étape 2 est abandonnée.
   async function continuerIdentite() {
     if (!prenom.trim() || !nomFamille.trim()) {
       Alert.alert('Informations manquantes', 'Le prénom et le nom sont obligatoires.');
@@ -106,7 +99,6 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     }
   }
 
-  // Position facultative : sans elle la boutique existe, mais n'apparaît pas dans « Autour de moi ».
   async function releverPosition() {
     setRelevePosition('en_cours');
     const { position: releve } = await activer().catch(() => ({ position: null }));
@@ -114,7 +106,6 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
     setRelevePosition(releve ? 'ok' : 'echec');
   }
 
-  // Étape 2 : création de la boutique avec le numéro saisi à l'étape 1.
   async function creer() {
     if (!nom.trim()) {
       Alert.alert('Nom manquant', 'Donnez un nom à votre boutique.');
@@ -133,7 +124,6 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
 
   return (
     <ScrollView contentContainerClassName="px-4 pt-3 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      {/* Progression en deux segments (maquettes « Devenir Vendeur — Étape 1 / 2 ») */}
       <View className="gap-1.5">
         <View className="flex-row gap-2">
           <View className="flex-1 h-1.5 rounded-full bg-[#10B981]" />
@@ -212,11 +202,7 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
           onPress={continuerIdentite}
           disabled={enregistrement}
           className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60 bg-[#10B981]">
-          {enregistrement ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white text-[14.5px] font-bold">Continuer →</Text>
-          )}
+          {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Continuer →</Text>}
         </Pressable>
       ) : (
         <Pressable
@@ -235,6 +221,7 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
 }
 
 function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: () => void }) {
+  const router = useRouter();
   const [enCours, setEnCours] = useState(false);
   const photo = article.photos[0] ? urlPhoto(article.photos[0]) : null;
 
@@ -252,40 +239,37 @@ function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: 
     }
   }
 
-  function confirmerRetrait() {
-    Alert.alert('Retirer cet article ?', `« ${article.titre} » ne sera plus visible sur le Marketplace.`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Retirer',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await retirerArticle(article.id);
-            onChanger();
-          } catch (e) {
-            Alert.alert('Erreur', e instanceof Error ? e.message : 'Retrait impossible.');
-          }
-        },
-      },
-    ]);
+  function ouvrirModification() {
+    const params = new URLSearchParams({
+      id: article.id,
+      titre: article.titre,
+      categorie: article.categorie,
+      prix: String(article.prix_xof),
+      quantite: String(article.quantite),
+      description: article.description || '',
+      photos: JSON.stringify(article.photos),
+    });
+    router.push(`/marketplace/vendre/modifier-article?${params.toString()}` as Href);
   }
 
   return (
     <View className="flex-row gap-3 bg-white rounded-2xl border border-black/[0.06] p-2.5">
-      <View className="w-16 h-16 rounded-xl bg-[#F2F0EA] items-center justify-center overflow-hidden">
+      <Pressable onPress={ouvrirModification} className="w-16 h-16 rounded-xl bg-[#F2F0EA] items-center justify-center overflow-hidden">
         {photo ? (
           <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
           <Ionicons name="image-outline" size={22} color="#9CA3AF" />
         )}
-      </View>
+      </Pressable>
       <View className="flex-1 gap-1">
-        <Text className="text-[13px] font-bold text-[#1A1A1A]" numberOfLines={1}>
-          {article.titre}
-        </Text>
-        <Text className="text-[13px] font-extrabold" style={{ color: VERT_PROFOND }}>
-          {prixLisible(article.prix_xof)} FCFA
-        </Text>
+        <Pressable onPress={ouvrirModification}>
+          <Text className="text-[13px] font-bold text-[#1A1A1A]" numberOfLines={1}>
+            {article.titre}
+          </Text>
+          <Text className="text-[13px] font-extrabold" style={{ color: VERT_PROFOND }}>
+            {prixLisible(article.prix_xof)} FCFA
+          </Text>
+        </Pressable>
         <View className="flex-row items-center justify-between mt-0.5">
           <View className="flex-row items-center gap-2">
             <Pressable
@@ -304,8 +288,8 @@ function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: 
               <Ionicons name="add" size={14} color="#1A1A1A" />
             </Pressable>
           </View>
-          <Pressable onPress={confirmerRetrait} hitSlop={8} accessibilityLabel="Retirer l'article">
-            <Ionicons name="trash-outline" size={17} color="#DC2626" />
+          <Pressable onPress={ouvrirModification} hitSlop={8} accessibilityLabel="Modifier l'article">
+            <Ionicons name="create-outline" size={17} color="#1A1A1A" />
           </Pressable>
         </View>
       </View>
@@ -313,40 +297,7 @@ function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: 
   );
 }
 
-// Commande reçue : lecture seule pour le vendeur. Il voit le nom, le
-// téléphone et l'adresse de l'acheteur, nécessaires pour la remise ; le
-// livreur, lui, ne voit ces coordonnées qu'après avoir réclamé la livraison.
-function CarteCommandeVendeur({ commande }: { commande: MaCommande }) {
-  const statut = couleurStatut(commande.statut);
-  return (
-    <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2">
-      <View className="flex-row items-start justify-between gap-2">
-        <Text className="flex-1 text-[13.5px] font-bold text-[#1A1A1A]" numberOfLines={2}>
-          {commande.item?.titre ?? 'Article'}
-        </Text>
-        <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: statut.fond }}>
-          <Text className="text-[11px] font-bold" style={{ color: statut.texte }}>
-            {LIBELLES_STATUT[commande.statut]}
-          </Text>
-        </View>
-      </View>
-      <Text className="text-[12.5px] text-gray-700">
-        {commande.quantite} × {prixLisible(commande.prix_unitaire_xof)} FCFA ·{' '}
-        <Text className="font-extrabold" style={{ color: VERT_PROFOND }}>
-          {prixLisible(commande.prix_total_xof)} FCFA
-        </Text>
-      </Text>
-      <Text className="text-[12px] text-gray-500">
-        {LIBELLES_PAIEMENT[commande.moyen_paiement]} · {dateCourte(commande.created_at)}
-      </Text>
-      <View className="border-t border-black/[0.05] pt-2 gap-0.5">
-        <Text className="text-[12.5px] font-semibold text-gray-800">{commande.livraison_nom}</Text>
-        <Text className="text-[12px] text-gray-600">{commande.livraison_telephone}</Text>
-        <Text className="text-[12px] text-gray-600">{commande.livraison_adresse}</Text>
-      </View>
-    </View>
-  );
-}
+const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 export default function MaBoutiqueScreen() {
   const router = useRouter();
@@ -354,14 +305,21 @@ export default function MaBoutiqueScreen() {
   const [chargement, setChargement] = useState(true);
   const [boutique, setBoutique] = useState<MaBoutique | null | undefined>(undefined); // undefined = chargement, null = aucune
   const [articles, setArticles] = useState<MonArticle[]>([]);
-  const [commandes, setCommandes] = useState<MaCommande[]>([]);
-  const [onglet, setOnglet] = useState<'articles' | 'commandes'>('articles');
+  const [onglet, setOnglet] = useState<'article' | 'service' | 'etablissement'>('article');
   const [bascule, setBascule] = useState(false);
+  const [disponibiliteEnCours, setDisponibiliteEnCours] = useState(false);
 
-  // Fonction volontairement non mémoïsée (pas de useCallback) : l'effet de
-  // montage ci-dessous ne la référence qu'une fois (deps [user?.id],
-  // eslint-disable ciblé — même patron que src/app/recherche.tsx), et les
-  // rappels (onChanger, onCree) sont recréés à chaque rendu sans conséquence.
+  // Édition Métier / Prestation (onglet SERVICE).
+  const [editionMetier, setEditionMetier] = useState(false);
+  const [metierSaisi, setMetierSaisi] = useState('');
+  const [descriptionSaisie, setDescriptionSaisie] = useState('');
+
+  // Édition Catégorie d'établissement (onglet ÉTABLISSEMENT).
+  const [editionEtablissement, setEditionEtablissement] = useState(false);
+  const [categorieSaisie, setCategorieSaisie] = useState<string | null>(null);
+
+  const [enregistrementRubrique, setEnregistrementRubrique] = useState(false);
+
   async function recharger() {
     if (!user?.id) return;
     try {
@@ -369,7 +327,6 @@ export default function MaBoutiqueScreen() {
       const active = liste[0] ?? null;
       setBoutique(active);
       setArticles(active ? await chargerMesArticles(active.id) : []);
-      setCommandes(active ? await chargerCommandesBoutique(active.id) : []);
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Chargement impossible.');
     } finally {
@@ -377,10 +334,6 @@ export default function MaBoutiqueScreen() {
     }
   }
 
-  // useFocusEffect (pas useEffect) : recharge à chaque retour sur cet écran,
-  // pas seulement au montage — sans quoi un article publié ou retiré depuis
-  // un autre écran (vendre/publier) restait invisible ici tant que le
-  // composant ne se démontait pas.
   useFocusEffect(
     useCallback(() => {
       recharger();
@@ -401,9 +354,259 @@ export default function MaBoutiqueScreen() {
     }
   }
 
+  async function basculerDisponibilite(valeur: boolean) {
+    if (!boutique || disponibiliteEnCours) return;
+    setDisponibiliteEnCours(true);
+    try {
+      await definirDisponibiliteBoutique(boutique.id, valeur);
+      setBoutique({ ...boutique, disponible_manuel: valeur });
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Impossible de changer la disponibilité.');
+    } finally {
+      setDisponibiliteEnCours(false);
+    }
+  }
+
+  function ouvrirEditionMetier() {
+    setMetierSaisi(boutique?.metier ?? '');
+    setDescriptionSaisie(boutique?.description_prestation ?? '');
+    setEditionMetier(true);
+  }
+
+  async function enregistrerMetier() {
+    if (!boutique) return;
+    setEnregistrementRubrique(true);
+    try {
+      await modifierBoutique(boutique.id, {
+        nom: boutique.nom,
+        quartier: boutique.quartier,
+        ville: boutique.ville,
+        telephoneWhatsapp: boutique.telephone_whatsapp,
+        metier: metierSaisi,
+        descriptionPrestation: descriptionSaisie,
+        typeBoutique: 'service',
+      });
+      setEditionMetier(false);
+      await recharger();
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Enregistrement impossible.');
+    } finally {
+      setEnregistrementRubrique(false);
+    }
+  }
+
+  function ouvrirEditionEtablissement() {
+    setCategorieSaisie(boutique?.categorie_etablissement ?? null);
+    setEditionEtablissement(true);
+  }
+
+  async function enregistrerEtablissement() {
+    if (!boutique || !categorieSaisie) return;
+    setEnregistrementRubrique(true);
+    try {
+      await modifierBoutique(boutique.id, {
+        nom: boutique.nom,
+        quartier: boutique.quartier,
+        ville: boutique.ville,
+        telephoneWhatsapp: boutique.telephone_whatsapp,
+        categorieEtablissement: categorieSaisie,
+        typeBoutique: 'etablissement',
+      });
+      setEditionEtablissement(false);
+      await recharger();
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Enregistrement impossible.');
+    } finally {
+      setEnregistrementRubrique(false);
+    }
+  }
+
   function retour() {
     if (router.canGoBack()) router.back();
     else router.replace('/marketplace');
+  }
+
+  function blocDisponibilite() {
+    if (!boutique) return null;
+    return (
+      <View className="flex-row items-center gap-2 mb-3">
+        <Pressable
+          onPress={() => basculerDisponibilite(true)}
+          disabled={disponibiliteEnCours}
+          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5 border ${
+            boutique.disponible_manuel ? 'border-transparent bg-[#10B981]' : 'border-gray-300 bg-white'
+          }`}>
+          <Ionicons name="flash" size={13} color={boutique.disponible_manuel ? '#fff' : '#9CA3AF'} />
+          <Text className={`text-[12px] font-bold ${boutique.disponible_manuel ? 'text-white' : 'text-gray-600'}`}>
+            Disponible maintenant
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => basculerDisponibilite(false)}
+          disabled={disponibiliteEnCours}
+          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5 border ${
+            !boutique.disponible_manuel ? 'border-transparent bg-gray-700' : 'border-gray-300 bg-white'
+          }`}>
+          <Ionicons name="pause" size={13} color={!boutique.disponible_manuel ? '#fff' : '#9CA3AF'} />
+          <Text className={`text-[12px] font-bold ${!boutique.disponible_manuel ? 'text-white' : 'text-gray-600'}`}>Indisponible</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  function contenuService() {
+    if (!boutique) return null;
+    return (
+      <View className="px-4 gap-3">
+        <View className="flex-row items-center justify-between bg-white rounded-2xl border border-black/[0.06] p-3.5">
+          <View>
+            <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Rendre mon service visible</Text>
+            <Text className="text-[11.5px] text-gray-500 mt-0.5">{boutique.actif ? 'Visible par les utilisateurs' : 'Masqué aux utilisateurs'}</Text>
+          </View>
+          <Switch value={boutique.actif} onValueChange={basculerVisibilite} disabled={bascule} trackColor={{ true: VERT_PROFOND }} />
+        </View>
+
+        <View className="bg-[#EFF6FF] rounded-2xl p-3.5 gap-2">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="construct-outline" size={16} color="#1A1A1A" />
+              <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Métier / Prestation</Text>
+            </View>
+            {!editionMetier && (
+              <Pressable onPress={ouvrirEditionMetier} hitSlop={6}>
+                <Text className="text-[12px] font-bold text-[#2563EB]">✎ Modifier</Text>
+              </Pressable>
+            )}
+          </View>
+          {editionMetier ? (
+            <View className="gap-2.5">
+              <View className="flex-row flex-wrap gap-1.5">
+                {METIERS_SERVICE.map((m) => (
+                  <Pressable
+                    key={m}
+                    onPress={() => setMetierSaisi(m)}
+                    className={`rounded-full px-2.5 py-1.5 border ${metierSaisi === m ? 'border-transparent bg-[#2563EB]' : 'border-gray-300 bg-white'}`}>
+                    <Text className={`text-[11px] font-semibold ${metierSaisi === m ? 'text-white' : 'text-gray-700'}`}>{m}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <TextInput
+                value={metierSaisi}
+                onChangeText={setMetierSaisi}
+                placeholder="Votre métier (ou précisez)"
+                placeholderTextColor="#9CA3AF"
+                className="border border-gray-300 rounded-xl px-3 py-2.5 text-[13px] text-[#1A1A1A] bg-white"
+              />
+              <TextInput
+                value={descriptionSaisie}
+                onChangeText={setDescriptionSaisie}
+                placeholder="Spécialités, zone d'intervention…"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                style={{ minHeight: 60, textAlignVertical: 'top' }}
+                className="border border-gray-300 rounded-xl px-3 py-2.5 text-[13px] text-[#1A1A1A] bg-white"
+              />
+              <View className="flex-row gap-2">
+                <Pressable onPress={() => setEditionMetier(false)} className="flex-1 items-center rounded-xl py-2.5 border border-gray-300">
+                  <Text className="text-[12.5px] font-bold text-gray-600">Annuler</Text>
+                </Pressable>
+                <Pressable
+                  onPress={enregistrerMetier}
+                  disabled={enregistrementRubrique}
+                  className="flex-1 items-center rounded-xl py-2.5 bg-[#2563EB] disabled:opacity-60">
+                  {enregistrementRubrique ? <ActivityIndicator color="#fff" /> : <Text className="text-[12.5px] font-bold text-white">Enregistrer</Text>}
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Text className="text-[14px] font-extrabold text-[#2563EB]">{boutique.metier || 'Non renseigné'}</Text>
+              <Text className="text-[12px] text-gray-500">{boutique.description_prestation || 'Prestation de service sur mesure.'}</Text>
+            </>
+          )}
+        </View>
+
+        {blocDisponibilite()}
+
+        <Pressable
+          onPress={() => BIENTOT('Programmer des horaires')}
+          className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
+          <Ionicons name="calendar-outline" size={16} color="#2563EB" />
+          <Text className="text-[13px] font-bold text-[#2563EB]">Programmer des horaires</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/marketplace/vendre/livreur')}
+          className="flex-row items-center gap-3 rounded-2xl border border-gray-300 px-3.5 py-3">
+          <Ionicons name="bicycle-outline" size={20} color={VERT_PROFOND} />
+          <View className="flex-1">
+            <Text className="text-[13px] font-bold text-[#1A1A1A]">Devenir livreur</Text>
+            <Text className="text-[11.5px] text-gray-500">Livrer les commandes du Marketplace</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+        </Pressable>
+      </View>
+    );
+  }
+
+  function contenuEtablissement() {
+    if (!boutique) return null;
+    return (
+      <View className="px-4 gap-3">
+        <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2">
+          <Text className="text-[11px] font-extrabold tracking-wide text-gray-500">À PROPOS DE {boutique.nom.toUpperCase()}</Text>
+          <Text className="text-[12.5px] text-gray-600">Boutique officielle partenaire sur Facilité Sénégal.</Text>
+          <View className="border-t border-black/[0.05] pt-2 flex-row items-center justify-between">
+            <Text className="text-[12.5px] font-bold text-gray-700">Catégorie de l&apos;établissement</Text>
+            {!editionEtablissement && (
+              <Pressable onPress={ouvrirEditionEtablissement} hitSlop={6}>
+                <Ionicons name="create-outline" size={16} color="#2563EB" />
+              </Pressable>
+            )}
+          </View>
+          {editionEtablissement ? (
+            <View className="gap-2.5">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {CATEGORIES_ETABLISSEMENT.map((c) => (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => setCategorieSaisie(c.id)}
+                    className={`rounded-full px-3 py-1.5 border ${categorieSaisie === c.id ? 'border-transparent bg-[#2563EB]' : 'border-gray-300 bg-white'}`}>
+                    <Text className={`text-[11px] font-semibold ${categorieSaisie === c.id ? 'text-white' : 'text-gray-700'}`}>{c.label}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <View className="flex-row gap-2">
+                <Pressable onPress={() => setEditionEtablissement(false)} className="flex-1 items-center rounded-xl py-2.5 border border-gray-300">
+                  <Text className="text-[12.5px] font-bold text-gray-600">Annuler</Text>
+                </Pressable>
+                <Pressable
+                  onPress={enregistrerEtablissement}
+                  disabled={enregistrementRubrique || !categorieSaisie}
+                  className="flex-1 items-center rounded-xl py-2.5 bg-[#2563EB] disabled:opacity-60">
+                  {enregistrementRubrique ? <ActivityIndicator color="#fff" /> : <Text className="text-[12.5px] font-bold text-white">Enregistrer</Text>}
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View className="self-start rounded-full px-2.5 py-1 bg-[#D1FAE5]">
+              <Text className="text-[11px] font-black tracking-wide text-[#047857]">
+                {libelleCategorieEtablissement(boutique.categorie_etablissement).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {blocDisponibilite()}
+
+        <Pressable
+          onPress={() => BIENTOT('Horaires d’ouverture')}
+          className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
+          <Ionicons name="time-outline" size={16} color="#2563EB" />
+          <Text className="text-[13px] font-bold text-[#2563EB]">Horaires d&apos;ouverture</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   return (
@@ -429,96 +632,49 @@ export default function MaBoutiqueScreen() {
           </View>
         ) : boutique === null ? (
           <FormulaireCreationBoutique userId={user.id} onCree={recharger} />
-        ) : (
+        ) : onglet === 'article' ? (
           <FlatList
-            data={onglet === 'articles' ? articles : []}
+            data={articles}
             keyExtractor={(a) => a.id}
             contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 10 }}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View className="mb-4">
-                <View className="p-3.5 rounded-2xl border border-black/[0.06] bg-[#F8F6F1] gap-2.5">
-                  <View className="flex-row items-center gap-3">
-                    <View className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: VERT_PROFOND }}>
-                      <Ionicons name="storefront" size={20} color="#6ee7c9" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-[15px] font-extrabold text-[#1A1A1A]" numberOfLines={1}>
-                        {boutique.nom}
-                      </Text>
-                      <Text className="text-[12px] text-gray-500" numberOfLines={1}>
-                        {[boutique.quartier, boutique.ville].filter(Boolean).join(', ') || 'Sénégal'}
-                      </Text>
+                <View className="h-[90px] rounded-2xl bg-[#E6DFD0]" />
+                <View className="-mt-8 px-1 gap-1">
+                  <View className="w-[66px] h-[66px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
+                    <Ionicons name="storefront" size={26} color={VERT_PROFOND} />
+                  </View>
+                  <View className="flex-row items-center gap-2 flex-wrap mt-1">
+                    <Text className="text-[16px] font-black text-[#1A1A1A]">{boutique.nom}</Text>
+                    <View className="rounded-full px-2 py-0.5 bg-[#D1FAE5]">
+                      <Text className="text-[10px] font-black tracking-wide text-[#047857]">BOUTIQUE</Text>
                     </View>
                   </View>
-                  <View className="flex-row items-center justify-between pt-2 border-t border-black/[0.05]">
-                    <Text className="text-[12.5px] font-semibold text-gray-700">
-                      {boutique.actif ? 'Visible sur le Marketplace' : 'Masquée du Marketplace'}
-                    </Text>
-                    <Switch
-                      value={boutique.actif}
-                      onValueChange={basculerVisibilite}
-                      disabled={bascule}
-                      trackColor={{ true: VERT_PROFOND }}
-                    />
-                  </View>
-                </View>
-
-                <View className="flex-row gap-2.5 mt-3">
-                  <Pressable
-                    onPress={() =>
-                      router.push({
-                        pathname: '/marketplace/vendre/publier',
-                        params: { storeId: boutique.id },
-                      })
-                    }
-                    className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl py-3"
-                    style={{ backgroundColor: VERT_PROFOND }}>
-                    <Ionicons name="add" size={17} color="#6ee7c9" />
-                    <Text className="text-white text-[13px] font-bold">Publier un article</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() =>
-                      router.push({
-                        pathname: '/marketplace/vendre/boutique',
-                        params: {
-                          storeId: boutique.id,
-                          nom: boutique.nom,
-                          quartier: boutique.quartier ?? '',
-                          ville: boutique.ville ?? '',
-                          whatsapp: boutique.telephone_whatsapp ?? '',
-                        },
-                      })
-                    }
-                    accessibilityLabel="Modifier ma boutique"
-                    className="w-12 items-center justify-center rounded-2xl border border-gray-300">
-                    <Ionicons name="settings-outline" size={18} color="#1A1A1A" />
-                  </Pressable>
+                  <Text className="text-[12px] text-gray-500">
+                    {[boutique.quartier, boutique.ville].filter(Boolean).join(' · ') || 'Sénégal'}
+                  </Text>
                 </View>
 
                 <Pressable
-                  onPress={() => router.push('/marketplace/vendre/livreur')}
-                  className="flex-row items-center gap-3 mt-3 rounded-2xl border border-gray-300 px-3.5 py-3">
-                  <Ionicons name="bicycle-outline" size={20} color={VERT_PROFOND} />
-                  <View className="flex-1">
-                    <Text className="text-[13px] font-bold text-[#1A1A1A]">Service · Devenir livreur</Text>
-                    <Text className="text-[11.5px] text-gray-500">Livrer les commandes du Marketplace</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                  onPress={() => router.push('/marketplace/vendre/tableau-de-bord' as Href)}
+                  className="flex-row items-center justify-center gap-2 rounded-2xl border border-[#10B981] py-3 mt-3">
+                  <Ionicons name="bar-chart-outline" size={16} color={VERT_PROFOND} />
+                  <Text className="text-[13.5px] font-bold" style={{ color: VERT_PROFOND }}>
+                    Tableau de bord
+                  </Text>
                 </Pressable>
 
-                <View className="flex-row gap-2 mt-5">
-                  {(['articles', 'commandes'] as const).map((o) => {
+                <View className="flex-row gap-1.5 mt-4">
+                  {(['article', 'service', 'etablissement'] as const).map((o) => {
                     const actif = onglet === o;
-                    const libelle = o === 'articles' ? `Mes annonces (${articles.length})` : `Commandes reçues (${commandes.length})`;
+                    const libelle = o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT';
                     return (
                       <Pressable
                         key={o}
                         onPress={() => setOnglet(o)}
-                        className={`flex-1 rounded-full py-2 items-center border ${
-                          actif ? 'border-[#0d3b34] bg-[#0d3b34]' : 'border-gray-300 bg-white'
-                        }`}>
-                        <Text className={`text-[12px] font-bold ${actif ? 'text-white' : 'text-gray-700'}`}>{libelle}</Text>
+                        className={`flex-1 rounded-full py-2 items-center ${actif ? 'bg-black' : 'bg-[#F2F0EA]'}`}>
+                        <Text className={`text-[11px] font-black tracking-wide ${actif ? 'text-white' : 'text-gray-500'}`}>{libelle}</Text>
                       </Pressable>
                     );
                   })}
@@ -526,35 +682,55 @@ export default function MaBoutiqueScreen() {
               </View>
             }
             ListEmptyComponent={
-              onglet === 'articles' ? (
-                <View className="items-center pt-6 pb-10 gap-2">
-                  <Ionicons name="pricetags-outline" size={36} color="#9CA3AF" />
-                  <Text className="text-[13.5px] text-gray-500 text-center px-6">
-                    Aucun article publié pour l&apos;instant.
-                  </Text>
-                </View>
-              ) : null
-            }
-            ListFooterComponent={
-              onglet === 'commandes' ? (
-                commandes.length === 0 ? (
-                  <View className="items-center pt-6 pb-10 gap-2">
-                    <Ionicons name="receipt-outline" size={36} color="#9CA3AF" />
-                    <Text className="text-[13.5px] text-gray-500 text-center px-6">
-                      Aucune commande reçue pour l&apos;instant.
-                    </Text>
-                  </View>
-                ) : (
-                  <View className="gap-2.5">
-                    {commandes.map((c) => (
-                      <CarteCommandeVendeur key={c.id} commande={c} />
-                    ))}
-                  </View>
-                )
-              ) : null
+              <View className="items-center pt-6 pb-10 gap-2">
+                <Ionicons name="pricetags-outline" size={36} color="#9CA3AF" />
+                <Text className="text-[13.5px] text-gray-500 text-center px-6">Aucun article publié pour l&apos;instant.</Text>
+              </View>
             }
             renderItem={({ item }) => <LigneArticle article={item} onChanger={recharger} />}
           />
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
+            <View className="h-[90px] bg-[#E6DFD0]" />
+            <View className="px-4 -mt-8 gap-1 mb-4">
+              <View className="w-[66px] h-[66px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
+                <Ionicons name="storefront" size={26} color={VERT_PROFOND} />
+              </View>
+              <View className="flex-row items-center gap-2 flex-wrap mt-1">
+                <Text className="text-[16px] font-black text-[#1A1A1A]">{boutique.nom}</Text>
+                <View className="rounded-full px-2 py-0.5 bg-[#D1FAE5]">
+                  <Text className="text-[10px] font-black tracking-wide text-[#047857]">BOUTIQUE</Text>
+                </View>
+              </View>
+              <Text className="text-[12px] text-gray-500">{[boutique.quartier, boutique.ville].filter(Boolean).join(' · ') || 'Sénégal'}</Text>
+
+              <Pressable
+                onPress={() => router.push('/marketplace/vendre/tableau-de-bord' as Href)}
+                className="flex-row items-center justify-center gap-2 rounded-2xl border border-[#10B981] py-3 mt-3">
+                <Ionicons name="bar-chart-outline" size={16} color={VERT_PROFOND} />
+                <Text className="text-[13.5px] font-bold" style={{ color: VERT_PROFOND }}>
+                  Tableau de bord
+                </Text>
+              </Pressable>
+
+              <View className="flex-row gap-1.5 mt-4">
+                {(['article', 'service', 'etablissement'] as const).map((o) => {
+                  const actif = onglet === o;
+                  const libelle = o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT';
+                  return (
+                    <Pressable
+                      key={o}
+                      onPress={() => setOnglet(o)}
+                      className={`flex-1 rounded-full py-2 items-center ${actif ? 'bg-black' : 'bg-[#F2F0EA]'}`}>
+                      <Text className={`text-[11px] font-black tracking-wide ${actif ? 'text-white' : 'text-gray-500'}`}>{libelle}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {onglet === 'service' ? contenuService() : contenuEtablissement()}
+          </ScrollView>
         )}
       </SafeAreaView>
     </View>
