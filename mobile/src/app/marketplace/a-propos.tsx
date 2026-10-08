@@ -83,6 +83,12 @@ export default function AProposMarketplaceScreen() {
                 <Text className="text-[12.5px] text-gray-600">
                   {estVendeur ? boutique?.nom : 'Boutique officielle partenaire sur Facilité Sénégal'}
                 </Text>
+                <Pressable
+                  onPress={() => router.push('/marketplace/modifier-profil')}
+                  className="self-start flex-row items-center gap-1.5 rounded-full border border-gray-300 px-3 py-1.5 mt-1">
+                  <Ionicons name="pencil-outline" size={12} color="#1A1A1A" />
+                  <Text className="text-[11.5px] font-bold text-[#1A1A1A]">Modifier le profil</Text>
+                </Pressable>
               </View>
             </View>
 
