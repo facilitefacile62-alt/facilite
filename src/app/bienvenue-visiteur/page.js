@@ -1,20 +1,16 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function BienvenueVisiteurContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState("");
-
-  const rawRedirect = searchParams.get("redirect") || "/";
-  const safeRedirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
 
   useEffect(() => {
     let annule = false;
@@ -63,8 +59,11 @@ function BienvenueVisiteurContent() {
           })
           .eq("id", user.id);
       }
-      const destination = safeRedirect === "/" ? "/marketplace" : safeRedirect;
-      router.push(destination);
+      // Toujours l'accueil Marketplace : un « redirect » hérité d'avant la
+      // connexion (ex. onglet=vendre via "+ Publier un article") n'a plus de
+      // sens une fois que la personne vient de déclarer explicitement
+      // qu'elle est Visiteur, pas Vendeur.
+      router.push("/marketplace");
     } catch (err) {
       console.error("Erreur enregistrement nom/prénom (bienvenue-visiteur):", err);
       setErreur("Une erreur est survenue. Réessayez.");
