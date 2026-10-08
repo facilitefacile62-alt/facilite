@@ -225,6 +225,16 @@ export default function ArticleScreen() {
               </Text>
             </View>
           )}
+
+          {/* Plein écran — maquette « Marketplace — Photos & vidéo » (22) */}
+          {article.photos.length > 0 && (
+            <Pressable
+              onPress={() => router.push(`/marketplace/photos?id=${article.id}&index=${photoActive}`)}
+              accessibilityLabel="Voir en plein écran"
+              className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/55 items-center justify-center">
+              <Ionicons name="expand-outline" size={17} color="#fff" />
+            </Pressable>
+          )}
         </View>
 
         {/* Section Infos & Prix */}
