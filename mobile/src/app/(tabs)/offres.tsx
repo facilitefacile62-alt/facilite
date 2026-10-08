@@ -43,7 +43,7 @@ export default function OffresScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0B0E14' }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <FaciliteHeader dark={true} />
+        <FaciliteHeader />
 
         {offres === null ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

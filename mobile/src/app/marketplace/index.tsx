@@ -5,8 +5,11 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CarteArticleMarketplace from '@/components/CarteArticleMarketplace';
+import PanneauNotifications from '@/components/PanneauNotifications';
+import PastilleCompteur from '@/components/PastilleCompteur';
 import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES_MARKETPLACE, type ArticleMarketplace } from '@/lib/marketplace';
+import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 import { chargerMesBoutiques } from '@/lib/vendeur';
 
@@ -17,6 +20,7 @@ import { chargerMesBoutiques } from '@/lib/vendeur';
 // est désormais l'onglet dédié de la barre du bas.
 const VERT_PROFOND = '#0d3b34';
 const BLEU_MARKETPLACE = '#2563EB';
+const FOND_BARRE = '#e3dbcc';
 
 // Nombre impair d'articles : sans case vide, la dernière carte s'étirerait sur
 // toute la largeur (numColumns=2, flex-1).
@@ -31,6 +35,9 @@ export default function MarketplaceScreen() {
   const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, '');
 
   // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...).
+  const [notifsOuvertes, setNotifsOuvertes] = useState(false);
+  const compteurs = useCompteursNonLus();
+
   const { categorie: categorieParam } = useLocalSearchParams<{ categorie?: string }>();
   useEffect(() => {
     if (!categorieParam) return;
@@ -58,26 +65,33 @@ export default function MarketplaceScreen() {
   );
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: '#F2F0EA' }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-2.5 px-4 pt-2 pb-3">
-          <Ionicons name="storefront" size={20} color={BLEU_MARKETPLACE} />
-          <Text className="text-[19px] font-black flex-1" style={{ color: BLEU_MARKETPLACE }}>
+        {/* En-tête de la maquette 15 : bande #e3dbcc, « Marketplace » bleu,
+            cloche avec pastille réelle, loupe dans sa pastille grise, menu. */}
+        <View className="flex-row items-center gap-4 px-4 py-3" style={{ backgroundColor: FOND_BARRE }}>
+          <Ionicons name="storefront" size={19} color={BLEU_MARKETPLACE} />
+          <Text className="text-[18px] font-black flex-1 -ml-2.5" style={{ color: BLEU_MARKETPLACE }}>
             Marketplace
           </Text>
+          <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
+            <View>
+              <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />
+              <PastilleCompteur valeur={compteurs.notifications} />
+            </View>
+          </Pressable>
           <Pressable
             onPress={() => router.push('/marketplace/recherche')}
             accessibilityLabel="Rechercher"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="search" size={17} color="#1A1A1A" />
+            className="w-9 h-9 rounded-full items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}>
+            <Ionicons name="search" size={18} color="#1A1A1A" />
           </Pressable>
-          <Pressable
-            onPress={() => router.push('/marketplace/profil')}
-            accessibilityLabel="Menu"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="menu" size={19} color="#1A1A1A" />
+          <Pressable onPress={() => router.push('/marketplace/profil')} accessibilityLabel="Menu" hitSlop={8}>
+            <Ionicons name="menu" size={22} color="#1A1A1A" />
           </Pressable>
         </View>
+        <PanneauNotifications visible={notifsOuvertes} onFermer={() => setNotifsOuvertes(false)} />
 
         <View style={{ height: 40, marginTop: 4 }}>
           <ScrollView
