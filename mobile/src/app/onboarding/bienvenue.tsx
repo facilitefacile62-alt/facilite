@@ -27,7 +27,7 @@ export default function OnboardingBienvenueScreen() {
 
         <View className="w-full px-5 pb-8 gap-3">
           <Pressable
-            onPress={() => router.replace('/')}
+            onPress={() => router.push('/onboarding/document' as Href)}
             className="rounded-2xl p-5"
             style={{ backgroundColor: VERT_PROFOND }}>
             <Ionicons name="briefcase-outline" size={22} color="#6ee7c9" />
