@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { idsConversationsMarketplace } from '@/lib/messagesMarketplace';
 
 // Liste réelle des discussions pour l'écran Messages (mobile) — la ligne
 // "Support RH Facilité" du design est fixe (voir messages.tsx), donc cette
@@ -55,9 +56,13 @@ export function useConversationsReelles(userId: string | undefined) {
           return;
         }
 
+        // Les discussions Marketplace ont leur propre messagerie (barre Marketplace).
+        const marketplace = await idsConversationsMarketplace(userId);
+        const data_ = data.filter((c) => !marketplace.has(c.id));
+
         const autresIds = Array.from(
           new Set(
-            data
+            data_
               .map((c) => (c.user_1_id === userId ? c.user_2_id : c.user_1_id))
               .filter((id): id is string => Boolean(id) && id !== userId)
           )
@@ -68,7 +73,7 @@ export function useConversationsReelles(userId: string | undefined) {
           return;
         }
 
-        const idsConversations = data.map((c) => c.id);
+        const idsConversations = data_.map((c) => c.id);
 
         const [{ data: profils }, { data: roles }, { data: messagesNonLus }] = await Promise.all([
           supabase.from('profiles').select('id, full_name').in('id', autresIds),
@@ -88,7 +93,7 @@ export function useConversationsReelles(userId: string | undefined) {
           nomParId[p.id] = p.full_name || 'Utilisateur Facilité';
         });
 
-        const mapped = data
+        const mapped = data_
           .map((c) => {
             const autreId = c.user_1_id === userId ? c.user_2_id : c.user_1_id;
             return { c, autreId };

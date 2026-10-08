@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname, useRouter } from 'expo-router';
+import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,9 +21,9 @@ type Entree = {
 
 const ENTREES: Entree[] = [
   { id: 'accueil', libelle: 'Accueil', icone: 'home-outline', iconeActive: 'home', cible: '/marketplace' },
-  { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/marketplace?autour=1' },
+  { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/marketplace/autour' },
   { id: 'publier', libelle: 'Publier', icone: 'add-circle-outline', iconeActive: 'add-circle', cible: '/marketplace/vendre' },
-  { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/messages' },
+  { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/marketplace/messages' },
   { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/marketplace/profil' },
 ];
 
@@ -31,8 +31,10 @@ const ENTREES: Entree[] = [
 // à une entrée (ex. /marketplace/[id] -> Accueil) gardent l'entrée parente active.
 function entreeActive(chemin: string): Entree['id'] | null {
   if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/a-propos')) return 'profil';
+  if (chemin.startsWith('/marketplace/autour')) return 'autour';
+  if (chemin.startsWith('/marketplace/recherche')) return 'accueil';
   if (chemin.startsWith('/marketplace/vendre')) return 'publier';
-  if (chemin.startsWith('/messages')) return 'messages';
+  if (chemin.startsWith('/marketplace/messages') || chemin.startsWith('/marketplace/chat')) return 'messages';
   if (chemin.startsWith('/marketplace')) return 'accueil';
   return null;
 }
@@ -52,7 +54,7 @@ export default function MarketplaceBottomBar() {
           return (
             <Pressable
               key={e.id}
-              onPress={() => router.navigate(e.cible as never)}
+              onPress={() => router.navigate(e.cible as Href)}
               accessibilityRole="tab"
               accessibilityState={{ selected: estActif }}
               className="flex-1 items-center justify-center py-2 min-h-[52px]">

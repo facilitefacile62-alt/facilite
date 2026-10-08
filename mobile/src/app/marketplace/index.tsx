@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -93,12 +93,12 @@ export default function MarketplaceScreen() {
   // Menu « Autour de moi » (comme sur le site) : Articles proches / Mini carte / Pleine carte.
   const [menuAutourOuvert, setMenuAutourOuvert] = useState(false);
 
-  // « Autour de moi » de la barre du bas ouvre cet accueil avec ?autour=1 : on ouvre alors le menu.
-  const { autour } = useLocalSearchParams<{ autour?: string }>();
+  // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...).
+  const { categorie: categorieParam } = useLocalSearchParams<{ categorie?: string }>();
   useEffect(() => {
-    if (autour !== '1') return;
-    queueMicrotask(() => setMenuAutourOuvert(true));
-  }, [autour]);
+    if (!categorieParam) return;
+    queueMicrotask(() => setCategorie(categorieParam));
+  }, [categorieParam]);
 
   // Libellé des actions rapides : « Devenir Vendeur » sans boutique, « Ma boutique » avec une.
   const { user } = useAuth();
@@ -178,23 +178,20 @@ export default function MarketplaceScreen() {
         </View>
 
         <View className="px-4">
-          <View className="flex-row items-center gap-2 bg-[#F2F0EA] rounded-full px-4 py-2.5">
+          {/* Un clic ouvre la page Recherche (maquette « Marketplace — Recherche ») ; le filtre local est gardé en repli. */}
+          <Pressable
+            onPress={() => router.push('/marketplace/recherche')}
+            className="flex-row items-center gap-2 bg-[#F2F0EA] rounded-full px-4 py-2.5">
             <Ionicons name="search" size={17} color="#6B7280" />
-            <TextInput
-              value={recherche}
-              onChangeText={setRecherche}
-              placeholder="Rechercher un article"
-              placeholderTextColor="#9CA3AF"
-              returnKeyType="search"
-              autoCorrect={false}
-              className="flex-1 text-[14px] text-[#1A1A1A] p-0"
-            />
+            <Text className="flex-1 text-[14px] text-gray-500">
+              {recherche || 'Rechercher un article, une boutique...'}
+            </Text>
             {recherche.length > 0 && (
               <Pressable onPress={() => setRecherche('')} hitSlop={8} accessibilityLabel="Effacer la recherche">
                 <Ionicons name="close-circle" size={18} color="#9CA3AF" />
               </Pressable>
             )}
-          </View>
+          </Pressable>
         </View>
 
         {/* Actions rapides (maquette « Visiteur — Marketplace ») : Devenir Vendeur / Ma boutique, Mes commandes */}
