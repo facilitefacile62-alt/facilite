@@ -38,8 +38,10 @@ import {
 // "Ma boutique" (espace vendeur natif) : aperçu public avec les onglets
 // ARTICLE · SERVICE · ÉTABLISSEMENT (maquette « Marketplace — Ma boutique »).
 // La gestion (annonces, commandes, réglages…) vit dans Tableau de bord,
-// accessible depuis ici. Aucune fonctionnalité inventée : les horaires
-// d'ouverture ne sont pas encore modifiables depuis l'app (BIENTOT).
+// accessible depuis ici. Les horaires d'ouverture ouvrent désormais
+// l'éditeur des sept jours (vendre/horaires.tsx), adossé à la table
+// marketplace_horaires — ils affichaient « Bientôt disponible » alors que
+// la table et sa fonction d'écriture existaient déjà.
 const VERT_PROFOND = '#0d3b34';
 
 function decouperNom(nomComplet: string | null | undefined): { prenom: string; nom: string } {
@@ -297,8 +299,6 @@ function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: 
   );
 }
 
-const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
-
 export default function MaBoutiqueScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -529,7 +529,7 @@ export default function MaBoutiqueScreen() {
         {blocDisponibilite()}
 
         <Pressable
-          onPress={() => BIENTOT('Programmer des horaires')}
+          onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
           className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
           <Ionicons name="calendar-outline" size={16} color="#2563EB" />
           <Text className="text-[13px] font-bold text-[#2563EB]">Programmer des horaires</Text>
@@ -600,7 +600,7 @@ export default function MaBoutiqueScreen() {
         {blocDisponibilite()}
 
         <Pressable
-          onPress={() => BIENTOT('Horaires d’ouverture')}
+          onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
           className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
           <Ionicons name="time-outline" size={16} color="#2563EB" />
           <Text className="text-[13px] font-bold text-[#2563EB]">Horaires d&apos;ouverture</Text>
@@ -610,7 +610,7 @@ export default function MaBoutiqueScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
           <Pressable
