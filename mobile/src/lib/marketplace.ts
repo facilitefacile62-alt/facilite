@@ -49,6 +49,10 @@ export type ArticleMarketplace = {
   // Badge « Vérifié » : seulement quand la boutique l'est réellement. Absent
   // des listes de proximité (leur RPC ne le renvoie pas), jamais affiché par défaut.
   boutiqueVerifie?: boolean;
+  // Position de la boutique, pour le bouton « M'y rendre ». Absente des
+  // listes de proximité (leur RPC ne la renvoie pas).
+  boutiqueLat?: number | null;
+  boutiqueLng?: number | null;
 };
 
 export type Position = { latitude: number; longitude: number };
@@ -92,6 +96,8 @@ type LigneStore = {
   telephone_whatsapp: string | null;
   owner_id: string | null;
   verifie: boolean | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 type LigneArticle = {
   id: string;
@@ -124,10 +130,12 @@ function versArticle(r: LigneArticle): ArticleMarketplace {
     proprietaireId: store?.owner_id ?? null,
     distanceKm: null,
     boutiqueVerifie: store?.verifie === true,
+    boutiqueLat: store?.latitude ?? null,
+    boutiqueLng: store?.longitude ?? null,
   };
 }
 
-const COLONNES_STORE = 'id, nom, quartier, ville, telephone_whatsapp, owner_id, verifie';
+const COLONNES_STORE = 'id, nom, quartier, ville, telephone_whatsapp, owner_id, verifie, latitude, longitude';
 
 /** Articles actifs de boutiques actives, plus récents d'abord (comme le web). */
 export async function chargerArticles({

@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { distanceLisible, prixLisible, RAYON_PROCHE_KM, type ArticleMarketplace } from '@/lib/marketplace';
+import CarteArticleMarketplace from '@/components/CarteArticleMarketplace';
+import { RAYON_PROCHE_KM, type ArticleMarketplace } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -81,29 +81,7 @@ export default function AutourDeMoiScreen() {
               </View>
             }
             renderItem={({ item }) => (
-              <Pressable
-                onPress={() => router.push(`/marketplace/${item.id}` as Href)}
-                className="flex-1 bg-white rounded-2xl border border-black/[0.06] overflow-hidden">
-                <View className="w-full aspect-square bg-[#F2F0EA]">
-                  {item.photos[0] ? (
-                    <Image source={{ uri: item.photos[0] }} alt={item.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                  ) : null}
-                  {distanceLisible(item.distanceKm) ? (
-                    <View className="absolute bottom-2 left-2 flex-row items-center gap-1 bg-black/65 rounded-full px-2 py-0.5">
-                      <Ionicons name="location" size={10} color="#6ee7c9" />
-                      <Text className="text-white text-[10px] font-bold">{distanceLisible(item.distanceKm)}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <View className="p-2.5 gap-0.5">
-                  <Text className="text-[14px] font-extrabold" style={{ color: VERT_PROFOND }}>
-                    {prixLisible(item.prixXof)} <Text className="text-[10px] font-bold">FCFA</Text>
-                  </Text>
-                  <Text className="text-[12.5px] text-[#1A1A1A]" numberOfLines={2}>
-                    {item.titre}
-                  </Text>
-                </View>
-              </Pressable>
+              <CarteArticleMarketplace article={item} onPress={() => router.push(`/marketplace/${item.id}` as Href)} />
             )}
           />
         )}
