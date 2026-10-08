@@ -11,23 +11,53 @@ import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE } from '@/lib/marketplace';
 import { envoyerPhotoArticle, publierArticle } from '@/lib/vendeur';
 
+// Pas encore disponible : aucune API de reconnaissance d'article (scan IA)
+// n'existe côté serveur pour le Marketplace — contrairement au scan de CV
+// (src/lib/scanDocument.ts), qui est un service différent.
+const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
+
 const VERT_PROFOND = '#0d3b34';
 const MAX_PHOTOS = 6;
 
 type PhotoLocale = { uri: string; width: number; height: number };
+type Etape = 'methode' | 'categorie' | 'details';
+
+function EnTete({ titre, sousTitre, onRetour }: { titre: string; sousTitre?: string; onRetour: () => void }) {
+  return (
+    <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
+      <Pressable onPress={onRetour} accessibilityLabel="Retour" className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
+        <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+      </Pressable>
+      <View>
+        {sousTitre ? <Text className="text-[11px] font-bold tracking-wide text-gray-500">{sousTitre}</Text> : null}
+        <Text className="text-[17px] font-black text-[#1A1A1A] -mt-0.5">{titre}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function PublierArticleScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
   const router = useRouter();
   const { user } = useAuth();
 
+  // Étape 1 : comment vendre, puis la catégorie. Étape 2 : les détails
+  // (maquettes « Publier — Étape 1 Catégorie » et « Étape 2 Détails »).
+  const [etape, setEtape] = useState<Etape>('methode');
+  const [categorie, setCategorie] = useState<string | null>(null);
+
   const [photos, setPhotos] = useState<PhotoLocale[]>([]);
   const [titre, setTitre] = useState('');
-  const [categorie, setCategorie] = useState('autre');
   const [prix, setPrix] = useState('');
   const [quantite, setQuantite] = useState('1');
   const [description, setDescription] = useState('');
   const [publication, setPublication] = useState(false);
+
+  function retour() {
+    if (etape === 'details') setEtape('categorie');
+    else if (etape === 'categorie') setEtape('methode');
+    else router.back();
+  }
 
   async function ajouterPhotos() {
     if (photos.length >= MAX_PHOTOS) return;
@@ -52,7 +82,7 @@ export default function PublierArticleScreen() {
   }
 
   async function publier() {
-    if (!storeId || !user?.id) return;
+    if (!storeId || !user?.id || !categorie) return;
     const titreNet = titre.trim();
     if (!titreNet) {
       Alert.alert('Titre manquant', 'Donnez un titre à votre article.');
@@ -93,18 +123,96 @@ export default function PublierArticleScreen() {
     }
   }
 
+  if (etape === 'methode') {
+    return (
+      <View className="flex-1 bg-white">
+        <SafeAreaView className="flex-1" edges={['top']}>
+          <EnTete titre="Comment voulez-vous vendre ?" onRetour={retour} />
+          <View className="px-4 pt-2 gap-3">
+            <Pressable
+              onPress={() => BIENTOT('Scanner avec l’IA')}
+              className="flex-row items-center gap-3 rounded-2xl border border-gray-200 p-4">
+              <View className="w-11 h-11 rounded-xl bg-[#ECFDF5] items-center justify-center">
+                <Ionicons name="sparkles-outline" size={20} color="#047857" />
+              </View>
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-[14.5px] font-bold text-[#1A1A1A]">Scanner avec l&apos;IA</Text>
+                  <View className="rounded px-1.5 py-0.5 bg-amber-100">
+                    <Text className="text-[9.5px] font-black text-amber-700">PRO</Text>
+                  </View>
+                </View>
+                <Text className="text-[12px] text-gray-500 mt-0.5">Zéro saisie : prenez une photo, l&apos;IA remplit la fiche</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            </Pressable>
+
+            <Pressable
+              onPress={() => setEtape('categorie')}
+              className="flex-row items-center gap-3 rounded-2xl p-4"
+              style={{ backgroundColor: VERT_PROFOND }}>
+              <View className="w-11 h-11 rounded-xl bg-white/15 items-center justify-center">
+                <Ionicons name="create-outline" size={20} color="#FFFFFF" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[14.5px] font-bold text-white">Vendre manuellement</Text>
+                <Text className="text-[12px] text-white/80 mt-0.5">Choisissez la catégorie, puis remplissez les détails</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  if (etape === 'categorie') {
+    return (
+      <View className="flex-1 bg-white">
+        <SafeAreaView className="flex-1" edges={['top']}>
+          <EnTete titre="Choisissez une catégorie" sousTitre="Étape 1 sur 2" onRetour={retour} />
+          <View className="px-4">
+            <Pressable onPress={retour} className="flex-row items-center gap-1 self-start mb-3" hitSlop={8}>
+              <Ionicons name="chevron-back" size={15} color="#6B7280" />
+              <Text className="text-[12.5px] font-semibold text-gray-500">Changer</Text>
+            </Pressable>
+
+            <View className="flex-row flex-wrap gap-2">
+              {CATEGORIES_MARKETPLACE.map((c) => {
+                const actif = categorie === c.id;
+                return (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => setCategorie(c.id)}
+                    className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2.5 border ${
+                      actif ? 'border-transparent' : 'bg-white border-gray-200'
+                    }`}
+                    style={actif ? { backgroundColor: VERT_PROFOND } : undefined}>
+                    <Ionicons name={c.icone as keyof typeof Ionicons.glyphMap} size={14} color={actif ? '#6ee7c9' : '#4B5563'} />
+                    <Text className={`text-[13px] font-semibold ${actif ? 'text-white' : 'text-gray-700'}`}>{c.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Juste sous « ‹ Changer » et la grille, pas collé en bas de l'écran. */}
+            <Pressable
+              onPress={() => categorie && setEtape('details')}
+              disabled={!categorie}
+              className="rounded-2xl py-3.5 items-center mt-6 disabled:opacity-40"
+              style={{ backgroundColor: VERT_PROFOND }}>
+              <Text className="text-white text-[14.5px] font-bold">Continuer</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">Publier un article</Text>
-        </View>
+        <EnTete titre="Détails de l'article" sousTitre="Étape 2 sur 2" onRetour={retour} />
 
         <ScrollView contentContainerClassName="px-4 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View>
@@ -145,27 +253,6 @@ export default function PublierArticleScreen() {
               maxLength={120}
               className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
             />
-          </View>
-
-          <View className="gap-1.5">
-            <Text className="text-[12.5px] font-bold text-gray-700">Catégorie</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {CATEGORIES_MARKETPLACE.map((c) => {
-                const actif = categorie === c.id;
-                return (
-                  <Pressable
-                    key={c.id}
-                    onPress={() => setCategorie(c.id)}
-                    className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border ${
-                      actif ? 'border-transparent' : 'bg-white border-gray-200'
-                    }`}
-                    style={actif ? { backgroundColor: VERT_PROFOND } : undefined}>
-                    <Ionicons name={c.icone as keyof typeof Ionicons.glyphMap} size={13} color={actif ? '#6ee7c9' : '#4B5563'} />
-                    <Text className={`text-[12px] font-semibold ${actif ? 'text-white' : 'text-gray-700'}`}>{c.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
           </View>
 
           <View className="flex-row gap-3">

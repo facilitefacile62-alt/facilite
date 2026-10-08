@@ -111,7 +111,7 @@ export default function ProfilMarketplaceScreen() {
               />
               <Ligne icone="information-circle-outline" fondIcone="#F2F0EA" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
               <Ligne icone="cube-outline" fondIcone="#F2F0EA" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
-              <Ligne icone="settings-outline" fondIcone="#F2F0EA" titre="Réglages" onPress={() => router.push('/mon-profil/parametres')} />
+              <Ligne icone="settings-outline" fondIcone="#F2F0EA" titre="Réglages" onPress={() => router.push('/marketplace/reglages')} />
             </View>
           </ScrollView>
         )}

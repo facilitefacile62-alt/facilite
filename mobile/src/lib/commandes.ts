@@ -38,6 +38,7 @@ export type MaCommande = {
   livreur_position_maj_le: string | null;
   created_at: string;
   item: { titre: string } | null;
+  store?: { nom: string; quartier: string | null; ville: string | null } | null;
 };
 
 export const LIBELLES_STATUT: Record<StatutCommande, string> = {
@@ -94,6 +95,18 @@ export async function creerCommandeMarketplace(champs: {
   });
   if (error) throw new Error(error.message);
   return data as MaCommande;
+}
+
+/** Une commande par son id (la RLS limite déjà à l'acheteur, au livreur ou au vendeur concernés). */
+export async function chargerCommande(commandeId: string): Promise<MaCommande | null> {
+  if (!commandeId) return null;
+  const { data, error } = await supabase
+    .from('marketplace_commandes')
+    .select(`${COLONNES}, store:marketplace_stores(nom, quartier, ville)`)
+    .eq('id', commandeId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as unknown as MaCommande) ?? null;
 }
 
 /** Commandes passées par l'acheteur courant, les plus récentes d'abord. */

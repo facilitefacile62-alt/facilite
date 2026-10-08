@@ -510,7 +510,7 @@ export default function MaBoutiqueScreen() {
                 <View className="flex-row gap-2 mt-5">
                   {(['articles', 'commandes'] as const).map((o) => {
                     const actif = onglet === o;
-                    const libelle = o === 'articles' ? `Mes articles (${articles.length})` : `Commandes reçues (${commandes.length})`;
+                    const libelle = o === 'articles' ? `Mes annonces (${articles.length})` : `Commandes reçues (${commandes.length})`;
                     return (
                       <Pressable
                         key={o}

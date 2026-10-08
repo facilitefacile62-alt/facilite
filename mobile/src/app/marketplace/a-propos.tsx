@@ -110,7 +110,7 @@ export default function AProposMarketplaceScreen() {
                 <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Foire aux questions</Text>
               </Pressable>
               <Pressable
-                onPress={() => router.push('/mon-profil/parametres')}
+                onPress={() => router.push('/marketplace/reglages')}
                 className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white py-3">
                 <Ionicons name="settings-outline" size={17} color={VERT_PROFOND} />
                 <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Réglages</Text>

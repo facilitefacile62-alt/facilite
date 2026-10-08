@@ -1,14 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import {
   annulerCommande,
   chargerMesCommandesAcheteur,
-  confirmerReceptionCommande,
   couleurStatut,
   dateCourte,
   LIBELLES_PAIEMENT,
@@ -17,32 +16,25 @@ import {
 } from '@/lib/commandes';
 import { prixLisible } from '@/lib/marketplace';
 
-// « Mes commandes » (acheteur). Le suivi se met à jour à l'ouverture de
-// l'écran et au tirer-pour-rafraîchir : pas de canal temps réel dans cette
-// version native. La position du livreur n'apparaît qu'une fois la livraison
-// en cours, et s'ouvre dans l'application Plans du téléphone.
+// « Mes commandes » (acheteur). Le suivi détaillé (position, confirmation de
+// réception) vit dans l'écran dédié /marketplace/suivi/[id] (maquettes
+// « Suivi de livraison » / « Suivi — Livraison déclarée »).
 const VERT_PROFOND = '#0d3b34';
 
 function CarteCommande({
   commande,
   occupee,
-  onConfirmer,
+  onSuivre,
   onAnnuler,
 }: {
   commande: MaCommande;
   occupee: boolean;
-  onConfirmer: () => void;
+  onSuivre: () => void;
   onAnnuler: () => void;
 }) {
   const statut = couleurStatut(commande.statut);
-  const positionConnue = commande.livreur_position_lat !== null && commande.livreur_position_lng !== null;
   const peutAnnuler = commande.statut === 'en_attente_livreur' || commande.statut === 'assignee';
-
-  function ouvrirCarte() {
-    if (!positionConnue) return;
-    const url = `https://www.google.com/maps/search/?api=1&query=${commande.livreur_position_lat},${commande.livreur_position_lng}`;
-    Linking.openURL(url).catch(() => Alert.alert('Carte', "Impossible d'ouvrir l'application Plans."));
-  }
+  const peutSuivre = ['assignee', 'recuperee', 'en_livraison', 'livree_declaree', 'livree'].includes(commande.statut);
 
   return (
     <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2.5">
@@ -70,37 +62,21 @@ function CarteCommande({
         Livraison : {commande.livraison_adresse}
       </Text>
 
-      {commande.statut === 'en_livraison' && (
+      {peutSuivre && (
         <Pressable
-          onPress={ouvrirCarte}
-          disabled={!positionConnue}
-          className="flex-row items-center gap-2 rounded-xl bg-[#F8F6F1] px-3 py-2.5 disabled:opacity-60">
-          <Ionicons name="navigate-outline" size={16} color={VERT_PROFOND} />
-          <Text className="flex-1 text-[12.5px] font-semibold text-[#1A1A1A]">
-            {positionConnue && commande.livreur_position_maj_le
-              ? `Livreur localisé à ${dateCourte(commande.livreur_position_maj_le).slice(-5)} · voir sur la carte`
-              : 'Position du livreur pas encore reçue'}
+          onPress={onSuivre}
+          className="flex-row items-center justify-center gap-2 rounded-xl py-2.5"
+          style={{ backgroundColor: commande.statut === 'livree_declaree' ? '#B45309' : VERT_PROFOND }}>
+          <Ionicons name={commande.statut === 'livree' ? 'checkmark-circle-outline' : 'navigate-outline'} size={16} color="#fff" />
+          <Text className="text-white text-[13px] font-bold">
+            {commande.statut === 'livree_declaree' ? 'Confirmer la réception' : commande.statut === 'livree' ? 'Voir le suivi' : 'Suivre la livraison'}
           </Text>
-        </Pressable>
-      )}
-
-      {commande.statut === 'livree_declaree' && (
-        <Pressable
-          onPress={onConfirmer}
-          disabled={occupee}
-          className="rounded-xl py-2.5 items-center disabled:opacity-60"
-          style={{ backgroundColor: VERT_PROFOND }}>
-          {occupee ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white text-[13px] font-bold">J&apos;ai bien reçu mon colis</Text>
-          )}
         </Pressable>
       )}
 
       {peutAnnuler && (
         <Pressable onPress={onAnnuler} disabled={occupee} hitSlop={6} className="self-start py-1 disabled:opacity-60">
-          <Text className="text-[12.5px] font-bold text-red-600">Annuler la commande</Text>
+          {occupee ? <ActivityIndicator color={VERT_PROFOND} /> : <Text className="text-[12.5px] font-bold text-red-600">Annuler la commande</Text>}
         </Pressable>
       )}
     </View>
@@ -135,18 +111,6 @@ export default function MesCommandesScreen() {
       recharger();
     }, [recharger])
   );
-
-  async function confirmer(commande: MaCommande) {
-    setOccupee(commande.id);
-    try {
-      await confirmerReceptionCommande(commande.id);
-      await recharger();
-    } catch (e) {
-      Alert.alert('Erreur', e instanceof Error ? e.message : 'Confirmation impossible.');
-    } finally {
-      setOccupee(null);
-    }
-  }
 
   function demanderAnnulation(commande: MaCommande) {
     Alert.alert('Annuler cette commande ?', "L'article ne sera plus réservé pour vous.", [
@@ -230,7 +194,7 @@ export default function MesCommandesScreen() {
               <CarteCommande
                 commande={item}
                 occupee={occupee === item.id}
-                onConfirmer={() => confirmer(item)}
+                onSuivre={() => router.push(`/marketplace/suivi/${item.id}` as Href)}
                 onAnnuler={() => demanderAnnulation(item)}
               />
             )}
