@@ -1,123 +1,67 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAuth } from '@/context/AuthContext';
+import FaciliteHeader from '@/components/FaciliteHeader';
 
-// Reproduction de design_handoff_facilite/pages/12a-profil-a-propos.html —
-// le hub "À propos" du profil, poussé depuis la ligne "Informations
-// personnelles" de (tabs)/profil.tsx (jusqu'ici un Alert.alert stub).
-// Dossier `mon-profil/` (pas `profil/`) : évite toute ambiguïté avec
-// (tabs)/profil.tsx qui possède déjà la route `/profil`, même précaution
-// que offre/[id].tsx vis-à-vis de (tabs)/offres.tsx.
+// « Modifier infos — À propos » — maquette 40 : en-tête Facilité, ligne
+// « ← Retour  Modifier infos », trois onglets (À propos · Scanner ·
+// Paramètres) et la liste des rubriques du profil.
 //
-// Les onglets "Mes documents" / "Paramètres" ouvrent respectivement
-// /web/mes-cvs (WebView, pont de session) et le hub natif
-// mon-profil/parametres.tsx — mêmes cibles que (tabs)/profil.tsx.
-// "Scanner Document" pousse vers scanner-document.tsx, un vrai flux
-// (CNI/passeport + CV, voir lib/scanDocument.ts) qui réutilise les
-// endpoints déjà déployés côté web (/api/profil/scan-identity-document,
-// /api/parse-document).
-const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
-
-const RUBRIQUES = [
-  { id: 'infos-perso', icone: '🪪', label: 'Informations personnelles', route: '/mon-profil/infos-perso' as const },
-  { id: 'langues', icone: '🌐', label: 'Langues', route: '/mon-profil/langues' as const },
-  { id: 'experiences', icone: '💼', label: 'Expériences professionnelles', route: '/mon-profil/experiences' as const },
+// L'écran précédent affichait une grande bannière « CV » avec avatar et
+// badges — rien de tel sur la maquette, et la charte §4 interdit justement
+// la bannière « CV ». La fiche de présentation (bio, infos, coordonnées)
+// vit désormais dans sa propre rubrique « Intro » (maquette 47).
+//
+// Les rubriques pointent toutes vers un écran réellement construit : les
+// six dernières (Formation, Compétences, Centres d'intérêt, Coordonnées,
+// Confidentialité, Sécurité) manquaient complètement.
+const RUBRIQUES: { id: string; icone: string; label: string; route: Href }[] = [
+  { id: 'intro', icone: '🎙️', label: 'Intro', route: '/mon-profil/intro' as Href },
+  { id: 'infos-perso', icone: '🪪', label: 'Informations personnelles', route: '/mon-profil/infos-perso' as Href },
+  { id: 'langues', icone: '🔤', label: 'Langues', route: '/mon-profil/langues' as Href },
+  { id: 'experiences', icone: '👤', label: 'Expériences professionnelles', route: '/mon-profil/experiences' as Href },
+  { id: 'formation', icone: '🎓', label: 'Formation', route: '/mon-profil/formation' as Href },
+  { id: 'competences', icone: '💡', label: 'Compétences', route: '/mon-profil/competences' as Href },
+  { id: 'interets', icone: '❤️', label: "Centres d'intérêt", route: '/mon-profil/centres-interet' as Href },
+  { id: 'coordonnees', icone: '📇', label: 'Coordonnées', route: '/mon-profil/coordonnees' as Href },
+  { id: 'confidentialite', icone: '🛡️', label: 'Confidentialité et informations juridiques', route: '/mon-profil/confidentialite' as Href },
+  { id: 'securite', icone: '🔑', label: 'Sécurité & Connexion', route: '/mon-profil/securite' as Href },
 ];
-
-// Rubrique séparée (pas dans RUBRIQUES ci-dessus, qui ne pousse que vers des écrans natifs) : « Mes documents »
-// en haut de cette page ouvre /candidat/mes-cvs (liste des CV déjà enregistrés), une page que l'administration
-// du site peut désactiver — signalé le 25/09/2026, l'utilisateur ne trouvait alors nulle part où importer un
-// CV. /importer-cv fait autre chose (déposer un nouveau CV et le faire lire par l'IA) et n'est jamais
-// désactivée par ce même réglage (voir featureFlags.js, feat_diagnostic_cv exclu du contrôle du proxy).
 
 export default function ProfilAProposScreen() {
   const router = useRouter();
-  const { user, profile, role } = useAuth();
-
-  const nomComplet = (profile?.full_name as string | undefined) || 'Utilisateur Facilité';
-  const initiale = nomComplet.charAt(0).toUpperCase() || (user?.email || 'F').charAt(0).toUpperCase();
-  const avatarUrl = profile?.avatar_url as string | undefined;
-  const headline = (profile?.headline as string | undefined) || '';
-  const ville = (profile?.city as string | undefined) || (profile?.location as string | undefined) || '';
-  const estVerifie = profile?.recruiter_verified === true;
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View className="relative">
-            <View className="h-[130px] bg-[#161b2e] items-center justify-center overflow-hidden">
-              <Text className="text-[52px] font-extrabold text-white/[0.12] tracking-widest">CV</Text>
-            </View>
-            <Pressable
-              onPress={() => router.back()}
-              className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white items-center justify-center">
-              <Ionicons name="chevron-back" size={18} color="#1A1A1A" />
-            </Pressable>
-            <Pressable
-              onPress={() => BIENTOT('Photo de couverture')}
-              className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white items-center justify-center">
-              <Ionicons name="camera-outline" size={16} color="#1A1A1A" />
-            </Pressable>
-            <View className="absolute -bottom-8 left-5 w-16 h-16 rounded-full bg-[#0B0D10] border-[3px] border-white overflow-hidden items-center justify-center">
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} alt={nomComplet} contentFit="cover" className="w-full h-full" />
-              ) : (
-                <Text className="text-white text-[22px] font-black">{initiale}</Text>
-              )}
-            </View>
-          </View>
+        <FaciliteHeader />
 
-          <View className="px-5 pt-11">
-            <View className="flex-row flex-wrap items-center gap-2">
-              <Text className="text-[20px] font-extrabold text-[#1A1A1A]">{nomComplet}</Text>
-              {role === 'admin' && <Badge bg="#fee2e2" color="#DC2626" texte="🛡 Administrateur" />}
-              {role === 'publisher' && <Badge bg="#dbe8fc" color="#2563EB" texte="💼 Recruteur" />}
-              {estVerifie && <Badge bg="#d7f2ea" color="#10B981" texte="✔ Profil Vérifié" />}
-            </View>
-            {headline ? <Text className="text-[13px] text-[#2563EB] font-semibold mt-1.5">{headline}</Text> : null}
-            {/* !! plutot que headline || ville : si les deux sont des chaines
-                vides (avant chargement du profil, ou un profil sans headline
-                ni ville), l'expression valait '' - une chaine, pas false -
-                que React affichait comme enfant brut de cette View ("Unexpected
-                text node"). Trouve le 13/09/2026 en capturant l'app reelle. */}
-            {!!(headline || ville) && (
-              <View className="flex-row flex-wrap gap-2 mt-3">
-                {headline ? <Chip texte={`💼 ${headline}`} /> : null}
-                {ville ? <Chip texte={`📍 ${ville}`} /> : null}
-              </View>
-            )}
-          </View>
+        <View className="flex-row items-center gap-3 px-4 py-3">
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
+            className="flex-row items-center gap-1.5 bg-white rounded-full px-3 py-2">
+            <Ionicons name="arrow-back" size={14} color="#1A1A1A" />
+            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Retour</Text>
+          </Pressable>
+          <Text className="text-[15px] font-extrabold text-[#1A1A1A]">Modifier infos</Text>
+        </View>
 
-          <View className="flex-row gap-5 px-5 pt-5 border-b border-black/[0.08] mt-3.5">
-            <Text className="text-[14px] font-bold text-[#2563EB] pb-2.5 border-b-2 border-[#2563EB]">À propos</Text>
-            <Pressable onPress={() => router.push('/web/mes-cvs')}>
-              <Text className="text-[14px] font-semibold text-black/50 pb-2.5">Mes documents</Text>
-            </Pressable>
-            <Pressable onPress={() => router.push('/mon-profil/parametres')}>
-              <Text className="text-[14px] font-semibold text-black/50 pb-2.5">Paramètres</Text>
-            </Pressable>
-          </View>
+        <View className="flex-row items-center gap-4 px-5 border-b border-black/[0.08]">
+          <Text className="text-[14px] font-bold text-[#1A1A1A] pb-2.5 border-b-2 border-[#1A1A1A]">À propos</Text>
+          <Pressable
+            onPress={() => router.push('/mon-profil/scanner-document')}
+            className="bg-[#10B981] rounded-full px-3.5 py-1.5 mb-2">
+            <Text className="text-[12.5px] font-bold text-white">⛶ Scanner</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/mon-profil/parametres')}>
+            <Text className="text-[14px] font-semibold text-black/45 pb-2.5">Paramètres</Text>
+          </Pressable>
+        </View>
 
-          <View className="px-5 pt-4 pb-1 gap-2.5">
-            <Pressable
-              onPress={() => router.push('/mon-profil/scanner-document')}
-              className="bg-emerald-500 rounded-full py-2.5 items-center flex-row justify-center gap-2">
-              <Text className="text-white text-[12.5px] font-bold">⛶ Scanner Document (CV, CNI, Passeport)</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/web/importer-cv')}
-              className="bg-white border border-[#2563EB]/30 rounded-full py-2.5 items-center flex-row justify-center gap-2">
-              <Ionicons name="cloud-upload-outline" size={15} color="#2563EB" />
-              <Text className="text-[#2563EB] text-[12.5px] font-bold">Importer mon CV</Text>
-            </Pressable>
-          </View>
-
-          <View className="mx-5 mt-4 mb-6 bg-white rounded-2xl overflow-hidden">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 py-4">
+          <View className="bg-white rounded-2xl overflow-hidden">
             {RUBRIQUES.map((r, i) => (
               <Pressable
                 key={r.id}
@@ -131,26 +75,15 @@ export default function ProfilAProposScreen() {
               </Pressable>
             ))}
           </View>
+
+          <Pressable
+            onPress={() => router.push('/web/importer-cv')}
+            className="bg-white border border-[#2563EB]/30 rounded-full py-3 items-center flex-row justify-center gap-2 mt-4">
+            <Ionicons name="cloud-upload-outline" size={15} color="#2563EB" />
+            <Text className="text-[#2563EB] text-[12.5px] font-bold">Importer mon CV</Text>
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
-    </View>
-  );
-}
-
-function Badge({ texte, bg, color }: { texte: string; bg: string; color: string }) {
-  return (
-    <View style={{ backgroundColor: bg }} className="rounded-full px-2.5 py-1">
-      <Text style={{ color }} className="text-[11px] font-semibold">
-        {texte}
-      </Text>
-    </View>
-  );
-}
-
-function Chip({ texte }: { texte: string }) {
-  return (
-    <View className="border border-black/10 rounded-full px-2.5 py-1.5">
-      <Text className="text-[12px] text-black/55">{texte}</Text>
     </View>
   );
 }

@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -41,7 +41,6 @@ function periodeLisible(x: ExperienceProfil): string {
 const PALETTE = ['#2563EB', '#10B981', '#7C3AED', '#F59E0B', '#DC2626', '#0EA5E9'];
 
 export default function ProfilExperiencesScreen() {
-  const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const experiences = Array.isArray(profile?.experiences) ? (profile.experiences as ExperienceProfil[]) : [];
 
@@ -102,13 +101,7 @@ export default function ProfilExperiencesScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-2.5 px-5 py-4">
-          <Pressable onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[16px] font-extrabold text-[#1A1A1A]">Expériences professionnelles</Text>
-        </View>
-        <View className="h-px bg-black/[0.08] mx-5 mb-3.5" />
+        <EnteteRubrique titre="Expériences professionnelles" />
 
         <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
           <View className="bg-white rounded-2xl p-3.5">

@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -19,7 +19,6 @@ type LangueProfil = { id?: string; name: string; level: string };
 // tableau, simple convention d'affichage plutôt qu'une colonne inventée.
 // Ajout/suppression écrivent réellement sur profiles.languages.
 export default function ProfilLanguesScreen() {
-  const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const langues = Array.isArray(profile?.languages) ? (profile.languages as LangueProfil[]) : [];
 
@@ -61,13 +60,7 @@ export default function ProfilLanguesScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-2.5 px-5 py-4">
-          <Pressable onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[16px] font-extrabold text-[#1A1A1A]">Langues</Text>
-        </View>
-        <View className="h-px bg-black/[0.08] mx-5 mb-3.5" />
+        <EnteteRubrique titre="Langues" />
 
         <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
           <View className="bg-white rounded-2xl p-3.5">
