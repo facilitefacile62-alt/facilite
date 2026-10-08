@@ -691,20 +691,18 @@ export async function modifierArticle(itemId, champs) {
   const titre = String(champs?.titre || "").trim();
   if (!titre) throw new Error("Le titre est obligatoire.");
 
-  const { data, error } = await supabase
-    .from("marketplace_items")
-    .update({
-      titre,
-      categorie: champs?.categorie || "autre",
-      prix_xof: Math.max(0, Math.round(Number(champs?.prix_xof) || 0)),
-      quantite: Math.max(0, Math.round(Number(champs?.quantite) || 0)),
-      description: champs?.description?.trim() || null,
-      photos: Array.isArray(champs?.photos) ? champs.photos.slice(0, 6) : [],
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", itemId)
-    .select()
-    .single();
+  // RPC SECURITY DEFINER (modifier_mon_article) : aucune table n'accorde
+  // jamais d'UPDATE direct à authenticated (invariant 1) — un .update()
+  // direct ici échouait systématiquement en "permission denied".
+  const { data, error } = await supabase.rpc("modifier_mon_article", {
+    p_id: itemId,
+    p_titre: titre,
+    p_categorie: champs?.categorie || "autre",
+    p_prix: Math.max(0, Math.round(Number(champs?.prix_xof) || 0)),
+    p_quantite: Math.max(0, Math.round(Number(champs?.quantite) || 0)),
+    p_description: champs?.description?.trim() || null,
+    p_photos: Array.isArray(champs?.photos) ? champs.photos.slice(0, 6) : [],
+  });
 
   if (error) throw new Error(error.message);
   return data;
