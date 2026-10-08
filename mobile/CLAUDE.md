@@ -40,8 +40,11 @@ Tables lues ou écrites par l'app : `profiles`, `user_roles`, `job_offers`, `con
 
 ## Écrans
 
-- **Construits** : les 4 écrans d'authentification, les 5 onglets, fiche offre, chat, recherche, fiche entreprise, sous-écrans du profil, scanner de document.
-- **Encore en « bientôt disponible »** : liste à jour avec `grep -rnE "BIENTOT\(|Bientôt disponible" src` (messages, profil, candidature spontanée, `fonctionnalites`, `mon-profil/a-propos`, `PanneauMenuProfil`).
+- **Construits (Facilité)** : les 4 écrans d'authentification, les 5 onglets, fiche offre, chat, recherche, fiche entreprise, sous-écrans du profil, scanner de document.
+- **Construits (plateforme Marketplace, `src/app/marketplace/`)** : barre du bas propre à la plateforme (`components/MarketplaceBottomBar.tsx`, `marketplace/_layout.tsx`) ; accueil avec pastilles Devenir Vendeur/Ma boutique et Mes commandes ; profil (visiteur/vendeur), À propos, Réglages (séparés de ceux de Facilité) ; Devenir Vendeur en 2 étapes ; Recherche et Autour de moi en pages dédiées ; Discussions Marketplace séparées de la messagerie Facilité (`lib/messagesMarketplace.ts`) ; Publier en 2 étapes (méthode puis catégorie puis détails) ; Ma boutique (annonces, commandes reçues, Service · Devenir livreur) ; commandes (achat, Mes commandes, Suivi de livraison dédié) ; livreur (demande, Mes livraisons, livraisons disponibles, position pendant la livraison).
+- **Onboarding Facilité Business** (`src/app/onboarding/`, hors du groupe marketplace pour ne pas hériter de sa barre) : Bienvenue, Rôle, Profil express, Infos vendeur. Écrans atteignables mais **pas branchés** sur l'inscription (voir note dans `_layout.tsx` — AuthGate redirige aujourd'hui tout compte connecté vers l'accueil Facilité, changer ça touche la connexion de tous les comptes).
+- **Non applicable aux boutiques créées par l'app** : les onglets Service (horaires/disponibilité) et Établissement de la maquette, car une boutique créée depuis le mobile est toujours de type « produit ».
+- **Encore en « bientôt disponible »** : liste à jour avec `grep -rnE "BIENTOT\(|Bientôt disponible" src` (messages Facilité, profil, candidature spontanée, `fonctionnalites`, `mon-profil/a-propos`, `PanneauMenuProfil`, scan IA du Publier Marketplace, et plusieurs rubriques des Réglages vendeur — Boost, Abonnés, Avis, chat/commentaires, notifications).
 
 ## Build
 
