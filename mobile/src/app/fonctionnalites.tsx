@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -26,8 +25,6 @@ type Outil = {
   sous: string;
   ouvrir: (router: ReturnType<typeof useRouter>) => void;
 };
-
-const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 // Liste alignée sur les VRAIS outils du site (src/app/fonctionnalites/FonctionnalitesClient.jsx). Les outils PDF
 // s'ouvrent sur la page du site, dans l'app : ils traitent le fichier sur l'appareil, comme sur le web.
@@ -196,17 +193,9 @@ export default function FonctionnalitesScreen() {
           renderItem={({ item }) => <LigneOutil outil={item} onPress={() => item.ouvrir(router)} />}
         />
 
-        <Pressable
-          onPress={() => BIENTOT('Assistant vocal')}
-          className="absolute right-4 bottom-4 w-[52px] h-[52px] rounded-full overflow-hidden shadow-lg">
-          <LinearGradient colors={['#10B981', '#0ea975']} className="w-full h-full items-center justify-center">
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Path d="M9 3H15V14A3 3 0 0 1 9 14V3Z" stroke="#fff" strokeWidth={1.8} />
-              <Path d="M6 11V12C6 15.3 8.7 18 12 18C15.3 18 18 15.3 18 12V11" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-              <Path d="M12 18V21" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-          </LinearGradient>
-        </Pressable>
+        {/* Le bouton flottant « assistant » (micro) a été déplacé sur le fil
+            d'actualité : la charte §3 ne l'autorise que là, et aucune
+            maquette ne le montre sur cet écran (voir maquette 13). */}
       </SafeAreaView>
     </View>
   );
