@@ -4,159 +4,42 @@ import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-// Reproduction de design_handoff_facilite/pages/09-fonctionnalites.html —
-// clair, avec son propre en-tête (pas FaciliteHeader ni la barre d'onglets :
-// écran poussé depuis l'Extracteur/le menu profil). Liste d'outils
-// statique — le mock ne fournit aucune source dynamique pour outilsList,
-// et le web n'a pas non plus de table "outils" en base ; ce catalogue
-// reflète les vraies fonctionnalités PDF/IA du dépôt (voir src/app/api/
-// côté web : pdf2doc, extract-email, process-resume, diagnostic-cv,
-// voice-assistant...). Seul "Extracteur 1-Clic" mène à un écran mobile
-// réellement construit ; les autres affichent l'alerte honnête déjà
-// utilisée ailleurs dans l'app en attendant leur propre point.
-type TypeOutil = 'tous' | 'pdf' | 'ia';
+import LigneOutil from '@/components/LigneOutil';
+import { ONGLETS_OUTILS, filtrerOutils, type TypeOutil } from '@/lib/outils';
 
-type Outil = {
-  id: string;
-  type: 'pdf' | 'ia';
-  icone: string;
-  bg: string;
-  titre: string;
-  sous: string;
-  ouvrir: (router: ReturnType<typeof useRouter>) => void;
-};
-
-// Liste alignée sur les VRAIS outils du site (src/app/fonctionnalites/FonctionnalitesClient.jsx). Les outils PDF
-// s'ouvrent sur la page du site, dans l'app : ils traitent le fichier sur l'appareil, comme sur le web.
-const OUTILS_PDF_SITE = () => '/web/fonctionnalites' as const;
-
-const OUTILS: Outil[] = [
-  {
-    id: 'compresser',
-    type: 'pdf',
-    icone: '📉',
-    bg: '#E0E7FF',
-    titre: 'Compresser un PDF',
-    sous: 'Réduire la taille du fichier',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
-  },
-  {
-    id: 'fusionner',
-    type: 'pdf',
-    icone: '📎',
-    bg: '#DBEAFE',
-    titre: 'Fusionner des PDF',
-    sous: 'Combiner plusieurs documents',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
-  },
-  {
-    id: 'diviser',
-    type: 'pdf',
-    icone: '✂️',
-    bg: '#FEF3C7',
-    titre: 'Diviser un PDF',
-    sous: "Extraire les pages voulues",
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
-  },
-  {
-    id: 'organiser',
-    type: 'pdf',
-    icone: '🗂️',
-    bg: '#D1FAE5',
-    titre: 'Organiser les pages',
-    sous: 'Trier, pivoter, supprimer',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
-  },
-  {
-    id: 'jpg_en_pdf',
-    type: 'pdf',
-    icone: '🖼️',
-    bg: '#FCE7F3',
-    titre: 'Convertir JPG en PDF',
-    sous: 'Photos vers un seul document',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
-  },
-  {
-    id: 'pdf_en_jpg',
-    type: 'pdf',
-    icone: '📷',
-    bg: '#EDE9FE',
-    titre: 'Convertir PDF en JPG',
-    sous: 'Chaque page en image',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
-  },
-  {
-    id: 'extracteur_ia',
-    type: 'ia',
-    icone: '⚡',
-    bg: '#FEF3C7',
-    titre: 'Extracteur 1-Clic',
-    sous: "Candidature depuis une annonce",
-    ouvrir: (router) => router.push('/extracteur'),
-  },
-  {
-    id: 'diagnostic_cv',
-    type: 'ia',
-    icone: '📄',
-    bg: '#D1FAE5',
-    titre: 'Diagnostic CV Gratuit',
-    sous: 'Analyse ATS et mots-clés',
-    ouvrir: (router) => router.push('/web/importer-cv'),
-  },
-  {
-    id: 'services_modeles',
-    type: 'ia',
-    icone: '🎨',
-    bg: '#DBEAFE',
-    titre: 'Studio Services & Modèles',
-    sous: 'CV, lettres et modèles prêts',
-    ouvrir: (router) => router.push('/web/modeles'),
-  },
-  {
-    id: 'boite_idees',
-    type: 'ia',
-    icone: '💡',
-    bg: '#EDE9FE',
-    titre: 'Boîte à idées',
-    sous: 'Proposer une amélioration',
-    ouvrir: (router) => router.push('/web/boite-a-idees'),
-  },
-];
-
-const ONGLETS: { id: TypeOutil; label: string }[] = [
-  { id: 'tous', label: 'Tous les outils' },
-  { id: 'pdf', label: 'Outils PDF & Documents' },
-  { id: 'ia', label: 'Outils IA & Carrière' },
-];
+// Écran « Fonctionnalités » — maquette 13. En-tête propre (badge outil,
+// titre, pastille OUTILS ACTIFS, bouton Accueil), onglets, liste d'outils.
+// Le catalogue vit dans lib/outils.ts : l'onglet Fonctionnalités du profil
+// (maquette 38) affiche exactement la même liste.
+//
+// La barre du bas est fournie par le layout racine (règle §1.1) ; le bouton
+// flottant « assistant » n'est plus ici (charte §3 : fil d'actualité seul).
+const VERT = '#10B981';
 
 export default function FonctionnalitesScreen() {
   const router = useRouter();
   const [ongletActif, setOngletActif] = useState<TypeOutil>('tous');
-
-  const outilsAffiches = useMemo(
-    () => (ongletActif === 'tous' ? OUTILS : OUTILS.filter((o) => o.type === ongletActif)),
-    [ongletActif]
-  );
+  const outilsAffiches = useMemo(() => filtrerOutils(ongletActif), [ongletActif]);
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="bg-white border-b border-black/[0.06] px-4 py-3.5">
+        <View className="px-4 py-3.5" style={{ backgroundColor: '#e3dbcc' }}>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2.5">
-              <View className="w-[38px] h-[38px] rounded-xl bg-[#F2F0EA] items-center justify-center">
+              <View className="w-[38px] h-[38px] rounded-xl bg-black/[0.06] items-center justify-center">
                 <Text className="text-[17px]">🛠️</Text>
               </View>
               <View className="flex-row items-center gap-2">
                 <Text className="text-[16px] font-extrabold text-[#1A1A1A]">Fonctionnalités</Text>
-                <View className="bg-[#E7E5E4] px-2 py-1 rounded-full">
+                <View className="bg-black/[0.08] px-2 py-1 rounded-full">
                   <Text className="text-[10px] font-bold text-[#44403C]">OUTILS ACTIFS</Text>
                 </View>
               </View>
             </View>
             <Pressable
-              onPress={() => router.replace('/')}
-              className="flex-row items-center gap-1.5 bg-[#F2F0EA] rounded-full px-3.5 py-2.5">
+              onPress={() => router.navigate('/')}
+              className="flex-row items-center gap-1.5 bg-white rounded-full px-3.5 py-2.5">
               <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
                 <Path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="#1A1A1A" strokeWidth={1.8} strokeLinejoin="round" />
               </Svg>
@@ -165,55 +48,34 @@ export default function FonctionnalitesScreen() {
           </View>
         </View>
 
-        <View className="bg-white px-4 pb-3.5">
+        {/* Onglets : pastille active VERTE comme la maquette (elle était noire). */}
+        <View className="bg-white px-4 py-3">
           <View className="flex-row gap-1 bg-[#F2F0EA] rounded-full p-1">
-            {ONGLETS.map((o) => (
-              <Pressable
-                key={o.id}
-                onPress={() => setOngletActif(o.id)}
-                className={`flex-1 py-2 rounded-full items-center ${
-                  ongletActif === o.id ? 'bg-[#1A1A1A]' : ''
-                }`}>
-                <Text
-                  className={`text-[11.5px] font-bold text-center ${
-                    ongletActif === o.id ? 'text-white' : 'text-black/55'
-                  }`}>
-                  {o.label}
-                </Text>
-              </Pressable>
-            ))}
+            {ONGLETS_OUTILS.map((o) => {
+              const actif = ongletActif === o.id;
+              return (
+                <Pressable
+                  key={o.id}
+                  onPress={() => setOngletActif(o.id)}
+                  className="flex-1 py-2 rounded-full items-center"
+                  style={actif ? { backgroundColor: VERT } : undefined}>
+                  <Text className={`text-[12px] font-bold text-center ${actif ? 'text-white' : 'text-black/55'}`}>
+                    {o.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
         <FlatList
           data={outilsAffiches}
           keyExtractor={(item) => item.id}
-          contentContainerClassName="px-4 py-3.5 gap-2.5"
+          contentContainerClassName="px-4 py-3.5"
           ItemSeparatorComponent={() => <View className="h-2.5" />}
           renderItem={({ item }) => <LigneOutil outil={item} onPress={() => item.ouvrir(router)} />}
         />
-
-        {/* Le bouton flottant « assistant » (micro) a été déplacé sur le fil
-            d'actualité : la charte §3 ne l'autorise que là, et aucune
-            maquette ne le montre sur cet écran (voir maquette 13). */}
       </SafeAreaView>
     </View>
-  );
-}
-
-function LigneOutil({ outil, onPress }: { outil: Outil; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} className="bg-white rounded-2xl p-3 flex-row items-center gap-3">
-      <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: outil.bg }}>
-        <Text className="text-[18px]">{outil.icone}</Text>
-      </View>
-      <View className="flex-1 min-w-0">
-        <Text className="text-[14px] font-bold text-[#1A1A1A]">{outil.titre}</Text>
-        <Text className="text-[12px] text-black/45 mt-0.5">{outil.sous}</Text>
-      </View>
-      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-        <Path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      </Svg>
-    </Pressable>
   );
 }
