@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Line } from 'react-native-svg';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -6,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   ScrollView,
   Switch,
@@ -438,27 +440,37 @@ export default function MaBoutiqueScreen() {
 
   function blocDisponibilite() {
     if (!boutique) return null;
+    const dispo = boutique.disponible_manuel;
     return (
-      <View className="flex-row items-center gap-2 mb-3">
+      <View className="bg-white gap-3" style={{ borderRadius: 18, padding: 14 }}>
+        <View className="flex-row items-center gap-2.5">
+          <View style={{ width: 17, height: 17, borderRadius: 9, borderWidth: 3, borderColor: '#10B981' }} />
+          <Text className="text-[15px] font-black text-[#1A1A1A]">Disponibilité</Text>
+        </View>
+        <View className="flex-row items-center gap-2.5">
+          <Pressable
+            onPress={() => basculerDisponibilite(true)}
+            disabled={disponibiliteEnCours}
+            className="flex-1 flex-row items-center justify-center gap-1.5"
+            style={{ height: 46, borderRadius: 12, backgroundColor: dispo ? '#10B981' : '#F0F1F3' }}>
+            <Ionicons name="flash" size={13} color={dispo ? '#fff' : '#F97316'} />
+            <Text className="text-[12.5px] font-black" style={{ color: dispo ? '#fff' : '#374151' }}>Disponible maintenant</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => basculerDisponibilite(false)}
+            disabled={disponibiliteEnCours}
+            className="flex-1 flex-row items-center justify-center gap-1.5"
+            style={{ height: 46, borderRadius: 12, backgroundColor: !dispo ? '#374151' : '#F0F1F3' }}>
+            <Ionicons name="pause" size={13} color={!dispo ? '#fff' : '#374151'} />
+            <Text className="text-[12.5px] font-black" style={{ color: !dispo ? '#fff' : '#374151' }}>Indisponible</Text>
+          </Pressable>
+        </View>
         <Pressable
-          onPress={() => basculerDisponibilite(true)}
-          disabled={disponibiliteEnCours}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5 border ${
-            boutique.disponible_manuel ? 'border-transparent bg-[#10B981]' : 'border-gray-300 bg-white'
-          }`}>
-          <Ionicons name="flash" size={13} color={boutique.disponible_manuel ? '#fff' : '#9CA3AF'} />
-          <Text className={`text-[12px] font-bold ${boutique.disponible_manuel ? 'text-white' : 'text-gray-600'}`}>
-            Disponible maintenant
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => basculerDisponibilite(false)}
-          disabled={disponibiliteEnCours}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-2.5 border ${
-            !boutique.disponible_manuel ? 'border-transparent bg-gray-700' : 'border-gray-300 bg-white'
-          }`}>
-          <Ionicons name="pause" size={13} color={!boutique.disponible_manuel ? '#fff' : '#9CA3AF'} />
-          <Text className={`text-[12px] font-bold ${!boutique.disponible_manuel ? 'text-white' : 'text-gray-600'}`}>Indisponible</Text>
+          onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
+          className="flex-row items-center justify-center gap-2"
+          style={{ height: 50, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D1D5DB' }}>
+          <Ionicons name="calendar-outline" size={16} color="#7C3AED" />
+          <Text className="text-[13.5px] font-black" style={{ color: '#7C3AED' }}>Programmer des horaires</Text>
         </Pressable>
       </View>
     );
@@ -468,15 +480,7 @@ export default function MaBoutiqueScreen() {
     if (!boutique) return null;
     return (
       <View className="px-4 gap-3">
-        <View className="flex-row items-center justify-between bg-white rounded-2xl border border-black/[0.06] p-3.5">
-          <View>
-            <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Rendre mon service visible</Text>
-            <Text className="text-[11.5px] text-gray-500 mt-0.5">{boutique.actif ? 'Visible par les utilisateurs' : 'Masqué aux utilisateurs'}</Text>
-          </View>
-          <Switch value={boutique.actif} onValueChange={basculerVisibilite} disabled={bascule} trackColor={{ true: VERT_PROFOND }} />
-        </View>
-
-        <View className="bg-[#EFF6FF] rounded-2xl p-3.5 gap-2">
+        <View className="bg-[#EFF6FF] gap-2" style={{ borderRadius: 18, padding: 14, borderWidth: 1, borderColor: '#BFD4F6' }}>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <Ionicons name="construct-outline" size={16} color="#1A1A1A" />
@@ -539,21 +543,17 @@ export default function MaBoutiqueScreen() {
         {blocDisponibilite()}
 
         <Pressable
-          onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
-          className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
-          <Ionicons name="calendar-outline" size={16} color="#2563EB" />
-          <Text className="text-[13px] font-bold text-[#2563EB]">Programmer des horaires</Text>
-        </Pressable>
-
-        <Pressable
           onPress={() => router.push('/marketplace/vendre/livreur')}
-          className="flex-row items-center gap-3 rounded-2xl border border-gray-300 px-3.5 py-3">
-          <Ionicons name="bicycle-outline" size={20} color={VERT_PROFOND} />
-          <View className="flex-1">
-            <Text className="text-[13px] font-bold text-[#1A1A1A]">Devenir livreur</Text>
-            <Text className="text-[11.5px] text-gray-500">Livrer les commandes du Marketplace</Text>
+          className="flex-row items-center gap-3"
+          style={{ backgroundColor: '#F3FBF7', borderRadius: 14, borderWidth: 1.5, borderColor: '#34D399', padding: 12 }}>
+          <View className="items-center justify-center" style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#D7F2EA' }}>
+            <Ionicons name="bicycle-outline" size={22} color="#047857" />
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+          <View className="flex-1">
+            <Text className="text-[15px] font-black text-[#1A1A1A]">Devenir livreur</Text>
+            <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Livrez les commandes autour de vous</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.35)" />
         </Pressable>
       </View>
     );
@@ -608,13 +608,6 @@ export default function MaBoutiqueScreen() {
         </View>
 
         {blocDisponibilite()}
-
-        <Pressable
-          onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
-          className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
-          <Ionicons name="time-outline" size={16} color="#2563EB" />
-          <Text className="text-[13px] font-bold text-[#2563EB]">Horaires d&apos;ouverture</Text>
-        </Pressable>
       </View>
     );
   }
@@ -652,9 +645,16 @@ export default function MaBoutiqueScreen() {
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View className="mb-4">
-                <View className="h-[90px] rounded-2xl bg-[#E6DFD0]" />
-                <View className="-mt-8 px-1 gap-1">
-                  <View className="w-[66px] h-[66px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
+                <View style={{ height: 120, borderRadius: 16, backgroundColor: '#E9E4D8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+              <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
+                {Array.from({ length: 30 }, (_, i) => (
+                  <Line key={i} x1={i * 26 - 130} y1={120} x2={i * 26} y2={0} stroke="#DDD6C6" strokeWidth={9} />
+                ))}
+              </Svg>
+              <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11, color: '#8A8272' }}>bannière de la boutique</Text>
+            </View>
+                <View className="-mt-10 px-1 gap-1">
+                  <View className="w-[78px] h-[78px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
                     <Ionicons name="storefront" size={26} color={VERT_PROFOND} />
                   </View>
                   <View className="flex-row items-center gap-2 flex-wrap mt-1">
@@ -712,9 +712,16 @@ export default function MaBoutiqueScreen() {
           />
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
-            <View className="h-[90px] bg-[#E6DFD0]" />
-            <View className="px-4 -mt-8 gap-1 mb-4">
-              <View className="w-[66px] h-[66px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
+            <View style={{ height: 120, backgroundColor: '#E9E4D8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+              <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
+                {Array.from({ length: 30 }, (_, i) => (
+                  <Line key={i} x1={i * 26 - 130} y1={120} x2={i * 26} y2={0} stroke="#DDD6C6" strokeWidth={9} />
+                ))}
+              </Svg>
+              <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11, color: '#8A8272' }}>bannière de la boutique</Text>
+            </View>
+            <View className="px-4 -mt-10 gap-1 mb-4">
+              <View className="w-[78px] h-[78px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
                 <Ionicons name="storefront" size={26} color={VERT_PROFOND} />
               </View>
               <View className="flex-row items-center gap-2 flex-wrap mt-1">
@@ -734,7 +741,7 @@ export default function MaBoutiqueScreen() {
                 </Text>
               </Pressable>
 
-              <View className="flex-row gap-1.5 mt-4">
+              <View className="flex-row gap-1 mt-4 bg-white rounded-[20px] p-1.5">
                 {(['article', 'service', 'etablissement'] as const).map((o) => {
                   const actif = onglet === o;
                   const libelle = o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT';
