@@ -1,36 +1,44 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import BoutonAction from '@/components/BoutonAction';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
-import { LIBELLES_STATUT, couleurStatut, dateCourte } from '@/lib/commandes';
-import { distanceLisible, prixLisible, type Position } from '@/lib/marketplace';
+import { refCommande, type StatutCommande } from '@/lib/commandes';
+import { prixLisible } from '@/lib/marketplace';
 import {
   chargerMesLivraisonsEnCours,
   chargerMonStatutLivreur,
   envoyerPositionLivraison,
   faireEtapeLivraison,
-  listerLivraisonsDisponibles,
-  reclamerLivraison,
   type EtapeLivraison,
-  type LivraisonDisponible,
   type LivraisonEnCours,
 } from '@/lib/livraison';
-import { useLocalisation } from '@/lib/useLocalisation';
 
-// Espace livreur actif : les livraisons réclamées (avec les coordonnées de
-// l'acheteur, révélées seulement après réclamation) et les livraisons
-// disponibles près de la position. La position n'est envoyée que pendant une
-// livraison « en cours », tant que l'écran reste ouvert au premier plan.
-const VERT_PROFOND = '#0d3b34';
+// « Livreur — Livraisons en cours » (maquette 80) : une carte par commande
+// réclamée, avec les coordonnées de l'acheteur (révélées seulement après
+// réclamation). Les livraisons disponibles ont leur propre écran
+// (livraisons-disponibles.tsx, maquette 81). La position n'est envoyée que
+// pendant une livraison « en cours », tant que l'écran reste ouvert au
+// premier plan.
+const VERT = '#10B981';
 
-const ETAPES_SUIVANTES: Partial<Record<LivraisonEnCours['statut'], { etape: EtapeLivraison; libelle: string }>> = {
+const ETAPES_SUIVANTES: Partial<Record<StatutCommande, { etape: EtapeLivraison; libelle: string }>> = {
   assignee: { etape: 'recuperee', libelle: "J'ai récupéré l'article" },
   recuperee: { etape: 'demarrer', libelle: 'Je démarre la livraison' },
   en_livraison: { etape: 'livree', libelle: 'Marquer comme livré' },
+};
+
+// Libellés et couleurs du point de vue du LIVREUR (maquette 80) : « À
+// récupérer » plutôt que « Livreur assigné ».
+const BADGE_LIVREUR: Partial<Record<StatutCommande, { libelle: string; fond: string; texte: string }>> = {
+  assignee: { libelle: 'À récupérer', fond: '#FEF3C7', texte: '#B45309' },
+  recuperee: { libelle: 'Article récupéré', fond: '#DBEAFE', texte: '#1D4ED8' },
+  en_livraison: { libelle: 'En livraison', fond: '#DBEAFE', texte: '#1D4ED8' },
+  livree_declaree: { libelle: 'Livrée · à confirmer', fond: '#D1FAE5', texte: '#047857' },
 };
 
 function CarteLivraison({
@@ -44,49 +52,42 @@ function CarteLivraison({
   onEtape: (etape: EtapeLivraison) => void;
   onLiberer: () => void;
 }) {
-  const statut = couleurStatut(livraison.statut);
+  const badge = BADGE_LIVREUR[livraison.statut] ?? { libelle: livraison.statut, fond: '#F3F4F6', texte: '#6B7280' };
   const suivante = ETAPES_SUIVANTES[livraison.statut];
+  const lieu = [livraison.store?.nom, livraison.store?.quartier].filter(Boolean).join(', ');
   return (
-    <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2.5">
-      <View className="flex-row items-start justify-between gap-2">
-        <Text className="flex-1 text-[14px] font-bold text-[#1A1A1A]" numberOfLines={2}>
-          {livraison.item?.titre ?? 'Article'}
+    <View className="bg-white rounded-[20px] p-4 gap-2.5">
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="text-[12.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.5)' }}>
+          {refCommande(livraison.id, 'LIV')} · {prixLisible(livraison.prix_total_xof)} FCFA
         </Text>
-        <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: statut.fond }}>
-          <Text className="text-[11px] font-bold" style={{ color: statut.texte }}>
-            {LIBELLES_STATUT[livraison.statut]}
-          </Text>
+        <View className="rounded-full px-3 py-1" style={{ backgroundColor: badge.fond }}>
+          <Text className="text-[11.5px] font-extrabold" style={{ color: badge.texte }}>{badge.libelle}</Text>
         </View>
       </View>
 
-      <View className="rounded-xl bg-[#F8F6F1] p-3 gap-0.5">
-        <Text className="text-[11px] font-bold tracking-wide text-gray-500">RETRAIT</Text>
-        <Text className="text-[13px] font-semibold text-[#1A1A1A]">{livraison.store?.nom ?? 'Boutique'}</Text>
-        <Text className="text-[12px] text-gray-600">
-          {[livraison.store?.quartier, livraison.store?.ville].filter(Boolean).join(', ') || 'Sénégal'}
-        </Text>
-      </View>
+      <Text className="text-[17px] font-black text-[#1A1A1A]" numberOfLines={2}>
+        {livraison.item?.titre ?? 'Article'}
+      </Text>
+      <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Retrait : {lieu || 'Boutique'}</Text>
 
-      <View className="rounded-xl bg-[#F8F6F1] p-3 gap-0.5">
-        <Text className="text-[11px] font-bold tracking-wide text-gray-500">LIVRAISON</Text>
-        <Text className="text-[13px] font-semibold text-[#1A1A1A]">{livraison.livraison_nom}</Text>
-        <Text className="text-[12px] text-gray-600">{livraison.livraison_adresse}</Text>
+      <View className="rounded-[14px] p-3 gap-1" style={{ backgroundColor: '#F6F5F1' }}>
+        <Text className="text-[11px] font-black tracking-wider" style={{ color: '#047857' }}>ACHETEUR</Text>
+        <Text className="text-[15px] font-black text-[#1A1A1A]">{livraison.livraison_nom}</Text>
         <Pressable
           onPress={() => Linking.openURL(`tel:${livraison.livraison_telephone}`).catch(() => {})}
-          className="flex-row items-center gap-1.5 mt-1 self-start">
-          <Ionicons name="call-outline" size={14} color={VERT_PROFOND} />
-          <Text className="text-[12.5px] font-bold" style={{ color: VERT_PROFOND }}>
-            {livraison.livraison_telephone}
-          </Text>
+          className="flex-row items-center gap-2 self-start">
+          <Ionicons name="call" size={14} color="#DB2777" />
+          <Text className="text-[13.5px]" style={{ color: 'rgba(0,0,0,0.65)' }}>{livraison.livraison_telephone}</Text>
         </Pressable>
+        <View className="flex-row items-center gap-2">
+          <Ionicons name="location" size={14} color="#DB2777" />
+          <Text className="flex-1 text-[13.5px]" style={{ color: 'rgba(0,0,0,0.65)' }}>{livraison.livraison_adresse}</Text>
+        </View>
       </View>
 
-      <Text className="text-[12px] text-gray-500">
-        {livraison.quantite} × {prixLisible(livraison.prix_unitaire_xof)} FCFA · {dateCourte(livraison.created_at)}
-      </Text>
-
       {livraison.statut === 'livree_declaree' && (
-        <Text className="text-[12px] font-semibold text-amber-700">
+        <Text className="text-[12px] font-bold" style={{ color: '#B45309' }}>
           En attente de la confirmation de réception par l&apos;acheteur.
         </Text>
       )}
@@ -95,9 +96,9 @@ function CarteLivraison({
         <Pressable
           onPress={() => onEtape(suivante.etape)}
           disabled={occupee}
-          className="rounded-xl py-2.5 items-center disabled:opacity-60"
-          style={{ backgroundColor: VERT_PROFOND }}>
-          {occupee ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[13px] font-bold">{suivante.libelle}</Text>}
+          className="items-center justify-center rounded-[16px] disabled:opacity-60"
+          style={{ height: 54, backgroundColor: VERT }}>
+          {occupee ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[15px] font-black">{suivante.libelle}</Text>}
         </Pressable>
       )}
 
@@ -110,62 +111,13 @@ function CarteLivraison({
   );
 }
 
-function CarteDisponible({
-  livraison,
-  occupee,
-  onReclamer,
-}: {
-  livraison: LivraisonDisponible;
-  occupee: boolean;
-  onReclamer: () => void;
-}) {
-  const distance = distanceLisible(livraison.distance_km);
-  const lieu = [livraison.boutique_quartier, livraison.boutique_ville].filter(Boolean).join(', ');
-  return (
-    <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2">
-      <View className="flex-row items-start justify-between gap-2">
-        <View className="flex-1">
-          <Text className="text-[13.5px] font-bold text-[#1A1A1A]" numberOfLines={2}>
-            {livraison.item_titre}
-          </Text>
-          <Text className="text-[12px] text-gray-500" numberOfLines={1}>
-            Retrait : {livraison.boutique_nom}
-            {lieu ? ` · ${lieu}` : ''}
-          </Text>
-        </View>
-        {distance ? (
-          <View className="flex-row items-center gap-1 rounded-full bg-[#E0F2FE] px-2.5 py-1">
-            <Ionicons name="navigate-outline" size={11} color="#0369A1" />
-            <Text className="text-[11px] font-bold text-[#0369A1]">{distance}</Text>
-          </View>
-        ) : null}
-      </View>
-      <View className="flex-row items-center justify-between">
-        <Text className="text-[13px] font-extrabold" style={{ color: VERT_PROFOND }}>
-          {prixLisible(livraison.prix_total_xof)} FCFA
-        </Text>
-        <Pressable
-          onPress={onReclamer}
-          disabled={occupee}
-          className="rounded-xl px-4 py-2 disabled:opacity-60"
-          style={{ backgroundColor: VERT_PROFOND }}>
-          {occupee ? <ActivityIndicator color="#fff" size="small" /> : <Text className="text-white text-[12.5px] font-bold">Réclamer</Text>}
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 export default function LivraisonsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id;
-  const { activer } = useLocalisation();
   // null = vérification en cours ; false = pas livreur actif ; true = livreur actif.
   const [estLivreur, setEstLivreur] = useState<boolean | null>(null);
   const [enCours, setEnCours] = useState<LivraisonEnCours[]>([]);
-  const [disponibles, setDisponibles] = useState<LivraisonDisponible[]>([]);
-  const [position, setPosition] = useState<Position | null>(null);
   const [occupee, setOccupee] = useState<string | null>(null);
   const [rafraichissement, setRafraichissement] = useState(false);
   const [erreurPartage, setErreurPartage] = useState<string | null>(null);
@@ -224,24 +176,6 @@ export default function LivraisonsScreen() {
     };
   }, [commandePartagee]);
 
-  async function chercherDisponibles(p: Position) {
-    try {
-      setDisponibles(await listerLivraisonsDisponibles(p));
-    } catch (e) {
-      Alert.alert('Erreur', e instanceof Error ? e.message : 'Recherche impossible.');
-    }
-  }
-
-  async function relever() {
-    const { position: releve } = await activer().catch(() => ({ position: null }));
-    if (!releve) {
-      Alert.alert('Localisation', "Impossible d'obtenir votre position pour le moment.");
-      return;
-    }
-    setPosition(releve);
-    await chercherDisponibles(releve);
-  }
-
   async function actionSur(id: string, action: () => Promise<void>) {
     setOccupee(id);
     try {
@@ -254,15 +188,8 @@ export default function LivraisonsScreen() {
     }
   }
 
-  async function reclamer(livraison: LivraisonDisponible) {
-    await actionSur(livraison.id, async () => {
-      await reclamerLivraison(livraison.id);
-      if (position) setDisponibles(await listerLivraisonsDisponibles(position));
-    });
-  }
-
   function libererAvecConfirmation(livraison: LivraisonEnCours) {
-    Alert.alert('Rendre cette livraison ?', "Elle redeviendra disponible pour les autres livreurs.", [
+    Alert.alert('Rendre cette livraison ?', 'Elle redeviendra disponible pour les autres livreurs.', [
       { text: 'Non', style: 'cancel' },
       { text: 'Oui', style: 'destructive', onPress: () => actionSur(livraison.id, () => faireEtapeLivraison(livraison.id, 'liberer')) },
     ]);
@@ -279,27 +206,29 @@ export default function LivraisonsScreen() {
     if (estLivreur === null) {
       return (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#10B981" />
+          <ActivityIndicator color={VERT} />
         </View>
       );
     }
     if (!estLivreur) {
       return (
         <View className="flex-1 items-center justify-center px-8 gap-3">
-          <Ionicons name="bicycle-outline" size={40} color="#9CA3AF" />
+          <Text style={{ fontSize: 40 }}>🛵</Text>
           <Text className="text-[14px] font-bold text-[#1A1A1A] text-center">Vous n&apos;êtes pas livreur actif</Text>
-          <Pressable
-            onPress={() => router.replace('/marketplace/vendre/livreur')}
-            className="rounded-2xl px-6 py-3 mt-2"
-            style={{ backgroundColor: VERT_PROFOND }}>
-            <Text className="text-white text-[13.5px] font-bold">Devenir livreur</Text>
-          </Pressable>
+          <View className="w-full mt-2">
+            <BoutonAction
+              titre="Devenir livreur"
+              sousTitre="Livrez les commandes autour de vous"
+              icone="bicycle-outline"
+              onPress={() => router.replace('/marketplace/vendre/livreur')}
+            />
+          </View>
         </View>
       );
     }
     return (
       <ScrollView
-        contentContainerClassName="px-4 pb-10 gap-5 pt-2"
+        contentContainerClassName="px-4 pt-4 pb-10 gap-3.5"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -307,53 +236,43 @@ export default function LivraisonsScreen() {
             onRefresh={() => {
               setRafraichissement(true);
               recharger();
-              if (position) chercherDisponibles(position);
             }}
-            tintColor="#10B981"
+            tintColor={VERT}
           />
         }>
-        <View className="gap-3">
-          <Text className="text-[12.5px] font-extrabold tracking-wide text-gray-500">MES LIVRAISONS EN COURS ({enCours.length})</Text>
-          {commandePartagee && (
-            <View className="rounded-xl bg-[#E0F2FE] px-3 py-2">
-              <Text className="text-[12px] text-[#0369A1]">
-                Position partagée avec l&apos;acheteur pendant la livraison, tant que cet écran reste ouvert.
-              </Text>
-              {erreurPartage ? <Text className="text-[12px] font-bold text-red-600 mt-1">{erreurPartage}</Text> : null}
-            </View>
-          )}
-          {enCours.length === 0 ? (
-            <Text className="text-[13px] text-gray-500">Aucune livraison réclamée pour l&apos;instant.</Text>
-          ) : (
-            enCours.map((l) => (
-              <CarteLivraison
-                key={l.id}
-                livraison={l}
-                occupee={occupee === l.id}
-                onEtape={(etape) => actionSur(l.id, () => faireEtapeLivraison(l.id, etape))}
-                onLiberer={() => libererAvecConfirmation(l)}
-              />
-            ))
-          )}
-        </View>
+        {commandePartagee && (
+          <View className="rounded-[14px] px-3.5 py-2.5" style={{ backgroundColor: '#E0F2FE' }}>
+            <Text className="text-[12px] text-[#0369A1]">
+              Position partagée avec l&apos;acheteur pendant la livraison, tant que cet écran reste ouvert.
+            </Text>
+            {erreurPartage ? <Text className="text-[12px] font-bold text-red-600 mt-1">{erreurPartage}</Text> : null}
+          </View>
+        )}
 
-        <View className="gap-3">
-          <Text className="text-[12.5px] font-extrabold tracking-wide text-gray-500">LIVRAISONS DISPONIBLES</Text>
-          {!position ? (
-            <Pressable
-              onPress={relever}
-              className="flex-row items-center justify-center gap-2 rounded-2xl border border-gray-300 py-3">
-              <Ionicons name="location-outline" size={18} color={VERT_PROFOND} />
-              <Text className="text-[13px] font-bold text-[#1A1A1A]">Relever ma position actuelle</Text>
-            </Pressable>
-          ) : disponibles.length === 0 ? (
-            <Text className="text-[13px] text-gray-500">Aucune livraison disponible dans un rayon de 15 km.</Text>
-          ) : (
-            disponibles.map((l) => (
-              <CarteDisponible key={l.id} livraison={l} occupee={occupee === l.id} onReclamer={() => reclamer(l)} />
-            ))
-          )}
-        </View>
+        {enCours.length === 0 ? (
+          <View className="items-center py-10 gap-1.5">
+            <Text style={{ fontSize: 34 }}>📭</Text>
+            <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Aucune livraison en cours</Text>
+            <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Réclamez-en une parmi les livraisons disponibles.</Text>
+          </View>
+        ) : (
+          enCours.map((l) => (
+            <CarteLivraison
+              key={l.id}
+              livraison={l}
+              occupee={occupee === l.id}
+              onEtape={(etape) => actionSur(l.id, () => faireEtapeLivraison(l.id, etape))}
+              onLiberer={() => libererAvecConfirmation(l)}
+            />
+          ))
+        )}
+
+        <BoutonAction
+          titre="Livraisons disponibles"
+          sousTitre="Triées par distance"
+          icone="navigate-outline"
+          onPress={() => router.push('/marketplace/livraisons-disponibles' as Href)}
+        />
       </ScrollView>
     );
   }
@@ -361,7 +280,7 @@ export default function LivraisonsScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
-        <EnteteMarketplace titre="Mes livraisons" />
+        <EnteteMarketplace titre="Mes livraisons en cours" sousTitre={estLivreur ? 'Livreur actif' : undefined} />
         {contenu()}
       </View>
     </View>

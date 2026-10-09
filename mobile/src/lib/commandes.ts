@@ -1,3 +1,4 @@
+import { urlPhoto } from '@/lib/marketplace';
 import { supabase } from '@/lib/supabase';
 
 // Commandes Marketplace côté app native — port de src/lib/marketplaceData.js
@@ -37,7 +38,7 @@ export type MaCommande = {
   livreur_position_lng: number | null;
   livreur_position_maj_le: string | null;
   created_at: string;
-  item: { titre: string } | null;
+  item: { titre: string; photos?: unknown } | null;
   store?: { nom: string; quartier: string | null; ville: string | null } | null;
 };
 
@@ -57,6 +58,80 @@ export const LIBELLES_PAIEMENT: Record<MoyenPaiement, string> = {
   livraison: 'À la livraison',
 };
 
+type Pastille = { libelle: string; fond: string; texte: string };
+
+// Un même statut se dit différemment selon qui regarde : l'acheteur attend sa
+// livraison, le vendeur prépare puis voit partir sa commande (maquettes 66 et
+// 78). Les libellés génériques ci-dessus restent ceux du suivi détaillé.
+const BLEU: Pick<Pastille, 'fond' | 'texte'> = { fond: '#DBEAFE', texte: '#1D4ED8' };
+const VERT: Pick<Pastille, 'fond' | 'texte'> = { fond: '#D1FAE5', texte: '#047857' };
+const AMBRE: Pick<Pastille, 'fond' | 'texte'> = { fond: '#FEF3C7', texte: '#B45309' };
+const GRIS: Pick<Pastille, 'fond' | 'texte'> = { fond: '#E5E7EB', texte: '#374151' };
+const ROUGE: Pick<Pastille, 'fond' | 'texte'> = { fond: '#FEE2E2', texte: '#B91C1C' };
+
+export function pastilleAcheteur(statut: StatutCommande): Pastille {
+  switch (statut) {
+    case 'en_attente_livreur': return { libelle: "En attente d'un livreur", ...BLEU };
+    case 'assignee': return { libelle: 'Livreur assigné', ...BLEU };
+    case 'recuperee': return { libelle: 'Article récupéré', ...BLEU };
+    case 'en_livraison': return { libelle: 'En livraison', ...BLEU };
+    case 'livree_declaree': return { libelle: 'Livrée par le livreur', ...AMBRE };
+    case 'livree': return { libelle: 'Reçue', ...VERT };
+    case 'annulee': return { libelle: 'Annulée', ...GRIS };
+  }
+}
+
+export function pastilleVendeur(statut: StatutCommande): Pastille {
+  switch (statut) {
+    case 'en_attente_livreur': return { libelle: 'Nouvelle', ...ROUGE };
+    case 'assignee': return { libelle: 'En préparation', ...GRIS };
+    case 'recuperee':
+    case 'en_livraison': return { libelle: 'En livraison', ...BLEU };
+    case 'livree_declaree':
+    case 'livree': return { libelle: 'Livrée', ...VERT };
+    case 'annulee': return { libelle: 'Annulée', ...GRIS };
+  }
+}
+
+/** « Aujourd'hui 10:24 », « Hier », « 3 oct. » — repère de date des cartes de la maquette 78. */
+export function dateRelativeCourte(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const aujourdhui = new Date();
+  const debutJour = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ecartJours = Math.round((debutJour(aujourdhui) - debutJour(d)) / 86_400_000);
+  const heure = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (ecartJours === 0) return `Aujourd'hui ${heure}`;
+  if (ecartJours === 1) return 'Hier';
+  return jourMois(iso);
+}
+
+/** Première photo d'un article en URL publique, ou null. */
+export function premierePhoto(photos: unknown): string | null {
+  const liste = Array.isArray(photos) ? photos : [];
+  const premiere = liste.find((p) => typeof p === 'string' && p) as string | undefined;
+  return premiere ? urlPhoto(premiere) : null;
+}
+
+/**
+ * Référence courte lisible d'une commande (« CMD-8F3A »), dérivée de son
+ * identifiant : les maquettes 66 à 68 et 80 montrent une référence en tête de
+ * carte, la table n'a pas de numéro séquentiel. Les quatre premiers
+ * caractères suffisent pour retrouver la commande côté support, et la
+ * référence est la même sur tous les écrans (acheteur, vendeur, livreur).
+ */
+export function refCommande(id: string, prefixe: 'CMD' | 'LIV' = 'CMD'): string {
+  return `${prefixe}-${id.replace(/-/g, '').slice(0, 4).toUpperCase()}`;
+}
+
+/** « 4 oct. » — date courte des cartes de commande (maquette 66). */
+export function jourMois(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const mois = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  return `${d.getDate()} ${mois[d.getMonth()]}`;
+}
+
 /** Date ISO -> « 06/10/2026 21:05 » en heure locale (formatage manuel, sans Intl). */
 export function dateCourte(iso: string): string {
   const d = new Date(iso);
@@ -74,7 +149,7 @@ export function couleurStatut(statut: StatutCommande): { fond: string; texte: st
   return { fond: '#E0F2FE', texte: '#0369A1' };
 }
 
-const COLONNES = '*, item:marketplace_items(titre)';
+const COLONNES = '*, item:marketplace_items(titre, photos), store:marketplace_stores(nom, quartier, ville)';
 
 export async function creerCommandeMarketplace(champs: {
   itemId: string;
@@ -102,7 +177,7 @@ export async function chargerCommande(commandeId: string): Promise<MaCommande | 
   if (!commandeId) return null;
   const { data, error } = await supabase
     .from('marketplace_commandes')
-    .select(`${COLONNES}, store:marketplace_stores(nom, quartier, ville)`)
+    .select(COLONNES)
     .eq('id', commandeId)
     .maybeSingle();
   if (error) throw new Error(error.message);

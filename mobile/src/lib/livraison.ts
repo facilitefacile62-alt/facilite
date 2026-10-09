@@ -171,3 +171,24 @@ export async function envoyerPositionLivraison(commandeId: string, position: Pos
     throw new Error(corps?.error || "Position non envoyée.");
   }
 }
+
+
+export type LivreurDeCommande = { type_vehicule: TypeVehicule; telephone: string | null };
+
+/**
+ * Le livreur assigné à une commande, vu par l'acheteur : véhicule et numéro
+ * pour l'appeler. La RLS de `livreurs` autorise exactement ce cas (l'acheteur
+ * d'une commande qui lui est assignée). Son nom n'est PAS lisible par
+ * l'acheteur — aucune policy n'expose le profil d'un autre compte — d'où un
+ * affichage « Votre livreur » plutôt qu'un nom inventé.
+ */
+export async function chargerLivreurDeCommande(livreurId: string): Promise<LivreurDeCommande | null> {
+  if (!livreurId) return null;
+  const { data, error } = await supabase
+    .from('livreurs')
+    .select('type_vehicule, telephone')
+    .eq('user_id', livreurId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as LivreurDeCommande;
+}

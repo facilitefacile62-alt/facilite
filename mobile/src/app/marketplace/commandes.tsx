@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
@@ -8,10 +9,11 @@ import { useAuth } from '@/context/AuthContext';
 import {
   annulerCommande,
   chargerMesCommandesAcheteur,
-  couleurStatut,
-  dateCourte,
-  LIBELLES_PAIEMENT,
-  LIBELLES_STATUT,
+  confirmerReceptionCommande,
+  jourMois,
+  pastilleAcheteur,
+  premierePhoto,
+  refCommande,
   type MaCommande,
 } from '@/lib/commandes';
 import { prixLisible } from '@/lib/marketplace';
@@ -25,58 +27,70 @@ function CarteCommande({
   commande,
   occupee,
   onSuivre,
+  onConfirmer,
   onAnnuler,
 }: {
   commande: MaCommande;
   occupee: boolean;
   onSuivre: () => void;
+  onConfirmer: () => void;
   onAnnuler: () => void;
 }) {
-  const statut = couleurStatut(commande.statut);
+  const pastille = pastilleAcheteur(commande.statut);
+  const photo = premierePhoto(commande.item?.photos);
   const peutAnnuler = commande.statut === 'en_attente_livreur' || commande.statut === 'assignee';
-  const peutSuivre = ['assignee', 'recuperee', 'en_livraison', 'livree_declaree', 'livree'].includes(commande.statut);
+  const suivable = ['assignee', 'recuperee', 'en_livraison'].includes(commande.statut);
 
   return (
-    <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-2.5">
-      <View className="flex-row items-start justify-between gap-2">
-        <Text className="flex-1 text-[14px] font-bold text-[#1A1A1A]" numberOfLines={2}>
-          {commande.item?.titre ?? 'Article'}
-        </Text>
-        <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: statut.fond }}>
-          <Text className="text-[11px] font-bold" style={{ color: statut.texte }}>
-            {LIBELLES_STATUT[commande.statut]}
+    <View className="bg-white rounded-[20px] p-3.5 gap-3">
+      <View className="flex-row gap-3">
+        <View className="rounded-[14px] overflow-hidden items-center justify-center" style={{ width: 56, height: 56, backgroundColor: '#E8E4DA' }}>
+          {photo ? (
+            <Image source={{ uri: photo }} alt={commande.item?.titre ?? 'Article'} style={{ width: 56, height: 56 }} contentFit="cover" />
+          ) : (
+            <Ionicons name="image-outline" size={20} color="rgba(0,0,0,0.25)" />
+          )}
+        </View>
+        <View className="flex-1 min-w-0 gap-0.5">
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="text-[12.5px] flex-1" style={{ color: 'rgba(0,0,0,0.45)' }} numberOfLines={1}>
+              {refCommande(commande.id)} · {jourMois(commande.created_at)}
+            </Text>
+            <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: pastille.fond }}>
+              <Text className="text-[11.5px] font-extrabold" style={{ color: pastille.texte }}>{pastille.libelle}</Text>
+            </View>
+          </View>
+          <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={2}>
+            {commande.item?.titre ?? 'Article'}
+          </Text>
+          <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>
+            {commande.store?.nom ?? 'Boutique'} · {prixLisible(commande.prix_total_xof)} FCFA
           </Text>
         </View>
       </View>
 
-      <Text className="text-[13px] text-gray-700">
-        {commande.quantite} × {prixLisible(commande.prix_unitaire_xof)} FCFA ·{' '}
-        <Text className="font-extrabold" style={{ color: VERT_PROFOND }}>
-          {prixLisible(commande.prix_total_xof)} FCFA
-        </Text>
-      </Text>
-      <Text className="text-[12px] text-gray-500">
-        {LIBELLES_PAIEMENT[commande.moyen_paiement]} · {dateCourte(commande.created_at)}
-      </Text>
-      <Text className="text-[12px] text-gray-500" numberOfLines={2}>
-        Livraison : {commande.livraison_adresse}
-      </Text>
-
-      {peutSuivre && (
+      {suivable && (
         <Pressable
           onPress={onSuivre}
-          className="flex-row items-center justify-center gap-2 rounded-xl py-2.5"
-          style={{ backgroundColor: commande.statut === 'livree_declaree' ? '#B45309' : VERT_PROFOND }}>
-          <Ionicons name={commande.statut === 'livree' ? 'checkmark-circle-outline' : 'navigate-outline'} size={16} color="#fff" />
-          <Text className="text-white text-[13px] font-bold">
-            {commande.statut === 'livree_declaree' ? 'Confirmer la réception' : commande.statut === 'livree' ? 'Voir le suivi' : 'Suivre la livraison'}
-          </Text>
+          className="items-center justify-center rounded-[14px]"
+          style={{ height: 50, backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399' }}>
+          <Text className="text-[15px] font-black text-[#1A1A1A]">Suivre la livraison</Text>
+        </Pressable>
+      )}
+
+      {commande.statut === 'livree_declaree' && (
+        <Pressable
+          onPress={onConfirmer}
+          disabled={occupee}
+          className="items-center justify-center rounded-[14px] disabled:opacity-60"
+          style={{ height: 50, backgroundColor: '#10B981' }}>
+          {occupee ? <ActivityIndicator color="#fff" /> : <Text className="text-[15px] font-black text-white">Confirmer la réception</Text>}
         </Pressable>
       )}
 
       {peutAnnuler && (
-        <Pressable onPress={onAnnuler} disabled={occupee} hitSlop={6} className="self-start py-1 disabled:opacity-60">
-          {occupee ? <ActivityIndicator color={VERT_PROFOND} /> : <Text className="text-[12.5px] font-bold text-red-600">Annuler la commande</Text>}
+        <Pressable onPress={onAnnuler} disabled={occupee} hitSlop={6} className="self-start py-0.5 disabled:opacity-60">
+          <Text className="text-[12.5px] font-bold text-red-600">Annuler la commande</Text>
         </Pressable>
       )}
     </View>
@@ -133,15 +147,30 @@ export default function MesCommandesScreen() {
     ]);
   }
 
-  function retour() {
-    if (router.canGoBack()) router.back();
-    else router.replace('/marketplace');
+  function demanderConfirmation(commande: MaCommande) {
+    Alert.alert('Colis reçu ?', 'Confirmez uniquement si vous avez bien reçu votre article.', [
+      { text: 'Pas encore', style: 'cancel' },
+      {
+        text: 'Oui, reçu',
+        onPress: async () => {
+          setOccupee(commande.id);
+          try {
+            await confirmerReceptionCommande(commande.id);
+            await recharger();
+          } catch (e) {
+            Alert.alert('Erreur', e instanceof Error ? e.message : 'Confirmation impossible.');
+          } finally {
+            setOccupee(null);
+          }
+        },
+      },
+    ]);
   }
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
-        <EnteteMarketplace titre="Mes commandes" onRetour={retour} />
+        <EnteteMarketplace titre="Mes commandes" />
 
         {!user?.id ? (
           <View className="flex-1 items-center justify-center px-8 gap-4">
@@ -187,6 +216,7 @@ export default function MesCommandesScreen() {
                 commande={item}
                 occupee={occupee === item.id}
                 onSuivre={() => router.push(`/marketplace/suivi/${item.id}` as Href)}
+                onConfirmer={() => demanderConfirmation(item)}
                 onAnnuler={() => demanderAnnulation(item)}
               />
             )}

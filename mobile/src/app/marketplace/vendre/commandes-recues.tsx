@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 
-import { chargerCommandesBoutique, couleurStatut, dateCourte, LIBELLES_PAIEMENT, LIBELLES_STATUT, type MaCommande } from '@/lib/commandes';
+import { chargerCommandesBoutique, dateRelativeCourte, pastilleVendeur, type MaCommande } from '@/lib/commandes';
 import { prixLisible } from '@/lib/marketplace';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 
@@ -11,25 +11,25 @@ import EnteteMarketplace from '@/components/EnteteMarketplace';
 // lecture seule (les actions de livraison appartiennent au livreur, le
 // vendeur suit juste l'avancement).
 function CarteCommandeVendeur({ commande }: { commande: MaCommande }) {
-  const statut = couleurStatut(commande.statut);
+  const pastille = pastilleVendeur(commande.statut);
+  const initiale = (commande.livraison_nom || '?').trim().charAt(0).toUpperCase();
   return (
-    <View className="bg-white rounded-2xl border border-black/[0.06] p-3.5 gap-1.5">
-      <View className="flex-row items-start justify-between gap-2">
-        <Text className="flex-1 text-[14px] font-bold text-[#1A1A1A]" numberOfLines={1}>
-          {commande.livraison_nom}
-        </Text>
-        <View className="rounded-full px-2.5 py-1" style={{ backgroundColor: statut.fond }}>
-          <Text className="text-[11px] font-bold" style={{ color: statut.texte }}>
-            {LIBELLES_STATUT[commande.statut]}
-          </Text>
-        </View>
+    <View className="flex-row items-center gap-3 bg-white rounded-[20px] p-3.5">
+      <View className="items-center justify-center rounded-full" style={{ width: 46, height: 46, backgroundColor: '#E4DED2' }}>
+        <Text className="text-[16px] font-black text-[#1A1A1A]">{initiale}</Text>
       </View>
-      <Text className="text-[12.5px] text-gray-600" numberOfLines={1}>
-        {commande.item?.titre ?? 'Article'} · ×{commande.quantite}
-      </Text>
-      <Text className="text-[12px] text-gray-500">
-        {dateCourte(commande.created_at)} · {prixLisible(commande.prix_total_xof)} FCFA · {LIBELLES_PAIEMENT[commande.moyen_paiement]}
-      </Text>
+      <View className="flex-1 min-w-0 gap-0.5">
+        <Text className="text-[15px] font-black text-[#1A1A1A]" numberOfLines={1}>{commande.livraison_nom}</Text>
+        <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.55)' }} numberOfLines={1}>
+          {commande.item?.titre ?? 'Article'} · ×{commande.quantite}
+        </Text>
+        <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.45)' }}>
+          {dateRelativeCourte(commande.created_at)} · {prixLisible(commande.prix_total_xof)} FCFA
+        </Text>
+      </View>
+      <View className="rounded-full px-3 py-1" style={{ backgroundColor: pastille.fond }}>
+        <Text className="text-[11.5px] font-extrabold" style={{ color: pastille.texte }}>{pastille.libelle}</Text>
+      </View>
     </View>
   );
 }
