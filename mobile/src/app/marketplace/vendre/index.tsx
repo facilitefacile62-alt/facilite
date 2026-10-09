@@ -227,6 +227,47 @@ function FormulaireCreationBoutique({
   );
 }
 
+// Carte de la grille « Ma boutique » (maquette 71) : grande photo, titre et
+// prix ; un appui ouvre la modification de l'article (la quantité s'y règle).
+function CarteBoutique({ article }: { article: MonArticle }) {
+  const router = useRouter();
+  const photo = article.photos[0] ? urlPhoto(article.photos[0]) : null;
+
+  function ouvrir() {
+    const params = new URLSearchParams({
+      id: article.id,
+      titre: article.titre,
+      categorie: article.categorie,
+      prix: String(article.prix_xof),
+      quantite: String(article.quantite),
+      description: article.description || '',
+      photos: JSON.stringify(article.photos),
+      video: article.url_video || '',
+    });
+    router.push(`/marketplace/vendre/modifier-article?${params.toString()}` as Href);
+  }
+
+  return (
+    <Pressable onPress={ouvrir} className="flex-1 bg-white overflow-hidden" style={{ borderRadius: 18 }}>
+      <View style={{ aspectRatio: 0.92, backgroundColor: '#E9E4D8' }}>
+        {photo ? (
+          <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        ) : (
+          <Svg width="100%" height="100%">
+            {Array.from({ length: 16 }, (_, i) => (
+              <Line key={i} x1={i * 30 - 200} y1={220} x2={i * 30} y2={0} stroke="#DDD6C6" strokeWidth={11} />
+            ))}
+          </Svg>
+        )}
+      </View>
+      <View style={{ padding: 10, minHeight: 76 }}>
+        <Text className="text-[13.5px] font-black text-[#1A1A1A]" numberOfLines={2}>{article.titre}</Text>
+        <Text className="text-[15px] font-black text-[#1A1A1A] mt-auto pt-1">{prixLisible(article.prix_xof)} FCFA</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function LigneArticle({ article, onChanger }: { article: MonArticle; onChanger: () => void }) {
   const router = useRouter();
   const [enCours, setEnCours] = useState(false);
@@ -641,11 +682,13 @@ export default function MaBoutiqueScreen() {
           <FlatList
             data={articles}
             keyExtractor={(a) => a.id}
-            contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 10 }}
+            numColumns={2}
+            columnWrapperStyle={{ gap: 12, paddingHorizontal: 14 }}
+            contentContainerStyle={{ paddingBottom: 32, gap: 12 }}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
-              <View className="mb-4">
-                <View style={{ height: 120, borderRadius: 16, backgroundColor: '#E9E4D8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+              <View className="mb-1">
+                <View style={{ height: 140, backgroundColor: '#E9E4D8', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
               <Svg width="100%" height="100%" style={{ position: 'absolute' }}>
                 {Array.from({ length: 30 }, (_, i) => (
                   <Line key={i} x1={i * 26 - 130} y1={120} x2={i * 26} y2={0} stroke="#DDD6C6" strokeWidth={9} />
@@ -653,7 +696,8 @@ export default function MaBoutiqueScreen() {
               </Svg>
               <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11, color: '#8A8272' }}>bannière de la boutique</Text>
             </View>
-                <View className="-mt-10 px-1 gap-1">
+                <View className="bg-white pb-4">
+                <View className="-mt-10 px-4 gap-1">
                   <View className="w-[78px] h-[78px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
                     <Ionicons name="storefront" size={26} color={VERT_PROFOND} />
                   </View>
@@ -672,21 +716,23 @@ export default function MaBoutiqueScreen() {
                     « Modifier le profil » de la boutique (maquette 32). */}
                 <Pressable
                   onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)}
-                  className="flex-row items-center justify-center gap-2 rounded-2xl bg-white border border-black/[0.08] py-3 mt-3">
+                  className="flex-row items-center justify-center gap-2 rounded-2xl bg-white border border-black/[0.08] py-3 mt-3 mx-4">
                   <Ionicons name="pencil" size={14} color="#1A1A1A" />
                   <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Modifier infos</Text>
                 </Pressable>
 
                 <Pressable
                   onPress={() => router.push('/marketplace/vendre/tableau-de-bord' as Href)}
-                  className="flex-row items-center justify-center gap-2 rounded-2xl border border-[#10B981] py-3 mt-2.5">
+                  style={{ backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399', borderRadius: 14, height: 52 }}
+                  className="flex-row items-center justify-center gap-2 mt-2.5 mx-4">
                   <Ionicons name="bar-chart-outline" size={16} color={VERT_PROFOND} />
                   <Text className="text-[13.5px] font-bold" style={{ color: VERT_PROFOND }}>
                     Tableau de bord
                   </Text>
                 </Pressable>
 
-                <View className="flex-row gap-1 mt-4 bg-white rounded-[20px] p-1.5">
+                </View>
+                <View className="flex-row gap-1 mt-3 mb-3 mx-3 bg-white rounded-[20px] p-1.5">
                   {(['article', 'service', 'etablissement'] as const).map((o) => {
                     const actif = onglet === o;
                     const libelle = o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT';
@@ -708,7 +754,7 @@ export default function MaBoutiqueScreen() {
                 <Text className="text-[13.5px] text-gray-500 text-center px-6">Aucun article publié pour l&apos;instant.</Text>
               </View>
             }
-            renderItem={({ item }) => <LigneArticle article={item} onChanger={recharger} />}
+            renderItem={({ item }) => <CarteBoutique article={item} />}
           />
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
