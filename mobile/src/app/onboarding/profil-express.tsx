@@ -1,14 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Text, TextInput, View } from 'react-native';
 
+import BandeauOnboarding from '@/components/BandeauOnboarding';
+import BoutonAction from '@/components/BoutonAction';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 // Onboarding — Profil express (visiteur), maquette « Onboarding — Profil express ».
-const VERT_PROFOND = '#0d3b34';
-
 export default function OnboardingProfilExpressScreen() {
   const router = useRouter();
   const { user, profile } = useAuth();
@@ -38,41 +37,20 @@ export default function OnboardingProfilExpressScreen() {
     }
   }
 
+  const champ = { height: 58, borderRadius: 14, borderWidth: 1.5, borderColor: '#0B3D2A', backgroundColor: '#fff', paddingHorizontal: 20, fontSize: 16, color: '#1A1A1A', outlineStyle: 'none' } as object;
+
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
-      <SafeAreaView className="flex-1 justify-center px-6 gap-4" edges={['top', 'bottom']}>
-        <Text className="text-[19px] font-black text-[#1A1A1A] text-center">Profil express</Text>
-        <Text className="text-[13px] text-gray-500 text-center -mt-2">Juste votre nom pour commencer vos achats.</Text>
+    <BandeauOnboarding image={require('../../../assets/images/onboarding/onboarding-express-v2.jpg')} centrage={30} retour>
+      <Text className="text-[26px] font-black text-[#111] text-center">Profil express</Text>
+      <Text className="text-[14.5px] text-center mt-2 mb-4" style={{ color: 'rgba(0,0,0,0.5)' }}>Juste votre nom pour commencer vos achats.</Text>
 
-        <View className="gap-1.5 mt-2">
-          <Text className="text-[12.5px] font-bold text-gray-700">Prénom</Text>
-          <TextInput
-            value={prenom}
-            onChangeText={setPrenom}
-            placeholder="Ex. Moussa"
-            placeholderTextColor="#9CA3AF"
-            className="border border-[#0B3D2A] rounded-xl px-3.5 py-3.5 text-[14px] text-[#1A1A1A]"
-          />
-        </View>
-        <View className="gap-1.5">
-          <Text className="text-[12.5px] font-bold text-gray-700">Nom</Text>
-          <TextInput
-            value={nom}
-            onChangeText={setNom}
-            placeholder="Ex. Diop"
-            placeholderTextColor="#9CA3AF"
-            className="border border-[#0B3D2A] rounded-xl px-3.5 py-3.5 text-[14px] text-[#1A1A1A]"
-          />
-        </View>
-
-        <Pressable
-          onPress={continuer}
-          disabled={enregistrement}
-          className="rounded-2xl py-3.5 items-center mt-3 disabled:opacity-60"
-          style={{ backgroundColor: VERT_PROFOND }}>
-          {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Accéder à la marketplace</Text>}
-        </Pressable>
-      </SafeAreaView>
-    </View>
+      <Text className="text-[13.5px] font-black text-[#111] mb-1.5">Prénom</Text>
+      <TextInput value={prenom} onChangeText={setPrenom} placeholder="Votre prénom" placeholderTextColor="rgba(0,0,0,0.35)" style={champ} />
+      <Text className="text-[13.5px] font-black text-[#111] mt-4 mb-1.5">Nom</Text>
+      <TextInput value={nom} onChangeText={setNom} placeholder="Votre nom" placeholderTextColor="rgba(0,0,0,0.35)" style={champ} />
+      <View className="mt-4">
+        <BoutonAction titre="Accéder à la marketplace" sousTitre="Découvrir et acheter des articles" icone="cart-outline" onPress={continuer} chargement={enregistrement} />
+      </View>
+    </BandeauOnboarding>
   );
 }

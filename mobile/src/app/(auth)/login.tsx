@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -97,7 +98,7 @@ export default function LoginScreen() {
               <View
                 className="items-center justify-center"
                 style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#C4F3DD' }}>
-                <Text style={{ fontSize: 44 }}>🗝️</Text>
+                <Image alt="" source={require('../../../assets/images/onboarding/cle-facilite.png')} contentFit="contain" style={{ width: 56, height: 90 }} />
               </View>
             </View>
           </View>
