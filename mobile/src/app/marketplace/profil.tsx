@@ -1,40 +1,15 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 
 // Profil Marketplace (maquettes « Visiteur — Profil » et « Vendeur — Profil »).
 // Le badge et les lignes dépendent du rôle : VISITEUR sans boutique, BOUTIQUE avec une boutique.
 const VERT_PROFOND = '#0d3b34';
-
-function Ligne({
-  icone,
-  fondIcone,
-  titre,
-  droite,
-  onPress,
-}: {
-  icone: keyof typeof Ionicons.glyphMap;
-  fondIcone: string;
-  titre: string;
-  droite?: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} className="flex-row items-center gap-3 px-4 py-3.5 border-b border-black/[0.05] active:bg-gray-50">
-      <View className="w-9 h-9 rounded-xl items-center justify-center" style={{ backgroundColor: fondIcone }}>
-        <Ionicons name={icone} size={18} color="#1A1A1A" />
-      </View>
-      <Text className="flex-1 text-[14.5px] font-bold text-[#1A1A1A]">{titre}</Text>
-      {droite ? <Text className="text-[13px] font-extrabold" style={{ color: VERT_PROFOND }}>{droite}</Text> : null}
-      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-    </Pressable>
-  );
-}
 
 export default function ProfilMarketplaceScreen() {
   const router = useRouter();
@@ -101,17 +76,37 @@ export default function ProfilMarketplaceScreen() {
               </View>
             </View>
 
-            <View className="bg-white rounded-2xl overflow-hidden">
-              <Ligne
-                icone="storefront-outline"
-                fondIcone="#CCFBF1"
+            {/* Visiteur : Ma boutique (Devenir Vendeur), À propos, Mes commandes, Réglages
+                (maquette 59). Vendeur : Ma boutique (Voir ma boutique), Tableau de bord,
+                Commandes reçues, Mes livraisons, Réglages (maquette 70). */}
+            <View className="bg-white rounded-[18px] overflow-hidden">
+              <LigneMenu
+                emoji="🏪"
                 titre="Ma boutique"
-                droite={estVendeur ? boutique?.nom : 'Devenir Vendeur'}
+                droite={
+                  <Text className="text-[13px] font-extrabold" style={{ color: '#047857' }}>
+                    {estVendeur ? 'Voir ma boutique' : 'Devenir Vendeur'}
+                  </Text>
+                }
                 onPress={() => router.push('/marketplace/vendre')}
               />
-              <Ligne icone="information-circle-outline" fondIcone="#F2F0EA" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
-              <Ligne icone="cube-outline" fondIcone="#F2F0EA" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
-              <Ligne icone="settings-outline" fondIcone="#F2F0EA" titre="Réglages" onPress={() => router.push('/marketplace/reglages')} />
+              {estVendeur ? (
+                <>
+                  <LigneMenu emoji="📊" titre="Tableau de bord" onPress={() => router.push('/marketplace/vendre/tableau-de-bord')} />
+                  <LigneMenu
+                    emoji="📦"
+                    titre="Commandes reçues"
+                    onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
+                  />
+                  <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} />
+                </>
+              ) : (
+                <>
+                  <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
+                  <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
+                </>
+              )}
+              <LigneMenu emoji="⚙️" titre="Réglages" derniere onPress={() => router.push('/marketplace/reglages')} />
             </View>
           </ScrollView>
         )}

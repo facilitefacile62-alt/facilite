@@ -1,12 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { chargerCommandesBoutique } from '@/lib/commandes';
 import { chargerMesArticles, chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
+import { LigneMenu } from '@/components/LigneMenu';
 
 // Tableau de bord (maquette « Vendeur — Tableau de bord ») : le menu de
 // gestion de la boutique, séparé de l'aperçu public « Ma boutique ». Les
@@ -15,7 +15,7 @@ import EnteteMarketplace from '@/components/EnteteMarketplace';
 const BIENTOT = (titre: string) => Alert.alert(titre, 'Cet écran arrive dans une prochaine mise à jour.');
 
 type Ligne = {
-  icone: keyof typeof Ionicons.glyphMap;
+  emoji: string;
   titre: string;
   badge?: number;
   onPress: () => void;
@@ -53,7 +53,7 @@ export default function TableauDeBordScreen() {
 
   if (chargement || !boutique) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
+      <View className="flex-1 bg-[#F2F0EA] items-center justify-center">
         <ActivityIndicator color="#10B981" />
       </View>
     );
@@ -61,18 +61,18 @@ export default function TableauDeBordScreen() {
 
   const storeId = boutique.id;
   const lignes: Ligne[] = [
-    { icone: 'clipboard-outline', titre: 'Mes annonces', badge: nbArticles, onPress: () => router.push(`/marketplace/vendre/annonces?storeId=${storeId}` as Href) },
-    { icone: 'cube-outline', titre: 'Mes commandes', badge: nbCommandes, onPress: () => router.push(`/marketplace/vendre/commandes-recues?storeId=${storeId}` as Href) },
-    { icone: 'construct-outline', titre: 'Service / métier', onPress: () => router.push('/marketplace/vendre') },
-    { icone: 'business-outline', titre: 'Établissement', onPress: () => router.push('/marketplace/vendre') },
-    { icone: 'rocket-outline', titre: 'Faire profit & Boost', onPress: () => BIENTOT('Faire profit & Boost') },
-    { icone: 'ribbon-outline', titre: 'Premium Marketplace', onPress: () => BIENTOT('Premium Marketplace') },
-    { icone: 'people-outline', titre: 'Abonnés', onPress: () => BIENTOT('Abonnés') },
-    { icone: 'star-outline', titre: 'Avis', onPress: () => BIENTOT('Avis') },
-    { icone: 'help-circle-outline', titre: 'FAQ', onPress: () => router.push('/web/faq') },
-    { icone: 'information-circle-outline', titre: 'À propos', onPress: () => router.push('/marketplace/a-propos') },
-    { icone: 'call-outline', titre: 'Contact', onPress: () => BIENTOT('Contact') },
-    { icone: 'settings-outline', titre: 'Réglages', onPress: () => router.push('/marketplace/reglages') },
+    { emoji: '📋', titre: 'Mes annonces', badge: nbArticles, onPress: () => router.push(`/marketplace/vendre/annonces?storeId=${storeId}` as Href) },
+    { emoji: '📦', titre: 'Mes commandes', badge: nbCommandes, onPress: () => router.push(`/marketplace/vendre/commandes-recues?storeId=${storeId}` as Href) },
+    { emoji: '🛠️', titre: 'Service / métier', onPress: () => router.push('/marketplace/vendre') },
+    { emoji: '🏢', titre: 'Établissement', onPress: () => router.push('/marketplace/vendre') },
+    { emoji: '🚀', titre: 'Faire profit & Boost', onPress: () => BIENTOT('Faire profit & Boost') },
+    { emoji: '👑', titre: 'Premium Marketplace', onPress: () => BIENTOT('Premium Marketplace') },
+    { emoji: '👥', titre: 'Abonnés', onPress: () => BIENTOT('Abonnés') },
+    { emoji: '⭐', titre: 'Avis', onPress: () => BIENTOT('Avis') },
+    { emoji: '❔', titre: 'FAQ', onPress: () => router.push('/web/faq') },
+    { emoji: 'ℹ️', titre: 'À propos', onPress: () => router.push('/marketplace/a-propos') },
+    { emoji: '☎️', titre: 'Contact', onPress: () => BIENTOT('Contact') },
+    { emoji: '⚙️', titre: 'Réglages', onPress: () => router.push('/marketplace/reglages') },
   ];
 
   return (
@@ -80,24 +80,17 @@ export default function TableauDeBordScreen() {
       <View className="flex-1">
         <EnteteMarketplace titre="Tableau de bord" />
 
-        <ScrollView contentContainerClassName="px-4 pb-10" showsVerticalScrollIndicator={false}>
-          <View className="bg-white rounded-2xl overflow-hidden">
+        <ScrollView contentContainerClassName="px-4 pt-4 pb-10" showsVerticalScrollIndicator={false}>
+          <View className="bg-white rounded-[18px] overflow-hidden">
             {lignes.map((l, i) => (
-              <Pressable
+              <LigneMenu
                 key={l.titre}
+                emoji={l.emoji}
+                titre={l.titre}
+                compteur={l.badge}
+                derniere={i === lignes.length - 1}
                 onPress={l.onPress}
-                className={`flex-row items-center gap-3 px-4 py-3.5 ${i > 0 ? 'border-t border-black/[0.05]' : ''}`}>
-                <View className="w-9 h-9 rounded-xl bg-[#F2F0EA] items-center justify-center">
-                  <Ionicons name={l.icone} size={17} color="#1A1A1A" />
-                </View>
-                <Text className="flex-1 text-[13.5px] font-bold text-[#1A1A1A]">{l.titre}</Text>
-                {typeof l.badge === 'number' && l.badge > 0 ? (
-                  <View className="rounded-full bg-[#D1FAE5] px-2 py-0.5 mr-1">
-                    <Text className="text-[11px] font-black text-[#047857]">{l.badge}</Text>
-                  </View>
-                ) : null}
-                <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
-              </Pressable>
+              />
             ))}
           </View>
         </ScrollView>

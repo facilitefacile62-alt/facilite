@@ -686,7 +686,7 @@ export default function MaBoutiqueScreen() {
                   </Text>
                 </Pressable>
 
-                <View className="flex-row gap-1.5 mt-4">
+                <View className="flex-row gap-1 mt-4 bg-white rounded-[20px] p-1.5">
                   {(['article', 'service', 'etablissement'] as const).map((o) => {
                     const actif = onglet === o;
                     const libelle = o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT';
@@ -694,8 +694,8 @@ export default function MaBoutiqueScreen() {
                       <Pressable
                         key={o}
                         onPress={() => setOnglet(o)}
-                        className={`flex-1 rounded-full py-2 items-center ${actif ? 'bg-black' : 'bg-[#F2F0EA]'}`}>
-                        <Text className={`text-[11px] font-black tracking-wide ${actif ? 'text-white' : 'text-gray-500'}`}>{libelle}</Text>
+                        className={`flex-1 rounded-full py-2.5 items-center ${actif ? 'bg-[#111]' : ''}`}>
+                        <Text className={`text-[11.5px] font-black tracking-wide ${actif ? 'text-white' : 'text-[#374151]'}`}>{libelle}</Text>
                       </Pressable>
                     );
                   })}
@@ -742,8 +742,8 @@ export default function MaBoutiqueScreen() {
                     <Pressable
                       key={o}
                       onPress={() => setOnglet(o)}
-                      className={`flex-1 rounded-full py-2 items-center ${actif ? 'bg-black' : 'bg-[#F2F0EA]'}`}>
-                      <Text className={`text-[11px] font-black tracking-wide ${actif ? 'text-white' : 'text-gray-500'}`}>{libelle}</Text>
+                      className={`flex-1 rounded-full py-2.5 items-center ${actif ? 'bg-[#111]' : ''}`}>
+                      <Text className={`text-[11.5px] font-black tracking-wide ${actif ? 'text-white' : 'text-[#374151]'}`}>{libelle}</Text>
                     </Pressable>
                   );
                 })}

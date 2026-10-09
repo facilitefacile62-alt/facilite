@@ -26,6 +26,12 @@ const TYPES_DOCUMENT = ['application/pdf', 'image/png', 'image/jpeg', 'image/web
 
 type DocumentChoisi = { uri: string; nom: string; type: string };
 
+// Champ de la charte §2.1 : bordure 1,5 px vert foncé, coins 16, hauteur 54.
+const champ = { height: 54, borderWidth: 1.5, borderColor: '#0B3D2A', borderRadius: 16, paddingHorizontal: 16 } as const;
+
+// Pictogrammes des véhicules (maquette 64).
+const PICTO_VEHICULE: Record<TypeVehicule, string> = { pied: '🚶', velo: '🚲', moto: '🛵', voiture: '🚗' };
+
 function FormulaireDemande({
   userId,
   nomInitial,
@@ -85,44 +91,57 @@ function FormulaireDemande({
       ) : null}
 
       <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Nom et prénom *</Text>
+        <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Nom &amp; Prénom</Text>
         <TextInput
           value={nom}
           onChangeText={setNom}
           placeholder="Ex. Moussa Diop"
           placeholderTextColor="#9CA3AF"
-          className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
+          className="bg-white text-[14.5px] text-[#1A1A1A]"
+          style={champ}
         />
       </View>
 
       <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Téléphone *</Text>
+        <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Téléphone</Text>
         <TextInput
           value={telephone}
           onChangeText={setTelephone}
-          placeholder="77 123 45 67"
+          placeholder="+221 77 000 00 00"
           placeholderTextColor="#9CA3AF"
           keyboardType="phone-pad"
-          className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
+          className="bg-white text-[14.5px] text-[#1A1A1A]"
+          style={champ}
         />
       </View>
 
       <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Ville ou zone de livraison *</Text>
+        <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Ville / Zone</Text>
         <SelecteurDepartement valeur={zone} onChoisir={setZone} />
       </View>
 
+      {/* Véhicule : quatre tuiles à pictogramme, la tuile choisie en vert menthe (maquette 64) */}
       <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Véhicule *</Text>
-        <View className="flex-row flex-wrap gap-2">
+        <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Véhicule</Text>
+        <View className="flex-row gap-2">
           {VEHICULES.map((v) => {
             const actif = vehicule === v;
             return (
               <Pressable
                 key={v}
                 onPress={() => setVehicule(v)}
-                className={`rounded-xl border px-4 py-2.5 ${actif ? 'border-[#0d3b34] bg-[#0d3b34]' : 'border-gray-300 bg-white'}`}>
-                <Text className={`text-[13px] font-bold ${actif ? 'text-white' : 'text-gray-700'}`}>{LIBELLES_VEHICULE[v]}</Text>
+                accessibilityRole="radio"
+                accessibilityState={{ selected: actif }}
+                className="flex-1 items-center justify-center rounded-[14px] py-3 gap-1"
+                style={{
+                  backgroundColor: actif ? '#D1FAE5' : '#fff',
+                  borderWidth: 1.5,
+                  borderColor: actif ? '#34D399' : 'rgba(0,0,0,0.1)',
+                }}>
+                <Text style={{ fontSize: 22 }}>{PICTO_VEHICULE[v]}</Text>
+                <Text className="text-[12.5px] font-extrabold" style={{ color: actif ? '#065F46' : '#374151' }}>
+                  {LIBELLES_VEHICULE[v]}
+                </Text>
               </Pressable>
             );
           })}
@@ -130,13 +149,16 @@ function FormulaireDemande({
       </View>
 
       <View className="gap-1.5">
-        <Text className="text-[12.5px] font-bold text-gray-700">Pièce d&apos;identité (facultatif)</Text>
+        <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">
+          Pièce d&apos;identité <Text className="font-medium" style={{ color: 'rgba(0,0,0,0.45)' }}>(facultatif)</Text>
+        </Text>
         <Pressable
           onPress={choisirDocument}
-          className="flex-row items-center gap-3 rounded-2xl border border-gray-300 px-3.5 py-3">
-          <Ionicons name="document-attach-outline" size={20} color={VERT_PROFOND} />
-          <Text className="flex-1 text-[13px] font-semibold text-[#1A1A1A]" numberOfLines={1}>
-            {pieceJointe ? pieceJointe.nom : 'Joindre un PDF ou une photo'}
+          className="flex-row items-center justify-center gap-2.5 rounded-[16px] bg-white"
+          style={{ height: 76, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.18)' }}>
+          <Text style={{ fontSize: 16 }}>📎</Text>
+          <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]" numberOfLines={1}>
+            {pieceJointe ? pieceJointe.nom : 'Ajouter une photo ou un PDF'}
           </Text>
         </Pressable>
       </View>
@@ -144,12 +166,12 @@ function FormulaireDemande({
       <Pressable
         onPress={envoyer}
         disabled={enCours}
-        className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60"
-        style={{ backgroundColor: VERT_PROFOND }}>
+        className="rounded-[16px] items-center justify-center mt-2 disabled:opacity-60"
+        style={{ height: 56, backgroundColor: '#10B981' }}>
         {enCours ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="text-white text-[14.5px] font-bold">Envoyer ma demande</Text>
+          <Text className="text-white text-[15px] font-black">Envoyer ma demande</Text>
         )}
       </Pressable>
     </ScrollView>
