@@ -7,16 +7,17 @@ import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 
-// Confidentialité — maquette 55 : interrupteurs puis liens légaux.
+// Confidentialité — maquette 55 : trois interrupteurs puis liens légaux.
 //
-// Écart assumé avec la maquette : elle montre « Afficher mon téléphone » et
-// « Afficher mon e-mail » comme DEUX interrupteurs. La base n'a qu'un seul
-// drapeau pour les coordonnées (profiles.show_contact) ; en afficher deux
-// reviendrait à inventer une colonne, ou à présenter deux interrupteurs qui
-// pilotent la même valeur. On expose donc les trois drapeaux qui existent
-// réellement, avec les mêmes noms et la même règle de couplage que le site
-// (src/app/profil/page.js : couper is_public coupe aussi show_contact — on
-// ne garde jamais des coordonnées visibles sur un profil masqué).
+// Les colonnes show_phone et show_email ont été ajoutées le 09/10/2026
+// (migration 20261009090000) à la demande du client, pour séparer les deux
+// interrupteurs de la maquette — la base n'avait jusque-là que le drapeau
+// de bloc show_contact.
+//
+// show_contact reste l'interrupteur maître du bloc « coordonnées » côté
+// site : on le garde synchronisé ici (vrai dès qu'au moins l'un des deux
+// champs est affiché), sinon activer « Afficher mon téléphone » depuis
+// l'app ne produirait rien sur la page publique.
 const LIENS_LEGAUX = [
   { titre: "Conditions d'utilisation", cle: 'cgu' },
   { titre: 'Politique de confidentialité', cle: 'confidentialite' },
@@ -28,18 +29,25 @@ export default function ProfilConfidentialiteScreen() {
   const { user, profile, refreshProfile } = useAuth();
 
   const [enCours, setEnCours] = useState<string | null>(null);
-  const estPublic = profile?.is_public === true;
-  const montreContact = profile?.show_contact === true;
+  const montreTelephone = profile?.show_phone === true;
+  const montreEmail = profile?.show_email === true;
   const cvVisible = profile?.cv_visible_recruteurs === true;
 
-  async function basculer(champ: 'is_public' | 'show_contact' | 'cv_visible_recruteurs', valeur: boolean) {
+  type Champ = 'show_phone' | 'show_email' | 'cv_visible_recruteurs';
+
+  async function basculer(champ: Champ, valeur: boolean) {
     if (!user?.id || enCours) return;
     setEnCours(champ);
     try {
-      const champs: Record<string, boolean> =
-        champ === 'is_public' && valeur === false
-          ? { is_public: false, show_contact: false }
-          : { [champ]: valeur };
+      const champs: Record<string, boolean> = { [champ]: valeur };
+      // show_contact est l'interrupteur maître du bloc « coordonnées » sur
+      // la page publique : il doit être vrai dès qu'un des deux champs est
+      // affiché, faux quand les deux sont coupés.
+      if (champ === 'show_phone' || champ === 'show_email') {
+        const telephone = champ === 'show_phone' ? valeur : montreTelephone;
+        const email = champ === 'show_email' ? valeur : montreEmail;
+        champs.show_contact = telephone || email;
+      }
       await enregistrerChampsProfil(user.id, champs);
       await refreshProfile();
     } catch {
@@ -64,20 +72,19 @@ export default function ProfilConfidentialiteScreen() {
               onChange={(v) => basculer('cv_visible_recruteurs', v)}
             />
             <LigneBascule
-              titre="Profil public"
-              sous="Votre page profil est accessible par son lien"
-              valeur={estPublic}
-              occupe={enCours === 'is_public'}
-              onChange={(v) => basculer('is_public', v)}
+              titre="Afficher mon téléphone"
+              sous="Visible sur votre profil public"
+              valeur={montreTelephone}
+              occupe={enCours === 'show_phone'}
+              onChange={(v) => basculer('show_phone', v)}
               premier={false}
             />
             <LigneBascule
-              titre="Afficher mes coordonnées"
-              sous={estPublic ? 'Téléphone et e-mail visibles sur votre profil public' : 'Activez d’abord le profil public'}
-              valeur={montreContact}
-              occupe={enCours === 'show_contact'}
-              desactive={!estPublic}
-              onChange={(v) => basculer('show_contact', v)}
+              titre="Afficher mon e-mail"
+              sous="Visible sur votre profil public"
+              valeur={montreEmail}
+              occupe={enCours === 'show_email'}
+              onChange={(v) => basculer('show_email', v)}
               premier={false}
             />
           </View>

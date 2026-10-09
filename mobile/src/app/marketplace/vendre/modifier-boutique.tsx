@@ -7,24 +7,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
-import { supabase } from '@/lib/supabase';
-import { useLocalisation } from '@/lib/useLocalisation';
-import {
-  chargerMesBoutiques,
-  enregistrerPositionBoutique,
-  modifierBoutique,
-  type MaBoutique,
-} from '@/lib/vendeur';
+import { chargerMesBoutiques, modifierBoutique, type MaBoutique } from '@/lib/vendeur';
 
 // « Boutique — Modifier le profil » — maquette 32 : logo, Prénom/Nom avec
 // compteur, WhatsApp, ville avec GPS verrouillé, relevé de position, date
 // de naissance et sexe, bouton « ✓ Enregistrer » dans l'en-tête.
 //
 // Deux contraintes du modèle de données, visibles dans l'écran :
-// - La position d'une boutique est FIGÉE au premier relevé (tolérance de
-//   50 m) : `modifier_ma_boutique` ne porte ni latitude ni longitude. D'où
-//   la pastille « GPS Verrouillé » dès qu'une position existe, et le bouton
-//   de relevé seulement tant qu'il n'y en a pas.
+// - La position d'une boutique est posée UNE SEULE FOIS, à la création
+//   (creer_ma_boutique l'exige), et plus aucune fonction ne la déplace
+//   ensuite : enregistrer_ma_boutique a été supprimée le 02/09/2026
+//   (20260902240000_boutiques_multiples.sql) et modifier_ma_boutique ne
+//   porte ni latitude ni longitude. Le verrou est délibéré — c'est lui qui
+//   rend la distance affichée croyable (20260902220000). L'écran l'affiche
+//   donc comme un état, sans bouton de relevé : un bouton appellerait une
+//   fonction qui n'existe plus.
 // - Le logo est un `avatar_config` (modifier_mon_avatar_boutique), pas une
 //   photo téléversée : aucun éditeur mobile n'existe encore, le crayon le
 //   dit au lieu d'ouvrir un sélecteur qui n'enregistrerait rien.
@@ -41,7 +38,6 @@ export default function ModifierBoutiqueScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
-  const { etat: etatGps, activer } = useLocalisation();
 
   const connu = decouperNom(profile?.full_name as string | undefined);
   const [prenom, setPrenom] = useState(connu.prenom);
@@ -72,22 +68,6 @@ export default function ModifierBoutiqueScreen() {
   useFocusEffect(charger);
 
   const positionConnue = boutique?.latitude != null && boutique?.longitude != null;
-
-  async function releverPosition() {
-    if (!boutique) return;
-    const { etat, position } = await activer();
-    if (etat !== 'active' || !position) {
-      Alert.alert('Position indisponible', "Autorisez la localisation pour positionner votre boutique.");
-      return;
-    }
-    try {
-      await enregistrerPositionBoutique(boutique, position);
-      Alert.alert('Position enregistrée', 'Les acheteurs proches peuvent désormais vous trouver.');
-      charger();
-    } catch (e) {
-      Alert.alert('Erreur', e instanceof Error ? e.message : "Impossible d'enregistrer la position.");
-    }
-  }
 
   async function enregistrer() {
     if (!userId || enregistrement) return;
@@ -210,23 +190,17 @@ export default function ModifierBoutiqueScreen() {
               </View>
               <Text className="text-[11.5px] text-black/45 mt-1.5">
                 {positionConnue
-                  ? 'Position déjà enregistrée. Elle est figée pour éviter qu’une boutique change d’adresse après coup.'
-                  : 'Aidez les acheteurs proches à vous trouver.'}
+                  ? 'Position relevée à la création de la boutique. Elle est figée : c’est ce qui rend la distance affichée aux acheteurs crédible.'
+                  : 'Aucune position enregistrée pour cette boutique.'}
               </Text>
-              <Pressable
-                onPress={releverPosition}
-                disabled={positionConnue || etatGps === 'recherche'}
-                className="rounded-xl py-3.5 items-center justify-center flex-row gap-2 mt-3"
-                style={{ backgroundColor: BLEU, opacity: positionConnue || etatGps === 'recherche' ? 0.45 : 1 }}>
-                {etatGps === 'recherche' ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Ionicons name="refresh" size={14} color="#fff" />
-                )}
-                <Text className="text-white text-[13.5px] font-bold">
-                  {positionConnue ? 'Position verrouillée' : 'Démarrer le relevé'}
+              <View
+                className="rounded-xl py-3 items-center justify-center flex-row gap-2 mt-3"
+                style={{ backgroundColor: '#EEF2FF' }}>
+                <Ionicons name={positionConnue ? 'lock-closed' : 'alert-circle-outline'} size={14} color={BLEU} />
+                <Text className="text-[13px] font-bold" style={{ color: BLEU }}>
+                  {positionConnue ? 'Position verrouillée' : 'Position non définie'}
                 </Text>
-              </Pressable>
+              </View>
             </View>
 
             <ChampEncadre libelle="Date de naissance" valeur={naissance} onChange={setNaissance} indication="aaaa-mm-jj" />

@@ -1,0 +1,26 @@
+-- =====================================================================
+-- Retrait de la policy de lecture publique du bucket marketplace-videos.
+--
+-- La migration 20261009100000 créait, par symétrie avec le texte de
+-- 20260901190000, une policy SELECT « videos marketplace lisibles » dont
+-- la condition est `bucket_id = 'marketplace-videos'` et rien d'autre.
+--
+-- Deux raisons de la supprimer, et aucune de la garder :
+--
+-- 1. Elle est inutile. Le bucket est `public = true` : les objets sont
+--    servis par URL directe sans passer par la RLS. Vérifié en base le
+--    09/10/2026 — marketplace-photos, qui fonctionne exactement ainsi
+--    depuis le 01/09/2026, n'a AUCUNE policy SELECT. La policy ajoutée
+--    n'ouvrait donc rien de plus, elle dupliquait un accès déjà ouvert.
+--
+-- 2. Elle a la forme exacte que l'invariant 7 détecte (« bucket_id vérifié
+--    seul, sans restriction de dossier ni de propriétaire »), motif du bug
+--    trouvé deux fois dans ce dépôt (job_offers, chat-attachments). Laisser
+--    une policy de cette forme, même sur un bucket délibérément public,
+--    use le détecteur pour rien.
+--
+-- Les trois policies d'ÉCRITURE restent : elles, contraignent bien le
+-- dossier au `auth.uid()` du vendeur.
+-- =====================================================================
+
+DROP POLICY IF EXISTS "videos marketplace lisibles" ON storage.objects;

@@ -312,7 +312,20 @@ test.describe("Invariants de sécurité", () => {
     //     classe que "job-offers" ci-dessus. Le bucket plafonne chaque
     //     fichier à 2 Mo et n'accepte que jpeg/png/webp. Décision écrite le
     //     2026-09-01, migration 20260901190000_marketplace_reelle.sql.
-    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos"]);
+    //   - "marketplace-videos" : vidéo de présentation d'un article mis en
+    //     vente — strictement la même classe que "marketplace-photos"
+    //     ci-dessus, et le même contenu filmé plutôt que photographié.
+    //     Déposée par le vendeur dans un dossier à son nom (policy INSERT
+    //     préfixée par auth.uid()), lue sur la fiche publique de l'article
+    //     par n'importe quel visiteur — c'est sa seule raison d'être.
+    //     Aucune donnée personnelle n'y transite : ni pièce d'identité, ni
+    //     CV, ni pièce jointe de conversation, qui ont tous leur propre
+    //     bucket privé. Le bucket plafonne chaque fichier à 30 Mo et
+    //     n'accepte que video/mp4, video/quicktime et video/webm. Bucket
+    //     séparé des photos parce que celles-ci plafonnent à 2 Mo et
+    //     n'acceptent que des images. Décision écrite le 2026-10-09,
+    //     migration 20261009100000_marketplace_video_article.sql.
+    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos", "marketplace-videos"]);
 
     const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
     const violations = rows.filter((r) => r.public === true && !JUSTIFIED_PUBLIC_BUCKETS.has(r.id));
