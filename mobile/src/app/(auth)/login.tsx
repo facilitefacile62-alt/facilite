@@ -1,9 +1,10 @@
 import { Link } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BoutonAction from '@/components/BoutonAction';
+import SaisieCodeSms from '@/components/SaisieCodeSms';
 import {
   DELAI_RENVOI_S,
   INDICATIF,
@@ -38,7 +39,6 @@ export default function LoginScreen() {
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState('');
   const [attente, setAttente] = useState(0);
-  const champCode = useRef<TextInput>(null);
 
   // Compte à rebours avant de pouvoir redemander un SMS.
   useEffect(() => {
@@ -60,7 +60,6 @@ export default function LoginScreen() {
     setCode('');
     setAttente(DELAI_RENVOI_S);
     setEtape('code');
-    setTimeout(() => champCode.current?.focus(), 150);
   }
 
   async function valider() {
@@ -188,44 +187,13 @@ export default function LoginScreen() {
                     </Text>
                   </View>
 
-                  {/* Six cases, une seule saisie : le champ réel est invisible et
-                      couvre les cases, ce qui permet la saisie automatique du
-                      code reçu par SMS (oneTimeCode / sms-otp). */}
-                  <Pressable onPress={() => champCode.current?.focus()} accessibilityLabel="Saisir le code reçu par SMS">
-                    <View className="flex-row justify-between">
-                      {Array.from({ length: LONGUEUR_CODE }).map((_, i) => {
-                        const rempli = i < code.length;
-                        const actif = i === Math.min(code.length, LONGUEUR_CODE - 1);
-                        return (
-                          <View
-                            key={i}
-                            className="items-center justify-center rounded-[12px] bg-white"
-                            style={{
-                              width: 48,
-                              height: 54,
-                              borderWidth: 1.5,
-                              borderColor: actif ? BLEU : rempli ? VERT_FONCE : 'rgba(0,0,0,0.12)',
-                            }}>
-                            <Text className="text-[22px] font-black text-[#1A1A1A]">{code[i] ?? ''}</Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                    <TextInput
-                      ref={champCode}
-                      value={code}
-                      onChangeText={(t) => {
-                        setCode(t.replace(/\D/g, '').slice(0, LONGUEUR_CODE));
-                        if (erreur) setErreur('');
-                      }}
-                      keyboardType="number-pad"
-                      maxLength={LONGUEUR_CODE}
-                      textContentType="oneTimeCode"
-                      autoComplete="sms-otp"
-                      caretHidden
-                      style={{ position: 'absolute', inset: 0, opacity: 0.02 }}
-                    />
-                  </Pressable>
+                  <SaisieCodeSms
+                    code={code}
+                    onChange={(v) => {
+                      setCode(v);
+                      if (erreur) setErreur('');
+                    }}
+                  />
 
                   {erreur ? <BoiteErreur texte={erreur} /> : null}
 

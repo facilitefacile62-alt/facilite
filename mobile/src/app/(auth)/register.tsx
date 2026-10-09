@@ -1,45 +1,86 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import EnteteAuth from '@/components/EnteteAuth';
+import SaisieCodeSms from '@/components/SaisieCodeSms';
 import { IconGoogle } from '@/components/facilite-icons';
+import {
+  DELAI_RENVOI_S,
+  INDICATIF,
+  LONGUEUR_CODE,
+  chiffresDuNumero,
+  envoyerCodeSms,
+  formaterNumero,
+  numeroValide,
+  verifierCodeSms,
+} from '@/lib/connexionSms';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 
-// Port de src/app/register/page.js, avec les mêmes deux changements que la
-// version web du 2026-09-04 : Nom/Prénom séparés (concaténés en un seul
-// full_name à l'envoi — le déclencheur handle_new_user attend ce champ, pas
-// deux), et redirection vers /verifiez-votre-email plutôt qu'un message
-// inline. Contrairement au web, aucun détour par /api/auth/register : cette
-// route existe pour donner à Vercel BotID des requêtes de navigateur à
-// challenger (instrumentation-client.js) — une app native n'exécute pas ce
-// challenge, la faire transiter par la route web n'apporterait donc aucune
-// protection réelle. signUp() est appelé directement, comme le faisait le
-// web avant l'ajout de BotID.
+// Inscription — maquette 58 « Sign Up ». Port de src/app/register/page.js :
+// Nom/Prénom séparés concaténés en un seul full_name à l'envoi (le
+// déclencheur handle_new_user attend ce champ), puis redirection vers
+// /verifiez-votre-email. Aucun détour par /api/auth/register : cette route
+// n'existe que pour donner à Vercel BotID des requêtes de navigateur à
+// challenger — une app native n'exécute pas ce challenge.
 //
-// Réécrit sur fond clair le 13/09/2026 (mise en page/couleurs de
-// design_handoff_facilite/pages/16-inscription.html, texte et
-// comportement réels inchangés) : cet écran était resté codé en dur dans
-// l'ancien thème sombre (#0B0F17) abandonné pour le reste de l'app,
-// invisible tant que le ThemeProvider masquait le problème en forçant un
-// fond clair par-dessus — même badge clé et même teal #085041 que
-// login.tsx, pour rester cohérent avec l'écran juste avant celui-ci dans
-// le flux.
+// Habillage de la maquette : en-tête #e3dbcc avec le bouton vert
+// « Connexion », clé dans son halo, sélecteur segmenté Téléphone | E-mail
+// (E-mail par défaut), champs à bordure vert foncé 1,5 px et coins 14 px.
+// Les libellés anglais (Sign Up, Password, Create Account, OR, Continue with
+// Google) sont ceux de la maquette, qui reprend le site.
+//
+// Onglet Téléphone : même mécanique que l'onglet du site (désactivé là-bas
+// par PHONE_SIGNUP_ENABLED tant qu'un envoi SMS réel n'a pas été testé de
+// bout en bout) — signInWithOtp en création, puis verifyOtp. Le champ
+// Password du sélecteur de la maquette est remplacé par un œil : le chevron
+// de la maquette n'ouvrait rien.
+const VERT = '#10B981';
+const VERT_FONCE = '#0B3D2A';
+const BLEU = '#2563EB';
+
+type Methode = 'telephone' | 'email';
+
+const champStyle = { height: 56, borderWidth: 1.5, borderColor: VERT_FONCE, borderRadius: 14, backgroundColor: '#fff' } as const;
+
 export default function RegisterScreen() {
   const router = useRouter();
+  const [methode, setMethode] = useState<Methode>('email');
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [chiffres, setChiffres] = useState('');
+  const [codeEnvoye, setCodeEnvoye] = useState(false);
+  const [code, setCode] = useState('');
+  const [attente, setAttente] = useState(0);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const creerCompte = async () => {
+  const nomComplet = `${prenom.trim()} ${nom.trim()}`.trim();
+
+  useEffect(() => {
+    if (attente <= 0) return;
+    const t = setTimeout(() => setAttente((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [attente]);
+
+  const creerCompteEmail = async () => {
     setErrorMessage('');
     if (password !== confirmPassword) {
       setErrorMessage('Les mots de passe ne correspondent pas.');
@@ -49,15 +90,14 @@ export default function RegisterScreen() {
       setErrorMessage('Le mot de passe doit contenir au moins 6 caractères.');
       return;
     }
-    const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
-    if (!fullName || !email.trim()) return;
+    if (!nomComplet || !email.trim()) return;
 
     setLoading(true);
     try {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: fullName } },
+        options: { data: { full_name: nomComplet } },
       });
       if (error) {
         setErrorMessage(error.message);
@@ -69,6 +109,31 @@ export default function RegisterScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const envoyerCode = async () => {
+    if (!nomComplet || !numeroValide(chiffres) || loading) return;
+    setLoading(true);
+    setErrorMessage('');
+    const probleme = await envoyerCodeSms(chiffres, { nomComplet });
+    setLoading(false);
+    if (probleme) {
+      setErrorMessage(probleme);
+      return;
+    }
+    setCode('');
+    setAttente(DELAI_RENVOI_S);
+    setCodeEnvoye(true);
+  };
+
+  const validerCode = async () => {
+    if (code.length !== LONGUEUR_CODE || loading) return;
+    setLoading(true);
+    setErrorMessage('');
+    const probleme = await verifierCodeSms(chiffres, code);
+    setLoading(false);
+    if (probleme) setErrorMessage(probleme);
+    // Succès : la session déclenche la redirection du garde d'authentification.
   };
 
   const continuerAvecGoogle = async () => {
@@ -83,133 +148,250 @@ export default function RegisterScreen() {
     }
   };
 
+  const formulaireEmailPret = Boolean(nom.trim() && prenom.trim() && email.trim() && password && confirmPassword);
+  const formulaireTelPret = Boolean(nom.trim() && prenom.trim() && numeroValide(chiffres));
+
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1">
+    <View className="flex-1 bg-[#F2F0EA]">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <EnteteAuth />
+
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-          <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
-            <View className="bg-white rounded-[22px] px-6 py-7 items-center border border-gray-200 shadow-xs">
-              <View className="w-14 h-14 rounded-full bg-white border-2 border-[#085041] items-center justify-center">
-                <Image
-                  source={require('@/assets/images/logo-cle.png')}
-                  style={{ width: 16, height: 32 }}
-                  contentFit="contain"
-                  alt="Facilité"
-                />
+          <ScrollView contentContainerClassName="px-5 pt-5 pb-10" keyboardShouldPersistTaps="handled">
+            <View className="bg-white rounded-[24px] px-5 py-6 items-center" style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }}>
+              <View
+                className="items-center justify-center"
+                style={{ width: 74, height: 74, borderRadius: 37, backgroundColor: '#D9F5E8' }}>
+                <View
+                  className="items-center justify-center bg-white"
+                  style={{ width: 58, height: 58, borderRadius: 29, borderWidth: 1.5, borderColor: VERT }}>
+                  <Text style={{ fontSize: 26 }}>🔑</Text>
+                </View>
               </View>
-              <Text className="text-[20px] font-black text-[#0F172A] mt-3.5">Inscription</Text>
-              <Text className="text-[13px] text-black/50 font-medium mt-1.5 text-center">
-                Créez votre compte pour commencer.
+
+              <Text className="text-[22px] font-black text-[#1A1A1A] mt-3.5">Sign Up</Text>
+              <Text className="text-[13px] mt-1.5 text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                Create your account to get started.
               </Text>
 
-              <View className="w-full mt-5 gap-2.5">
-                <View className="flex-row gap-2.5">
-                  <View className="flex-1">
-                    <Text className="text-[11px] font-bold text-black/60 mb-1.5">Nom</Text>
-                    <TextInput
-                      value={nom}
-                      onChangeText={setNom}
-                      placeholder="Diop"
-                      placeholderTextColor="rgba(0,0,0,0.35)"
-                      className="bg-white border border-black/15 rounded-xl px-3.5 py-3 text-[13.5px] text-[#1A1A1A]"
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-[11px] font-bold text-black/60 mb-1.5">Prénom</Text>
-                    <TextInput
-                      value={prenom}
-                      onChangeText={setPrenom}
-                      placeholder="Aïssatou"
-                      placeholderTextColor="rgba(0,0,0,0.35)"
-                      className="bg-white border border-black/15 rounded-xl px-3.5 py-3 text-[13.5px] text-[#1A1A1A]"
-                    />
-                  </View>
-                </View>
-
-                <View>
-                  <Text className="text-[11px] font-bold text-black/60 mb-1.5">Email</Text>
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    placeholder="vous@exemple.com"
-                    placeholderTextColor="rgba(0,0,0,0.35)"
-                    className="bg-white border border-black/15 rounded-xl px-3.5 py-3 text-[13.5px] text-[#1A1A1A]"
-                  />
-                </View>
-
-                <View>
-                  <Text className="text-[11px] font-bold text-black/60 mb-1.5">Mot de passe</Text>
-                  <View className="flex-row items-center bg-white border border-black/15 rounded-xl px-3.5">
-                    <TextInput
-                      value={password}
-                      onChangeText={setPassword}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      placeholder="Au moins 6 caractères"
-                      placeholderTextColor="rgba(0,0,0,0.35)"
-                      className="flex-1 py-3 text-[13.5px] text-[#1A1A1A]"
-                    />
-                    <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color="rgba(0,0,0,0.4)" />
+              <View className="w-full mt-5 gap-3">
+                {codeEnvoye ? (
+                  <View className="gap-3.5">
+                    <Pressable
+                      onPress={() => {
+                        setCodeEnvoye(false);
+                        setCode('');
+                        setErrorMessage('');
+                      }}
+                      hitSlop={8}>
+                      <Text className="text-[13.5px] font-extrabold" style={{ color: '#0d3b34' }}>
+                        ‹ Modifier le numéro
+                      </Text>
                     </Pressable>
+                    <View>
+                      <Text className="text-[20px] font-black text-[#1A1A1A]">Entre ton code</Text>
+                      <Text className="text-[13px] mt-1" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                        Le code à {LONGUEUR_CODE} chiffres vient de partir au {INDICATIF} {formaterNumero(chiffres)}.
+                      </Text>
+                    </View>
+                    <SaisieCodeSms
+                      code={code}
+                      onChange={(v) => {
+                        setCode(v);
+                        if (errorMessage) setErrorMessage('');
+                      }}
+                    />
+                    {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+                    <BoutonSimple
+                      titre="Valider"
+                      onPress={validerCode}
+                      desactive={code.length !== LONGUEUR_CODE}
+                      chargement={loading}
+                    />
+                    <View className="flex-row justify-center items-center gap-1.5">
+                      <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Pas reçu ?</Text>
+                      <Pressable
+                        onPress={async () => {
+                          if (attente > 0 || loading) return;
+                          setLoading(true);
+                          const p = await envoyerCodeSms(chiffres, { nomComplet });
+                          setLoading(false);
+                          if (p) setErrorMessage(p);
+                          else {
+                            setCode('');
+                            setAttente(DELAI_RENVOI_S);
+                          }
+                        }}
+                        disabled={attente > 0 || loading}
+                        hitSlop={8}>
+                        <Text
+                          className="text-[13px] font-extrabold underline"
+                          style={{ color: '#0d3b34', opacity: attente > 0 ? 0.45 : 1 }}>
+                          {attente > 0 ? `Renvoyer le code (${attente} s)` : 'Renvoyer le code'}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <>
+                    <View className="flex-row gap-2.5">
+                      <View className="flex-1">
+                        <Text className="text-[12.5px] font-extrabold text-[#1A1A1A] mb-1.5">Nom</Text>
+                        <TextInput
+                          value={nom}
+                          onChangeText={setNom}
+                          placeholder="Votre nom"
+                          placeholderTextColor="rgba(0,0,0,0.35)"
+                          style={[champStyle, { paddingHorizontal: 14, fontSize: 14, color: '#1A1A1A' }]}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[12.5px] font-extrabold text-[#1A1A1A] mb-1.5">Prénom</Text>
+                        <TextInput
+                          value={prenom}
+                          onChangeText={setPrenom}
+                          placeholder="Votre prénom"
+                          placeholderTextColor="rgba(0,0,0,0.35)"
+                          style={[champStyle, { paddingHorizontal: 14, fontSize: 14, color: '#1A1A1A' }]}
+                        />
+                      </View>
+                    </View>
 
-                <View>
-                  <Text className="text-[11px] font-bold text-black/60 mb-1.5">Confirmer le mot de passe</Text>
-                  <TextInput
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    placeholder="Confirmez votre mot de passe"
-                    placeholderTextColor="rgba(0,0,0,0.35)"
-                    className="bg-white border border-black/15 rounded-xl px-3.5 py-3 text-[13.5px] text-[#1A1A1A]"
-                  />
-                </View>
+                    {/* Sélecteur segmenté Téléphone | E-mail (E-mail par défaut) */}
+                    <View className="flex-row rounded-[14px] p-1" style={{ backgroundColor: '#E8E4DA' }}>
+                      {(
+                        [
+                          { id: 'telephone' as const, libelle: 'Téléphone' },
+                          { id: 'email' as const, libelle: 'E-mail' },
+                        ]
+                      ).map((o) => {
+                        const actif = methode === o.id;
+                        return (
+                          <Pressable
+                            key={o.id}
+                            onPress={() => {
+                              setMethode(o.id);
+                              setErrorMessage('');
+                            }}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: actif }}
+                            className="flex-1 items-center justify-center rounded-[11px]"
+                            style={{ height: 42, backgroundColor: actif ? '#fff' : 'transparent' }}>
+                            <Text className="text-[14px] font-extrabold" style={{ color: actif ? '#1A1A1A' : 'rgba(0,0,0,0.55)' }}>
+                              {o.libelle}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
 
-                {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+                    {methode === 'email' ? (
+                      <>
+                        <View>
+                          <Text className="text-[12.5px] font-extrabold text-[#1A1A1A] mb-1.5">Email</Text>
+                          <TextInput
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            autoComplete="email"
+                            keyboardType="email-address"
+                            placeholder="Enter your Email"
+                            placeholderTextColor="rgba(0,0,0,0.35)"
+                            style={[champStyle, { paddingHorizontal: 14, fontSize: 14, color: '#1A1A1A' }]}
+                          />
+                        </View>
 
-                <Pressable
-                  onPress={creerCompte}
-                  disabled={loading || !nom.trim() || !prenom.trim() || !email.trim() || !password}
-                  className="w-full bg-[#085041] rounded-full py-3.5 items-center"
-                  style={{ opacity: loading || !nom.trim() || !prenom.trim() || !email.trim() || !password ? 0.6 : 1 }}>
-                  {loading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text className="text-white text-[14px] font-bold">Créer le compte</Text>
-                  )}
-                </Pressable>
+                        <View>
+                          <Text className="text-[12.5px] font-extrabold text-[#1A1A1A] mb-1.5">Password</Text>
+                          <View style={[champStyle, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14 }]}>
+                            <TextInput
+                              value={password}
+                              onChangeText={setPassword}
+                              secureTextEntry={!showPassword}
+                              autoCapitalize="none"
+                              placeholder="Create a password"
+                              placeholderTextColor="rgba(0,0,0,0.35)"
+                              style={{ flex: 1, fontSize: 14, color: '#1A1A1A' }}
+                            />
+                            <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8} accessibilityLabel="Afficher le mot de passe">
+                              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="rgba(0,0,0,0.4)" />
+                            </Pressable>
+                          </View>
+                        </View>
 
-                <Text className="text-center text-[11.5px] font-semibold text-black/40 my-1 uppercase tracking-wider">
-                  OU
-                </Text>
+                        <View>
+                          <Text className="text-[12.5px] font-extrabold text-[#1A1A1A] mb-1.5">Confirm Password</Text>
+                          <TextInput
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            placeholder="Confirm your password"
+                            placeholderTextColor="rgba(0,0,0,0.35)"
+                            style={[champStyle, { paddingHorizontal: 14, fontSize: 14, color: '#1A1A1A' }]}
+                          />
+                        </View>
+                      </>
+                    ) : (
+                      <View>
+                        <Text className="text-[12.5px] font-extrabold text-[#1A1A1A] mb-1.5">Numéro de téléphone</Text>
+                        <View style={[champStyle, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14 }]}>
+                          <Text style={{ fontSize: 16 }}>🇸🇳</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '800', color: '#1A1A1A', marginLeft: 8 }}>{INDICATIF}</Text>
+                          <View style={{ width: 1, height: 22, backgroundColor: 'rgba(0,0,0,0.15)', marginHorizontal: 10 }} />
+                          <TextInput
+                            value={formaterNumero(chiffres)}
+                            onChangeText={(t) => {
+                              setChiffres(chiffresDuNumero(t));
+                              if (errorMessage) setErrorMessage('');
+                            }}
+                            placeholder="77 000 00 00"
+                            placeholderTextColor="rgba(0,0,0,0.3)"
+                            keyboardType="phone-pad"
+                            autoComplete="tel"
+                            accessibilityLabel="Numéro de téléphone"
+                            style={{ flex: 1, fontSize: 15, color: '#1A1A1A' }}
+                          />
+                        </View>
+                      </View>
+                    )}
 
-                <Pressable
-                  onPress={continuerAvecGoogle}
-                  disabled={googleLoading}
-                  className="w-full flex-row items-center justify-center gap-2.5 border border-black/15 rounded-full py-3.5"
-                  style={{ opacity: googleLoading ? 0.6 : 1 }}>
-                  <IconGoogle />
-                  <Text className="text-[13.5px] font-bold text-[#1A1A1A]">
-                    {googleLoading ? 'Redirection…' : 'Continuer avec Google'}
-                  </Text>
-                </Pressable>
+                    {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+
+                    <BoutonSimple
+                      titre="Create Account"
+                      onPress={methode === 'email' ? creerCompteEmail : envoyerCode}
+                      desactive={methode === 'email' ? !formulaireEmailPret : !formulaireTelPret}
+                      chargement={loading}
+                    />
+
+                    <Text className="text-center text-[12px] font-bold" style={{ color: 'rgba(0,0,0,0.4)' }}>
+                      OR
+                    </Text>
+
+                    <Pressable
+                      onPress={continuerAvecGoogle}
+                      disabled={googleLoading}
+                      className="w-full flex-row items-center justify-center gap-2.5 bg-white rounded-[14px]"
+                      style={{ height: 54, borderWidth: 1, borderColor: 'rgba(0,0,0,0.15)', opacity: googleLoading ? 0.6 : 1 }}>
+                      <IconGoogle />
+                      <Text className="text-[14px] font-bold text-[#1A1A1A]">
+                        {googleLoading ? 'Redirection…' : 'Continue with Google'}
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
               </View>
 
-              <View className="w-full border-t border-black/[0.08] mt-5 pt-3.5 flex-row justify-center gap-1.5">
-                <Text className="text-[13px] text-[#1A1A1A]">Déjà un compte ?</Text>
-                <Link href="/login" className="text-[13px] font-bold text-blue-600">
-                  Se connecter
+              <View className="w-full mt-5 pt-4 flex-row justify-center gap-1.5" style={{ borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
+                <Text className="text-[13.5px] text-[#1A1A1A]">Already have an account?</Text>
+                <Link href="/login" className="text-[13.5px] font-bold" style={{ color: BLEU }}>
+                  Log In
                 </Link>
               </View>
             </View>
 
-            <Text className="text-center text-[11.5px] text-black/35 mt-4">
+            <Text className="text-center text-[12px] mt-4" style={{ color: 'rgba(0,0,0,0.35)' }}>
               © 2026 Facilité · Tous droits réservés.
             </Text>
           </ScrollView>
@@ -219,10 +401,45 @@ export default function RegisterScreen() {
   );
 }
 
+/** Bouton « simple » de la charte §2.1 : même forme, titre centré, sans icône. */
+function BoutonSimple({
+  titre,
+  onPress,
+  desactive,
+  chargement,
+}: {
+  titre: string;
+  onPress: () => void;
+  desactive?: boolean;
+  chargement?: boolean;
+}) {
+  const inactif = Boolean(desactive || chargement);
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={inactif}
+      accessibilityRole="button"
+      className="w-full items-center justify-center rounded-[14px]"
+      style={{
+        height: 54,
+        backgroundColor: '#F3FBF7',
+        borderWidth: 1.5,
+        borderColor: '#34D399',
+        opacity: desactive && !chargement ? 0.6 : 1,
+      }}>
+      {chargement ? (
+        <ActivityIndicator color="#047857" />
+      ) : (
+        <Text className="text-[15px] font-extrabold text-[#1A1A1A]">{titre}</Text>
+      )}
+    </Pressable>
+  );
+}
+
 function BoiteErreur({ texte }: { texte: string }) {
   return (
     <View className="w-full bg-red-50 border border-red-200 rounded-xl p-2.5">
-      <Text className="text-[11px] font-bold text-red-600">{texte}</Text>
+      <Text className="text-[11.5px] font-bold text-red-600">{texte}</Text>
     </View>
   );
 }

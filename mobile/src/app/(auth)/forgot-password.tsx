@@ -1,25 +1,29 @@
-import { Image } from 'expo-image';
+import * as Linking from 'expo-linking';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Linking from 'expo-linking';
+
+import BoutonAction from '@/components/BoutonAction';
+import EnteteAuth from '@/components/EnteteAuth';
 import { supabase } from '@/lib/supabase';
 
-// Port partiel de src/app/forgot-password/page.js : envoie le lien de
-// réinitialisation. Ce point ne couvre PAS la suite du parcours (ouverture
-// du lien reçu par e-mail -> saisie du nouveau mot de passe) : sur le web,
-// cette étape reste sur /login et écoute l'événement PASSWORD_RECOVERY, ce
-// qui entrerait en conflit avec AuthGate (src/app/_layout.tsx), qui renvoie
-// vers les tabs dès qu'une session existe — y compris une session de
-// récupération. À traiter dans un point dédié plutôt que de risquer de
-// bloquer quelqu'un en pleine réinitialisation.
+// Mot de passe oublié — maquette 57. Port partiel de
+// src/app/forgot-password/page.js : envoie le lien de réinitialisation. Ce
+// point ne couvre PAS la suite du parcours (ouverture du lien reçu par
+// e-mail -> saisie du nouveau mot de passe) : sur le web, cette étape reste
+// sur /login et écoute l'événement PASSWORD_RECOVERY, ce qui entrerait en
+// conflit avec AuthGate (src/app/_layout.tsx), qui renvoie vers les tabs
+// dès qu'une session existe — y compris une session de récupération. À
+// traiter dans un point dédié plutôt que de risquer de bloquer quelqu'un en
+// pleine réinitialisation.
 //
-// Réécrit sur fond clair le 13/09/2026 (mise en page/couleurs de
-// design_handoff_facilite/pages/15-mot-de-passe-oublie.html, texte et
-// comportement réels inchangés) : cet écran était resté codé en dur dans
-// l'ancien thème sombre (#0B0F17) abandonné pour le reste de l'app, même
-// badge clé et même teal #085041 que login.tsx et register.tsx.
+// Habillage de la maquette : en-tête #e3dbcc avec le bouton vert
+// « Connexion », clé dans son halo, champ à bordure vert foncé 1,5 px et
+// coins 14 px, bouton « Envoyer le lien » de la charte §2.1.
+const VERT = '#10B981';
+const VERT_FONCE = '#0B3D2A';
+
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,45 +54,48 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1">
+    <View className="flex-1 bg-[#F2F0EA]">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <EnteteAuth />
+
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-          <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
-            <View className="bg-white rounded-[22px] px-6 py-7 items-center border border-gray-200 shadow-xs">
-              <View className="w-14 h-14 rounded-full bg-white border-2 border-[#085041] items-center justify-center">
-                <Image
-                  source={require('@/assets/images/logo-cle.png')}
-                  style={{ width: 16, height: 32 }}
-                  contentFit="contain"
-                  alt="Facilité"
-                />
+          <ScrollView contentContainerClassName="px-5 pt-5 pb-10" keyboardShouldPersistTaps="handled">
+            <View className="bg-white rounded-[24px] px-5 py-6 items-center" style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }}>
+              <View
+                className="items-center justify-center"
+                style={{ width: 74, height: 74, borderRadius: 37, backgroundColor: '#D9F5E8' }}>
+                <View
+                  className="items-center justify-center bg-white"
+                  style={{ width: 58, height: 58, borderRadius: 29, borderWidth: 1.5, borderColor: VERT }}>
+                  <Text style={{ fontSize: 26 }}>🔑</Text>
+                </View>
               </View>
 
               {isSuccess ? (
                 <>
-                  <Text className="text-[19px] font-black text-[#0F172A] mt-3.5">E-mail envoyé</Text>
+                  <Text className="text-[22px] font-black text-[#1A1A1A] mt-3.5">E-mail envoyé</Text>
                   <View className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-3 mt-4">
                     <Text className="text-[12.5px] text-emerald-800 text-center leading-relaxed">
                       Si un compte existe pour <Text className="font-bold">{email}</Text>, vous recevrez un
                       lien d&apos;ici quelques instants.
                     </Text>
                   </View>
-                  <Link
-                    href="/login"
-                    className="w-full text-center bg-[#085041] rounded-full py-3.5 mt-5 text-[14px] font-bold text-white">
-                    Retour à la connexion
+                  <Link href="/login" className="mt-5 text-[14px] font-bold" style={{ color: VERT }}>
+                    ← Retour à la connexion
                   </Link>
                 </>
               ) : (
                 <>
-                  <Text className="text-[19px] font-black text-[#0F172A] mt-3.5">Réinitialiser le mot de passe</Text>
-                  <Text className="text-[13px] text-black/50 font-medium mt-1.5 text-center">
+                  <Text className="text-[22px] font-black text-[#1A1A1A] mt-3.5 text-center">
+                    Réinitialiser le mot de passe
+                  </Text>
+                  <Text className="text-[13px] mt-1.5 text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>
                     Entrez votre e-mail pour recevoir un lien de réinitialisation.
                   </Text>
 
-                  <View className="w-full mt-5 gap-2.5">
+                  <View className="w-full mt-5 gap-3">
                     <View>
-                      <Text className="text-[13px] font-bold text-[#1A1A1A] mb-1.5">Adresse e-mail</Text>
+                      <Text className="text-[13px] font-extrabold text-[#1A1A1A] mb-1.5">Adresse e-mail</Text>
                       <TextInput
                         value={email}
                         onChangeText={(v) => {
@@ -100,25 +107,31 @@ export default function ForgotPasswordScreen() {
                         keyboardType="email-address"
                         placeholder="nom@exemple.com"
                         placeholderTextColor="rgba(0,0,0,0.35)"
-                        className="w-full border-[1.6px] border-[#085041] rounded-full px-4 py-3 text-[13.5px] text-[#1A1A1A]"
+                        style={{
+                          height: 56,
+                          borderWidth: 1.5,
+                          borderColor: VERT_FONCE,
+                          borderRadius: 14,
+                          backgroundColor: '#fff',
+                          paddingHorizontal: 14,
+                          fontSize: 14,
+                          color: '#1A1A1A',
+                        }}
                       />
                     </View>
 
                     {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
 
-                    <Pressable
+                    <BoutonAction
+                      titre="Envoyer le lien"
+                      sousTitre="Réinitialisation par e-mail"
+                      icone="mail-outline"
                       onPress={envoyerLien}
-                      disabled={loading || !email.trim()}
-                      className="w-full bg-[#085041] rounded-full py-3.5 items-center"
-                      style={{ opacity: loading || !email.trim() ? 0.6 : 1 }}>
-                      {loading ? (
-                        <ActivityIndicator color="#ffffff" />
-                      ) : (
-                        <Text className="text-white text-[14px] font-bold">Envoyer le lien</Text>
-                      )}
-                    </Pressable>
+                      desactive={!email.trim()}
+                      chargement={loading}
+                    />
 
-                    <Link href="/login" className="self-center text-[13px] font-bold text-[#085041] mt-1">
+                    <Link href="/login" className="self-center text-[13.5px] font-bold" style={{ color: VERT }}>
                       ← Retour à la connexion
                     </Link>
                   </View>
@@ -126,7 +139,7 @@ export default function ForgotPasswordScreen() {
               )}
             </View>
 
-            <Text className="text-center text-[11.5px] text-black/35 mt-4">
+            <Text className="text-center text-[12px] mt-4" style={{ color: 'rgba(0,0,0,0.35)' }}>
               © 2026 Facilité · Tous droits réservés.
             </Text>
           </ScrollView>
@@ -139,7 +152,7 @@ export default function ForgotPasswordScreen() {
 function BoiteErreur({ texte }: { texte: string }) {
   return (
     <View className="w-full bg-red-50 border border-red-200 rounded-xl p-2.5">
-      <Text className="text-[11px] font-bold text-red-600">{texte}</Text>
+      <Text className="text-[11.5px] font-bold text-red-600">{texte}</Text>
     </View>
   );
 }

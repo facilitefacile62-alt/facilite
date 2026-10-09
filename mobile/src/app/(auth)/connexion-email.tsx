@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BoutonAction from '@/components/BoutonAction';
+import EnteteAuth from '@/components/EnteteAuth';
 import { IconGoogle } from '@/components/facilite-icons';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
@@ -22,7 +23,6 @@ import { supabase } from '@/lib/supabase';
 //
 // L'en-tête n'a ni recherche ni menu : avant la connexion, ils ouvriraient
 // des écrans protégés et renverraient aussitôt ici — des boutons morts.
-const FOND_BARRE = '#e3dbcc';
 const VERT = '#10B981';
 const VERT_FONCE = '#0B3D2A';
 const BLEU = '#2563EB';
@@ -120,16 +120,7 @@ export default function ConnexionEmailScreen() {
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         {/* En-tête : « Facilité » + bouton vert Connexion (ramène au téléphone) */}
-        <View className="flex-row items-center justify-between px-5 py-3.5" style={{ backgroundColor: FOND_BARRE }}>
-          <Text className="text-[19px] font-black text-[#2563EB]">Facilité</Text>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/login'))}
-            className="flex-row items-center gap-1.5 rounded-full px-4 py-2.5"
-            style={{ backgroundColor: VERT }}>
-            <Ionicons name="log-in-outline" size={15} color="#fff" />
-            <Text className="text-white text-[13px] font-bold">Connexion</Text>
-          </Pressable>
-        </View>
+        <EnteteAuth />
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
           <ScrollView contentContainerClassName="px-5 pt-5 pb-10" keyboardShouldPersistTaps="handled">

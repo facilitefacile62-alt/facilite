@@ -50,11 +50,24 @@ function messageLisible(erreur: { message?: string; code?: string } | null, parD
   return msg;
 }
 
-/** Envoie le code. Renvoie null en cas de succès, sinon le message à afficher. */
-export async function envoyerCodeSms(chiffres: string): Promise<string | null> {
+/**
+ * Envoie le code. Renvoie null en cas de succès, sinon le message à afficher.
+ *
+ * Sans `creation` : mode CONNEXION, jamais de compte créé. Avec `creation` :
+ * mode INSCRIPTION (onglet « Téléphone » de l'écran d'inscription) — le
+ * compte est créé à la validation du code, avec le nom saisi. Un compte créé
+ * par téléphone n'a aucun e-mail ; comme sur le site, l'e-mail n'est exigé
+ * que pour candidater, pas pour créer le compte.
+ */
+export async function envoyerCodeSms(
+  chiffres: string,
+  creation?: { nomComplet: string }
+): Promise<string | null> {
   const { error } = await supabase.auth.signInWithOtp({
     phone: numeroComplet(chiffres),
-    options: { shouldCreateUser: false },
+    options: creation
+      ? { shouldCreateUser: true, data: { full_name: creation.nomComplet } }
+      : { shouldCreateUser: false },
   });
   return error ? messageLisible(error, "Impossible d'envoyer le SMS. Vérifiez le numéro.") : null;
 }
