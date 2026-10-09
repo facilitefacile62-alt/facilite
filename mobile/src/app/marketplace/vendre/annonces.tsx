@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useFocusEffect, useRouter, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import Svg, { Line } from 'react-native-svg';
 
 import { enStock, prixLisible, urlPhoto } from '@/lib/marketplace';
 import { chargerMesArticles, type MonArticle } from '@/lib/vendeur';
@@ -11,7 +12,6 @@ import EnteteMarketplace from '@/components/EnteteMarketplace';
 // Mes annonces (maquette « Vendeur — Mes annonces ») : écran dédié, séparé
 // du Tableau de bord. Pas de compteur de vues affiché : aucune colonne ne
 // le suit côté base, l'inventer serait une fausse donnée.
-const VERT_PROFOND = '#0d3b34';
 
 function LigneAnnonce({ article, storeId, onChange }: { article: MonArticle; storeId: string; onChange: () => void }) {
   const router = useRouter();
@@ -32,30 +32,33 @@ function LigneAnnonce({ article, storeId, onChange }: { article: MonArticle; sto
   }
 
   return (
-    <View className="flex-row items-center gap-3 bg-white rounded-2xl border border-black/[0.06] p-2.5">
-      <View className="w-14 h-14 rounded-xl bg-[#F2F0EA] items-center justify-center overflow-hidden">
+    <View className="flex-row items-center gap-3 bg-white" style={{ borderRadius: 18, padding: 10 }}>
+      <View style={{ width: 58, height: 58, borderRadius: 12, backgroundColor: '#E9E4D8', overflow: 'hidden' }}>
         {photo ? (
           <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
-          <Ionicons name="image-outline" size={20} color="#9CA3AF" />
+          <Svg width="100%" height="100%">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Line key={i} x1={i * 16 - 58} y1={58} x2={i * 16} y2={0} stroke="#DDD6C6" strokeWidth={7} />
+            ))}
+          </Svg>
         )}
       </View>
-      <View className="flex-1">
-        <Text className="text-[13.5px] font-bold text-[#1A1A1A]" numberOfLines={1}>
+      <View className="flex-1 min-w-0">
+        <Text className="text-[15px] font-black text-[#1A1A1A]" numberOfLines={1}>
           {article.titre}
         </Text>
-        <Text className="text-[13px] font-extrabold" style={{ color: VERT_PROFOND }}>
-          {prixLisible(article.prix_xof)} FCFA
-        </Text>
-        <Text className={`text-[11px] mt-0.5 ${enStock(article) ? 'text-gray-500' : 'text-amber-600'}`}>
+        <Text className="text-[15px] font-black text-[#1A1A1A] mt-0.5">{prixLisible(article.prix_xof)} FCFA</Text>
+        <Text className="text-[12.5px] mt-0.5" style={{ color: enStock(article) ? 'rgba(0,0,0,0.5)' : '#D97706' }}>
           {article.quantite} en stock
         </Text>
       </View>
       <Pressable
         onPress={ouvrirModification}
-        className="flex-row items-center gap-1 rounded-full border border-gray-300 px-3 py-1.5">
-        <Ionicons name="create-outline" size={13} color="#1A1A1A" />
-        <Text className="text-[11.5px] font-bold text-[#1A1A1A]">Modifier</Text>
+        className="flex-row items-center gap-1.5"
+        style={{ height: 46, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', paddingHorizontal: 14 }}>
+        <Ionicons name="pencil" size={13} color="#1A1A1A" />
+        <Text className="text-[14px] font-black text-[#1A1A1A]">Modifier</Text>
       </Pressable>
     </View>
   );
@@ -95,17 +98,16 @@ export default function MesAnnoncesScreen() {
           <FlatList
             data={articles}
             keyExtractor={(a) => a.id}
-            contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 10 }}
+            contentContainerStyle={{ padding: 14, paddingBottom: 32, gap: 12 }}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-[13px] font-bold text-gray-600">{articles.length} article{articles.length > 1 ? 's' : ''} publié{articles.length > 1 ? 's' : ''}</Text>
+                <Text className="text-[15px] font-black text-[#1A1A1A]">{articles.length} article{articles.length > 1 ? 's' : ''} publié{articles.length > 1 ? 's' : ''}</Text>
                 <Pressable
                   onPress={() => router.push(`/marketplace/vendre/publier?storeId=${storeId}` as Href)}
-                  className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2"
-                  style={{ backgroundColor: VERT_PROFOND }}>
-                  <Ionicons name="add" size={15} color="#6ee7c9" />
-                  <Text className="text-white text-[12px] font-bold">Publier un article</Text>
+                  className="items-center justify-center"
+                  style={{ backgroundColor: '#10B981', borderRadius: 16, height: 48, paddingHorizontal: 16 }}>
+                  <Text className="text-white text-[14.5px] font-black">+ Publier un article</Text>
                 </Pressable>
               </View>
             }
