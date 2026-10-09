@@ -3,7 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import FaciliteHeader from '@/components/FaciliteHeader';
+import EnteteModifierInfos from '@/components/EnteteModifierInfos';
 
 // « Modifier infos — À propos » — maquette 40 : en-tête Facilité, ligne
 // « ← Retour  Modifier infos », trois onglets (À propos · Scanner ·
@@ -36,29 +36,7 @@ export default function ProfilAProposScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <FaciliteHeader />
-
-        <View className="flex-row items-center gap-3 px-4 py-3">
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
-            className="flex-row items-center gap-1.5 bg-white rounded-full px-3 py-2">
-            <Ionicons name="arrow-back" size={14} color="#1A1A1A" />
-            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Retour</Text>
-          </Pressable>
-          <Text className="text-[15px] font-extrabold text-[#1A1A1A]">Modifier infos</Text>
-        </View>
-
-        <View className="flex-row items-center gap-4 px-5 border-b border-black/[0.08]">
-          <Text className="text-[14px] font-bold text-[#1A1A1A] pb-2.5 border-b-2 border-[#1A1A1A]">À propos</Text>
-          <Pressable
-            onPress={() => router.push('/mon-profil/scanner-document')}
-            className="bg-[#10B981] rounded-full px-3.5 py-1.5 mb-2">
-            <Text className="text-[12.5px] font-bold text-white">⛶ Scanner</Text>
-          </Pressable>
-          <Pressable onPress={() => router.push('/mon-profil/parametres')}>
-            <Text className="text-[14px] font-semibold text-black/45 pb-2.5">Paramètres</Text>
-          </Pressable>
-        </View>
+        <EnteteModifierInfos actif="apropos" />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 py-4">
           <View className="bg-white rounded-2xl overflow-hidden">
