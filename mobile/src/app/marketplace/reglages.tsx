@@ -1,8 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import EnteteMarketplace from '@/components/EnteteMarketplace';
+import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { LigneBascule, LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
 import { chargerMesBoutiques, definirVisibiliteBoutique, type MaBoutique } from '@/lib/vendeur';
@@ -32,8 +35,31 @@ function Groupe({ titre, enfants }: { titre?: string; enfants: React.ReactNode }
   );
 }
 
+
+// Réglages vendeur (maquette 31) : lignes à plat sur fond blanc, groupes
+// séparés par une bande grise, pastilles « Actif » pour les réglages.
+function LigneReglage({ titre, onPress, chevron = true, pastille, rouge }: { titre: string; onPress: () => void; chevron?: boolean; pastille?: { texte: string; actif: boolean }; rouge?: boolean }) {
+  return (
+    <Pressable onPress={onPress} className="flex-row items-center justify-between px-5" style={{ height: 56, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
+      <Text className="text-[15.5px] font-black" style={{ color: rouge ? '#DC2626' : '#1A1A1A' }}>{titre}</Text>
+      {pastille ? (
+        <View className="rounded-full px-3 py-1" style={{ backgroundColor: pastille.actif ? '#D1FAE5' : '#E5E7EB' }}>
+          <Text className="text-[12.5px] font-black" style={{ color: pastille.actif ? '#047857' : '#4B5563' }}>{pastille.texte}</Text>
+        </View>
+      ) : chevron ? (
+        <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.35)" />
+      ) : null}
+    </Pressable>
+  );
+}
+
+function BandeGrise() {
+  return <View style={{ height: 14, backgroundColor: '#F0EEE8' }} />;
+}
+
 export default function ReglagesMarketplaceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const userId = user?.id;
   const [chargement, setChargement] = useState(true);
@@ -79,6 +105,51 @@ export default function ReglagesMarketplaceScreen() {
   }
 
   const estVendeur = Boolean(boutique);
+
+  if (userId && !chargement && estVendeur) {
+    return (
+      <View className="flex-1 bg-white">
+        <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
+          <MarketplaceHeader />
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+          <View className="flex-row items-center px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'))}
+              accessibilityLabel="Retour"
+              className="items-center justify-center"
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0EEE8' }}>
+              <Ionicons name="arrow-back" size={19} color="#2563EB" />
+            </Pressable>
+            <Text className="flex-1 text-center text-[15px] font-black tracking-widest" style={{ marginRight: 44 }}>RÉGLAGES</Text>
+          </View>
+
+          <LigneReglage titre="🤑 Faire profit & Boost" onPress={() => BIENTOT('Faire profit & Boost')} />
+          <LigneReglage titre="Abonnés" onPress={() => BIENTOT('Abonnés')} />
+          <LigneReglage titre="Avis clients" onPress={() => BIENTOT('Avis clients')} />
+          <BandeGrise />
+          <LigneReglage titre="Informations personnelles" onPress={() => router.push('/mon-profil/infos-perso')} />
+          <LigneReglage titre="Coordonnées" onPress={() => router.push('/mon-profil/coordonnees')} />
+          <LigneReglage titre="Contact & Livraison" onPress={() => BIENTOT('Contact & Livraison')} />
+          <LigneReglage titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
+          <LigneReglage titre="Changer la langue" chevron={false} onPress={() => BIENTOT('Changer la langue')} />
+          <BandeGrise />
+          <LigneReglage titre="Confidentialité" onPress={() => router.push('/mon-profil/confidentialite')} />
+          <LigneReglage
+            titre="Rendre ma boutique visible"
+            pastille={{ texte: boutique?.actif === true ? 'Actif' : 'Masquée', actif: boutique?.actif === true }}
+            onPress={() => basculerVisibilite(boutique?.actif !== true)}
+          />
+          <LigneReglage titre="Désactiver le chat" pastille={{ texte: 'Actif', actif: true }} onPress={() => BIENTOT('Désactiver le chat')} />
+          <LigneReglage titre="Désactiver les commentaires" pastille={{ texte: 'Actifs', actif: true }} onPress={() => BIENTOT('Désactiver les commentaires')} />
+          <LigneReglage titre="Gérer les notifications" onPress={() => BIENTOT('Gérer les notifications')} />
+          <BandeGrise />
+          <LigneReglage titre="Sécurité & Connexion" onPress={() => router.push('/mon-profil/securite')} />
+          <LigneReglage titre="↪ Se déconnecter" chevron={false} rouge onPress={deconnexion} />
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
