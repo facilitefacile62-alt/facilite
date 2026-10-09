@@ -158,10 +158,13 @@ export async function chargerArticles({
   categorie = null,
   texte = '',
   limite = 40,
+  boutiqueId = null,
 }: {
   categorie?: string | null;
   texte?: string;
   limite?: number;
+  /** Restreint aux articles d'une boutique (page publique d'une boutique). */
+  boutiqueId?: string | null;
 } = {}): Promise<ArticleMarketplace[]> {
   let requete = supabase
     .from('marketplace_items')
@@ -174,6 +177,7 @@ export async function chargerArticles({
     .limit(limite);
 
   if (categorie) requete = requete.eq('categorie', categorie);
+  if (boutiqueId) requete = requete.eq('store_id', boutiqueId);
   const recherche = texte.trim();
   if (recherche) requete = requete.ilike('titre', `%${recherche.replace(/[%_]/g, ' ')}%`);
 
