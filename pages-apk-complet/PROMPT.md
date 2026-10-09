@@ -4,7 +4,7 @@ Version finale — 8 octobre 2026
 
 Tu es un développeur mobile senior. Tu dois implémenter (ou corriger) l'application Android **Facilité** (ffacilite.com) dans ce projet.
 
-**Références visuelles obligatoires** : le dossier `pages-apk-complet/` contient les **80 écrans en images** (01 à 80) et `pages-apk-complet/LISTE.md` donne le nom de chaque écran. Chaque écran de l'application doit correspondre exactement à son image : mise en page, textes, couleurs, icônes, boutons, comportements. Toute l'interface est **en français**. Respecte à la lettre les règles ci-dessous : elles viennent toutes des demandes du client.
+**Références visuelles obligatoires** : le dossier `pages-apk-complet/` contient les **81 écrans en images** (01 à 81) et `pages-apk-complet/LISTE.md` donne le nom de chaque écran. Chaque écran de l'application doit correspondre exactement à son image : mise en page, textes, couleurs, icônes, boutons, comportements. Toute l'interface est **en français**. Respecte à la lettre les règles ci-dessous : elles viennent toutes des demandes du client.
 
 **Méthode de travail**
 1. Lis tout ce document et `pages-apk-complet/LISTE.md`. Dresse la liste des écrans déjà présents dans le code et de ceux qui manquent ou diffèrent des images.
@@ -132,7 +132,7 @@ Forme de référence = bouton **« Compresser PDF »** : rectangle aux coins arr
 - Livrer un APK signé + AAB, testé sur Android 8+ en 360–412 px de large.
 
 ## 11. Checklist finale
-Total : 80 écrans (images 01 à 80 dans pages-apk-complet/ : 58 pages de l'app + 22 écrans par rôle).
+Total : 81 écrans (images 01 à 81 dans pages-apk-complet/).
 Vérifier écran par écran contre les images : barre du bas visible partout, couleurs #e3dbcc / #10B981, bons onglets par plateforme, retours corrects, pastilles 9+, style des boutons « Compresser PDF », champs bordure vert foncé, tous les flux reliés (onboarding, candidature, devenir vendeur/livreur, commandes, livraison).
 
 ## 12. Parcours à relier de bout en bout
@@ -156,5 +156,6 @@ production sur le Play Store. Les points suivants sont donc lus ainsi :
 - **§10 « contenu réel via l'API »** → Supabase (clé anon + RLS), jamais de
   donnée inventée : un écran sans source de données affiche « Bientôt
   disponible » plutôt qu'un faux contenu.
-- **Écran 80** (Livreur — Livraisons disponibles) : image non fournie,
-  cadré d'après le §8.
+- Les deux écarts signalés le 08/10/2026 (vidéo de l'article, interrupteurs
+  téléphone/e-mail séparés) sont **levés** : le client demande d'ajouter les
+  colonnes correspondantes en base — voir les notes de `LISTE.md`.
