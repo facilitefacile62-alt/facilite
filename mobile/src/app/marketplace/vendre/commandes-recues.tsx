@@ -2,10 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { chargerCommandesBoutique, couleurStatut, dateCourte, LIBELLES_PAIEMENT, LIBELLES_STATUT, type MaCommande } from '@/lib/commandes';
 import { prixLisible } from '@/lib/marketplace';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 // Commandes reçues (maquette « Vendeur — Commandes reçues ») : écran dédié,
 // lecture seule (les actions de livraison appartiennent au livreur, le
@@ -56,17 +56,9 @@ export default function CommandesRecuesScreen() {
   );
 
   return (
-    <View className="flex-1 bg-[#FAF9F6]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/vendre'))}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-white items-center justify-center border border-black/[0.06]">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">Commandes reçues</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Commandes reçues" />
 
         {chargement ? (
           <View className="flex-1 items-center justify-center">
@@ -87,7 +79,7 @@ export default function CommandesRecuesScreen() {
             renderItem={({ item }) => <CarteCommandeVendeur commande={item} />}
           />
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

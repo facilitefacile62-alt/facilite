@@ -3,7 +3,6 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +15,7 @@ import {
   type TypeVehicule,
 } from '@/lib/livraison';
 import { chargerMesBoutiques } from '@/lib/vendeur';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 // « Devenir livreur » : rubrique Service de la boutique. Réservé aux vendeurs
 // (il faut une boutique). La demande est examinée par l'équipe Facilité ;
@@ -274,21 +274,18 @@ export default function DevenirLivreurScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={retour}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <View>
-            <Text className="text-[11px] font-bold tracking-wide text-gray-500">SERVICE</Text>
-            <Text className="text-[18px] font-black text-[#1A1A1A] -mt-0.5">Devenir livreur</Text>
-          </View>
-        </View>
+      <View className="flex-1">
+        {/* « Votre demande » en sous-titre vert sur le formulaire seulement
+            (maquette 64) ; l'écran d'attente (65) n'en a pas. */}
+        <EnteteMarketplace
+          titre="Devenir livreur"
+          sousTitre={
+            !chargement && aBoutique && !statut.livreur && statut.demande?.status !== 'pending' ? 'Votre demande' : undefined
+          }
+          onRetour={retour}
+        />
         {contenu()}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

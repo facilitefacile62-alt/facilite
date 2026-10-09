@@ -2,10 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 // Modifier le profil (visiteur), maquette « Marketplace — Modifier profil
 // visiteur » : juste prénom et nom, à la différence du profil vendeur
@@ -48,17 +48,9 @@ export default function ModifierProfilVisiteurScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#FAF6F1]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-white items-center justify-center">
-            <Ionicons name="chevron-back" size={18} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">Modifier le profil</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Modifier le profil" />
 
         <View className="px-5 pt-2 gap-3.5">
           <View className="gap-1.5">
@@ -90,7 +82,7 @@ export default function ModifierProfilVisiteurScreen() {
             {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Enregistrer</Text>}
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
 import {
   annulerCommande,
@@ -139,17 +139,9 @@ export default function MesCommandesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#FAF9F6]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={retour}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[18px] font-black text-[#1A1A1A]">Mes commandes</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Mes commandes" onRetour={retour} />
 
         {!user?.id ? (
           <View className="flex-1 items-center justify-center px-8 gap-4">
@@ -200,7 +192,7 @@ export default function MesCommandesScreen() {
             )}
           />
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

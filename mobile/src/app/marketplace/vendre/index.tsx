@@ -14,7 +14,7 @@ import {
   type TextInputProps,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
@@ -52,10 +52,11 @@ function decouperNom(nomComplet: string | null | undefined): { prenom: string; n
 function Champ({ libelle, ...props }: TextInputProps & { libelle: string }) {
   return (
     <View className="gap-1.5">
-      <Text className="text-[12.5px] font-bold text-gray-700">{libelle}</Text>
+      <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">{libelle}</Text>
       <TextInput
         placeholderTextColor="#9CA3AF"
-        className="border border-gray-300 rounded-xl px-3.5 py-3 text-[14px] text-[#1A1A1A]"
+        className="bg-white text-[14.5px] text-[#1A1A1A]"
+        style={{ height: 54, borderWidth: 1.5, borderColor: '#0B3D2A', borderRadius: 16, paddingHorizontal: 16 }}
         {...props}
       />
     </View>
@@ -66,10 +67,19 @@ function Champ({ libelle, ...props }: TextInputProps & { libelle: string }) {
 // du compte (prénom, nom, téléphone, e-mail facultatif), puis la boutique.
 // L'identité est enregistrée dès « Continuer » : une étape 2 abandonnée ne
 // fait pas perdre les informations saisies.
-function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree: () => void }) {
+function FormulaireCreationBoutique({
+  userId,
+  onCree,
+  etape,
+  setEtape,
+}: {
+  userId: string;
+  onCree: () => void;
+  etape: 'identite' | 'boutique';
+  setEtape: (e: 'identite' | 'boutique') => void;
+}) {
   const { user, profile } = useAuth();
   const { activer } = useLocalisation();
-  const [etape, setEtape] = useState<'identite' | 'boutique'>('identite');
   const connu = decouperNom(profile?.full_name as string | undefined);
   const [prenom, setPrenom] = useState(connu.prenom);
   const [nomFamille, setNomFamille] = useState(connu.nom);
@@ -126,28 +136,17 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
 
   return (
     <ScrollView contentContainerClassName="px-4 pt-3 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View className="gap-1.5">
-        <View className="flex-row gap-2">
-          <View className="flex-1 h-1.5 rounded-full bg-[#10B981]" />
-          <View className={`flex-1 h-1.5 rounded-full ${etape === 'boutique' ? 'bg-[#10B981]' : 'bg-gray-200'}`} />
-        </View>
-        <Text className="text-[12px] font-bold text-[#047857]">
-          {etape === 'identite' ? 'Étape 1 sur 2 · Identité' : 'Étape 2 sur 2 · Boutique'}
-        </Text>
+      <View className="flex-row gap-2">
+        <View className="flex-1 h-1.5 rounded-full bg-[#10B981]" />
+        <View className={`flex-1 h-1.5 rounded-full ${etape === 'boutique' ? 'bg-[#10B981]' : 'bg-black/10'}`} />
       </View>
 
       {etape === 'identite' ? (
         <>
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Champ libelle="Prénom *" value={prenom} onChangeText={setPrenom} placeholder="Ex. Moussa" />
-            </View>
-            <View className="flex-1">
-              <Champ libelle="Nom *" value={nomFamille} onChangeText={setNomFamille} placeholder="Ex. Diop" />
-            </View>
-          </View>
+          <Champ libelle="Prénom*" value={prenom} onChangeText={setPrenom} placeholder="Votre prénom" />
+          <Champ libelle="Nom*" value={nomFamille} onChangeText={setNomFamille} placeholder="Votre nom" />
           <Champ
-            libelle="Téléphone (WhatsApp) *"
+            libelle="Téléphone (WhatsApp)"
             value={telephone}
             onChangeText={setTelephone}
             placeholder="+221 77 000 00 00"
@@ -164,36 +163,40 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
         </>
       ) : (
         <>
-          <Pressable onPress={() => setEtape('identite')} className="flex-row items-center gap-1 self-start" hitSlop={8}>
-            <Ionicons name="chevron-back" size={16} color="#6B7280" />
-            <Text className="text-[12.5px] font-semibold text-gray-500">Modifier mes informations</Text>
-          </Pressable>
+          <Champ libelle="Nom de la boutique" value={nom} onChangeText={setNom} placeholder="Ex. Moïse Couture" />
 
-          <Champ libelle="Nom de la boutique *" value={nom} onChangeText={setNom} placeholder="Ex. Boutique Awa" />
-
-          <View className="gap-1.5">
-            <Text className="text-[12.5px] font-bold text-gray-700">Position de la boutique</Text>
+          <View className="rounded-[18px] p-3.5 gap-3" style={{ borderWidth: 1.5, borderColor: '#34D399', borderStyle: 'dashed', backgroundColor: '#fff' }}>
+            <View className="flex-row items-center gap-3">
+              <View className="w-10 h-10 rounded-[11px] items-center justify-center" style={{ backgroundColor: '#D7F2EA' }}>
+                <Ionicons name="location" size={18} color="#EC4899" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[14px] font-extrabold text-[#1A1A1A]">Positionner ma boutique</Text>
+                <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Aidez les acheteurs proches à vous trouver</Text>
+              </View>
+            </View>
             <Pressable
               onPress={releverPosition}
               disabled={relevePosition === 'en_cours'}
-              className="flex-row items-center gap-3 rounded-2xl border border-gray-300 px-3.5 py-3 disabled:opacity-60">
+              className="flex-row items-center justify-center gap-2 rounded-[12px] disabled:opacity-60"
+              style={{ height: 50, backgroundColor: relevePosition === 'ok' ? '#047857' : '#2563EB' }}>
               {relevePosition === 'en_cours' ? (
-                <ActivityIndicator color="#0d3b34" />
+                <ActivityIndicator color="#fff" />
               ) : (
-                <Ionicons name="location-outline" size={20} color="#0d3b34" />
+                <Ionicons name={relevePosition === 'ok' ? 'checkmark-circle' : 'navigate'} size={15} color="#fff" />
               )}
-              <Text className="flex-1 text-[13.5px] font-semibold text-[#1A1A1A]">
+              <Text className="text-white text-[14px] font-extrabold">
                 {relevePosition === 'ok'
                   ? 'Position relevée'
                   : relevePosition === 'echec'
                     ? 'Position indisponible, réessayez'
-                    : 'Positionner ma boutique · Démarrer le relevé'}
+                    : 'Démarrer le relevé'}
               </Text>
             </Pressable>
           </View>
 
           <View className="gap-1.5">
-            <Text className="text-[12.5px] font-bold text-gray-700">Ville</Text>
+            <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Ville</Text>
             <SelecteurDepartement valeur={ville} onChoisir={setVille} />
           </View>
         </>
@@ -203,14 +206,14 @@ function FormulaireCreationBoutique({ userId, onCree }: { userId: string; onCree
         <Pressable
           onPress={continuerIdentite}
           disabled={enregistrement}
-          className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60 bg-[#10B981]">
+          className="rounded-[16px] items-center justify-center mt-2 disabled:opacity-60 bg-[#10B981]" style={{ height: 56 }}>
           {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Continuer →</Text>}
         </Pressable>
       ) : (
         <Pressable
           onPress={creer}
           disabled={enregistrement}
-          className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60 bg-black">
+          className="rounded-[16px] items-center justify-center mt-2 disabled:opacity-60" style={{ height: 56, backgroundColor: '#0F172A' }}>
           {enregistrement ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -421,7 +424,14 @@ export default function MaBoutiqueScreen() {
     }
   }
 
+  // Création de boutique en deux étapes : le retour de l'étape 2 revient à l'étape 1.
+  const [etapeCreation, setEtapeCreation] = useState<'identite' | 'boutique'>('identite');
+
   function retour() {
+    if (boutique === null && etapeCreation === 'boutique') {
+      setEtapeCreation('identite');
+      return;
+    }
     if (router.canGoBack()) router.back();
     else router.replace('/marketplace');
   }
@@ -611,16 +621,18 @@ export default function MaBoutiqueScreen() {
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={retour}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[18px] font-black text-[#1A1A1A]">{boutique === null ? 'Devenir Vendeur' : 'Ma boutique'}</Text>
-        </View>
+      <View className="flex-1">
+        <EnteteMarketplace
+          titre={boutique === null ? 'Devenir Vendeur' : 'Ma boutique'}
+          sousTitre={
+            boutique === null
+              ? etapeCreation === 'identite'
+                ? 'Étape 1 sur 2 · Identité'
+                : 'Étape 2 sur 2 · Boutique'
+              : undefined
+          }
+          onRetour={retour}
+        />
 
         {chargement || boutique === undefined ? (
           <View className="flex-1 items-center justify-center">
@@ -631,7 +643,7 @@ export default function MaBoutiqueScreen() {
             <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour gérer votre boutique.</Text>
           </View>
         ) : boutique === null ? (
-          <FormulaireCreationBoutique userId={user.id} onCree={recharger} />
+          <FormulaireCreationBoutique userId={user.id} onCree={recharger} etape={etapeCreation} setEtape={setEtapeCreation} />
         ) : onglet === 'article' ? (
           <FlatList
             data={articles}
@@ -741,7 +753,7 @@ export default function MaBoutiqueScreen() {
             {onglet === 'service' ? contenuService() : contenuEtablissement()}
           </ScrollView>
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

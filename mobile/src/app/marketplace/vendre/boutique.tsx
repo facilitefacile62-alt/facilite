@@ -2,10 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { modifierBoutique } from '@/lib/vendeur';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 const VERT_PROFOND = '#0d3b34';
 
@@ -37,17 +37,9 @@ export default function ModifierBoutiqueScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">Modifier ma boutique</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Modifier ma boutique" />
 
         <ScrollView contentContainerClassName="px-4 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View className="gap-1.5">
@@ -97,7 +89,7 @@ export default function ModifierBoutiqueScreen() {
             {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Enregistrer</Text>}
           </Pressable>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

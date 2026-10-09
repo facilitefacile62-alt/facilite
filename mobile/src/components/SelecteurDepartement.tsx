@@ -26,11 +26,15 @@ export default function SelecteurDepartement({
 
   return (
     <>
+      {/* Champ de la charte §2.1 (bordure 1,5 px vert foncé, coins 16, hauteur
+          54), placeholder « Ex. Dakar » de la maquette 63. La valeur reste
+          choisie dans les 45 départements du site, jamais saisie à la main. */}
       <Pressable
         onPress={() => setOuvert(true)}
-        className="flex-row items-center justify-between border border-gray-300 rounded-xl px-3.5 py-3">
-        <Text className={`text-[14px] ${valeur ? 'text-[#1A1A1A] font-semibold' : 'text-gray-400'}`}>
-          {valeur || 'Choisir un département'}
+        className="flex-row items-center justify-between bg-white"
+        style={{ height: 54, borderWidth: 1.5, borderColor: '#0B3D2A', borderRadius: 16, paddingHorizontal: 16 }}>
+        <Text className={`text-[14.5px] ${valeur ? 'text-[#1A1A1A] font-semibold' : 'text-gray-400'}`}>
+          {valeur || 'Ex. Dakar'}
         </Text>
         <Ionicons name="chevron-down" size={16} color="#6B7280" />
       </Pressable>

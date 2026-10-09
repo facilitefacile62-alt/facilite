@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 
@@ -42,17 +42,9 @@ export default function AProposMarketplaceScreen() {
   const estVendeur = Boolean(boutique);
 
   return (
-    <View className="flex-1 bg-[#e3dbcc]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'))}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-white/60 items-center justify-center">
-            <Ionicons name="chevron-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">À propos</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="À propos" />
 
         {!userId ? (
           <View className="flex-1 items-center justify-center px-8">
@@ -124,7 +116,7 @@ export default function AProposMarketplaceScreen() {
             </View>
           </ScrollView>
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

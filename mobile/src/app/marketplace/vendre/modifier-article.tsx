@@ -4,12 +4,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE, libelleCategorie, prixLisible, urlPhoto } from '@/lib/marketplace';
 import { envoyerPhotoArticle, envoyerVideoArticle, modifierArticle, retirerArticle } from '@/lib/vendeur';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 // Modifier l'article (maquette « Vendeur — Publier un article », mode
 // édition) : mêmes champs que la publication, pré-remplis, avec un aperçu
@@ -166,17 +166,9 @@ export default function ModifierArticleScreen() {
   const prixApercu = Number(prix.replace(/[^\d]/g, '')) || 0;
 
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => router.back()}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">Modifier l&apos;article</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Modifier l&apos;article" />
 
         <ScrollView contentContainerClassName="px-4 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* Aperçu en direct, mis à jour avec la saisie */}
@@ -367,7 +359,7 @@ export default function ModifierArticleScreen() {
             </Pressable>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

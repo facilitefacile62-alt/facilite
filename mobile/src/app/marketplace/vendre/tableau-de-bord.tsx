@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { chargerCommandesBoutique } from '@/lib/commandes';
 import { chargerMesArticles, chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 // Tableau de bord (maquette « Vendeur — Tableau de bord ») : le menu de
 // gestion de la boutique, séparé de l'aperçu public « Ma boutique ». Les
@@ -77,16 +77,8 @@ export default function TableauDeBordScreen() {
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/vendre'))}
-            accessibilityLabel="Retour"
-            className="w-9 h-9 rounded-full bg-white items-center justify-center border border-black/[0.06]">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[17px] font-black text-[#1A1A1A]">Tableau de bord</Text>
-        </View>
+      <View className="flex-1">
+        <EnteteMarketplace titre="Tableau de bord" />
 
         <ScrollView contentContainerClassName="px-4 pb-10" showsVerticalScrollIndicator={false}>
           <View className="bg-white rounded-2xl overflow-hidden">
@@ -109,7 +101,7 @@ export default function TableauDeBordScreen() {
             ))}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

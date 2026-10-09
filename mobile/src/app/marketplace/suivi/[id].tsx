@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   chargerCommande,
@@ -12,6 +11,7 @@ import {
   type MaCommande,
   type StatutCommande,
 } from '@/lib/commandes';
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 
 // Suivi de livraison (maquettes « Suivi de livraison » et « Suivi — Livraison
 // déclarée »). Pas de fond de carte (aucun module carte natif installé) : la
@@ -72,14 +72,9 @@ export default function SuiviLivraisonScreen() {
   const positionConnue = Boolean(commande?.livreur_position_lat && commande?.livreur_position_lng);
 
   return (
-    <View className="flex-1 bg-[#FAF9F6]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-          <Pressable onPress={retour} accessibilityLabel="Retour" className="w-9 h-9 rounded-full bg-white items-center justify-center border border-black/[0.06]">
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-          </Pressable>
-          <Text className="text-[18px] font-black text-[#1A1A1A]">Suivi de livraison</Text>
-        </View>
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Suivi de livraison" onRetour={retour} />
 
         {commande === undefined ? (
           <View className="flex-1 items-center justify-center">
@@ -177,7 +172,7 @@ export default function SuiviLivraisonScreen() {
             )}
           </ScrollView>
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

@@ -4,8 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
 import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE } from '@/lib/marketplace';
@@ -21,20 +21,6 @@ const MAX_PHOTOS = 6;
 
 type PhotoLocale = { uri: string; width: number; height: number };
 type Etape = 'methode' | 'categorie' | 'details';
-
-function EnTete({ titre, sousTitre, onRetour }: { titre: string; sousTitre?: string; onRetour: () => void }) {
-  return (
-    <View className="flex-row items-center gap-3 px-4 pt-2 pb-3">
-      <Pressable onPress={onRetour} accessibilityLabel="Retour" className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-        <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
-      </Pressable>
-      <View>
-        {sousTitre ? <Text className="text-[11px] font-bold tracking-wide text-gray-500">{sousTitre}</Text> : null}
-        <Text className="text-[17px] font-black text-[#1A1A1A] -mt-0.5">{titre}</Text>
-      </View>
-    </View>
-  );
-}
 
 export default function PublierArticleScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
@@ -144,52 +130,57 @@ export default function PublierArticleScreen() {
 
   if (etape === 'methode') {
     return (
-      <View className="flex-1 bg-white">
-        <SafeAreaView className="flex-1" edges={['top']}>
-          <EnTete titre="Comment voulez-vous vendre ?" onRetour={retour} />
-          <View className="px-4 pt-2 gap-3">
-            <Pressable
-              onPress={() => BIENTOT('Scanner avec l’IA')}
-              className="flex-row items-center gap-3 rounded-2xl border border-gray-200 p-4">
-              <View className="w-11 h-11 rounded-xl bg-[#ECFDF5] items-center justify-center">
-                <Ionicons name="sparkles-outline" size={20} color="#047857" />
-              </View>
-              <View className="flex-1">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-[14.5px] font-bold text-[#1A1A1A]">Scanner avec l&apos;IA</Text>
-                  <View className="rounded px-1.5 py-0.5 bg-amber-100">
-                    <Text className="text-[9.5px] font-black text-amber-700">PRO</Text>
-                  </View>
-                </View>
-                <Text className="text-[12px] text-gray-500 mt-0.5">Zéro saisie : prenez une photo, l&apos;IA remplit la fiche</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-            </Pressable>
+      <View className="flex-1 bg-[#F2F0EA]">
+        <EnteteMarketplace titre="Catégorie" sousTitre="Étape 1 sur 2" onRetour={retour} />
+        <View className="px-4 pt-5 gap-3.5">
+          <Text className="text-[20px] font-black text-[#1A1A1A] text-center mb-1">Comment voulez-vous vendre ?</Text>
 
-            <Pressable
-              onPress={() => setEtape('categorie')}
-              className="flex-row items-center gap-3 rounded-2xl p-4"
-              style={{ backgroundColor: VERT_PROFOND }}>
-              <View className="w-11 h-11 rounded-xl bg-white/15 items-center justify-center">
-                <Ionicons name="create-outline" size={20} color="#FFFFFF" />
+          {/* Scanner avec l'IA : pas encore branché (aucun service d'analyse d'article côté serveur). */}
+          <Pressable
+            onPress={() => BIENTOT('Scanner avec l’IA')}
+            className="flex-row items-center gap-3 rounded-[16px] p-3.5"
+            style={{ backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399' }}>
+            <View className="w-11 h-11 rounded-[12px] items-center justify-center" style={{ backgroundColor: '#D7F2EA' }}>
+              <Ionicons name="camera-outline" size={21} color="#0B3D2A" />
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-[15px] font-black text-[#0B3D2A]">Scanner avec l&apos;IA</Text>
+                <View className="flex-row items-center gap-1 rounded-full px-2 py-0.5" style={{ backgroundColor: '#FEF3C7' }}>
+                  <Ionicons name="trophy-outline" size={10} color="#B45309" />
+                  <Text className="text-[10px] font-black text-[#B45309]">PRO</Text>
+                </View>
               </View>
-              <View className="flex-1">
-                <Text className="text-[14.5px] font-bold text-white">Vendre manuellement</Text>
-                <Text className="text-[12px] text-white/80 mt-0.5">Choisissez la catégorie, puis remplissez les détails</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        </SafeAreaView>
+              <Text className="text-[12.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>Une photo suffit, vous mettez le prix</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.3)" />
+          </Pressable>
+
+          <Pressable
+            onPress={() => setEtape('categorie')}
+            className="flex-row items-center gap-3.5 rounded-[18px] bg-white p-4"
+            style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }}>
+            <View className="w-14 h-14 rounded-[14px] items-center justify-center" style={{ backgroundColor: '#ECFDF5' }}>
+              <Text style={{ fontSize: 26 }}>✍️</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-[16px] font-black text-[#1A1A1A]">Vendre manuellement</Text>
+              <Text className="text-[12.5px] mt-0.5 leading-[18px]" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                Choisissez la catégorie et remplissez la fiche vous-même.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.3)" />
+          </Pressable>
+        </View>
       </View>
     );
   }
 
   if (etape === 'categorie') {
     return (
-      <View className="flex-1 bg-white">
-        <SafeAreaView className="flex-1" edges={['top']}>
-          <EnTete titre="Choisissez une catégorie" sousTitre="Étape 1 sur 2" onRetour={retour} />
+      <View className="flex-1 bg-[#F2F0EA]">
+        <View className="flex-1">
+          <EnteteMarketplace titre="Catégorie" sousTitre="Étape 1 sur 2" onRetour={retour} />
           <View className="px-4">
             <Pressable onPress={retour} className="flex-row items-center gap-1 self-start mb-3" hitSlop={8}>
               <Ionicons name="chevron-back" size={15} color="#6B7280" />
@@ -223,15 +214,15 @@ export default function PublierArticleScreen() {
               <Text className="text-white text-[14.5px] font-bold">Continuer</Text>
             </Pressable>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <EnTete titre="Détails de l'article" sousTitre="Étape 2 sur 2" onRetour={retour} />
+    <View className="flex-1 bg-[#F2F0EA]">
+      <View className="flex-1">
+        <EnteteMarketplace titre="Détails" sousTitre="Étape 2 sur 2" onRetour={retour} />
 
         <ScrollView contentContainerClassName="px-4 pb-10 gap-4" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View>
@@ -343,7 +334,7 @@ export default function PublierArticleScreen() {
             {publication ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Publier l&apos;article</Text>}
           </Pressable>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
