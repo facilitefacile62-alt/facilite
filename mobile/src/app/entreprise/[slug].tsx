@@ -1,9 +1,8 @@
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Line, Path } from 'react-native-svg';
 
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 
@@ -56,33 +55,34 @@ export default function FicheEntrepriseScreen() {
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <Pressable onPress={() => router.back()} className="flex-row items-center gap-2 px-4 py-3.5 bg-white">
+          <Pressable onPress={() => router.back()} accessibilityLabel="Retour" className="flex-row items-center gap-2.5 px-4 bg-white" style={{ height: 52 }}>
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path d="M15 5L8 12L15 19" stroke="#1A1A1A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
-            <Text className="text-[14px] font-bold text-[#1A1A1A]">Retour</Text>
+            <Text className="text-[16px] font-black text-[#1A1A1A]">Retour</Text>
           </Pressable>
 
           {entreprise.image_url ? (
             <Image source={{ uri: entreprise.image_url }} alt={entreprise.company} contentFit="cover" className="w-full h-44" />
           ) : (
-            <LinearGradient
-              colors={['#dce8f5', '#cdddef', '#dce8f5']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="w-full h-44"
-            />
+            <View style={{ width: '100%', height: 180, backgroundColor: '#D8E3F5', overflow: 'hidden' }}>
+              <Svg width="100%" height="100%">
+                {Array.from({ length: 26 }, (_, i) => (
+                  <Line key={i} x1={i * 28 - 180} y1={180} x2={i * 28} y2={0} stroke="#C9D7EE" strokeWidth={10} />
+                ))}
+              </Svg>
+            </View>
           )}
 
-          <View className="px-5 py-4.5">
+          <View className="px-5 pt-4 pb-6">
             {entreprise.contract_type && (
               <View className="self-start bg-[#d7f2ea] rounded-full px-2.5 py-1">
                 <Text className="text-[11px] font-bold text-[#0d3b34]">{entreprise.contract_type}</Text>
               </View>
             )}
-            <Text className="text-[22px] font-extrabold text-[#1A1A1A] mt-2.5">{entreprise.company}</Text>
+            <Text className="text-[28px] font-black text-[#1A1A1A] mt-2.5">{entreprise.company}</Text>
 
-            <Text className="text-[11px] font-bold tracking-wide text-[#0d3b34] mt-4.5">DOMAINES &amp; POSTES :</Text>
+            <Text className="text-[11px] font-bold tracking-wide text-[#0d3b34] mt-5">DOMAINES &amp; POSTES :</Text>
             <View className="bg-white rounded-xl p-3 mt-2">
               <Text className="text-[13.5px] leading-5 text-[#1A1A1A]">{entreprise.domains}</Text>
             </View>
@@ -97,15 +97,17 @@ export default function FicheEntrepriseScreen() {
 
             <Pressable
               onPress={postulerSurCanalPrincipal}
-              className="bg-[#10B981] rounded-full py-3.5 items-center flex-row justify-center gap-2 mt-4">
-              <Text className="text-white text-[14.5px] font-bold">↗ Postuler sur le site officiel</Text>
+              className="items-center justify-center mt-4"
+              style={{ backgroundColor: '#F3FBF7', borderRadius: 14, borderWidth: 1.5, borderColor: '#34D399', height: 52 }}>
+              <Text className="text-[#1A1A1A] text-[15px] font-black">↗ Postuler sur le site officiel</Text>
             </Pressable>
 
             {hasEmailSecondaire && (
               <Pressable
                 onPress={envoyerEmailDirect}
-                className="border border-[#10B981] rounded-full py-3 items-center flex-row justify-center gap-2 mt-2.5">
-                <Text className="text-[#0d3b34] text-[13.5px] font-bold">✉ Email Direct</Text>
+                className="items-center justify-center mt-2.5"
+                style={{ backgroundColor: '#F3FBF7', borderRadius: 14, borderWidth: 1.5, borderColor: '#34D399', height: 52 }}>
+                <Text className="text-[#1A1A1A] text-[15px] font-black">✉ Email Direct</Text>
               </Pressable>
             )}
           </View>
