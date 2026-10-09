@@ -1,10 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FaciliteHeader from '@/components/FaciliteHeader';
-import { IconCrayon, IconMessages, IconPoints, IconRecherche } from '@/components/facilite-icons';
+import { IconCrayon, IconPoints, IconRecherche } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { useConversationsReelles, type ConversationReelle } from '@/lib/useConversationsReelles';
@@ -72,7 +73,7 @@ export default function MessagesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader />
 
@@ -141,10 +142,10 @@ export default function MessagesScreen() {
               puceActive === 'toutes' || puceActive === 'non_lues' ? (
                 <Pressable
                   onPress={ouvrirSupport}
-                  className="flex-row gap-3 items-center px-4 py-3.5 border-b border-black/[0.06] bg-white">
+                  className="flex-row gap-3 items-center px-4 py-3.5 border-b border-black/[0.06]">
                   <View className="w-[46px] h-[46px] rounded-full bg-[#e8f8f1] border-[1.5px] border-emerald-500 items-center justify-center">
-                    <IconMessages color="#10B981" />
-                    <View className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+                    <Ionicons name="shield-outline" size={22} color="#10B981" />
+                    <View className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#F2F0EA]" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-[14.5px] font-bold text-[#1A1A1A]">Support RH Facilité 📌</Text>
@@ -171,7 +172,7 @@ export default function MessagesScreen() {
 
 function LigneConversation({ conversation, onPress }: { conversation: ConversationReelle; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} className="flex-row gap-3 items-center px-4 py-3.5 border-b border-black/[0.06] bg-white">
+    <Pressable onPress={onPress} className="flex-row gap-3 items-center px-4 py-3.5 border-b border-black/[0.06]">
       <View className="w-[46px] h-[46px] rounded-full bg-emerald-500 items-center justify-center">
         <Text className="text-white font-bold text-[15px]">{conversation.avatarLetter}</Text>
       </View>

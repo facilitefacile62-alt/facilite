@@ -2,6 +2,52 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getPrimaryOfferImage } from '@/lib/offerMedia';
 
+// Disponible / expirée — même règle que le site (src/lib/offerExpiration.js,
+// isOfferExpired) : une offre est EXPIRÉE si son statut est explicitement
+// clos, OU si is_active vaut false (hors brouillon), OU si sa date limite est
+// passée (la journée de la date limite reste valable jusqu'à minuit).
+//
+// Avant cet alignement l'app ne filtrait que sur is_active : 184 offres
+// « disponibles » dont 73 avaient déjà dépassé leur date limite (relevé du
+// 09/10/2026), et un compteur « Clôturées » écrit en dur à 0. Le filtre est
+// posé côté serveur pour que la pagination reste juste ; le statut explicite
+// est vérifié en plus après lecture (toutes les offres sont « approved »
+// aujourd'hui, c'est une garde pour la suite).
+export type EtatOffres = 'disponibles' | 'expirees';
+
+const STATUTS_CLOS = ['expired', 'closed', 'archive', 'archived', 'expiree', 'expirée'];
+
+/** « 2026-10-09 » : date du jour de l'appareil (colonne deadline de type date). */
+export function aujourdhuiISO(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const jj = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${jj}`;
+}
+
+function statutClos(statut: unknown): boolean {
+  return STATUTS_CLOS.includes(String(statut ?? '').toLowerCase().trim());
+}
+
+// Le constructeur de requête de supabase-js est générique et son typage
+// s'emballe dès qu'on le passe à travers une fonction (TS2589) : on ne s'en
+// sert ici que pour chaîner deux filtres identiques des deux côtés.
+function appliquerEtat(requete: any, etat: EtatOffres): any {
+  const aujourdhui = aujourdhuiISO();
+  return etat === 'disponibles'
+    ? requete.eq('is_active', true).or(`deadline.is.null,deadline.gte.${aujourdhui}`)
+    : requete.or(`is_active.eq.false,deadline.lt.${aujourdhui}`);
+}
+
+/** Nombre réel d'offres disponibles / expirées (aucune ligne transférée). */
+export async function compterOffres(etat: EtatOffres): Promise<number | null> {
+  const { count, error } = await appliquerEtat(
+    supabase.from('job_offers').select('id', { count: 'exact', head: true }),
+    etat
+  );
+  return error ? null : (count ?? 0);
+}
+
 export type OffreReelle = {
   id: string;
   entreprise: string;
@@ -49,7 +95,7 @@ function dateRelative(iso: string): string {
   return `il y a ${mois} mois`;
 }
 
-export function useOffresReelles(limite = 30) {
+export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') {
   const [offres, setOffres] = useState<OffreReelle[] | null>(null);
   const [erreur, setErreur] = useState(false);
   // Incrémenté par recharger() : force une nouvelle lecture sans changer la
@@ -67,14 +113,20 @@ export function useOffresReelles(limite = 30) {
 
     async function charger() {
       try {
-        const { data, error } = await supabase
-          .from('job_offers')
-          .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, deadline, image_url, created_at, listing_type, view_count')
-          .eq('is_active', true)
+        const { data: lignes, error } = await appliquerEtat(
+          supabase
+            .from('job_offers')
+            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, deadline, image_url, created_at, listing_type, view_count, status'),
+          etat
+        )
           .order('created_at', { ascending: false })
           .limit(limite);
+        const data = ((lignes ?? []) as Array<Record<string, any>>).filter((o) => {
+          if (String(o.status ?? '').toLowerCase().trim() === 'draft') return false;
+          return etat === 'expirees' ? true : !statutClos(o.status);
+        });
 
-        if (error || !data) {
+        if (error || !lignes) {
           if (!annule) setErreur(true);
           return;
         }
@@ -129,7 +181,7 @@ export function useOffresReelles(limite = 30) {
       annule = true;
       supabase.removeChannel(channel);
     };
-  }, [limite, version, idInstance]);
+  }, [limite, etat, version, idInstance]);
 
   return { offres, erreur, recharger };
 }

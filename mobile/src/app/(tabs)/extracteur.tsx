@@ -53,30 +53,29 @@ export default function ExtracteurScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader />
 
         <ScrollView className="flex-1 px-3 pt-3.5" contentContainerClassName="pb-8" showsVerticalScrollIndicator={false}>
-          <View className="flex-row items-center justify-between pb-3.5">
-            <Pressable onPress={() => router.replace('/')} className="flex-row items-center gap-2">
+          <View className="flex-row items-center pb-3.5">
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+              accessibilityRole="button"
+              className="flex-row items-center gap-2">
               <IconChevronGauche />
-              <Text className="text-blue-600 text-[13.5px] font-semibold">Retour à l&apos;accueil</Text>
-            </Pressable>
-            <Pressable onPress={() => router.push('/fonctionnalites')} className="flex-row items-center gap-1.5">
-              <Text className="text-[13.5px]">🛠️</Text>
-              <Text className="text-blue-600 text-[13.5px] font-semibold">Fonctionnalités</Text>
+              <Text className="text-blue-600 text-[14px] font-bold">Retour</Text>
             </Pressable>
           </View>
 
-          <LinearGradient colors={['#0d3b34', '#0f4f42']} className="rounded-2xl p-4">
+          <LinearGradient colors={['#0d3b34', '#0f4f42']} style={{ borderRadius: 18, padding: 16 }}>
             <View className="flex-row items-center gap-2">
               <IconEtincelle />
               <Text className="text-[11px] font-bold tracking-wide text-[#6ee7c9]">
                 ASSISTANT CANDIDATURE IA — POSTULATION EXPRESS
               </Text>
             </View>
-            <Text className="text-white text-[15.5px] font-extrabold mt-1.5 leading-5">
+            <Text className="text-white text-[17px] font-extrabold mt-2 leading-6">
               Scanner d&apos;Annonces &amp; Candidature Directe
             </Text>
 
@@ -85,7 +84,7 @@ export default function ExtracteurScreen() {
               className="self-start flex-row items-center gap-1.5 bg-white/[0.14] rounded-full px-3.5 py-2 mt-3">
               <IconHorloge />
               <Text className="text-white text-[12.5px] font-semibold">
-                {detailsOpen ? 'Masquer les détails' : 'Comment ça marche ?'}
+                {detailsOpen ? 'Masquer les détails' : 'Voir tous les détails'}
               </Text>
               <View style={{ transform: [{ rotate: detailsOpen ? '180deg' : '0deg' }] }}>
                 <IconChevronBas />
@@ -115,7 +114,7 @@ export default function ExtracteurScreen() {
           </LinearGradient>
 
           {etape === 'select' && (
-            <View className="bg-white rounded-2xl p-4 mt-3.5 border border-gray-200 shadow-xs">
+            <View className="bg-white rounded-[20px] p-4 mt-3.5" style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }}>
               <Text className="text-[11.5px] font-bold tracking-wide text-black/55">
                 CHOISISSEZ VOTRE MÉTHODE D&apos;IMPORTATION :
               </Text>
