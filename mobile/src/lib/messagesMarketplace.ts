@@ -12,6 +12,10 @@ export type DiscussionMarketplace = {
   dernierMessage: string;
   date: string;
   nonLue: boolean;
+  /** Le dernier message est le mien : les coches ✓✓ de la maquette 35 ne s'affichent que dans ce cas. */
+  dernierEnvoyeParMoi: boolean;
+  /** … et l'autre personne l'a lu (coches bleues) ou pas encore (coches grises). */
+  dernierLu: boolean;
 };
 
 function initiale(nom: string): string {
@@ -29,7 +33,7 @@ export async function chargerDiscussionsMarketplace(userId: string): Promise<Dis
   if (!userId) return [];
   const { data: messages, error } = await supabase
     .from('messages')
-    .select('conversation_id, content, created_at, receiver_id, is_read')
+    .select('conversation_id, content, created_at, sender_id, receiver_id, is_read')
     .eq('type_discussion', 'MARKETPLACE')
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order('created_at', { ascending: false })
@@ -37,11 +41,20 @@ export async function chargerDiscussionsMarketplace(userId: string): Promise<Dis
   if (error) throw new Error(error.message);
 
   // Dernier message par conversation (la liste est déjà triée du plus récent).
-  const parConversation = new Map<string, { content: string; created_at: string; nonLue: boolean }>();
+  const parConversation = new Map<
+    string,
+    { content: string; created_at: string; nonLue: boolean; moi: boolean; lu: boolean }
+  >();
   for (const m of messages ?? []) {
     if (!m.conversation_id || parConversation.has(m.conversation_id)) continue;
     const nonLue = m.receiver_id === userId && m.is_read === false;
-    parConversation.set(m.conversation_id, { content: m.content ?? '', created_at: m.created_at, nonLue });
+    parConversation.set(m.conversation_id, {
+      content: m.content ?? '',
+      created_at: m.created_at,
+      nonLue,
+      moi: m.sender_id === userId,
+      lu: m.is_read === true,
+    });
   }
   const ids = Array.from(parConversation.keys());
   if (ids.length === 0) return [];
@@ -72,6 +85,8 @@ export async function chargerDiscussionsMarketplace(userId: string): Promise<Dis
         dernierMessage: dernier?.content ?? '',
         date: dernier ? dateCourte(dernier.created_at) : '',
         nonLue: dernier?.nonLue ?? false,
+        dernierEnvoyeParMoi: dernier?.moi ?? false,
+        dernierLu: dernier?.lu ?? false,
       } satisfies DiscussionMarketplace,
       tri: dernier?.created_at ?? '',
     };

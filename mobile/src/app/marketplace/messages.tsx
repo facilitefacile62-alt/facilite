@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { chargerDiscussionsMarketplace, type DiscussionMarketplace } from '@/lib/messagesMarketplace';
@@ -15,22 +15,25 @@ type Filtre = 'toutes' | 'non_lues';
 
 function LigneDiscussion({ discussion, onPress }: { discussion: DiscussionMarketplace; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} className="flex-row items-center gap-3 px-4 py-3 border-b border-black/[0.05] active:bg-gray-50">
-      <View className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: VERT_PROFOND }}>
-        <Text className="text-white text-[15px] font-black">{discussion.initiale}</Text>
+    <Pressable onPress={onPress} className="flex-row items-center gap-3 px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+      <View className="items-center justify-center rounded-full" style={{ width: 52, height: 52, backgroundColor: '#059669' }}>
+        <Text className="text-white text-[17px] font-black">{discussion.initiale}</Text>
       </View>
-      <View className="flex-1 gap-0.5">
+      <View className="flex-1 min-w-0 gap-0.5">
         <View className="flex-row items-center justify-between gap-2">
-          <Text className={`flex-1 text-[14px] text-[#1A1A1A] ${discussion.nonLue ? 'font-black' : 'font-bold'}`} numberOfLines={1}>
+          <Text className="flex-1 text-[15.5px] text-[#1A1A1A] font-black" numberOfLines={1}>
             {discussion.nom}
           </Text>
-          <Text className="text-[11px] text-gray-500">{discussion.date}</Text>
+          <Text className="text-[12px] font-bold" style={{ color: discussion.nonLue ? '#059669' : 'rgba(0,0,0,0.5)' }}>{discussion.date}</Text>
         </View>
-        <View className="flex-row items-center justify-between gap-2">
-          <Text className="flex-1 text-[12.5px] text-gray-600" numberOfLines={1}>
+        <View className="flex-row items-center gap-1.5">
+          {discussion.dernierEnvoyeParMoi ? (
+            <Ionicons name="checkmark-done" size={16} color={discussion.dernierLu ? '#38BDF8' : 'rgba(0,0,0,0.35)'} />
+          ) : null}
+          <Text className="flex-1 text-[13.5px]" style={{ color: 'rgba(0,0,0,0.55)' }} numberOfLines={1}>
             {discussion.dernierMessage || 'Aucun message'}
           </Text>
-          {discussion.nonLue ? <View className="w-2.5 h-2.5 rounded-full bg-[#10B981]" /> : null}
+          {discussion.nonLue ? <View className="rounded-full" style={{ width: 10, height: 10, backgroundColor: '#10B981' }} /> : null}
         </View>
       </View>
     </Pressable>
@@ -39,6 +42,7 @@ function LigneDiscussion({ discussion, onPress }: { discussion: DiscussionMarket
 
 export default function MessagesMarketplaceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const userId = user?.id;
   const [chargement, setChargement] = useState(true);
@@ -72,26 +76,29 @@ export default function MessagesMarketplaceScreen() {
     );
   }, [discussions, filtre, recherche]);
 
-  const nonLues = discussions.filter((d) => d.nonLue).length;
-
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center justify-between px-4 pt-2 pb-3">
-          <View className="flex-row items-center gap-2">
-            <Text className="text-[20px] font-black text-[#1A1A1A]">Discussions</Text>
-            {nonLues > 0 ? (
-              <View className="rounded-full bg-[#10B981] px-2 py-0.5">
-                <Text className="text-[11px] font-black text-white">{nonLues}</Text>
+    <View className="flex-1 bg-[#F7F3EC]">
+      <View className="flex-1">
+        <View className="flex-row items-center justify-between px-4 pb-3" style={{ paddingTop: insets.top + 12 }}>
+          <View className="flex-row items-center gap-2.5">
+            <Text className="text-[22px] font-black text-[#1A1A1A]">Discussions</Text>
+            {discussions.length > 0 ? (
+              <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: '#D1FAE5' }}>
+                <Text className="text-[12px] font-black" style={{ color: '#047857' }}>{discussions.length}</Text>
               </View>
             ) : null}
           </View>
-          <Pressable
-            onPress={() => Alert.alert('Nouvelle discussion', 'Ouvrez un article pour discuter avec son vendeur.')}
-            accessibilityLabel="Nouvelle discussion"
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Ionicons name="create-outline" size={18} color="#1A1A1A" />
-          </Pressable>
+          <View className="flex-row items-center gap-4">
+            <Pressable
+              onPress={() => Alert.alert('Nouvelle discussion', 'Ouvrez un article et touchez « Discuter » pour écrire au vendeur.')}
+              accessibilityLabel="Nouvelle discussion"
+              hitSlop={8}>
+              <Ionicons name="create-outline" size={22} color="#1A1A1A" />
+            </Pressable>
+            <Pressable onPress={() => Alert.alert('Options', 'Bientôt disponible.')} accessibilityLabel="Options" hitSlop={8}>
+              <Ionicons name="ellipsis-vertical" size={20} color="#1A1A1A" />
+            </Pressable>
+          </View>
         </View>
 
         {!userId ? (
@@ -121,7 +128,7 @@ export default function MessagesMarketplaceScreen() {
             }
             ListHeaderComponent={
               <View className="px-4 pb-3 gap-3">
-                <View className="flex-row items-center gap-2 bg-[#F2F0EA] rounded-full px-4 py-2.5">
+                <View className="flex-row items-center gap-2.5 bg-white rounded-[18px] px-4" style={{ height: 50, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }}>
                   <Ionicons name="search" size={16} color="#6B7280" />
                   <TextInput
                     value={recherche}
@@ -138,8 +145,8 @@ export default function MessagesMarketplaceScreen() {
                       <Pressable
                         key={f}
                         onPress={() => setFiltre(f)}
-                        className={`rounded-full px-3.5 py-1.5 border ${actif ? 'border-[#0d3b34] bg-[#0d3b34]' : 'border-gray-300 bg-white'}`}>
-                        <Text className={`text-[12px] font-bold ${actif ? 'text-white' : 'text-gray-700'}`}>
+                        className={`rounded-full px-5 py-2 border ${actif ? 'border-[#111] bg-[#111]' : 'border-gray-200 bg-white'}`}>
+                        <Text className={`text-[13px] font-extrabold ${actif ? 'text-white' : 'text-[#1A1A1A]'}`}>
                           {f === 'toutes' ? 'Toutes' : 'Non lues'}
                         </Text>
                       </Pressable>
@@ -167,7 +174,7 @@ export default function MessagesMarketplaceScreen() {
             )}
           />
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
