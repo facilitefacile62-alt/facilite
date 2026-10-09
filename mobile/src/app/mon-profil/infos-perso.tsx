@@ -1,73 +1,81 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { enregistrerChampsProfil } from '@/lib/profilChamps';
 
-// Reproduction du contenu réel de 12b-profil-infos-perso.html. "Modifier
-// mon profil" bascule en mode édition (bio/nom/titre/ville/pays/
-// téléphone) et écrit sur profiles via update(), même table/colonnes que
-// src/app/profil/page.js côté web. Le lien d'invitation reprend la
-// résolution slug -> id de src/app/in/[username]/page.js (SITE_URL/in/…).
-// Les deux lignes "Retour à l'accueil des offres" / "Déconnexion" du mock
-// ne sont pas reproduites ici : redondantes avec le bouton retour de cet
-// écran et avec la Déconnexion déjà fonctionnelle dans (tabs)/profil.tsx
-// et le menu profil — dupliquer la logique de session dans un 3e endroit
-// aurait plus de coût (divergence future) que de valeur.
+// Informations personnelles (maquette 48) : six lignes — Lieu, Quartier,
+// Pays / origine, Membre de, Niveau d'études, Genre — chacune avec son
+// pictogramme, sa valeur, une aide, une pastille et un crayon qui ouvre la
+// modification de la ligne.
+//
+// Correspondance avec la base (table profiles) : Lieu = city, Quartier =
+// quartier, Pays / origine = country, Niveau d'études = education_level,
+// Genre = gender. « Membre de » lit les badges du profil (non modifiable ici,
+// ils sont attribués par la plateforme).
+//
+// Les pastilles « Public » / « Privé » reflètent la visibilité du profil
+// entier (is_public) : la base n'a pas de visibilité champ par champ.
+//
+// Le nom, le titre, la biographie et les coordonnées vivent dans « Intro »
+// et « Coordonnées » (maquettes 47 et 54). Le lien d'invitation reste en bas.
 const SITE_URL = 'https://ffacilite.com';
+
+type Ligne = {
+  cle: 'city' | 'quartier' | 'country' | 'membre' | 'education_level' | 'gender';
+  emoji: string;
+  label: string;
+  aide: string;
+  bleu?: boolean;
+  modifiable: boolean;
+};
+
+const LIGNES: Ligne[] = [
+  { cle: 'city', emoji: '📍', label: 'LIEU', aide: 'Ville actuelle', bleu: true, modifiable: true },
+  { cle: 'quartier', emoji: '📌', label: 'QUARTIER', aide: 'Peut être pré-rempli via "Scanner Document"', modifiable: true },
+  { cle: 'country', emoji: '🧭', label: "PAYS / ORIGINE", aide: "Pays d'origine", bleu: true, modifiable: true },
+  { cle: 'membre', emoji: '🏢', label: 'MEMBRE DE', aide: 'Organisation certifiée', modifiable: false },
+  { cle: 'education_level', emoji: '🎓', label: "NIVEAU D'ÉTUDES", aide: "Utilisé pour vérifier votre éligibilité aux offres d'emploi", modifiable: true },
+  { cle: 'gender', emoji: '♂', label: 'GENRE', aide: 'Genre du profil', modifiable: true },
+];
 
 export default function ProfilInfosPersoScreen() {
   const { user, profile, refreshProfile } = useAuth();
-
-  const [modeEdition, setModeEdition] = useState(false);
+  const [enEdition, setEnEdition] = useState<Ligne['cle'] | null>(null);
+  const [saisie, setSaisie] = useState('');
   const [enregistrement, setEnregistrement] = useState(false);
-  const [bio, setBio] = useState((profile?.bio as string | undefined) || '');
-  const [nomComplet, setNomComplet] = useState((profile?.full_name as string | undefined) || '');
-  const [titre, setTitre] = useState((profile?.headline as string | undefined) || '');
-  const [ville, setVille] = useState((profile?.city as string | undefined) || '');
-  const [pays, setPays] = useState((profile?.country as string | undefined) || '');
-  const [telephone, setTelephone] = useState((profile?.phone as string | undefined) || '');
 
-  const email = (profile?.contact_email as string | undefined) || user?.email || '';
   const estPublic = profile?.is_public === true;
+  const badges = Array.isArray(profile?.badges) ? (profile?.badges as string[]) : [];
   const lienInvitation = `${SITE_URL}/in/${(profile?.slug as string | undefined) || user?.id || ''}`;
 
-  function ouvrirEdition() {
-    setBio((profile?.bio as string | undefined) || '');
-    setNomComplet((profile?.full_name as string | undefined) || '');
-    setTitre((profile?.headline as string | undefined) || '');
-    setVille((profile?.city as string | undefined) || '');
-    setPays((profile?.country as string | undefined) || '');
-    setTelephone((profile?.phone as string | undefined) || '');
-    setModeEdition(true);
+  function valeurDe(l: Ligne): string {
+    if (l.cle === 'membre') return badges[0] ? String(badges[0]).replace(/_/g, ' ') : '';
+    const v = profile?.[l.cle];
+    return typeof v === 'string' ? v.trim() : '';
+  }
+
+  function ouvrir(l: Ligne) {
+    setSaisie(valeurDe(l));
+    setEnEdition(l.cle);
   }
 
   async function enregistrer() {
-    if (!user?.id) return;
+    if (!user?.id || !enEdition) return;
     setEnregistrement(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        bio: bio.trim(),
-        full_name: nomComplet.trim(),
-        headline: titre.trim(),
-        city: ville.trim(),
-        country: pays.trim(),
-        phone: telephone.trim(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-    setEnregistrement(false);
-    if (error) {
-      Alert.alert('Erreur', "Impossible d'enregistrer vos informations pour le moment.");
-      return;
+    try {
+      await enregistrerChampsProfil(user.id, { [enEdition]: saisie.trim() });
+      await refreshProfile();
+      setEnEdition(null);
+    } catch {
+      Alert.alert('Erreur', "Impossible d'enregistrer pour le moment.");
+    } finally {
+      setEnregistrement(false);
     }
-    await refreshProfile();
-    setModeEdition(false);
   }
 
   async function copierLien() {
@@ -80,110 +88,88 @@ export default function ProfilInfosPersoScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Informations personnelles" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
-          <View className="bg-[#eef3fd] rounded-2xl p-3.5">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[11px] font-bold text-[#2563EB]">PHRASE D&apos;ACCROCHE BIO</Text>
-              <View className="bg-[#dbe8fc] rounded-full px-2 py-1">
-                <Text className="text-[11px] font-semibold text-[#2563EB]">{estPublic ? '🌐 Public' : '🔒 Privé'}</Text>
-              </View>
+        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View className="gap-1">
+            {LIGNES.map((l) => {
+              const valeur = valeurDe(l);
+              const certifie = l.cle === 'membre' && Boolean(valeur);
+              const pastille =
+                l.cle === 'education_level'
+                  ? null
+                  : certifie
+                    ? { texte: 'Certifié', fond: '#D1FAE5', couleur: '#047857' }
+                    : l.cle === 'membre'
+                      ? null
+                      : estPublic
+                        ? { texte: 'Public', fond: '#DBEAFE', couleur: '#2563EB' }
+                        : { texte: 'Privé', fond: '#E5E7EB', couleur: '#4B5563' };
+              return (
+                <View key={l.cle} className="flex-row items-start gap-3" style={{ paddingVertical: 9 }}>
+                  <View className="items-center justify-center" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EEF1FB' }}>
+                    <Text style={{ fontSize: 17 }}>{l.emoji}</Text>
+                  </View>
+                  <View className="flex-1 min-w-0">
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-[11.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{l.label}</Text>
+                      <View className="flex-row items-center gap-3">
+                        {pastille ? (
+                          <View style={{ backgroundColor: pastille.fond, borderRadius: 11, paddingHorizontal: 9, paddingVertical: 2 }}>
+                            <Text className="text-[11.5px] font-black" style={{ color: pastille.couleur }}>{pastille.texte}</Text>
+                          </View>
+                        ) : null}
+                        {l.modifiable ? (
+                          <Pressable onPress={() => ouvrir(l)} accessibilityLabel={`Modifier ${l.label.toLowerCase()}`} hitSlop={8}>
+                            <Ionicons name="pencil" size={14} color="rgba(0,0,0,0.45)" />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {enEdition === l.cle ? (
+                      <View className="gap-2 mt-1">
+                        <TextInput
+                          value={saisie}
+                          onChangeText={setSaisie}
+                          autoFocus
+                          placeholder={l.aide}
+                          placeholderTextColor="rgba(0,0,0,0.35)"
+                          style={[{ height: 46, borderRadius: 12, borderWidth: 1.5, borderColor: '#0B3D2A', backgroundColor: '#fff', paddingHorizontal: 14, fontSize: 15, color: '#1A1A1A' }, { outlineStyle: 'none' } as object]}
+                        />
+                        <View className="flex-row gap-2">
+                          <Pressable onPress={() => setEnEdition(null)} className="flex-1 items-center justify-center bg-white" style={{ height: 40, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' }}>
+                            <Text className="text-[13px] font-black text-[#1A1A1A]">Annuler</Text>
+                          </Pressable>
+                          <Pressable onPress={enregistrer} disabled={enregistrement} className="flex-1 items-center justify-center" style={{ height: 40, borderRadius: 12, backgroundColor: '#10B981', opacity: enregistrement ? 0.6 : 1 }}>
+                            {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-[13px] font-black text-white">Enregistrer</Text>}
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : (
+                      <>
+                        <Text className="text-[16px] font-black mt-0.5" style={{ color: valeur && l.bleu ? '#2563EB' : '#1A1A1A' }}>
+                          {valeur || 'Non renseigné'}
+                        </Text>
+                        <Text className="text-[12.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.45)' }}>{l.aide}</Text>
+                      </>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          <View className="flex-row items-center justify-between mt-6">
+            <View className="flex-1 min-w-0 pr-3">
+              <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.45)' }}>Lien d&apos;invitation</Text>
+              <Text className="text-[12.5px] font-bold" style={{ color: '#2563EB' }} numberOfLines={1}>{lienInvitation}</Text>
             </View>
-            {modeEdition ? (
-              <TextInput
-                value={bio}
-                onChangeText={setBio}
-                multiline
-                placeholder="Une phrase pour vous présenter"
-                placeholderTextColor="rgba(0,0,0,0.35)"
-                className="text-[13.5px] font-semibold text-[#1A1A1A] mt-2 bg-white rounded-xl px-3 py-2.5 min-h-[70px]"
-                textAlignVertical="top"
-              />
-            ) : (
-              <Text className="text-[13.5px] font-bold leading-5 text-[#1A1A1A] mt-2">
-                {bio || 'Aucune biographie rédigée pour le moment.'}
-              </Text>
-            )}
-          </View>
-
-          <View className="bg-white border border-black/[0.06] rounded-2xl p-3.5 mt-4">
-            <Text className="text-[11px] font-bold text-black/40 tracking-wide">INFORMATIONS PERSONNELLES &amp; CV</Text>
-            <ChampInfo label="NOM COMPLET" valeur={nomComplet} editable={modeEdition} onChange={setNomComplet} />
-            <ChampInfo label="TITRE PROFESSIONNEL" valeur={titre} editable={modeEdition} onChange={setTitre} />
-            <ChampInfo label="VILLE ACTUELLE" valeur={ville} editable={modeEdition} onChange={setVille} couleur="#2563EB" />
-            <ChampInfo label="PAYS / ORIGINE" valeur={pays} editable={modeEdition} onChange={setPays} couleur="#2563EB" />
-          </View>
-
-          <View className="bg-white border border-black/[0.06] rounded-2xl p-3.5 mt-4">
-            <Text className="text-[11px] font-bold text-black/40 tracking-wide">COORDONNÉES DE CONTACT</Text>
-            <ChampInfo label="TÉLÉPHONE" valeur={telephone} editable={modeEdition} onChange={setTelephone} />
-            <View className="mt-2.5">
-              <Text className="text-[10.5px] text-black/40">E-MAIL</Text>
-              <Text className="text-[14px] font-bold text-[#1A1A1A] mt-0.5">{email}</Text>
-            </View>
-          </View>
-
-          <View className="flex-row justify-end mt-4 gap-2.5">
-            {modeEdition && (
-              <Pressable onPress={() => setModeEdition(false)} className="rounded-full px-4.5 py-2.5 border border-black/10">
-                <Text className="text-[13px] font-bold text-[#1A1A1A]">Annuler</Text>
-              </Pressable>
-            )}
-            <Pressable
-              onPress={modeEdition ? enregistrer : ouvrirEdition}
-              disabled={enregistrement}
-              className="bg-[#2563EB] rounded-full px-4.5 py-2.5 flex-row items-center gap-1.5">
-              <Text className="text-white text-[13px] font-bold">
-                {modeEdition ? (enregistrement ? 'Enregistrement…' : '✓ Enregistrer') : '✎ Modifier mon profil'}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View className="flex-row items-center justify-between mt-5">
-            <View className="flex-1 mr-2.5">
-              <Text className="text-[12px] text-black/45">Lien d&apos;invitation</Text>
-              <Text className="text-[13px] font-bold text-[#2563EB]" numberOfLines={1}>
-                {lienInvitation}
-              </Text>
-            </View>
-            <Pressable onPress={copierLien} className="border border-black/10 rounded-full px-3.5 py-2 bg-white">
-              <Text className="text-[12.5px] font-semibold text-[#1A1A1A]">📋 Copier</Text>
+            <Pressable onPress={copierLien} className="flex-row items-center gap-1.5 bg-white" style={{ height: 40, borderRadius: 20, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }}>
+              <Ionicons name="copy-outline" size={14} color="#1A1A1A" />
+              <Text className="text-[13px] font-black text-[#1A1A1A]">Copier</Text>
             </Pressable>
           </View>
         </ScrollView>
       </SafeAreaView>
-    </View>
-  );
-}
-
-function ChampInfo({
-  label,
-  valeur,
-  editable,
-  onChange,
-  couleur,
-}: {
-  label: string;
-  valeur: string;
-  editable: boolean;
-  onChange: (v: string) => void;
-  couleur?: string;
-}) {
-  return (
-    <View className="mt-2.5">
-      <Text className="text-[10.5px] text-black/40">{label}</Text>
-      {editable ? (
-        <TextInput
-          value={valeur}
-          onChangeText={onChange}
-          className="text-[14px] font-bold text-[#1A1A1A] mt-1 border-b border-black/10 pb-1"
-          placeholder="—"
-          placeholderTextColor="rgba(0,0,0,0.3)"
-        />
-      ) : (
-        <Text style={couleur ? { color: couleur } : undefined} className="text-[14px] font-bold text-[#1A1A1A] mt-0.5">
-          {valeur || '—'}
-        </Text>
-      )}
     </View>
   );
 }
