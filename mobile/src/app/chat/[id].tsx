@@ -30,6 +30,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { envoyerPieceJointeChat, urlPieceJointeSignee, type TypePieceJointe } from '@/lib/chatAttachments';
 import { useChatThread } from '@/lib/useChatThread';
@@ -174,12 +175,20 @@ export default function ChatDetailScreen() {
     setBrouillon((prev) => prev + emoji);
   }
 
+  const Fond = (marketplace ? View : ImageBackground) as React.ComponentType<object>;
+  const propsFond = marketplace
+    ? { style: { flex: 1, backgroundColor: '#F4EFE7' } }
+    : { source: require('../../../assets/images/facilite-pattern-background.png'), resizeMode: 'repeat' as const, style: { flex: 1 } };
+
   return (
-    <ImageBackground
-      source={require('../../../assets/images/facilite-pattern-background.png')}
-      resizeMode="repeat"
-      style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <Fond {...(propsFond as object)}>
+      {/* Marketplace (maquette 36) : l'en-tête de la plateforme porte la zone sûre du haut */}
+      {marketplace ? (
+        <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
+          <MarketplaceHeader />
+        </View>
+      ) : null}
+      <SafeAreaView style={{ flex: 1 }} edges={marketplace ? [] : ['top']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {/* En-tête */}
           <View
@@ -189,7 +198,7 @@ export default function ChatDetailScreen() {
               gap: 10,
               paddingHorizontal: 10,
               paddingVertical: 10,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: marketplace ? '#F4EFE7' : '#FFFFFF',
               borderBottomWidth: 1,
               borderBottomColor: 'rgba(0,0,0,0.06)',
             }}>
@@ -203,7 +212,7 @@ export default function ChatDetailScreen() {
             <View
               style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: VERT, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>
-                {nomAffiche ? nomAffiche.charAt(0).toUpperCase() : '·'}
+                {nomAffiche ? nomAffiche.slice(0, marketplace ? 2 : 1).toUpperCase() : '·'}
               </Text>
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -211,10 +220,28 @@ export default function ChatDetailScreen() {
                 {nomAffiche ?? 'Discussion'}
               </Text>
               <Text style={{ fontSize: 11.5, color: '#059669' }} numberOfLines={1}>
-                {marketplace ? 'Boutique' : autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
+                {marketplace ? `Boutique${nomAffiche ? ` · ${nomAffiche}` : ''}` : autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
               </Text>
             </View>
           </View>
+
+          {marketplace ? (
+            <View
+              style={{
+                marginHorizontal: 14,
+                marginTop: 4,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 12,
+                backgroundColor: '#FFF3C4',
+                borderWidth: 1,
+                borderColor: '#F0D27A',
+              }}>
+              <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#92400E' }}>
+                🔒 Les échanges avec ce vendeur/client du Marketplace sont chiffrés.
+              </Text>
+            </View>
+          ) : null}
 
           <View style={{ flex: 1 }}>
             {/* Fil : s'ouvre sur le dernier message, et suit les nouveaux */}
@@ -327,7 +354,7 @@ export default function ChatDetailScreen() {
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ImageBackground>
+    </Fond>
   );
 }
 
