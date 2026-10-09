@@ -248,6 +248,15 @@ export async function chargerArticlesProches({
   }));
 }
 
+/** Distance à vol d'oiseau en km (Haversine) — même formule que public.distance_km côté base. */
+export function distanceKm(a: Position, b: Position): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLng = rad(b.longitude - a.longitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
 /** 0,85 -> "850 m" ; 3,4 -> "3,4 km" ; null -> null. */
 export function distanceLisible(km: number | null | undefined): string | null {
   if (km === null || km === undefined || !Number.isFinite(km)) return null;
