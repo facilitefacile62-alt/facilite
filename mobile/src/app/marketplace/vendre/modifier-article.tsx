@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE, libelleCategorie, prixLisible, urlPhoto } from '@/lib/marketplace';
-import { envoyerPhotoArticle, modifierArticle, retirerArticle } from '@/lib/vendeur';
+import { envoyerPhotoArticle, envoyerVideoArticle, modifierArticle, retirerArticle } from '@/lib/vendeur';
 
 // Modifier l'article (maquette « Vendeur — Publier un article », mode
 // édition) : mêmes champs que la publication, pré-remplis, avec un aperçu
@@ -29,6 +29,7 @@ export default function ModifierArticleScreen() {
     quantite: string;
     description: string;
     photos: string;
+    video: string;
   }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -49,6 +50,9 @@ export default function ModifierArticleScreen() {
   const [prix, setPrix] = useState(params.prix || '');
   const [quantite, setQuantite] = useState(params.quantite || '1');
   const [description, setDescription] = useState(params.description || '');
+  // Vidéo (maquette 22) : chemin déjà enregistré, ou nouveau fichier choisi.
+  const [videoExistante, setVideoExistante] = useState<string | null>(params.video || null);
+  const [nouvelleVideo, setNouvelleVideo] = useState<{ uri: string; extension: string } | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
 
   const totalPhotos = photosExistantes.length + nouvellesPhotos.length;
@@ -69,6 +73,19 @@ export default function ModifierArticleScreen() {
     if (resultat.canceled) return;
     const nouvelles = resultat.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height }));
     setNouvellesPhotos((prev) => [...prev, ...nouvelles].slice(0, MAX_PHOTOS));
+  }
+
+  async function choisirVideo() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Autorisation requise', 'Facilité a besoin d’accéder à votre galerie pour ajouter une vidéo.');
+      return;
+    }
+    const resultat = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 });
+    if (resultat.canceled || !resultat.assets?.length) return;
+    const asset = resultat.assets[0];
+    const extension = (asset.fileName?.split('.').pop() || asset.uri.split('.').pop() || 'mp4').toLowerCase();
+    setNouvelleVideo({ uri: asset.uri, extension });
   }
 
   function retirerPhotoExistante(chemin: string) {
@@ -100,6 +117,13 @@ export default function ModifierArticleScreen() {
         chemins.push(await envoyerPhotoArticle(photo.uri, { width: photo.width, height: photo.height }, user.id));
       }
 
+      // Sans session, on garde la vidéo déjà enregistrée plutôt que de
+      // l'effacer — même prudence que pour les photos juste au-dessus.
+      const cheminVideo =
+        nouvelleVideo && user?.id
+          ? await envoyerVideoArticle(nouvelleVideo.uri, user.id, nouvelleVideo.extension)
+          : videoExistante;
+
       await modifierArticle(params.id, {
         titre: titreNet,
         categorie,
@@ -107,6 +131,7 @@ export default function ModifierArticleScreen() {
         quantite: Math.max(0, Math.round(Number(quantite) || 0)),
         description,
         photos: chemins,
+        urlVideo: cheminVideo,
       });
       router.back();
     } catch (e) {
@@ -215,6 +240,35 @@ export default function ModifierArticleScreen() {
                 </Pressable>
               )}
             </ScrollView>
+          </View>
+
+          {/* Vidéo (maquette 22) : celle déjà enregistrée, ou une nouvelle. */}
+          <View>
+            <Text className="text-[12.5px] font-bold text-gray-700 mb-2">Vidéo (facultative)</Text>
+            {nouvelleVideo || videoExistante ? (
+              <View className="flex-row items-center gap-2.5 bg-[#F2F0EA] rounded-xl px-3.5 py-3">
+                <Ionicons name="videocam" size={18} color="#047857" />
+                <Text className="flex-1 text-[12.5px] font-semibold text-[#1A1A1A]" numberOfLines={1}>
+                  {nouvelleVideo ? 'Nouvelle vidéo prête à être envoyée' : 'Vidéo enregistrée'}
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    setNouvelleVideo(null);
+                    setVideoExistante(null);
+                  }}
+                  accessibilityLabel="Retirer la vidéo"
+                  hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color="rgba(0,0,0,0.35)" />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={choisirVideo}
+                className="flex-row items-center gap-2.5 rounded-xl border-2 border-dashed border-gray-300 px-3.5 py-3">
+                <Ionicons name="videocam-outline" size={18} color="#9CA3AF" />
+                <Text className="text-[12.5px] font-semibold text-gray-500">Ajouter une vidéo (30 Mo max.)</Text>
+              </Pressable>
+            )}
           </View>
 
           <View className="gap-1.5">

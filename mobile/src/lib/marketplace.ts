@@ -6,6 +6,10 @@ import { supabase } from '@/lib/supabase';
 // tout le monde (voir les policies "actifs visibles de tous").
 
 export const BUCKET_PHOTOS = 'marketplace-photos';
+// Bucket dédié à la vidéo d'un article (30 Mo, mp4/mov/webm) : les photos
+// plafonnent à 2 Mo et n'acceptent que des images.
+// Voir 20261009100000_marketplace_video_article.sql.
+export const BUCKET_VIDEOS = 'marketplace-videos';
 export const SITE_URL = 'https://ffacilite.com';
 
 // Identifiants = CHECK de marketplace_items.categorie (voir la migration
@@ -53,6 +57,9 @@ export type ArticleMarketplace = {
   // listes de proximité (leur RPC ne la renvoie pas).
   boutiqueLat?: number | null;
   boutiqueLng?: number | null;
+  // Vidéo du produit (maquette 22). NULL quand l'article n'en a pas :
+  // aucune vidéo n'est jamais inventée pour remplir la visionneuse.
+  urlVideo?: string | null;
 };
 
 export type Position = { latitude: number; longitude: number };
@@ -64,6 +71,13 @@ export function urlPhoto(chemin: string | null | undefined): string | null {
   if (!chemin || typeof chemin !== 'string') return null;
   if (/^(https?:|data:)/.test(chemin)) return chemin;
   return supabase.storage.from(BUCKET_PHOTOS).getPublicUrl(chemin).data.publicUrl;
+}
+
+/** Idem pour la vidéo, dans son propre bucket. */
+export function urlVideoArticle(chemin: string | null | undefined): string | null {
+  if (!chemin || typeof chemin !== 'string') return null;
+  if (/^(https?:|data:)/.test(chemin)) return chemin;
+  return supabase.storage.from(BUCKET_VIDEOS).getPublicUrl(chemin).data.publicUrl;
 }
 
 function listePhotos(brut: unknown): string[] {
@@ -108,6 +122,7 @@ type LigneArticle = {
   quantite: number;
   statut: string;
   photos: unknown;
+  url_video: string | null;
   store: LigneStore | LigneStore[] | null;
 };
 
@@ -132,6 +147,7 @@ function versArticle(r: LigneArticle): ArticleMarketplace {
     boutiqueVerifie: store?.verifie === true,
     boutiqueLat: store?.latitude ?? null,
     boutiqueLng: store?.longitude ?? null,
+    urlVideo: urlVideoArticle(r.url_video),
   };
 }
 
@@ -150,7 +166,7 @@ export async function chargerArticles({
   let requete = supabase
     .from('marketplace_items')
     .select(
-      `id, titre, description, categorie, prix_xof, quantite, statut, photos, store:marketplace_stores!inner(${COLONNES_STORE})`
+      `id, titre, description, categorie, prix_xof, quantite, statut, photos, url_video, store:marketplace_stores!inner(${COLONNES_STORE})`
     )
     .eq('actif', true)
     .eq('store.actif', true)
@@ -245,7 +261,7 @@ export async function obtenirArticle(id: string): Promise<ArticleMarketplace | n
   const { data, error } = await supabase
     .from('marketplace_items')
     .select(
-      `id, titre, description, categorie, prix_xof, quantite, statut, photos, store:marketplace_stores(${COLONNES_STORE})`
+      `id, titre, description, categorie, prix_xof, quantite, statut, photos, url_video, store:marketplace_stores(${COLONNES_STORE})`
     )
     .eq('id', id)
     .maybeSingle();

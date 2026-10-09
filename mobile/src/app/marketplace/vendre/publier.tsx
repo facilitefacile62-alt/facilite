@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE } from '@/lib/marketplace';
-import { envoyerPhotoArticle, publierArticle } from '@/lib/vendeur';
+import { envoyerPhotoArticle, envoyerVideoArticle, publierArticle } from '@/lib/vendeur';
 
 // Pas encore disponible : aucune API de reconnaissance d'article (scan IA)
 // n'existe côté serveur pour le Marketplace — contrairement au scan de CV
@@ -47,6 +47,9 @@ export default function PublierArticleScreen() {
   const [categorie, setCategorie] = useState<string | null>(null);
 
   const [photos, setPhotos] = useState<PhotoLocale[]>([]);
+  // Vidéo facultative de l'article (maquette 22). Une seule par article :
+  // la colonne url_video n'en porte qu'une.
+  const [video, setVideo] = useState<{ uri: string; extension: string } | null>(null);
   const [titre, setTitre] = useState('');
   const [prix, setPrix] = useState('');
   const [quantite, setQuantite] = useState('1');
@@ -81,6 +84,19 @@ export default function PublierArticleScreen() {
     setPhotos((prev) => prev.filter((p) => p.uri !== uri));
   }
 
+  async function choisirVideo() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Autorisation requise', 'Facilité a besoin d’accéder à votre galerie pour ajouter une vidéo.');
+      return;
+    }
+    const resultat = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 });
+    if (resultat.canceled || !resultat.assets?.length) return;
+    const asset = resultat.assets[0];
+    const extension = (asset.fileName?.split('.').pop() || asset.uri.split('.').pop() || 'mp4').toLowerCase();
+    setVideo({ uri: asset.uri, extension });
+  }
+
   async function publier() {
     if (!storeId || !user?.id || !categorie) return;
     const titreNet = titre.trim();
@@ -104,6 +120,8 @@ export default function PublierArticleScreen() {
         chemins.push(await envoyerPhotoArticle(photo.uri, { width: photo.width, height: photo.height }, user.id));
       }
 
+      const cheminVideo = video ? await envoyerVideoArticle(video.uri, user.id, video.extension) : null;
+
       await publierArticle(storeId, {
         titre: titreNet,
         categorie,
@@ -111,6 +129,7 @@ export default function PublierArticleScreen() {
         quantite: Math.max(0, Math.round(Number(quantite) || 0)),
         description,
         photos: chemins,
+        urlVideo: cheminVideo,
       });
 
       Alert.alert('Article publié', 'Il est désormais visible sur le Marketplace.', [
@@ -241,6 +260,29 @@ export default function PublierArticleScreen() {
                 </Pressable>
               )}
             </ScrollView>
+          </View>
+
+          {/* Vidéo facultative — maquette 22. Une seule par article. */}
+          <View>
+            <Text className="text-[12.5px] font-bold text-gray-700 mb-2">Vidéo (facultative)</Text>
+            {video ? (
+              <View className="flex-row items-center gap-2.5 bg-[#F2F0EA] rounded-xl px-3.5 py-3">
+                <Ionicons name="videocam" size={18} color="#047857" />
+                <Text className="flex-1 text-[12.5px] font-semibold text-[#1A1A1A]" numberOfLines={1}>
+                  Vidéo prête à être envoyée
+                </Text>
+                <Pressable onPress={() => setVideo(null)} accessibilityLabel="Retirer la vidéo" hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color="rgba(0,0,0,0.35)" />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={choisirVideo}
+                className="flex-row items-center gap-2.5 rounded-xl border-2 border-dashed border-gray-300 px-3.5 py-3">
+                <Ionicons name="videocam-outline" size={18} color="#9CA3AF" />
+                <Text className="text-[12.5px] font-semibold text-gray-500">Ajouter une vidéo (30 Mo max.)</Text>
+              </Pressable>
+            )}
           </View>
 
           <View className="gap-1.5">

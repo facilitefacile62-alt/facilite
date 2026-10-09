@@ -1,7 +1,7 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { supabase } from '@/lib/supabase';
-import { normaliserWhatsapp, urlPhoto, type Position } from '@/lib/marketplace';
+import { BUCKET_VIDEOS, normaliserWhatsapp, urlPhoto, type Position } from '@/lib/marketplace';
 
 // Espace vendeur natif — port mobile de src/lib/marketplaceData.js (web) :
 // mêmes RPC SECURITY DEFINER (jamais d'UPDATE/DELETE direct sur les tables,
@@ -45,6 +45,8 @@ export type MonArticle = {
   quantite: number;
   statut: string;
   photos: string[];
+  /** Chemin de la vidéo dans marketplace-videos, ou null. */
+  url_video: string | null;
   actif: boolean;
   updated_at: string;
 };
@@ -99,7 +101,7 @@ export async function chargerMesArticles(storeId: string): Promise<MonArticle[]>
   if (!storeId) return [];
   const { data, error } = await supabase
     .from('marketplace_items')
-    .select('id, titre, description, categorie, prix_xof, quantite, statut, photos, actif, updated_at')
+    .select('id, titre, description, categorie, prix_xof, quantite, statut, photos, url_video, actif, updated_at')
     .eq('store_id', storeId)
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -178,7 +180,16 @@ export async function definirVisibiliteBoutique(storeId: string, actif: boolean)
 
 export async function publierArticle(
   storeId: string,
-  champs: { titre: string; categorie: string; prixXof: number; quantite: number; description?: string; photos: string[] }
+  champs: {
+    titre: string;
+    categorie: string;
+    prixXof: number;
+    quantite: number;
+    description?: string;
+    photos: string[];
+    /** Chemin de la vidéo dans le bucket marketplace-videos, ou null. */
+    urlVideo?: string | null;
+  }
 ): Promise<string> {
   const titre = champs.titre.trim();
   if (!titre) throw new Error('Le titre est obligatoire.');
@@ -190,6 +201,7 @@ export async function publierArticle(
     p_quantite: Math.max(0, Math.round(champs.quantite || 0)),
     p_description: champs.description?.trim() || null,
     p_photos: champs.photos.slice(0, 6),
+    p_url_video: champs.urlVideo ?? null,
   });
   if (error) throw new Error(error.message);
   return data as string;
@@ -203,7 +215,15 @@ export async function publierArticle(
  */
 export async function modifierArticle(
   itemId: string,
-  champs: { titre: string; categorie: string; prixXof: number; quantite: number; description?: string; photos: string[] }
+  champs: {
+    titre: string;
+    categorie: string;
+    prixXof: number;
+    quantite: number;
+    description?: string;
+    photos: string[];
+    urlVideo?: string | null;
+  }
 ): Promise<void> {
   const titre = champs.titre.trim();
   if (!titre) throw new Error('Le titre est obligatoire.');
@@ -215,6 +235,7 @@ export async function modifierArticle(
     p_quantite: Math.max(0, Math.round(champs.quantite || 0)),
     p_description: champs.description?.trim() || null,
     p_photos: champs.photos.slice(0, 6),
+    p_url_video: champs.urlVideo ?? null,
   });
   if (error) throw new Error(error.message);
 }
@@ -230,6 +251,8 @@ export async function retirerArticle(itemId: string): Promise<void> {
 }
 
 const BUCKET_PHOTOS = 'marketplace-photos';
+// Plafond du bucket marketplace-videos (20261009100000).
+const TAILLE_MAX_VIDEO_OCTETS = 30 * 1024 * 1024;
 const LARGEUR_MAX = 1280;
 const QUALITE_INITIALE = 0.72;
 const POIDS_VISE_OCTETS = 220 * 1024;
@@ -278,6 +301,33 @@ export async function envoyerPhotoArticle(
     upsert: false,
   });
   if (error) throw new Error(`Envoi de la photo impossible : ${error.message}`);
+  return nom;
+}
+
+/**
+ * Dépose la vidéo d'un article dans son bucket dédié (maquette 22).
+ * Même contrainte de préfixe que les photos : le chemin commence par l'id
+ * du vendeur, sinon la policy Storage rejette l'envoi. Aucune compression
+ * ici — expo-image-manipulator ne traite que les images ; le plafond du
+ * bucket (30 Mo) est vérifié avant l'envoi pour donner un message clair
+ * plutôt qu'une erreur Storage opaque.
+ */
+export async function envoyerVideoArticle(uri: string, userId: string, extension = 'mp4'): Promise<string> {
+  if (!userId) throw new Error('Connexion requise pour envoyer une vidéo.');
+
+  const reponse = await fetch(uri);
+  const blob = await reponse.blob();
+  if (blob.size > TAILLE_MAX_VIDEO_OCTETS) {
+    throw new Error('Vidéo trop lourde : 30 Mo maximum.');
+  }
+
+  const ext = extension.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'mp4';
+  const nom = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET_VIDEOS).upload(nom, blob, {
+    contentType: blob.type || (ext === 'mov' ? 'video/quicktime' : ext === 'webm' ? 'video/webm' : 'video/mp4'),
+    upsert: false,
+  });
+  if (error) throw new Error(`Envoi de la vidéo impossible : ${error.message}`);
   return nom;
 }
 

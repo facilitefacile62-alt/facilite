@@ -26,6 +26,7 @@ function LigneAnnonce({ article, storeId, onChange }: { article: MonArticle; sto
       quantite: String(article.quantite),
       description: article.description || '',
       photos: JSON.stringify(article.photos),
+      video: article.url_video || '',
     });
     router.push(`/marketplace/vendre/modifier-article?${params.toString()}` as Href);
   }
