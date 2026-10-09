@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line, Path } from 'react-native-svg';
 
@@ -35,7 +35,9 @@ export default function FicheEntrepriseScreen() {
     );
   }
 
-  const hasEmailSecondaire = entreprise.contactType === 'url' && Boolean(entreprise.email);
+  // Maquette 46 : « Email Direct » accompagne toujours le canal « site officiel ».
+  // Sans adresse connue, le bouton le dit au lieu de rester muet.
+  const hasEmailSecondaire = entreprise.contactType === 'url';
 
   function postulerSurCanalPrincipal() {
     if (!entreprise) return;
@@ -47,7 +49,10 @@ export default function FicheEntrepriseScreen() {
   }
 
   function envoyerEmailDirect() {
-    if (!entreprise?.email) return;
+    if (!entreprise?.email) {
+      Alert.alert('Email Direct', "Cette entreprise n'a pas communiqué d'adresse e-mail. Utilisez le site officiel.");
+      return;
+    }
     Linking.openURL(`mailto:${entreprise.email}?subject=${encodeURIComponent(`Candidature - ${entreprise.company}`)}`);
   }
 
