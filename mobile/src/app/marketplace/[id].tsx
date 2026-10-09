@@ -35,6 +35,7 @@ import {
   type ArticleMarketplace,
 } from '@/lib/marketplace';
 import { ouvrirConversation } from '@/lib/messages';
+import { useFavori } from '@/lib/favoris';
 
 // Fiche article — maquette 16 : bande d'en-tête, ligne « ‹ Retour · fil
 // d'Ariane · partager · fermer », onglets Article / Commentaires /
@@ -60,11 +61,11 @@ export default function ArticleScreen() {
   const insets = useSafeAreaInsets();
 
   const [article, setArticle] = useState<ArticleMarketplace | null | undefined>(undefined);
+  const { favori, basculer: basculerFavori } = useFavori(article?.id, user?.id);
   const [photoActive, setPhotoActive] = useState(0);
   // Rapport réel (largeur / hauteur) de chaque photo, mesuré au chargement : la galerie prend le format de la photo affichée.
   const [ratiosPhotos, setRatiosPhotos] = useState<Record<string, number>>({});
   const [ouverture, setOuverture] = useState(false);
-  const [favori, setFavori] = useState(false);
   const [onglet, setOnglet] = useState<Onglet>('article');
   const [commandeOuverte, setCommandeOuverte] = useState(false);
 
@@ -119,6 +120,14 @@ export default function ArticleScreen() {
   const peuRestant = stock && article.quantite > 0 && article.quantite <= 5;
   const nbVignettes = article.photos.length + (article.urlVideo ? 1 : 0);
 
+  function toggleFavori() {
+    if (!user?.id) {
+      router.push('/login');
+      return;
+    }
+    basculerFavori();
+  }
+
   async function discuter() {
     if (!article) return;
     if (!user?.id) {
@@ -140,6 +149,7 @@ export default function ArticleScreen() {
           contexte: 'marketplace',
           nom: article.boutiqueNom,
           brouillon: brouillonArticle(article),
+          article: article.id,
         },
       });
     } finally {
@@ -323,8 +333,8 @@ export default function ArticleScreen() {
                 {/* Cœur et plein écran */}
                 <View className="absolute right-3 top-3 gap-2">
                   <Pressable
-                    onPress={() => setFavori(!favori)}
-                    accessibilityLabel="Ajouter aux favoris"
+                    onPress={toggleFavori}
+                    accessibilityLabel={favori ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                     className="items-center justify-center rounded-full bg-white"
                     style={{ width: 40, height: 40 }}>
                     <Ionicons name={favori ? 'heart' : 'heart-outline'} size={19} color={favori ? '#EF4444' : '#1A1A1A'} />
@@ -442,7 +452,7 @@ export default function ArticleScreen() {
         style={{ bottom: 0, paddingBottom: 10, borderTopWidth: 1, borderTopColor: BORDURE_CARTE, zIndex: 20 }}>
         <View className="flex-row items-center gap-2">
           <Pressable
-            onPress={() => setFavori(!favori)}
+            onPress={toggleFavori}
             accessibilityLabel="Favori"
             className="items-center justify-center rounded-[14px]"
             style={{ width: 50, height: 52, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)' }}>

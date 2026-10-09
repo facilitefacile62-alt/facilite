@@ -32,6 +32,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
+import { useFavori } from '@/lib/favoris';
+import { normaliserWhatsapp } from '@/lib/marketplace';
+import { supabase } from '@/lib/supabase';
 import { envoyerPieceJointeChat, urlPieceJointeSignee, type TypePieceJointe } from '@/lib/chatAttachments';
 import { useChatThread } from '@/lib/useChatThread';
 import type { ChatMessage } from '@/lib/messages';
@@ -71,7 +74,8 @@ export default function ChatDetailScreen() {
     contexte,
     nom: nomParam,
     brouillon: brouillonParam,
-  } = useLocalSearchParams<{ id: string; contexte?: string; nom?: string; brouillon?: string }>();
+    article: articleParam,
+  } = useLocalSearchParams<{ id: string; contexte?: string; nom?: string; brouillon?: string; article?: string }>();
   // Arrivée depuis la fiche d'un article (Marketplace) : les messages sont
   // étiquetés MARKETPLACE, le fil porte le nom de la boutique et le composeur
   // est prérempli avec un message qui nomme l'article.
@@ -85,6 +89,33 @@ export default function ChatDetailScreen() {
     marketplace ? 'MARKETPLACE' : undefined
   );
   const nomAffiche = marketplace && nomParam ? nomParam : autreParticipant?.nom;
+
+  // Marketplace (maquette 36) : téléphone du vendeur (boutique active de
+  // l'interlocuteur) — l'icône n'apparaît que s'il en a un — et cœur de
+  // l'article d'où vient la discussion (absent quand on ouvre la discussion
+  // depuis la liste : aucun article à mettre en favori).
+  const [telephoneVendeur, setTelephoneVendeur] = useState<string | null>(null);
+  const autreId = autreParticipant?.id;
+  useEffect(() => {
+    if (!marketplace || !autreId) return;
+    let annule = false;
+    supabase
+      .from('marketplace_stores')
+      .select('telephone_whatsapp')
+      .eq('owner_id', autreId)
+      .eq('actif', true)
+      .not('telephone_whatsapp', 'is', null)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!annule) setTelephoneVendeur(normaliserWhatsapp(data?.telephone_whatsapp as string | null | undefined));
+      });
+    return () => {
+      annule = true;
+    };
+  }, [marketplace, autreId]);
+  const idArticle = typeof articleParam === 'string' ? articleParam : undefined;
+  const { favori, basculer: basculerFavori } = useFavori(marketplace ? idArticle : undefined, user?.id);
   const [brouillon, setBrouillon] = useState(typeof brouillonParam === 'string' ? brouillonParam : '');
   const listeRef = useRef<FlatList<ChatMessage>>(null);
   // Clavier ouvert : il recouvre déjà la barre système, inutile de garder sa marge sous la zone d'envoi.
@@ -223,6 +254,24 @@ export default function ChatDetailScreen() {
                 {marketplace ? `Boutique${nomAffiche ? ` · ${nomAffiche}` : ''}` : autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
               </Text>
             </View>
+            {marketplace && idArticle ? (
+              <Pressable
+                onPress={basculerFavori}
+                accessibilityLabel={favori ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                hitSlop={8}
+                style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={favori ? 'heart' : 'heart-outline'} size={22} color={favori ? '#EF4444' : '#1A1A1A'} />
+              </Pressable>
+            ) : null}
+            {marketplace && telephoneVendeur ? (
+              <Pressable
+                onPress={() => Linking.openURL(`tel:${telephoneVendeur}`).catch(() => Alert.alert('Appel', "Impossible de lancer l'appel."))}
+                accessibilityLabel="Appeler le vendeur"
+                hitSlop={8}
+                style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="call-outline" size={21} color="#1A1A1A" />
+              </Pressable>
+            ) : null}
           </View>
 
           {marketplace ? (
