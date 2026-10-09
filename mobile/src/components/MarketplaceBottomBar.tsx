@@ -30,7 +30,7 @@ const ENTREES: Entree[] = [
 // Quelle entrée est active pour un chemin donné. Les pages de détail rattachées
 // à une entrée (ex. /marketplace/[id] -> Accueil) gardent l'entrée parente active.
 function entreeActive(chemin: string): Entree['id'] | null {
-  if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/a-propos')) return 'profil';
+  if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/mon-profil') || chemin.startsWith('/marketplace/a-propos')) return 'profil';
   if (chemin.startsWith('/marketplace/autour')) return 'autour';
   if (chemin.startsWith('/marketplace/recherche')) return 'accueil';
   if (chemin.startsWith('/marketplace/vendre')) return 'publier';

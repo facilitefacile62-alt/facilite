@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,7 +57,9 @@ export default function ProfilMarketplaceScreen() {
           </View>
         ) : (
           <ScrollView contentContainerClassName="px-3 pt-3 pb-6 gap-3" showsVerticalScrollIndicator={false}>
-            <View className="bg-white rounded-2xl p-4 flex-row items-center gap-3">
+            <Pressable
+              onPress={() => !estVendeur && router.push('/marketplace/mon-profil' as Href)}
+              className="bg-white rounded-2xl p-4 flex-row items-center gap-3">
               <View className="w-16 h-16 rounded-full bg-[#E4DED2] items-center justify-center">
                 <Text className="text-[22px] font-black text-[#1A1A1A]">{initiale}</Text>
               </View>
@@ -74,7 +76,7 @@ export default function ProfilMarketplaceScreen() {
                 </View>
                 {telephone ? <Text className="text-[12.5px] text-gray-500 mt-0.5">{telephone}</Text> : null}
               </View>
-            </View>
+            </Pressable>
 
             {/* Visiteur : Ma boutique (Devenir Vendeur), À propos, Mes commandes, Réglages
                 (maquette 59). Vendeur : Ma boutique (Voir ma boutique), Tableau de bord,
