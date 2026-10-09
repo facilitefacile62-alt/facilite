@@ -12,7 +12,7 @@ export default function OnboardingBienvenueScreen() {
 
   return (
     <BandeauOnboarding image={require('../../../assets/images/onboarding/onboarding-hero.jpg')} centrage={30}>
-      <Text className="text-[26px] font-black text-[#111] text-center">Bienvenue sur Facilité !</Text>
+      <Text className="text-[24px] font-bold text-[#111] text-center">Bienvenue sur Facilité !</Text>
       <Text className="text-[14.5px] text-center mt-2 mb-5" style={{ color: 'rgba(0,0,0,0.5)' }}>
         Par quel univers voulez-vous commencer ? Vous pourrez changer à tout moment.
       </Text>

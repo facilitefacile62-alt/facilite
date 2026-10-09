@@ -10,7 +10,7 @@ export default function OnboardingRoleScreen() {
 
   return (
     <BandeauOnboarding image={require('../../../assets/images/onboarding/onboarding-business.jpg')} centrage={40} retour>
-      <Text className="text-[26px] font-black text-[#111] text-center">Facilité Business</Text>
+      <Text className="text-[24px] font-bold text-[#111] text-center">Facilité Business</Text>
       <Text className="text-[14.5px] text-center mt-2 mb-5" style={{ color: 'rgba(0,0,0,0.5)' }}>
         Comment comptez-vous utiliser la Marketplace ?
       </Text>

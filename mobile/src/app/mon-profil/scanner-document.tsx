@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { terminerOnboarding } from '@/lib/onboarding';
 import { supabase } from '@/lib/supabase';
 import {
   analyserDocument,
@@ -32,7 +33,20 @@ type Etat =
 
 export default function ScannerDocumentScreen() {
   const router = useRouter();
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
   const { user, refreshProfile } = useAuth();
+
+  // Ouvert depuis l'écran 24 de l'onboarding : une fois le document
+  // enregistré, le parcours est terminé et on arrive sur l'accueil Facilité.
+  async function terminerParcours() {
+    if (onboarding === '1' && user?.id) {
+      await terminerOnboarding(user.id);
+      await refreshProfile();
+      router.replace('/');
+      return;
+    }
+    router.back();
+  }
   const [etat, setEtat] = useState<Etat>({ phase: 'choix' });
   const [enregistrement, setEnregistrement] = useState(false);
 
@@ -124,7 +138,7 @@ export default function ScannerDocumentScreen() {
     }
     await refreshProfile();
     Alert.alert('✓ Pièce d\'identité reconnue', 'Nom, prénom et quartier enregistrés sur votre profil.');
-    router.back();
+    await terminerParcours();
   }
 
   function confirmerEcrasement(donnees: DonneesExtraites) {
@@ -165,7 +179,7 @@ export default function ScannerDocumentScreen() {
     }
     await refreshProfile();
     Alert.alert('✓ Document analysé', 'Les informations du profil ont été mises à jour.');
-    router.back();
+    await terminerParcours();
   }
 
   return (

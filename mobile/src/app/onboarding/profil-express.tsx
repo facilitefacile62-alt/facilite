@@ -26,7 +26,7 @@ export default function OnboardingProfilExpressScreen() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: `${prenom.trim()} ${nom.trim()}`.trim(), updated_at: new Date().toISOString() })
+        .update({ full_name: `${prenom.trim()} ${nom.trim()}`.trim(), onboarding_done: true, updated_at: new Date().toISOString() })
         .eq('id', user.id);
       if (error) throw new Error(error.message);
       router.replace('/marketplace');
@@ -41,7 +41,7 @@ export default function OnboardingProfilExpressScreen() {
 
   return (
     <BandeauOnboarding image={require('../../../assets/images/onboarding/onboarding-express-v2.jpg')} centrage={30} retour>
-      <Text className="text-[26px] font-black text-[#111] text-center">Profil express</Text>
+      <Text className="text-[24px] font-bold text-[#111] text-center">Profil express</Text>
       <Text className="text-[14.5px] text-center mt-2 mb-4" style={{ color: 'rgba(0,0,0,0.5)' }}>Juste votre nom pour commencer vos achats.</Text>
 
       <Text className="text-[13.5px] font-black text-[#111] mb-1.5">Prénom</Text>

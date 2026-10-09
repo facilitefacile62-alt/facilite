@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BoutonAction from '@/components/BoutonAction';
 import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
+import { terminerOnboarding } from '@/lib/onboarding';
 import { creerBoutique, enregistrerIdentiteVendeur } from '@/lib/vendeur';
 import { useLocalisation } from '@/lib/useLocalisation';
 import type { Position } from '@/lib/marketplace';
@@ -46,6 +47,7 @@ export default function OnboardingInfosVendeurScreen() {
     try {
       await enregistrerIdentiteVendeur(user.id, { prenom, nom, telephone: whatsapp, email: '' });
       await creerBoutique(user.id, { nom: nomBoutique, ville, quartier: null, telephoneWhatsapp: whatsapp, position });
+      await terminerOnboarding(user.id);
       router.replace('/marketplace/vendre');
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Impossible de créer votre boutique.');
@@ -60,7 +62,7 @@ export default function OnboardingInfosVendeurScreen() {
   return (
     <View className="flex-1 bg-[#FAF6F1]">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <ScrollView contentContainerClassName="px-5 pt-3 pb-10" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerClassName="px-4 pt-3 pb-10" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View className="flex-row items-center justify-between mb-3">
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/onboarding/role' as never))}
@@ -76,7 +78,7 @@ export default function OnboardingInfosVendeurScreen() {
             </View>
           </View>
 
-          <Text className="text-[22px] font-black text-[#111]">Informations Vendeur &amp; Boutique</Text>
+          <Text className="text-[22px] font-bold text-[#111]">Informations Vendeur &amp; Boutique</Text>
           <Text className="text-[14px] mt-1 mb-4" style={{ color: 'rgba(0,0,0,0.5)' }}>Ces informations apparaîtront sur votre boutique.</Text>
 
           <View className="flex-row gap-3">

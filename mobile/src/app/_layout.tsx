@@ -1,6 +1,6 @@
 import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -19,19 +19,40 @@ SplashScreen.preventAutoHideAsync();
  * laisse juste passer les enfants une fois la redirection décidée).
  */
 function AuthGate({ children }: { children: ReactNode }) {
-  const { session, loading } = useAuth();
+  const { session, profile, profilChargePour, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  // Compte pour lequel l'onboarding a déjà été examiné pendant cette
+  // ouverture de l'app : il n'est proposé qu'à l'ouverture (ou à la
+  // connexion), pas à chaque navigation — sinon le scan de document (écran
+  // 24) renverrait sans cesse à « Bienvenue ». Tant que onboarding_done reste
+  // false, l'ouverture suivante le propose de nouveau.
+  const onboardingExamine = useRef<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
     const dansGroupeAuth = segments[0] === '(auth)';
-    if (!session && !dansGroupeAuth) {
-      router.replace('/login');
-    } else if (session && dansGroupeAuth) {
-      router.replace('/');
+    if (!session) {
+      onboardingExamine.current = null;
+      if (!dansGroupeAuth) router.replace('/login');
+      return;
     }
-  }, [session, loading, segments, router]);
+    // Le profil réel de CET utilisateur doit être lu avant de décider (le
+    // cache local peut venir d'un autre compte ou être périmé).
+    if (profilChargePour !== session.user.id) return;
+
+    // Strictement `=== false` : colonne absente, profil non lu ou erreur
+    // réseau ne déclenchent jamais l'onboarding.
+    const aOnboarding = profile?.id === session.user.id && profile?.onboarding_done === false;
+    if (onboardingExamine.current !== session.user.id) {
+      onboardingExamine.current = session.user.id;
+      if (aOnboarding) {
+        router.replace('/onboarding/bienvenue');
+        return;
+      }
+    }
+    if (dansGroupeAuth) router.replace('/');
+  }, [session, profile, profilChargePour, loading, segments, router]);
 
   return children;
 }

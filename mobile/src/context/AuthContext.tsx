@@ -29,6 +29,8 @@ type AuthContextValue = {
   isAdmin: boolean;
   isRecruiter: boolean;
   loading: boolean;
+  /** Id de l'utilisateur dont le profil réel vient d'être lu en base (null tant qu'on attend). */
+  profilChargePour: string | null;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -45,6 +47,7 @@ const AuthContext = createContext<AuthContextValue>({
   isAdmin: false,
   isRecruiter: false,
   loading: true,
+  profilChargePour: null,
   refreshProfile: async () => {},
   signOut: async () => {},
 });
@@ -55,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState('visitor');
   const [loading, setLoading] = useState(true);
+  const [profilChargePour, setProfilChargePour] = useState<string | null>(null);
 
   const fetchUserData = useCallback(async (currentSession: Session | null) => {
     if (!currentSession?.user) {
@@ -62,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setProfile(null);
       setRole('visitor');
+      setProfilChargePour(null);
       setLoading(false);
       await AsyncStorage.multiRemove([CACHE_PROFILE_KEY, CACHE_ROLE_KEY]).catch(() => {});
       return;
@@ -101,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Erreur AuthContext fetchUserData:', err);
     } finally {
+      // Même en cas d'erreur : le garde de navigation ne doit jamais rester bloqué.
+      setProfilChargePour(currentUser.id);
       setLoading(false);
     }
   }, []);
@@ -182,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, role, isAdmin, isRecruiter, loading, refreshProfile, signOut }}>
+      value={{ session, user, profile, role, isAdmin, isRecruiter, loading, profilChargePour, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );
