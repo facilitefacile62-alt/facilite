@@ -1,285 +1,284 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconGoogle } from '@/components/facilite-icons';
-import { seConnecterAvecGoogle } from '@/lib/oauth';
-import { supabase } from '@/lib/supabase';
 
-// Reproduit design_handoff_facilite/pages/14-connexion.html ET, surtout, le
-// vrai flux à 2 étapes déjà en place côté web (src/app/login/page.js) :
-// étape 1 = e-mail seul (+ Google, + mot de passe oublié) ; étape 2 = mot de
-// passe (+ lien magique, + retour "Modifier"). La version précédente de cet
-// écran affichait email ET mot de passe d'un coup, sans lien avec ni le
-// design fourni ni le comportement réel du site — signalé en capture par
-// l'utilisateur en comparant avec ffacilite.com. Couleur de marque #085041
-// (teal), pas le #0d3b34 approché par le mockup HTML statique : le vrai
-// code web fait foi sur les couleurs exactes.
-const TEAL = '#085041';
+import BoutonAction from '@/components/BoutonAction';
+import {
+  DELAI_RENVOI_S,
+  INDICATIF,
+  LONGUEUR_CODE,
+  chiffresDuNumero,
+  envoyerCodeSms,
+  formaterNumero,
+  numeroValide,
+  verifierCodeSms,
+} from '@/lib/connexionSms';
+import { SITE_URL } from '@/lib/webEcrans';
+
+// Connexion — maquettes 43 « Connexion » et 44 « Connexion — Code SMS » :
+// le téléphone est le moyen principal (« inspirée de Yimmo », charte §5),
+// l'e-mail et Google passent par « Continuer avec l'e-mail ou Google › »
+// (écran 45, connexion-email.tsx). Mode CONNEXION uniquement : un numéro
+// sans compte est refusé, jamais créé (voir lib/connexionSms.ts).
+//
+// Une fois le code validé la session est posée ; le garde d'authentification
+// du layout racine redirige tout seul vers l'accueil.
+const VERT_FOND = '#0d3b34';
+const VERT_FONCE = '#0B3D2A';
+const BLEU = '#2563EB';
+const CREME = '#FAF6F1';
+
+type Etape = 'numero' | 'code';
 
 export default function LoginScreen() {
-  const [etape, setEtape] = useState<1 | 2>(1);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [needsConfirmation, setNeedsConfirmation] = useState(false);
-  const [isResending, setIsResending] = useState(false);
+  const [etape, setEtape] = useState<Etape>('numero');
+  const [chiffres, setChiffres] = useState('');
+  const [code, setCode] = useState('');
+  const [chargement, setChargement] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [attente, setAttente] = useState(0);
+  const champCode = useRef<TextInput>(null);
 
-  const emailPropre = () => email.trim().toLowerCase();
+  // Compte à rebours avant de pouvoir redemander un SMS.
+  useEffect(() => {
+    if (attente <= 0) return;
+    const t = setTimeout(() => setAttente((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [attente]);
 
-  const validerEtape1 = () => {
-    if (!emailPropre() || !emailPropre().includes('@')) {
-      setErrorMessage('Veuillez saisir une adresse e-mail valide.');
+  async function recevoirLeCode() {
+    if (!numeroValide(chiffres) || chargement) return;
+    setChargement(true);
+    setErreur('');
+    const probleme = await envoyerCodeSms(chiffres);
+    setChargement(false);
+    if (probleme) {
+      setErreur(probleme);
       return;
     }
-    setErrorMessage('');
-    setEtape(2);
-  };
+    setCode('');
+    setAttente(DELAI_RENVOI_S);
+    setEtape('code');
+    setTimeout(() => champCode.current?.focus(), 150);
+  }
 
-  const seConnecter = async () => {
-    setErrorMessage('');
-    setNeedsConfirmation(false);
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email: emailPropre(), password });
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setErrorMessage('Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.');
-        } else if (error.message.includes('Email not confirmed')) {
-          setErrorMessage("Votre adresse email n'a pas encore été confirmée. Vérifiez votre boîte de réception.");
-          setNeedsConfirmation(true);
-        } else {
-          setErrorMessage(error.message);
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  async function valider() {
+    if (code.length !== LONGUEUR_CODE || chargement) return;
+    setChargement(true);
+    setErreur('');
+    const probleme = await verifierCodeSms(chiffres, code);
+    setChargement(false);
+    if (probleme) setErreur(probleme);
+    // Succès : rien à faire ici, la session déclenche la redirection.
+  }
 
-  const renvoyerConfirmation = async () => {
-    if (!emailPropre()) return;
-    setIsResending(true);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: emailPropre() });
-      setErrorMessage(error ? error.message || "Impossible de renvoyer l'email." : 'Un nouvel email a été envoyé.');
-      if (!error) setNeedsConfirmation(false);
-    } finally {
-      setIsResending(false);
+  async function renvoyer() {
+    if (attente > 0 || chargement) return;
+    setChargement(true);
+    setErreur('');
+    const probleme = await envoyerCodeSms(chiffres);
+    setChargement(false);
+    if (probleme) setErreur(probleme);
+    else {
+      setCode('');
+      setAttente(DELAI_RENVOI_S);
     }
-  };
-
-  const envoyerLienMagique = async () => {
-    if (!emailPropre() || !emailPropre().includes('@')) {
-      setErrorMessage('Veuillez saisir une adresse e-mail valide.');
-      return;
-    }
-    setMagicLinkLoading(true);
-    setErrorMessage('');
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ email: emailPropre() });
-      if (error) setErrorMessage(error.message || "Impossible d'envoyer le lien magique.");
-      else setMagicLinkSent(true);
-    } finally {
-      setMagicLinkLoading(false);
-    }
-  };
-
-  const continuerAvecGoogle = async () => {
-    setGoogleLoading(true);
-    setErrorMessage('');
-    try {
-      await seConnecterAvecGoogle();
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Erreur lors de la connexion Google.');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+  }
 
   return (
-    <ImageBackground
-      source={require('../../../assets/images/facilite-pattern-background.png')}
-      resizeMode="repeat"
-      style={{ flex: 1 }}
-    >
-      <SafeAreaView className="flex-1">
+    <View className="flex-1" style={{ backgroundColor: VERT_FOND }}>
+      <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-          <ScrollView contentContainerClassName="px-5 pt-6 pb-10 grow justify-center" keyboardShouldPersistTaps="handled">
-            <View className="bg-white rounded-[22px] px-6 py-7 items-center border border-gray-200 shadow-xs">
-              <View className="w-14 h-14 rounded-full bg-white border-2 border-[#085041] items-center justify-center">
-                <Image
-                  source={require('@/assets/images/logo-cle.png')}
-                  style={{ width: 16, height: 32 }}
-                  contentFit="contain"
-                  alt="Facilité"
-                />
+          {/* Bandeau vert : clé dans son halo */}
+          <View className="items-center justify-center" style={{ height: 230 }}>
+            <View
+              className="items-center justify-center"
+              style={{ width: 150, height: 150, borderRadius: 75, backgroundColor: '#0c5a3e' }}>
+              <View
+                className="items-center justify-center"
+                style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#C4F3DD' }}>
+                <Text style={{ fontSize: 44 }}>🗝️</Text>
               </View>
-              <Text className="text-[20px] font-black text-[#0F172A] mt-3.5">Connexion</Text>
-              <Text className="text-[13px] text-black/50 font-medium mt-1.5 text-center">
-                Saisissez vos identifiants pour vous connecter.
-              </Text>
+            </View>
+          </View>
 
-              {etape === 1 ? (
-                <View className="w-full mt-5 gap-2.5">
-                  <Pressable
-                    onPress={continuerAvecGoogle}
-                    disabled={googleLoading}
-                    className="w-full flex-row items-center justify-center gap-2.5 border border-black/15 rounded-full py-3.5"
-                    style={{ opacity: googleLoading ? 0.6 : 1 }}>
-                    <IconGoogle />
-                    <Text className="text-[13.5px] font-bold text-[#1A1A1A]">
-                      {googleLoading ? 'Redirection…' : 'Continuer avec Google'}
-                    </Text>
-                  </Pressable>
-
-                  <Text className="text-center text-[11.5px] font-semibold text-black/40 my-1 uppercase tracking-wider">
-                    OU
+          {/* Feuille crème */}
+          <View className="flex-1 rounded-t-[28px] overflow-hidden" style={{ backgroundColor: CREME }}>
+            <ScrollView
+              contentContainerClassName="px-6 pt-6 pb-6 grow"
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              {etape === 'numero' ? (
+                <View className="gap-3.5 grow">
+                  <Text className="text-[12px] font-extrabold tracking-wider" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                    TON NUMÉRO
                   </Text>
 
-                  <TextInput
-                    value={email}
-                    onChangeText={(t) => {
-                      setEmail(t);
-                      if (errorMessage) setErrorMessage('');
-                    }}
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    placeholder="nom@exemple.com"
-                    placeholderTextColor="rgba(0,0,0,0.35)"
-                    className="w-full border-[1.6px] border-[#085041] rounded-full px-4 py-3 text-[13.5px] text-[#1A1A1A]"
+                  {/* Styles explicites : les classes arbitraires de ce bloc
+                      n'étaient pas toutes prises en compte (coins carrés,
+                      séparateur absent) — constaté à la capture. */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      height: 58,
+                      paddingHorizontal: 16,
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderColor: VERT_FONCE,
+                      backgroundColor: '#FFFFFF',
+                    }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#1A1A1A' }}>{INDICATIF}</Text>
+                    <View style={{ width: 1, height: 24, backgroundColor: 'rgba(0,0,0,0.15)', marginHorizontal: 12 }} />
+                    <TextInput
+                      value={formaterNumero(chiffres)}
+                      onChangeText={(t) => {
+                        setChiffres(chiffresDuNumero(t));
+                        if (erreur) setErreur('');
+                      }}
+                      placeholder="77 000 00 00"
+                      placeholderTextColor="rgba(0,0,0,0.3)"
+                      keyboardType="phone-pad"
+                      autoComplete="tel"
+                      textContentType="telephoneNumber"
+                      accessibilityLabel="Numéro de téléphone"
+                      style={{ flex: 1, fontSize: 16, color: '#1A1A1A' }}
+                    />
+                  </View>
+
+                  <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                    On t&apos;envoie un code par SMS pour te connecter.
+                  </Text>
+
+                  {erreur ? <BoiteErreur texte={erreur} /> : null}
+
+                  <BoutonAction
+                    titre="Recevoir le code"
+                    sousTitre="Code de connexion par SMS"
+                    icone="chatbubble-outline"
+                    onPress={recevoirLeCode}
+                    desactive={!numeroValide(chiffres)}
+                    chargement={chargement}
                   />
 
-                  {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
-
-                  <Pressable onPress={validerEtape1} className="w-full bg-[#085041] rounded-full py-3.5 items-center">
-                    <Text className="text-white text-[14px] font-bold">Continuer avec l&apos;e-mail</Text>
-                  </Pressable>
-
-                  <Link href="/forgot-password" className="self-end text-[13px] font-semibold text-[#085041] mt-1">
-                    Mot de passe oublié ?
+                  <Link href="/connexion-email" className="self-center text-[14px] font-extrabold mt-1" style={{ color: VERT_FOND }}>
+                    Continuer avec l&apos;e-mail ou Google ›
                   </Link>
                 </View>
               ) : (
-                <View className="w-full mt-5 gap-2.5">
-                  <View className="w-full flex-row items-center justify-between bg-black/[0.03] px-3.5 py-2.5 rounded-xl border border-black/10">
-                    <Text className="text-[12.5px] font-semibold text-[#1A1A1A] flex-1 mr-2" numberOfLines={1}>
-                      {email}
+                <View className="gap-3.5 grow">
+                  <Pressable
+                    onPress={() => {
+                      setEtape('numero');
+                      setCode('');
+                      setErreur('');
+                    }}
+                    hitSlop={8}
+                    accessibilityRole="button">
+                    <Text className="text-[13.5px] font-extrabold" style={{ color: VERT_FOND }}>
+                      ‹ Modifier le numéro
                     </Text>
-                    <Pressable
-                      onPress={() => {
-                        setEtape(1);
-                        setPassword('');
-                        setErrorMessage('');
-                        setMagicLinkSent(false);
-                      }}>
-                      <Text className="text-[11.5px] font-semibold text-black/45">Modifier</Text>
-                    </Pressable>
+                  </Pressable>
+
+                  <View>
+                    <Text className="text-[22px] font-black text-[#1A1A1A]">Entre ton code</Text>
+                    <Text className="text-[13px] mt-1" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                      Le code à {LONGUEUR_CODE} chiffres vient de partir au {INDICATIF} {formaterNumero(chiffres)}.
+                    </Text>
                   </View>
 
-                  {magicLinkSent ? (
-                    <View className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                      <Text className="text-[12px] font-bold text-emerald-800">
-                        ✉️ Lien de connexion envoyé !
-                      </Text>
-                      <Text className="text-[11.5px] text-emerald-800 mt-0.5">
-                        Vérifiez votre boîte de réception pour vous connecter en 1 clic.
-                      </Text>
+                  {/* Six cases, une seule saisie : le champ réel est invisible et
+                      couvre les cases, ce qui permet la saisie automatique du
+                      code reçu par SMS (oneTimeCode / sms-otp). */}
+                  <Pressable onPress={() => champCode.current?.focus()} accessibilityLabel="Saisir le code reçu par SMS">
+                    <View className="flex-row justify-between">
+                      {Array.from({ length: LONGUEUR_CODE }).map((_, i) => {
+                        const rempli = i < code.length;
+                        const actif = i === Math.min(code.length, LONGUEUR_CODE - 1);
+                        return (
+                          <View
+                            key={i}
+                            className="items-center justify-center rounded-[12px] bg-white"
+                            style={{
+                              width: 48,
+                              height: 54,
+                              borderWidth: 1.5,
+                              borderColor: actif ? BLEU : rempli ? VERT_FONCE : 'rgba(0,0,0,0.12)',
+                            }}>
+                            <Text className="text-[22px] font-black text-[#1A1A1A]">{code[i] ?? ''}</Text>
+                          </View>
+                        );
+                      })}
                     </View>
-                  ) : (
-                    <>
-                      <View className="w-full flex-row items-center border-[1.6px] border-[#085041] rounded-full px-4">
-                        <TextInput
-                          value={password}
-                          onChangeText={(t) => {
-                            setPassword(t);
-                            if (errorMessage) setErrorMessage('');
-                          }}
-                          secureTextEntry={!showPassword}
-                          autoCapitalize="none"
-                          placeholder="Saisissez votre mot de passe"
-                          placeholderTextColor="rgba(0,0,0,0.35)"
-                          className="flex-1 py-3 text-[13.5px] text-[#1A1A1A]"
-                        />
-                        <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                          <Ionicons
-                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                            size={16}
-                            color="rgba(0,0,0,0.4)"
-                          />
-                        </Pressable>
-                      </View>
+                    <TextInput
+                      ref={champCode}
+                      value={code}
+                      onChangeText={(t) => {
+                        setCode(t.replace(/\D/g, '').slice(0, LONGUEUR_CODE));
+                        if (erreur) setErreur('');
+                      }}
+                      keyboardType="number-pad"
+                      maxLength={LONGUEUR_CODE}
+                      textContentType="oneTimeCode"
+                      autoComplete="sms-otp"
+                      caretHidden
+                      style={{ position: 'absolute', inset: 0, opacity: 0.02 }}
+                    />
+                  </Pressable>
 
-                      <View className="w-full flex-row items-center justify-between">
-                        <Pressable onPress={envoyerLienMagique} disabled={magicLinkLoading}>
-                          <Text className="text-[11.5px] font-semibold text-black/45">
-                            {magicLinkLoading ? 'Envoi…' : 'Lien magique'}
-                          </Text>
-                        </Pressable>
-                        <Link href="/forgot-password" className="text-[11.5px] font-semibold text-[#085041]">
-                          Mot de passe oublié ?
-                        </Link>
-                      </View>
+                  {erreur ? <BoiteErreur texte={erreur} /> : null}
 
-                      {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+                  <BoutonAction
+                    titre="Valider"
+                    sousTitre="Code reçu par SMS"
+                    icone="key-outline"
+                    onPress={valider}
+                    desactive={code.length !== LONGUEUR_CODE}
+                    chargement={chargement}
+                  />
 
-                      {needsConfirmation && (
-                        <Pressable
-                          onPress={renvoyerConfirmation}
-                          disabled={isResending}
-                          className="py-2.5 rounded-xl border border-[#085041] items-center">
-                          <Text className="text-[12px] font-bold text-[#085041]">
-                            {isResending ? 'Envoi en cours…' : "Renvoyer l'email de confirmation"}
-                          </Text>
-                        </Pressable>
-                      )}
-
-                      <Pressable
-                        onPress={seConnecter}
-                        disabled={loading || !password}
-                        className="w-full bg-[#085041] rounded-full py-3.5 items-center"
-                        style={{ opacity: loading || !password ? 0.6 : 1 }}>
-                        {loading ? (
-                          <ActivityIndicator color="#ffffff" />
-                        ) : (
-                          <Text className="text-white text-[14px] font-bold">Se connecter</Text>
-                        )}
-                      </Pressable>
-                    </>
-                  )}
+                  <View className="flex-row justify-center items-center gap-1.5">
+                    <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                      Pas reçu ?
+                    </Text>
+                    <Pressable onPress={renvoyer} disabled={attente > 0 || chargement} hitSlop={8}>
+                      <Text
+                        className="text-[13px] font-extrabold underline"
+                        style={{ color: VERT_FOND, opacity: attente > 0 ? 0.45 : 1 }}>
+                        {attente > 0 ? `Renvoyer le code (${attente} s)` : 'Renvoyer le code'}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               )}
 
-              <View className="w-full border-t border-black/[0.08] mt-5 pt-3.5 flex-row justify-center gap-1.5">
-                <Text className="text-[13px] text-[#1A1A1A]">Pas encore de compte ?</Text>
-                <Link href="/register" className="text-[13px] font-bold text-blue-600">
-                  Inscrivez-vous
-                </Link>
+              {/* Pied de page de la maquette 43. Avant connexion, les écrans
+                  /web/... sont inaccessibles (garde d'authentification) : on
+                  ouvre donc le site. « Mentions légales » figure sur la
+                  maquette mais le site n'a pas cette page — pas de lien
+                  inventé en attendant son contenu. */}
+              <View className="flex-row justify-center gap-2 mt-8">
+                <Pressable onPress={() => Linking.openURL(`${SITE_URL}/conditions-utilisation`).catch(() => {})}>
+                  <Text className="text-[12px] underline" style={{ color: 'rgba(0,0,0,0.5)' }}>CGU</Text>
+                </Pressable>
+                <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.35)' }}>·</Text>
+                <Pressable onPress={() => Linking.openURL(`${SITE_URL}/confidentialite`).catch(() => {})}>
+                  <Text className="text-[12px] underline" style={{ color: 'rgba(0,0,0,0.5)' }}>Confidentialité</Text>
+                </Pressable>
               </View>
-            </View>
-
-            <Text className="text-center text-[11.5px] text-black/35 mt-4">
-              © 2026 Facilité · Tous droits réservés.
-            </Text>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 
 function BoiteErreur({ texte }: { texte: string }) {
   return (
     <View className="w-full bg-red-50 border border-red-200 rounded-xl p-2.5">
-      <Text className="text-[11px] font-bold text-red-600">{texte}</Text>
+      <Text className="text-[11.5px] font-bold text-red-600">{texte}</Text>
     </View>
   );
 }

@@ -18,10 +18,15 @@ import { enregistrerChampsProfil } from '@/lib/profilChamps';
 // site : on le garde synchronisé ici (vrai dès qu'au moins l'un des deux
 // champs est affiché), sinon activer « Afficher mon téléphone » depuis
 // l'app ne produirait rien sur la page publique.
+// Seules les pages qui EXISTENT sur le site sont proposées. La maquette 55
+// montre aussi « Mentions légales » : aucune page de ce nom n'existe sur
+// ffacilite.com (ni contenu d'éditeur/hébergeur dans les autres pages
+// légales), donc pas de lien tant que le texte n'est pas fourni. Les clés
+// ci-dessous sont celles de lib/webEcrans.ts ET de la liste blanche du pont
+// de session côté serveur.
 const LIENS_LEGAUX = [
-  { titre: "Conditions d'utilisation", cle: 'cgu' },
+  { titre: "Conditions d'utilisation", cle: 'conditions-utilisation' },
   { titre: 'Politique de confidentialité', cle: 'confidentialite' },
-  { titre: 'Mentions légales', cle: 'mentions-legales' },
 ] as const;
 
 export default function ProfilConfidentialiteScreen() {
