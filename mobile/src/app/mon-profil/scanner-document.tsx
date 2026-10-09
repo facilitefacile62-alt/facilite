@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
@@ -142,6 +142,14 @@ export default function ScannerDocumentScreen() {
   }
 
   function confirmerEcrasement(donnees: DonneesExtraites) {
+    // Alert.alert est sans effet sur react-native-web (aperçu navigateur) :
+    // on y passe par la confirmation du navigateur.
+    if (Platform.OS === 'web') {
+      if (window.confirm('Les champs remplis ci-dessous vont remplacer vos informations personnelles, langues et expériences actuelles.')) {
+        enregistrerRevue(donnees);
+      }
+      return;
+    }
     Alert.alert(
       'Remplacer vos informations ?',
       'Les champs remplis ci-dessous vont remplacer vos informations personnelles, langues et expériences actuelles.',

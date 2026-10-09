@@ -43,6 +43,12 @@ export default function OnboardingInfosVendeurScreen() {
       Alert.alert('Informations manquantes', 'Prénom, nom, WhatsApp et nom de la boutique sont obligatoires.');
       return;
     }
+    // La base refuse une boutique sans position (creer_ma_boutique) : on le
+    // dit avant d'enregistrer quoi que ce soit, plutôt qu'après.
+    if (!position) {
+      Alert.alert('Position requise', 'Touchez « Relever ma position actuelle » : la position de la boutique est nécessaire pour la créer.');
+      return;
+    }
     setEnregistrement(true);
     try {
       await enregistrerIdentiteVendeur(user.id, { prenom, nom, telephone: whatsapp, email: '' });

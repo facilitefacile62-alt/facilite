@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 
 // Client mobile pour les deux endpoints réels déjà utilisés par
@@ -51,8 +52,15 @@ async function enteteAuth(): Promise<Record<string, string> | undefined> {
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
 
-function construireFormData(uri: string, nomFichier: string, type: string): FormData {
+async function construireFormData(uri: string, nomFichier: string, type: string): Promise<FormData> {
   const formData = new FormData();
+  if (Platform.OS === 'web') {
+    // Navigateur (aperçu web) : la forme { uri, name, type } n'y existe pas,
+    // il faut un vrai Blob.
+    const blob = await (await fetch(uri)).blob();
+    formData.append('file', blob, nomFichier);
+    return formData;
+  }
   // Forme spécifique à React Native (pas la Blob web standard) — acceptée
   // par le FormData polyfill RN pour un fichier local via son URI.
   formData.append('file', { uri, name: nomFichier, type } as unknown as Blob);
@@ -68,7 +76,7 @@ export async function scannerPieceIdentite(
   const reponse = await fetch(`${SITE_URL}/api/profil/scan-identity-document`, {
     method: 'POST',
     headers,
-    body: construireFormData(uri, nomFichier, type),
+    body: await construireFormData(uri, nomFichier, type),
   });
   const resultat = await reponse.json().catch(() => ({}));
   if (!reponse.ok) {
@@ -147,7 +155,7 @@ export async function analyserDocument(
   const reponse = await fetch(`${SITE_URL}/api/parse-document`, {
     method: 'POST',
     headers,
-    body: construireFormData(uri, nomFichier, type),
+    body: await construireFormData(uri, nomFichier, type),
   });
   const resultat = await reponse.json().catch(() => ({}));
   if (!reponse.ok || resultat?.success === false) {
