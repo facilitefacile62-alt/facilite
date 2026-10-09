@@ -66,6 +66,8 @@ export type OffreReelle = {
   contactPhone?: string;
   contactWhatsapp?: string;
   externalLink?: string;
+  applicationUrl?: string;
+  applicationEmail?: string;
   deadline?: string;
   listingType?: string;
   sector?: string;
@@ -116,7 +118,7 @@ export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') 
         const { data: lignes, error } = await appliquerEtat(
           supabase
             .from('job_offers')
-            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, deadline, image_url, created_at, listing_type, view_count, status'),
+            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, created_at, listing_type, view_count, status'),
           etat
         )
           .order('created_at', { ascending: false })
@@ -149,6 +151,8 @@ export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') 
           contactPhone: o.contact_phone || undefined,
           contactWhatsapp: o.contact_whatsapp || undefined,
           externalLink: o.external_link || undefined,
+          applicationUrl: o.application_url || undefined,
+          applicationEmail: o.application_email || undefined,
           deadline: o.deadline || undefined,
           listingType: o.listing_type || 'offre_emploi',
           // job_offers n'a PAS de colonnes sector / category / positions_count (erreur 42703 constatée

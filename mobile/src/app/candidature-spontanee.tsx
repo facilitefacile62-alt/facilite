@@ -6,6 +6,7 @@ import { Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
+import FaciliteHeader from '@/components/FaciliteHeader';
 import { SPONTANEOUS_COMPANIES, type EntrepriseSpontanee } from '@/lib/spontaneousData';
 
 // Reproduction de design_handoff_facilite/pages/10-candidature-spontanee.html.
@@ -49,16 +50,7 @@ export default function CandidatureSpontaneeScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="bg-white border-b border-black/[0.06] px-4 py-3.5 flex-row items-center gap-3">
-          <Pressable
-            onPress={() => router.back()}
-            className="w-9 h-9 rounded-full bg-[#F2F0EA] items-center justify-center">
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-              <Path d="M15 5L8 12L15 19" stroke="#1A1A1A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Pressable>
-          <Text className="text-[16px] font-extrabold text-[#1A1A1A]">Candidature Spontanée</Text>
-        </View>
+        <FaciliteHeader />
 
         <FlatList
           data={listeAffichee}
@@ -68,7 +60,7 @@ export default function CandidatureSpontaneeScreen() {
           ItemSeparatorComponent={() => <View className="h-3" />}
           ListHeaderComponent={
             <View className="mb-3.5">
-              <LinearGradient colors={['#0d3b34', '#0f4f42']} className="rounded-2xl p-[18px]">
+              <LinearGradient colors={['#0d3b34', '#0f4f42']} style={{ borderRadius: 18, padding: 18 }}>
                 <Text className="text-[11px] font-bold tracking-wide text-[#6ee7c9]">
                   CANDIDATURES SPONTANÉES
                 </Text>
@@ -171,7 +163,7 @@ function CarteEntreprise({ entreprise }: { entreprise: EntrepriseSpontanee }) {
             colors={['#dce8f5', '#cdddef', '#dce8f5']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            className="w-full h-full"
+            style={{ width: '100%', height: '100%' }}
           />
         )}
         <View className="absolute top-2.5 right-2.5 bg-white rounded-full px-2.5 py-1">

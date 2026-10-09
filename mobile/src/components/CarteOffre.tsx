@@ -5,7 +5,9 @@ import { useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
 
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
+import CandidatureRapide from '@/components/CandidatureRapide';
 import OfferMediaView from '@/components/OfferMediaView';
+import { resoudreActionOffre } from '@/lib/actionOffre';
 import type { OffreReelle } from '@/lib/useOffresReelles';
 
 // Carte d'offre du fil (maquettes 01 « Accueil » et 03 « Offres »), sur fond
@@ -32,6 +34,10 @@ export default function CarteOffre({
   const [aime, setAime] = useState(false);
   const [descriptionEtendue, setDescriptionEtendue] = useState(false);
   const [logoErreur, setLogoErreur] = useState(false);
+  // Candidature rapide (maquettes 08/09) : feuille ouverte par le bouton bleu,
+  // et état « postulée » une fois la confirmation fermée.
+  const [feuilleOuverte, setFeuilleOuverte] = useState(false);
+  const [postulee, setPostulee] = useState(false);
 
   const partager = async () => {
     try {
@@ -44,14 +50,23 @@ export default function CarteOffre({
     } catch {}
   };
 
+  // Même décision que le site (resolveOfferAction, portée dans
+  // lib/actionOffre.ts) : feuille Candidature Rapide, site officiel du
+  // recruteur ou WhatsApp, selon ce que l'annonce désigne elle-même.
+  const action = resoudreActionOffre({
+    titre: offre.titre,
+    entreprise: offre.entreprise,
+    description: offre.description,
+    externalLink: offre.externalLink,
+    applicationUrl: offre.applicationUrl,
+    applicationEmail: offre.applicationEmail,
+    contactEmail: offre.contactEmail,
+    contactWhatsapp: offre.contactWhatsapp,
+  });
+
   const ouvrirPostuler = () => {
-    if (offre.externalLink && (offre.externalLink.startsWith('http://') || offre.externalLink.startsWith('https://'))) {
-      Linking.openURL(offre.externalLink).catch(() => {
-        router.push(`/offre/${offre.id}`);
-      });
-    } else {
-      router.push(`/offre/${offre.id}`);
-    }
+    if (action.type === 'facilite') setFeuilleOuverte(true);
+    else Linking.openURL(action.url).catch(() => router.push(`/offre/${offre.id}`));
   };
 
   return (
@@ -193,15 +208,15 @@ export default function CarteOffre({
 
         <Pressable
           onPress={ouvrirPostuler}
-          disabled={expiree}
-          accessibilityState={{ disabled: expiree }}
+          disabled={expiree || postulee}
+          accessibilityState={{ disabled: expiree || postulee }}
           style={{
             flex: 1,
             height: 42,
             borderRadius: 12,
             // Expirée : même gabarit, grisé, comme sur le site (le bouton
             // « Postuler » y est remplacé par un état fermé).
-            backgroundColor: expiree ? '#D4D0C4' : BLEU,
+            backgroundColor: expiree ? '#D4D0C4' : postulee ? '#D5F5E6' : action.type === 'whatsapp' ? '#25D366' : BLEU,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -209,15 +224,22 @@ export default function CarteOffre({
             paddingHorizontal: 12,
           }}>
           <Ionicons
-            name={expiree ? 'lock-closed' : offre.externalLink ? 'open-outline' : 'paper-plane'}
+            name={expiree ? 'lock-closed' : postulee ? 'checkmark-circle' : action.type === 'whatsapp' ? 'logo-whatsapp' : action.type === 'externe' ? 'open-outline' : 'paper-plane'}
             size={16}
-            color={expiree ? 'rgba(0,0,0,0.45)' : '#FFFFFF'}
+            color={expiree ? 'rgba(0,0,0,0.45)' : postulee ? '#047857' : '#FFFFFF'}
           />
-          <Text style={{ color: expiree ? 'rgba(0,0,0,0.5)' : '#FFFFFF', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>
-            {expiree ? 'Offre expirée' : offre.externalLink ? 'Postuler sur le site officiel' : 'Postuler via Facilité'}
+          <Text style={{ color: expiree ? 'rgba(0,0,0,0.5)' : postulee ? '#047857' : '#FFFFFF', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>
+            {expiree ? 'Offre expirée' : postulee ? 'Candidature envoyée' : action.libelle}
           </Text>
         </Pressable>
       </View>
+
+      <CandidatureRapide
+        visible={feuilleOuverte}
+        offre={{ id: offre.id, titre: offre.titre, entreprise: offre.entreprise, contactEmail: action.type === 'facilite' ? (action.email ?? undefined) : undefined }}
+        onFermer={() => setFeuilleOuverte(false)}
+        onEnvoyee={() => setPostulee(true)}
+      />
     </Pressable>
   );
 }

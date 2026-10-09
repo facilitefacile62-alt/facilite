@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import BoutonAction from '@/components/BoutonAction';
+import { resoudreActionOffre } from '@/lib/actionOffre';
+import CandidatureRapide from '@/components/CandidatureRapide';
 import { useOffreDetail } from '@/lib/useOffreDetail';
 import OfferMediaView from '@/components/OfferMediaView';
 
@@ -16,9 +18,25 @@ export default function FicheOffreScreen() {
   const { offre, erreur } = useOffreDetail(id);
   const insets = useSafeAreaInsets();
   const [sauvegarde, setSauvegarde] = useState(false);
-  const [logoErreur, setLogoErreur] = useState(false);
+  const [feuilleOuverte, setFeuilleOuverte] = useState(false);
+  const [postulee, setPostulee] = useState(false);
 
   const urlOffre = `https://ffacilite.com/offres/${id}`;
+
+  // Même décision que le site (resolveOfferAction, portée dans
+  // lib/actionOffre.ts) : feuille Candidature Rapide, site officiel ou WhatsApp.
+  const action = offre
+    ? resoudreActionOffre({
+        titre: offre.titre,
+        entreprise: offre.entreprise,
+        description: offre.description,
+        externalLink: offre.externalLink,
+        applicationUrl: offre.applicationUrl,
+        applicationEmail: offre.applicationEmail,
+        contactEmail: offre.contactEmail,
+        contactWhatsapp: offre.contactWhatsapp,
+      })
+    : null;
 
   // Offres enregistrées : liste d'identifiants gardée sur l'appareil, comme sur le site (clé facilite_saved_jobs).
   useEffect(() => {
@@ -113,26 +131,17 @@ export default function FicheOffreScreen() {
 
             {/* En-tête Entreprise & Titre */}
             <View className="px-5 pt-4 items-center">
-              {offre.posterUri && !logoErreur ? (
-                <Image
-                  source={{ uri: offre.posterUri }}
-                  alt={offre.entreprise}
-                  style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: '#15181D' }}
-                  contentFit="cover"
-                  transition={150}
-                  onError={() => setLogoErreur(true)}
-                />
-              ) : (
-                <View
-                  className="w-16 h-16 rounded-[18px] items-center justify-center shadow-sm"
-                  style={{ backgroundColor: offre.logoBg }}>
-                  <Text className="text-white font-black text-[22px]">{offre.logo}</Text>
-                </View>
-              )}
+              {/* Tuile initiale de la maquette 07. L'image de l'offre est l'affiche
+                  (affichée en grand plus bas), pas un logo d'entreprise. */}
+              <View className="w-16 h-16 rounded-[18px] items-center justify-center" style={{ backgroundColor: '#2563EB' }}>
+                <Text className="font-black text-[24px]" style={{ color: '#0B0D10' }}>
+                  {offre.logo}
+                </Text>
+              </View>
               <Text className="text-[20px] font-extrabold text-[#F5F6F7] mt-3.5 text-center leading-7">
                 {offre.titre}
               </Text>
-              <Text className="text-[14px] text-[#F5F6F7]/60 mt-1 text-center font-medium">
+              <Text className="text-[14px] mt-1 text-center font-medium" style={{ color: '#10B981' }}>
                 {offre.entreprise} · {offre.localisation}
               </Text>
               <View className="flex-row gap-1.5 mt-3">
@@ -168,7 +177,7 @@ export default function FicheOffreScreen() {
             </View>
 
             {/* Description */}
-            <Text className="px-5 pt-5 pb-1.5 text-[15px] font-bold text-[#F5F6F7]">Description de l&apos;offre</Text>
+            <Text className="px-5 pt-5 pb-1.5 text-[15px] font-bold text-[#F5F6F7]">Description</Text>
             <Text className="px-5 text-[13.5px] leading-6 text-[#F5F6F7]/75 font-normal">{offre.description}</Text>
           </ScrollView>
         )}
@@ -186,23 +195,37 @@ export default function FicheOffreScreen() {
             className="w-12 h-12 rounded-full bg-[#15181D] border border-white/10 items-center justify-center">
             <Ionicons name={sauvegarde ? 'bookmark' : 'bookmark-outline'} size={20} color={sauvegarde ? '#10B981' : '#F5F6F7'} />
           </Pressable>
-          {offre.externalLink ? (
+          {action && action.type !== 'facilite' ? (
             <Pressable
-              onPress={() => Linking.openURL(offre.externalLink!).catch(() => {})}
-              className="flex-1 h-12 rounded-full bg-blue-600 active:bg-blue-700 flex-row items-center justify-center gap-2">
-              <Ionicons name="open-outline" size={18} color="#FFFFFF" />
-              <Text className="text-white text-[15px] font-black">Postuler sur le site du recruteur</Text>
+              onPress={() => Linking.openURL(action.url).catch(() => {})}
+              className={`flex-1 h-12 rounded-full flex-row items-center justify-center gap-2 ${
+                action.type === 'whatsapp' ? 'bg-[#25D366]' : 'bg-blue-600 active:bg-blue-700'
+              }`}>
+              <Ionicons name={action.type === 'whatsapp' ? 'logo-whatsapp' : 'open-outline'} size={18} color="#FFFFFF" />
+              <Text className="text-white text-[15px] font-black">{action.libelle}</Text>
             </Pressable>
           ) : (
-            <Pressable
-              onPress={() => router.push({ pathname: '/web/[cle]', params: { cle: 'offre', id: String(id) } })}
-              className="flex-1 h-12 rounded-full bg-[#10B981] active:opacity-90 flex-row items-center justify-center gap-2">
-              <Ionicons name="paper-plane" size={17} color="#0B0D10" />
-              <Text className="text-[#0B0D10] text-[15px] font-black">Postuler via Facilité</Text>
-            </Pressable>
+            <View className="flex-1">
+              <BoutonAction
+                titre={postulee ? 'Candidature envoyée' : 'Postuler en 1 clic'}
+                sousTitre={postulee ? 'Merci, le recruteur a bien reçu votre dossier' : 'Candidature en un clic'}
+                icone={postulee ? 'checkmark-circle-outline' : 'briefcase-outline'}
+                onPress={() => setFeuilleOuverte(true)}
+                desactive={postulee}
+              />
+            </View>
           )}
         </View>
       )}
+
+      {offre && !erreur ? (
+        <CandidatureRapide
+          visible={feuilleOuverte}
+          offre={{ id: offre.id, titre: offre.titre, entreprise: offre.entreprise, contactEmail: action?.type === 'facilite' ? (action.email ?? undefined) : undefined }}
+          onFermer={() => setFeuilleOuverte(false)}
+          onEnvoyee={() => setPostulee(true)}
+        />
+      ) : null}
     </View>
   );
 }

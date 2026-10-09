@@ -18,6 +18,9 @@ export type OffreDetail = {
   contactEmail?: string;
   contactPhone?: string;
   externalLink?: string;
+  applicationUrl?: string;
+  applicationEmail?: string;
+  contactWhatsapp?: string;
   deadline?: string;
   applicantsCount: number;
 };
@@ -60,16 +63,16 @@ export function useOffreDetail(id: string | undefined) {
 
     async function charger() {
       try {
-        const [{ data, error }, { count }] = await Promise.all([
+        const [{ data, error }, compteur] = await Promise.all([
           supabase
             .from('job_offers')
-            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, external_link, deadline, image_url, created_at')
+            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, created_at')
             .eq('id', id)
             .single(),
-          supabase
-            .from('candidatures')
-            .select('id', { count: 'exact', head: true })
-            .eq('job_offer_id', id),
+          // Compteur réel via la fonction du site : la RLS de candidatures
+          // ne laisse voir que SES PROPRES lignes, un select direct renverrait
+          // presque toujours 0 (voir OffreApplySection côté web).
+          supabase.rpc('compter_candidatures_par_offre', { p_offres: [id] }),
         ]);
 
         if (error || !data) {
@@ -94,8 +97,11 @@ export function useOffreDetail(id: string | undefined) {
             contactEmail: data.contact_email || undefined,
             contactPhone: data.contact_phone || undefined,
             externalLink: data.external_link || undefined,
+            applicationUrl: data.application_url || undefined,
+            applicationEmail: data.application_email || undefined,
+            contactWhatsapp: data.contact_whatsapp || undefined,
             deadline: data.deadline || undefined,
-            applicantsCount: count ?? 0,
+            applicantsCount: (compteur.data as Array<{ nombre: number }> | null)?.[0]?.nombre ?? 0,
           });
           setErreur(false);
         }

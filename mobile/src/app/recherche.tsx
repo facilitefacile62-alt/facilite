@@ -19,13 +19,15 @@ import { useRechercheOffres, useRecherchesRecentes, type ResultatRecherche } fro
 // description), pas une liste décorative. "Recherches récentes" est un
 // vrai historique persisté sur l'appareil (AsyncStorage), pas des données
 // d'exemple.
+// Libellés, ordre (par ligne : IN CO / SA BT / FI ED) et couleurs de la
+// maquette 04. Chaque tuile lance une vraie recherche par mot-clé.
 const CATEGORIES = [
-  { code: 'TI', color: '#2563EB', label: 'Technologie', motCle: 'informatique' },
-  { code: 'CV', color: '#10B981', label: 'Commerce & Vente', motCle: 'vente' },
-  { code: 'FC', color: '#F59E0B', label: 'Finance & Compta', motCle: 'comptab' },
-  { code: 'SA', color: '#DC2626', label: 'Santé', motCle: 'santé' },
-  { code: 'BT', color: '#8B5CF6', label: 'BTP & Logistique', motCle: 'logistique' },
-  { code: 'ED', color: '#0EA5E9', label: 'Éducation', motCle: 'formation' },
+  { code: 'IN', color: '#2563EB', label: 'Informatique', motCle: 'informatique' },
+  { code: 'CO', color: '#10B981', label: 'Commerce', motCle: 'commerc' },
+  { code: 'SA', color: '#F59E0B', label: 'Santé', motCle: 'santé' },
+  { code: 'BT', color: '#8B5CF6', label: 'BTP', motCle: 'btp' },
+  { code: 'FI', color: '#EC4899', label: 'Finance', motCle: 'financ' },
+  { code: 'ED', color: '#2563EB', label: 'Éducation', motCle: 'éducation' },
 ];
 
 export default function RechercheScreen() {
