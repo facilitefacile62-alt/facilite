@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import PanneauMenuProfil from '@/components/PanneauMenuProfil';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
@@ -25,7 +24,6 @@ const ICONE = '#1A1A1A';
 export default function FaciliteHeader() {
   const router = useRouter();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
-  const [menuOuvert, setMenuOuvert] = useState(false);
   const compteurs = useCompteursNonLus();
 
   return (
@@ -60,14 +58,13 @@ export default function FaciliteHeader() {
             </View>
           </Pressable>
 
-          <Pressable onPress={() => setMenuOuvert(true)} accessibilityLabel="Menu" hitSlop={10}>
+          <Pressable onPress={() => router.push('/menu')} accessibilityLabel="Menu" hitSlop={10}>
             <Ionicons name="menu" size={22} color={ICONE} />
           </Pressable>
         </View>
       </View>
 
       <PanneauNotifications visible={notifsOuvertes} onFermer={() => setNotifsOuvertes(false)} />
-      <PanneauMenuProfil visible={menuOuvert} onFermer={() => setMenuOuvert(false)} />
     </View>
   );
 }

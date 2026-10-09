@@ -45,7 +45,7 @@ const ENTREES: Entree[] = [
 ];
 
 export function entreeActiveFacilite(chemin: string): IdEntree | null {
-  if (chemin === '/' || chemin === '') return 'accueil';
+  if (chemin === '/' || chemin === '' || chemin.startsWith('/menu')) return 'accueil';
   if (chemin.startsWith('/offres') || chemin.startsWith('/offre/')) return 'offres';
   if (chemin.startsWith('/extracteur')) return 'extracteur';
   if (chemin.startsWith('/messages') || chemin.startsWith('/chat/')) return 'messages';

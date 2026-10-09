@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -32,7 +32,8 @@ const CATEGORIES = [
 
 export default function RechercheScreen() {
   const router = useRouter();
-  const [requete, setRequete] = useState('');
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [requete, setRequete] = useState(typeof q === 'string' ? q : '');
   const resultats = useRechercheOffres(requete);
   const { recherches, enregistrerRecherche } = useRecherchesRecentes();
 
