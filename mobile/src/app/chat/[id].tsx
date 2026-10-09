@@ -12,12 +12,12 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
   Linking,
@@ -60,6 +60,17 @@ const EMOJIS = [
 // coûteux échantillon par échantillon en continu.
 const BARRES_SAISIE = [6, 11, 8, 15, 9, 13, 7, 12, 10, 16, 8, 11];
 const BARRES_LECTURE = [5, 9, 14, 8, 17, 11, 6, 13, 10, 16, 7, 12, 9, 15, 6, 11, 8, 14, 10, 5];
+
+// Marketplace : deux premières lettres du nom (« MO » pour Moïse Couture) ;
+// Facilité : première lettre du premier et du dernier mot (« SF » pour
+// Support RH Facilité).
+function initiales(nom: string | undefined, deuxLettres: boolean): string {
+  const propre = (nom ?? '').trim();
+  if (!propre) return '·';
+  if (deuxLettres) return propre.slice(0, 2).toUpperCase();
+  const mots = propre.split(/\s+/);
+  return (mots.length > 1 ? mots[0][0] + mots[mots.length - 1][0] : mots[0].slice(0, 2)).toUpperCase();
+}
 
 function formaterDuree(secondes: number): string {
   const total = Math.max(0, Math.round(secondes));
@@ -123,6 +134,32 @@ export default function ChatDetailScreen() {
   const [menuJointOuvert, setMenuJointOuvert] = useState(false);
   const [emojiOuvert, setEmojiOuvert] = useState(false);
   const [envoiFichierEnCours, setEnvoiFichierEnCours] = useState(false);
+
+  // Facilité (maquettes 06 et 12) : cœur = conversation favorite DE CET
+  // APPAREIL (aucune colonne en base, le site garde cet état en mémoire),
+  // loupe = recherche dans le fil, ⋮ = « Réponses de l'IA » / « Infos ».
+  const [conversationFavorite, setConversationFavorite] = useState(false);
+  const [menuOuvert, setMenuOuvert] = useState(false);
+  const [rechercheOuverte, setRechercheOuverte] = useState(false);
+  const [termeRecherche, setTermeRecherche] = useState('');
+  const [modalIa, setModalIa] = useState(false);
+  const [modalInfos, setModalInfos] = useState(false);
+  const cleFavori = `FACILITE_CONV_FAVORITE_${id}`;
+  useEffect(() => {
+    if (marketplace) return;
+    AsyncStorage.getItem(cleFavori)
+      .then((v) => setConversationFavorite(v === '1'))
+      .catch(() => {});
+  }, [marketplace, cleFavori]);
+  function basculerConversationFavorite() {
+    const suivant = !conversationFavorite;
+    setConversationFavorite(suivant);
+    AsyncStorage.setItem(cleFavori, suivant ? '1' : '0').catch(() => {});
+  }
+  const messagesAffiches =
+    messages && termeRecherche.trim()
+      ? messages.filter((m) => (m.text ?? '').toLowerCase().includes(termeRecherche.trim().toLowerCase()))
+      : messages;
 
   useEffect(() => {
     const ouvre = Keyboard.addListener('keyboardDidShow', () => setClavierOuvert(true));
@@ -206,13 +243,8 @@ export default function ChatDetailScreen() {
     setBrouillon((prev) => prev + emoji);
   }
 
-  const Fond = (marketplace ? View : ImageBackground) as React.ComponentType<object>;
-  const propsFond = marketplace
-    ? { style: { flex: 1, backgroundColor: '#F4EFE7' } }
-    : { source: require('../../../assets/images/facilite-pattern-background.png'), resizeMode: 'repeat' as const, style: { flex: 1 } };
-
   return (
-    <Fond {...(propsFond as object)}>
+    <View style={{ flex: 1, backgroundColor: marketplace ? '#F4EFE7' : '#F0EEE8' }}>
       {/* Marketplace (maquette 36) : l'en-tête de la plateforme porte la zone sûre du haut */}
       {marketplace ? (
         <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
@@ -229,8 +261,8 @@ export default function ChatDetailScreen() {
               gap: 10,
               paddingHorizontal: 10,
               paddingVertical: 10,
-              backgroundColor: marketplace ? '#F4EFE7' : '#FFFFFF',
-              borderBottomWidth: 1,
+              backgroundColor: marketplace ? '#F4EFE7' : '#F0EEE8',
+              borderBottomWidth: marketplace ? 1 : 0,
               borderBottomColor: 'rgba(0,0,0,0.06)',
             }}>
             <Pressable
@@ -241,10 +273,8 @@ export default function ChatDetailScreen() {
               <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
             </Pressable>
             <View
-              style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: VERT, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>
-                {nomAffiche ? nomAffiche.slice(0, marketplace ? 2 : 1).toUpperCase() : '·'}
-              </Text>
+              style={{ width: marketplace ? 38 : 46, height: marketplace ? 38 : 46, borderRadius: 23, backgroundColor: VERT, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>{initiales(nomAffiche, marketplace)}</Text>
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ fontSize: 15, fontWeight: '700', color: '#1A1A1A' }} numberOfLines={1}>
@@ -254,6 +284,35 @@ export default function ChatDetailScreen() {
                 {marketplace ? `Boutique${nomAffiche ? ` · ${nomAffiche}` : ''}` : autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
               </Text>
             </View>
+            {!marketplace ? (
+              <>
+                <Pressable
+                  onPress={basculerConversationFavorite}
+                  accessibilityLabel={conversationFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  hitSlop={8}
+                  style={{ width: 32, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name={conversationFavorite ? 'heart' : 'heart-outline'} size={21} color={conversationFavorite ? '#DC2626' : '#1A1A1A'} />
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setRechercheOuverte((v) => !v);
+                    setTermeRecherche('');
+                    setMenuOuvert(false);
+                  }}
+                  accessibilityLabel="Rechercher dans la discussion"
+                  hitSlop={8}
+                  style={{ width: 32, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="search-outline" size={20} color="#1A1A1A" />
+                </Pressable>
+                <Pressable
+                  onPress={() => setMenuOuvert((v) => !v)}
+                  accessibilityLabel="Options de la discussion"
+                  hitSlop={8}
+                  style={{ width: 28, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="ellipsis-vertical" size={19} color="#1A1A1A" />
+                </Pressable>
+              </>
+            ) : null}
             {marketplace && idArticle ? (
               <Pressable
                 onPress={basculerFavori}
@@ -273,6 +332,19 @@ export default function ChatDetailScreen() {
               </Pressable>
             ) : null}
           </View>
+
+          {rechercheOuverte && !marketplace ? (
+            <View style={{ paddingHorizontal: 12, paddingBottom: 8, backgroundColor: '#F0EEE8' }}>
+              <TextInput
+                value={termeRecherche}
+                onChangeText={setTermeRecherche}
+                autoFocus
+                placeholder="Rechercher dans la discussion…"
+                placeholderTextColor="rgba(0,0,0,0.4)"
+                style={[{ height: 42, borderRadius: 21, backgroundColor: '#FFFFFF', paddingHorizontal: 16, fontSize: 14.5, color: '#1A1A1A' }, { outlineStyle: 'none' } as object]}
+              />
+            </View>
+          ) : null}
 
           {marketplace ? (
             <View
@@ -301,16 +373,16 @@ export default function ChatDetailScreen() {
             ) : (
               <FlatList
                 ref={listeRef}
-                data={messages}
+                data={messagesAffiches}
                 keyExtractor={(m) => m.id}
                 style={{ flex: 1 }}
                 contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 12, gap: 6, flexGrow: 1, justifyContent: 'flex-end' }}
                 keyboardShouldPersistTaps="handled"
                 onContentSizeChange={() => listeRef.current?.scrollToEnd({ animated: false })}
-                renderItem={({ item }) => <BulleMessage message={item} />}
+                renderItem={({ item }) => <BulleMessage message={item} marketplace={marketplace} />}
                 ListEmptyComponent={
                   <Text style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.4)', fontWeight: '500', textAlign: 'center', marginBottom: 24 }}>
-                    Aucun message pour l&apos;instant — dites bonjour 👋
+                    {termeRecherche.trim() ? 'Aucun message ne correspond à cette recherche.' : 'Aucun message pour l&apos;instant — dites bonjour 👋'}
                   </Text>
                 }
               />
@@ -379,6 +451,74 @@ export default function ChatDetailScreen() {
             )}
           </View>
 
+          {menuOuvert && !marketplace ? (
+            <Pressable onPress={() => setMenuOuvert(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 62,
+                  right: 12,
+                  width: 214,
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 16,
+                  paddingVertical: 8,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.16,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 5 },
+                  elevation: 8,
+                }}>
+                <Pressable
+                  onPress={() => {
+                    setMenuOuvert(false);
+                    setModalIa(true);
+                  }}
+                  style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1A1A1A' }}>Réponses de l&apos;IA</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setMenuOuvert(false);
+                    setModalInfos(true);
+                  }}
+                  style={{ paddingHorizontal: 18, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Ionicons name="information-circle-outline" size={17} color="#2563EB" />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1A1A1A' }}>Infos sur la discussion</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          ) : null}
+
+          <Modal visible={modalIa} transparent animationType="fade" onRequestClose={() => setModalIa(false)}>
+            <Pressable onPress={() => setModalIa(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+              <Pressable onPress={() => {}} style={{ width: '100%', maxWidth: 380, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24 }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#111' }}>Réponses de l’IA</Text>
+                <Text style={{ fontSize: 13.5, lineHeight: 20, color: '#374151', marginTop: 10 }}>
+                  L’IA répondra automatiquement aux messages de cette discussion. Vous recevrez une notification de message non lu si l’IA ne sait pas comment répondre.
+                </Text>
+                <Pressable onPress={() => setModalIa(false)} style={{ alignSelf: 'flex-end', marginTop: 22, paddingHorizontal: 16, paddingVertical: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#147953' }}>Fermer</Text>
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
+          <Modal visible={modalInfos} transparent animationType="fade" onRequestClose={() => setModalInfos(false)}>
+            <Pressable onPress={() => setModalInfos(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+              <Pressable onPress={() => {}} style={{ width: '100%', maxWidth: 380, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, gap: 6 }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#111' }}>Infos sur la discussion</Text>
+                <Text style={{ fontSize: 13.5, color: '#374151', marginTop: 8 }}>Avec : {nomAffiche ?? '—'}</Text>
+                <Text style={{ fontSize: 13.5, color: '#374151' }}>Messages : {messages?.length ?? 0}</Text>
+                <Text style={{ fontSize: 13.5, color: '#374151' }}>
+                  Photos et documents : {messages?.filter((m) => m.attachmentUrl).length ?? 0}
+                </Text>
+                <Pressable onPress={() => setModalInfos(false)} style={{ alignSelf: 'flex-end', marginTop: 16, paddingHorizontal: 16, paddingVertical: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#147953' }}>Fermer</Text>
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
           <ZoneSaisie
             brouillon={brouillon}
             setBrouillon={setBrouillon}
@@ -403,7 +543,7 @@ export default function ChatDetailScreen() {
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </Fond>
+    </View>
   );
 }
 
@@ -630,6 +770,50 @@ function ZoneSaisie({
     );
   }
 
+  if (!marketplace) {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          paddingHorizontal: 12,
+          paddingTop: 10,
+          paddingBottom: clavierOuvert ? 10 : paddingBas,
+          backgroundColor: '#FFFFFF',
+        }}>
+        <Pressable
+          onPress={onToggleJoint}
+          accessibilityLabel="Joindre une photo ou un document"
+          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#EDEBE5', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={24} color="#1A1A1A" />
+        </Pressable>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#EDEBE5', borderRadius: 22, paddingLeft: 18, paddingRight: 12, minHeight: 46 }}>
+          <TextInput
+            value={brouillon}
+            onChangeText={setBrouillon}
+            placeholder="Posez une question, demandez un conseil…"
+            placeholderTextColor="rgba(0,0,0,0.42)"
+            accessibilityLabel="Écrire un message"
+            multiline
+            textAlignVertical="center"
+            style={[{ flex: 1, maxHeight: 130, paddingVertical: 10, fontSize: 15, color: '#1A1A1A' }, { outlineStyle: 'none' } as object]}
+          />
+          <Pressable onPress={commencerEnregistrement} accessibilityLabel="Enregistrer une note vocale" hitSlop={8} style={{ paddingLeft: 8 }}>
+            <Ionicons name="mic-outline" size={19} color="rgba(0,0,0,0.65)" />
+          </Pressable>
+        </View>
+        <Pressable
+          onPress={onEnvoyer}
+          disabled={!peutEnvoyer || envoiEnCours}
+          accessibilityLabel="Envoyer le message"
+          style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#111111', opacity: peutEnvoyer || envoiEnCours ? 1 : 0.85, alignItems: 'center', justifyContent: 'center' }}>
+          {envoiEnCours ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
@@ -701,7 +885,7 @@ function ZoneSaisie({
   );
 }
 
-function BulleMessage({ message }: { message: ChatMessage }) {
+function BulleMessage({ message, marketplace }: { message: ChatMessage; marketplace: boolean }) {
   const moi = message.sender === 'me';
   const aUnePieceJointe = !!message.attachmentUrl && !!message.attachmentType;
 
@@ -709,16 +893,16 @@ function BulleMessage({ message }: { message: ChatMessage }) {
     <View style={{ flexDirection: 'row', justifyContent: moi ? 'flex-end' : 'flex-start' }}>
       <View
         style={{
-          maxWidth: '80%',
+          maxWidth: marketplace ? '80%' : '86%',
           padding: aUnePieceJointe && message.attachmentType === 'image' ? 4 : undefined,
           paddingHorizontal: aUnePieceJointe && message.attachmentType === 'image' ? undefined : 11,
           paddingTop: aUnePieceJointe && message.attachmentType === 'image' ? undefined : 7,
           paddingBottom: aUnePieceJointe && message.attachmentType === 'image' ? undefined : 5,
-          borderRadius: 14,
-          borderTopRightRadius: moi ? 4 : 14,
-          borderTopLeftRadius: moi ? 14 : 4,
-          backgroundColor: moi ? '#D7F5E4' : '#FFFFFF',
-          borderWidth: 1,
+          borderRadius: marketplace ? 14 : 20,
+          borderTopRightRadius: marketplace ? (moi ? 4 : 14) : 20,
+          borderTopLeftRadius: marketplace ? (moi ? 14 : 4) : 20,
+          backgroundColor: moi ? (marketplace ? '#D7F5E4' : '#D3F1E8') : '#FFFFFF',
+          borderWidth: marketplace ? 1 : 0,
           borderColor: moi ? 'rgba(16,185,129,0.25)' : 'rgba(0,0,0,0.06)',
           gap: 4,
         }}>
@@ -739,7 +923,7 @@ function BulleMessage({ message }: { message: ChatMessage }) {
           />
         )}
         {!aUnePieceJointe && message.text ? (
-          <Text style={{ fontSize: 15, lineHeight: 21, color: '#111827' }}>{message.text}</Text>
+          <Text style={{ fontSize: marketplace ? 15 : 16, lineHeight: marketplace ? 21 : 23, color: '#111827' }}>{message.text}</Text>
         ) : null}
         <View
           style={{
