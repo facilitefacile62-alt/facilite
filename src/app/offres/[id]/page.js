@@ -8,6 +8,37 @@ import OffreDetailClient from "./OffreDetailClient";
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 const FALLBACK_STATIC_OFFERS = {
+  "09200c93-6593-4d9c-b6da-9b7680e4d8f0": {
+    id: "09200c93-6593-4d9c-b6da-9b7680e4d8f0",
+    title: "Pyxis Logistics recrute un Chauffeur",
+    company: "Pyxis Logistics",
+    location: "Dakar et ses environs, Sénégal",
+    contract_type: "CDI / Plein temps",
+    salary_range: "Selon profil & expérience",
+    description: `Dans le cadre du développement de ses activités de transport, transit et supply chain, Pyxis Logistics recrute un Chauffeur professionnel et expérimenté basé à Dakar.
+
+🚛 POSTE : Chauffeur
+
+📌 EXIGENCES & CRITÈRES DU POSTE :
+• Expérience : 3 ans minimum dans la conduite professionnelle.
+• Permis de conduire : Permis B obligatoire et en cours de validité.
+• Connaissances géographiques : Bonne connaissance de Dakar et de ses environs.
+• Qualités recherchées : Ponctuel, dynamique et consciencieux.
+
+📁 MODALITÉS DE CANDIDATURE :
+Envoyez votre CV et vos références à :
+📧 Adresse e-mail : administratif@logistics-pyxis.com
+📌 Objet du mail obligatoire : Candidature - Chauffeur
+
+🤝 Pyxis Logistics - Votre partenaire logistique de confiance.`,
+    image_url: "/pyxis_logistics_chauffeur.jpg",
+    min_education_level: "Permis B obligatoire (3 ans d'expérience min)",
+    deadline: "2026-11-30",
+    contact_email: "administratif@logistics-pyxis.com",
+    external_link: "mailto:administratif@logistics-pyxis.com?subject=Candidature%20-%20Chauffeur",
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
   "c5e31782-b7e1-482a-a926-d183f3e79201": {
     id: "c5e31782-b7e1-482a-a926-d183f3e79201",
     title: "Sénégal Découvertes Touristiques (SDT) recrute des Chauffeurs Professionnels",
