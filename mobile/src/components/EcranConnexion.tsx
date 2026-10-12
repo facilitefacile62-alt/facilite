@@ -96,7 +96,7 @@ export default function EcranConnexion({ children, retour }: { children: ReactNo
         <ScrollView
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingTop: retour ? 6 : 24, paddingBottom: clavier ? 16 : 70 }}>
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28, paddingTop: retour ? 6 : 24, paddingBottom: clavier ? 16 : Math.max(insets.bottom, 12) + 4 }}>
           {retour ? (
             <Pressable
               onPress={retour}
@@ -108,12 +108,11 @@ export default function EcranConnexion({ children, retour }: { children: ReactNo
             </Pressable>
           ) : null}
           {children}
+          {/* Liens légaux dans le flux : en bas de la feuille si le contenu est court,
+              sous le contenu s'il est long (écran 17), jamais par-dessus. */}
+          <View style={{ flexGrow: 1, minHeight: 20 }} />
+          {!clavier ? <LiensLegaux /> : null}
         </ScrollView>
-        {!clavier ? (
-          <View className="absolute left-0 right-0 items-center" style={{ bottom: Math.max(insets.bottom, 12) + 4 }}>
-            <LiensLegaux />
-          </View>
-        ) : null}
       </View>
     </View>
   );
