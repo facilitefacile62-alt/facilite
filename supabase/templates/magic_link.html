@@ -1,0 +1,36 @@
+<!--
+  Courriel « Magic Link » de Supabase Auth (utilisé par signInWithOtp avec une
+  adresse e-mail) : il doit contenir le CODE À 6 CHIFFRES en plus du lien.
+
+  Pourquoi : l'écran « Vérifier l'adresse e-mail » de l'application mobile
+  demande ce code. Le modèle par défaut (« Your sign-in link ») n'envoie qu'un
+  lien, en anglais — constaté le 12/10/2026 en envoyant un vrai courriel.
+
+  Ce fichier est une référence : rien ne l'applique tout seul. À coller dans
+  Supabase > Authentication > Email Templates > « Magic Link » (objet suggéré :
+  « Ton code de connexion Facilité »). Le lien est conservé, le site web
+  continue donc de fonctionner comme avant.
+-->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #111827;">
+  <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Ton code de connexion</h2>
+  <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+    Saisis ce code dans l'application Facilité pour te connecter :
+  </p>
+  <p style="text-align: center; margin: 28px 0;">
+    <span style="display: inline-block; background-color: #EEECE7; color: #111827; font-weight: 800; font-size: 32px; letter-spacing: 8px; padding: 16px 24px; border-radius: 12px;">
+      {{ .Token }}
+    </span>
+  </p>
+  <p style="font-size: 14px; line-height: 1.6; color: #374151;">
+    Tu préfères un lien ? Clique sur le bouton ci-dessous.
+  </p>
+  <p style="text-align: center; margin: 24px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #10E688; color: #111827; font-weight: 800; font-size: 14px; padding: 14px 28px; border-radius: 12px; text-decoration: none;">
+      Me connecter
+    </a>
+  </p>
+  <p style="font-size: 12px; color: #9CA3AF; line-height: 1.6;">
+    Si tu n'es pas à l'origine de cette demande, ignore ce courriel. Le code et le lien expirent rapidement et ne servent qu'une fois.
+  </p>
+  <p style="font-size: 12px; color: #9CA3AF; margin-top: 24px;">— L'équipe Facilité</p>
+</div>
