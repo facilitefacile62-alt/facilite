@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
-import { chargerMesBoutiques } from '@/lib/vendeur';
 
 // Menu (maquettes 10 et 11) : une PAGE et non plus une fenêtre par-dessus
 // l'app, pour que la barre du bas de Facilité reste visible (charte §1.1) et
@@ -17,8 +16,8 @@ import { chargerMesBoutiques } from '@/lib/vendeur';
 // Le mode recherche (11) remplace l'en-tête par un champ « Rechercher une
 // offre, une entreprise… » ; valider ouvre la recherche avec ce texte.
 //
-// « Basculer » : le second espace est la boutique du compte (son nom) ou
-// « Créer sa propre boutique » si le compte n'en a pas encore.
+// « Basculer » : le second espace s'appelle « Locaux » (mise à jour du
+// 12/10/2026) et mène au fil d'actualité Marketplace.
 const FOND = '#F0EEE8';
 const VERT = '#10B981';
 const BLEU = '#2563EB';
@@ -59,7 +58,6 @@ export default function MenuScreen() {
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
   const [espaceActif, setEspaceActif] = useState<'candidat' | 'business'>('candidat');
-  const [nomBoutique, setNomBoutique] = useState<string | null | undefined>(undefined);
 
   const userId = user?.id;
 
@@ -67,21 +65,6 @@ export default function MenuScreen() {
   useEffect(() => {
     obtenirUserMode().then((m) => setEspaceActif(m === 'business' ? 'business' : 'candidat'));
   }, []);
-  useEffect(() => {
-    if (!userId) return;
-    let annule = false;
-    chargerMesBoutiques(userId)
-      .then((b) => {
-        if (!annule) setNomBoutique(b[0]?.nom ?? null);
-      })
-      .catch(() => {
-        if (!annule) setNomBoutique(null);
-      });
-    return () => {
-      annule = true;
-    };
-  }, [userId]);
-
   function retour() {
     if (router.canGoBack()) router.back();
     else router.replace('/');
@@ -106,7 +89,7 @@ export default function MenuScreen() {
   function basculerBoutique() {
     setEspaceActif('business');
     definirUserMode('business').catch(() => {});
-    router.push(nomBoutique ? '/marketplace' : '/marketplace/vendre');
+    router.push('/marketplace');
   }
 
   function lancerRecherche() {
@@ -198,7 +181,7 @@ export default function MenuScreen() {
               <Ionicons name="storefront-outline" size={19} color="rgba(0,0,0,0.35)" />
             </View>
             <View className="flex-1 min-w-0">
-              <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{nomBoutique || 'Créer sa propre boutique'}</Text>
+              <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>Locaux</Text>
               <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>Espace Vendeur & Marketplace</Text>
             </View>
             {espaceActif === 'business' ? (
