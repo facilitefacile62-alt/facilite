@@ -11,7 +11,7 @@
 // entre les mains.
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 const DOCUMENTS = [
   {
@@ -40,9 +40,10 @@ function ChoixDocumentContent() {
   const rawRedirect = searchParams.get("redirect") || "/";
   const safeRedirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
 
-  const choisir = (type) => {
-    router.push(`/bienvenue/scanner?type=${type}&redirect=${encodeURIComponent(safeRedirect)}`);
-  };
+  // Redirection directe vers la page d'insertion de document (CV)
+  useEffect(() => {
+    router.replace(`/bienvenue/scanner?type=cv&redirect=${encodeURIComponent(safeRedirect)}`);
+  }, [router, safeRedirect]);
 
   return (
     <div className="min-h-[calc(100dvh-60px)] bg-[#FAF6F1]/60 dark:bg-zinc-950 font-sans flex flex-col justify-center items-center px-4 py-8">
