@@ -209,6 +209,12 @@ export default function GlobeExplorateurBoutiques({
   const dissociationCleanupRef = useRef(null);
   // Rempli par l'effet de la carte : zoome sur le groupe qui cache une boutique.
   const zoomerSurBoutiqueRef = useRef(() => false);
+  // Vrai si une autre boutique visible est assez proche pour que la bulle
+  // d'info de celle-ci la recouvre (rempli par l'effet de la carte).
+  const aDesVoisinsRef = useRef(() => false);
+  // Id de la boutique sélectionnée, lisible depuis les gestionnaires Leaflet
+  // (créés une fois : l'état React y serait périmé).
+  const idSelectionRef = useRef(null);
   // Boutique dont la bulle produits est actuellement "épinglée" (ouverte en
   // permanence suite à un simple clic, jusqu'à un nouveau clic ou un
   // double-clic) — une ref, pas un state : lue depuis des gestionnaires
@@ -506,12 +512,41 @@ export default function GlobeExplorateurBoutiques({
     }
   }, [marqueurs, boutiqueSelectionnee]);
 
+  // Recentre le dock sur la boutique sélectionnée, quelle que soit l'origine de
+  // la sélection (clic sur la carte, flèches, avatar du dock). Avant, seul un
+  // clic DANS le dock le faisait défiler : choisir une boutique sur la carte
+  // laissait le carrousel où il était.
+  const idBoutiqueSelectionnee = boutiqueSelectionnee?.id;
+  useEffect(() => {
+    idSelectionRef.current = idBoutiqueSelectionnee ?? null;
+  }, [idBoutiqueSelectionnee]);
+  useEffect(() => {
+    if (!idBoutiqueSelectionnee || vueCarrousel !== "boutiques") return;
+    // Après la mise à jour de l'affichage : le nom sous l'avatar sélectionné
+    // change la largeur des cases ; mesurer avant faisait d'abord reculer le
+    // dock puis l'avancer (va-et-vient mesuré : 54 -> 38 -> 106).
+    let image2 = 0;
+    const image1 = requestAnimationFrame(() => {
+      image2 = requestAnimationFrame(() => {
+        const dock = carouselContainerRef.current;
+        const cible = dock?.querySelector(`[data-boutique-id="${idBoutiqueSelectionnee}"]`);
+        centrerDansDefileur(dock, cible);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(image1);
+      cancelAnimationFrame(image2);
+    };
+  }, [idBoutiqueSelectionnee, vueCarrousel]);
+
   const selectionnerBoutiqueCarousel = (b, element = null) => {
     if (dragRef.current.hasMoved) return;
     setBoutiqueSelectionnee(b);
     const handler = popupsBoutiquesRef.current.get(b.id);
-    if (handler?.ouvrir) {
+    if (handler?.ouvrir && !aDesVoisinsRef.current(b.id)) {
       handler.ouvrir();
+    } else {
+      carteRef.current?.closePopup();
     }
     // Recentre sans imposer de niveau de zoom précis — un flyTo à un zoom
     // fixe à chaque sélection (boutique OU article) dé-zoomait si on avait
@@ -528,10 +563,10 @@ export default function GlobeExplorateurBoutiques({
     // (carte, popup) mais le dock restait scrollé où il était, donnant
     // l'impression que le bouclage n'existait pas. Signalé par
     // l'utilisateur ("ça doit faire le tour").
-    const cible = element || carouselContainerRef.current?.querySelector(`[data-boutique-id="${b.id}"]`);
-    // centrerDansDefileur (pas scrollIntoView) : ne fait défiler QUE le dock,
-    // jamais la page (voir src/lib/dockDefilement.js).
-    centrerDansDefileur(carouselContainerRef.current, cible);
+    // Le recentrage du dock est fait par l'effet sur idBoutiqueSelectionnee
+    // (une seule fois, après mise à jour de l'affichage) : le faire ici aussi
+    // mesurait l'ancienne mise en page et provoquait un recul visible.
+    void element;
   };
 
   const selectionnerArticleCarousel = (a, element = null) => {
@@ -927,6 +962,12 @@ export default function GlobeExplorateurBoutiques({
         });
 
         carteRef.current = carte;
+        // Les bulles d'info passent SOUS les marqueurs (Leaflet : bulles 700,
+        // marqueurs 600 par défaut). Au-dessus, la bulle de la boutique
+        // sélectionnée recouvrait les avatars voisins et un tap tombait sur
+        // elle au lieu de la boutique visée (mesuré). « Vous êtes ici »
+        // (pane 640) reste au-dessus de tout.
+        carte.getPane("popupPane").style.zIndex = 590;
         carte.on("zoomstart", () => {
           zoomAnimationEnCoursRef.current = true;
         });
@@ -1239,6 +1280,32 @@ export default function GlobeExplorateurBoutiques({
       });
     }
 
+    aDesVoisinsRef.current = (id) => {
+      // Positions AFFICHÉES (rectangles DOM des avatars, décalage d'éclatement
+      // compris) et non les coordonnées géographiques : deux boutiques éclatées
+      // en anneau sont proches à l'écran même si leurs latlng diffèrent.
+      const rectAvatar = (entree) => {
+        const el = entree?.marqueur?.getElement?.();
+        if (!el || el.style.display === "none") return null; // absent ou caché dans une bulle
+        const av = el.querySelector(".avatar-boutique-zoom-scale");
+        const r = av?.getBoundingClientRect();
+        return r && r.width > 0 ? r : null;
+      };
+      const moi = rectAvatar(marqueursCreesParId.get(id));
+      if (!moi) return false;
+      const cx = moi.left + moi.width / 2;
+      for (const [autreId, entree] of marqueursCreesParId) {
+        if (autreId === id) continue;
+        const r = rectAvatar(entree);
+        if (!r) continue;
+        const dx = Math.abs(r.left + r.width / 2 - cx);
+        // La bulle d'info (≈ 220 × 190 px) s'ouvre au-dessus de l'avatar.
+        const dy = moi.top - (r.top + r.height / 2); // > 0 : le voisin est au-dessus
+        if (dx < 160 && dy > -90 && dy < 260) return true;
+      }
+      return false;
+    };
+
     // Permet au carrousel de faire apparaître une boutique cachée dans une bulle.
     zoomerSurBoutiqueRef.current = (id) => {
       const ids = groupeDeBoutique.get(id);
@@ -1247,6 +1314,21 @@ export default function GlobeExplorateurBoutiques({
       carte.fitBounds(L.latLngBounds(membres), { padding: [70, 70], maxZoom: ZOOM_SEPARATION, animate: true, duration: 0.5 });
       return true;
     };
+
+    // Sur écran tactile, un tap déclenche AUSSI des événements souris émulés
+    // (mouseover/mouseenter) : la bulle « survol » s'ouvrait alors toute seule
+    // au tap et recouvrait les boutiques voisines, qui devenaient intouchables
+    // (mesuré : le tap tombait sur la bulle, pas sur l'avatar). Le survol ne
+    // vaut donc que pour une vraie souris : on ignore les événements souris
+    // survenus juste après un toucher.
+    let dernierToucherLe = 0;
+    const surToucher = () => {
+      dernierToucherLe = Date.now();
+    };
+    if (carte.__surToucher) carte.getContainer().removeEventListener("touchstart", carte.__surToucher, true);
+    carte.__surToucher = surToucher;
+    carte.getContainer().addEventListener("touchstart", surToucher, { passive: true, capture: true });
+    const toucherRecent = () => Date.now() - dernierToucherLe < 900;
 
     boutiquesAffichees.forEach((b, idx) => {
       const avatarInfo = AVATARS_SNAP[idx % AVATARS_SNAP.length];
@@ -1336,7 +1418,8 @@ export default function GlobeExplorateurBoutiques({
           estSelectionne ? "scale-115 z-50" : "z-10"
         }">
           <!-- Bulle Tooltip / Badge au-dessus de l'avatar -->
-          <div class="mb-1.5 px-3 py-1 bg-gray-900/95 text-white rounded-full text-[10px] font-black shadow-2xl border border-gray-700/80 flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md">
+          <!-- pointer-events:none : l'étiquette d'une boutique recouvre souvent l'avatar de sa voisine ; elle captait les clics (retour utilisateur du 12/10/2026 : « je ne parviens pas à cliquer sur une des boutiques à cause du nom de l'autre »). -->
+          <div class="marqueur-etiquette mb-1.5 px-3 py-1 bg-gray-900/95 text-white rounded-full text-[10px] font-black shadow-2xl border border-gray-700/80 flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md" style="pointer-events:none;">
             <span class="w-2 h-2 rounded-full ${pointStatutTooltip}"></span>
             <span class="font-extrabold max-w-[110px] truncate text-white">${nomCourt}</span>
             <span class="text-[9px] font-bold text-gray-400">· ${quartier}</span>
@@ -1589,15 +1672,21 @@ export default function GlobeExplorateurBoutiques({
         boutique: b,
       });
 
-      marqueur.on("mouseover", ouvrirBulle);
-      marqueur.on("mouseout", fermerBulle);
+      const ouvrirAuSurvol = () => {
+        if (!toucherRecent()) ouvrirBulle();
+      };
+      const fermerALaSortie = () => {
+        if (!toucherRecent()) fermerBulle();
+      };
+      marqueur.on("mouseover", ouvrirAuSurvol);
+      marqueur.on("mouseout", fermerALaSortie);
 
       // Écouteur direct sur l'élément DOM du marqueur une fois ajouté
       setTimeout(() => {
         const elIcon = marqueur.getElement();
         if (elIcon) {
-          elIcon.addEventListener("mouseenter", ouvrirBulle);
-          elIcon.addEventListener("mouseleave", fermerBulle);
+          elIcon.addEventListener("mouseenter", ouvrirAuSurvol);
+          elIcon.addEventListener("mouseleave", fermerALaSortie);
         }
       }, 50);
 
@@ -1637,6 +1726,16 @@ export default function GlobeExplorateurBoutiques({
         // Une seule boutique épinglée à la fois : ferme la précédente avant
         // d'épingler celle-ci.
         carte.closePopup();
+        // Boutiques proches : sa bulle d'info recouvrirait les voisines, qui
+        // deviendraient impossibles à toucher. Le 1er tap sélectionne et
+        // centre seulement ; un 2e tap sur la boutique déjà sélectionnée
+        // ouvre la bulle.
+        if (idSelectionRef.current !== b.id && aDesVoisinsRef.current(b.id)) {
+          boutiqueEpingleeIdRef.current = null;
+          setBoutiqueSelectionnee(b);
+          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.4 });
+          return;
+        }
         boutiqueEpingleeIdRef.current = b.id;
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
@@ -2307,7 +2406,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {/* Espaceurs de centrage : sans eux, le 1er/dernier avatar ne
                     peut jamais atteindre le centre visuel (rien à faire
@@ -2403,7 +2502,7 @@ export default function GlobeExplorateurBoutiques({
                     }
                   }
                 }}
-                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth snap-x snap-mandatory cursor-grab active:cursor-grabbing touch-pan-x"
+                className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1.5 px-3 sm:px-5 flex items-center justify-start gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing touch-pan-x"
               >
                 {articlesFiltres.length === 0 ? (
                   <p className="text-[11px] text-gray-400 font-bold px-4 py-2">
