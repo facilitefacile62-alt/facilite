@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
-import { definirUserMode } from '@/lib/userMode';
+import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
 import { chargerMesBoutiques } from '@/lib/vendeur';
 
 // Menu (maquettes 10 et 11) : une PAGE et non plus une fenêtre par-dessus
@@ -62,6 +62,11 @@ export default function MenuScreen() {
   const [nomBoutique, setNomBoutique] = useState<string | null | undefined>(undefined);
 
   const userId = user?.id;
+
+  // L'espace actif est celui laissé la dernière fois.
+  useEffect(() => {
+    obtenirUserMode().then((m) => setEspaceActif(m === 'business' ? 'business' : 'candidat'));
+  }, []);
   useEffect(() => {
     if (!userId) return;
     let annule = false;
@@ -89,10 +94,19 @@ export default function MenuScreen() {
     else Alert.alert('Support RH Facilité', "Impossible d'ouvrir la discussion pour le moment.");
   }
 
+  // Bascule entre les deux espaces : le choix est mémorisé et on arrive dans
+  // l'espace choisi (accueil Facilité, ou Marketplace — ou la création de
+  // boutique tant que le compte n'en a pas).
+  function basculerCandidat() {
+    setEspaceActif('candidat');
+    definirUserMode('facilite').catch(() => {});
+    router.navigate('/');
+  }
+
   function basculerBoutique() {
     setEspaceActif('business');
     definirUserMode('business').catch(() => {});
-    router.push('/marketplace/vendre');
+    router.push(nomBoutique ? '/marketplace' : '/marketplace/vendre');
   }
 
   function lancerRecherche() {
@@ -163,7 +177,7 @@ export default function MenuScreen() {
           </View>
 
           <Pressable
-            onPress={() => setEspaceActif('candidat')}
+            onPress={basculerCandidat}
             className="flex-row items-center gap-3 mt-3"
             style={{ backgroundColor: espaceActif === 'candidat' ? FOND : 'transparent', borderRadius: 14, padding: 10 }}>
             <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
@@ -176,7 +190,10 @@ export default function MenuScreen() {
             {espaceActif === 'candidat' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>Basculer →</Text>}
           </Pressable>
 
-          <Pressable onPress={basculerBoutique} className="flex-row items-center gap-3" style={{ padding: 10 }}>
+          <Pressable
+            onPress={basculerBoutique}
+            className="flex-row items-center gap-3"
+            style={{ backgroundColor: espaceActif === 'business' ? FOND : 'transparent', borderRadius: 14, padding: 10 }}>
             <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
               <Ionicons name="storefront-outline" size={19} color="rgba(0,0,0,0.35)" />
             </View>
@@ -184,7 +201,11 @@ export default function MenuScreen() {
               <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{nomBoutique || 'Créer sa propre boutique'}</Text>
               <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>Espace Vendeur & Marketplace</Text>
             </View>
-            <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>↻ Basculer →</Text>
+            {espaceActif === 'business' ? (
+              <Ionicons name="checkmark-circle-outline" size={22} color={VERT} />
+            ) : (
+              <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>↻ Basculer →</Text>
+            )}
           </Pressable>
 
           <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
