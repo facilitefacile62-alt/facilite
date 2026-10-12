@@ -13,7 +13,20 @@ export default function EnteteAuth() {
   const router = useRouter();
   return (
     <View className="flex-row items-center justify-between px-5 py-3.5" style={{ backgroundColor: '#e3dbcc' }}>
-      <Text className="text-[19px] font-black text-[#2563EB]">Facilité</Text>
+      <View className="flex-row items-center gap-1.5">
+        {/* Retour (écrans 15, 16, 17) : ramène à l'écran précédent de la pile, jamais ailleurs. */}
+        {router.canGoBack() ? (
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityLabel="Retour"
+            hitSlop={4}
+            className="items-center justify-center"
+            style={{ width: 44, height: 44, marginLeft: -12 }}>
+            <Ionicons name="chevron-back" size={26} color="#111" />
+          </Pressable>
+        ) : null}
+        <Text className="text-[19px] font-black text-[#2563EB]">Facilité</Text>
+      </View>
       <Pressable
         onPress={() => router.replace('/login')}
         accessibilityRole="button"
