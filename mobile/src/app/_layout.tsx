@@ -1,4 +1,4 @@
-import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { bienvenueDejaVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
 
@@ -19,7 +20,7 @@ SplashScreen.preventAutoHideAsync();
  * laisse juste passer les enfants une fois la redirection décidée).
  */
 function AuthGate({ children }: { children: ReactNode }) {
-  const { session, profile, profilChargePour, loading } = useAuth();
+  const { session, profile, profilChargePour, loading, signOut } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   // Compte pour lequel l'onboarding a déjà été examiné pendant cette
@@ -28,15 +29,32 @@ function AuthGate({ children }: { children: ReactNode }) {
   // 24) renverrait sans cesse à « Bienvenue ». Tant que onboarding_done reste
   // false, l'ouverture suivante le propose de nouveau.
   const onboardingExamine = useRef<string | null>(null);
+  // Session héritée d'un lancement précédent : vérifiée une seule fois.
+  const sessionVerifiee = useRef(false);
 
   useEffect(() => {
     if (loading) return;
     const dansGroupeAuth = segments[0] === '(auth)';
+    const surNomPrenom = dansGroupeAuth && (segments as string[])[1] === 'nom-prenom';
     if (!session) {
       onboardingExamine.current = null;
-      if (!dansGroupeAuth) router.replace('/login');
+      sessionVerifiee.current = false;
+      if (!dansGroupeAuth) {
+        // Écran « Bienvenue » au tout premier lancement, connexion ensuite.
+        bienvenueDejaVue().then((vu) => router.replace((vu ? '/login' : '/bienvenue') as Href));
+      }
       return;
     }
+
+    // « Enregistre tes informations de connexion » décoché : une session
+    // laissée par un lancement précédent est fermée.
+    if (!sessionVerifiee.current) {
+      sessionVerifiee.current = true;
+      sessionAFermerAuDemarrage().then((fermer) => {
+        if (fermer) signOut();
+      });
+    }
+
     // Le profil réel de CET utilisateur doit être lu avant de décider (le
     // cache local peut venir d'un autre compte ou être périmé).
     if (profilChargePour !== session.user.id) return;
@@ -47,12 +65,15 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (onboardingExamine.current !== session.user.id) {
       onboardingExamine.current = session.user.id;
       if (aOnboarding) {
-        router.replace('/onboarding/bienvenue');
+        // Nouveau compte : « Nom et prénom » une seule fois, puis l'onboarding.
+        nomDejaConfirme(session.user.id).then((confirme) =>
+          router.replace((confirme ? '/onboarding/bienvenue' : '/nom-prenom') as Href)
+        );
         return;
       }
     }
-    if (dansGroupeAuth) router.replace('/');
-  }, [session, profile, profilChargePour, loading, segments, router]);
+    if (dansGroupeAuth && !surNomPrenom) router.replace('/');
+  }, [session, profile, profilChargePour, loading, segments, router, signOut]);
 
   return children;
 }
