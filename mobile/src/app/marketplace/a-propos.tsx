@@ -86,9 +86,9 @@ export default function AProposMarketplaceScreen() {
 
             <Pressable
               onPress={() => router.push('/marketplace/vendre')}
-              className="flex-row items-center gap-3 rounded-2xl px-4 py-4 active:opacity-90"
-              style={{ backgroundColor: VERT }}>
-              <View className="w-10 h-10 rounded-xl bg-white/25 items-center justify-center">
+              className="flex-row items-center gap-3 rounded-full active:opacity-90"
+              style={{ backgroundColor: VERT, paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+              <View className="w-11 h-11 rounded-full bg-white/25 items-center justify-center">
                 <Ionicons name="storefront" size={20} color="#FFFFFF" />
               </View>
               <View className="flex-1">
@@ -97,7 +97,6 @@ export default function AProposMarketplaceScreen() {
                   {estVendeur ? 'Gérer vos articles et vos commandes' : 'Créez votre boutique en 2 étapes'}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
             </Pressable>
 
             <View className="flex-row gap-2.5">

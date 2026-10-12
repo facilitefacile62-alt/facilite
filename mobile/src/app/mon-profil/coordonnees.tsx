@@ -79,21 +79,23 @@ export default function ProfilCoordonneesScreen() {
           <Pressable
             onPress={enregistrer}
             disabled={!modifie || enCours}
-            className="flex-row items-center gap-3 rounded-[14px] p-3 mt-4"
+            className="flex-row items-center gap-3 rounded-full mt-4"
             style={{
               backgroundColor: '#F3FBF7',
               borderWidth: 1.5,
               borderColor: '#34D399',
               opacity: !modifie || enCours ? 0.5 : 1,
+              paddingVertical: 8,
+              paddingLeft: 8,
+              paddingRight: 20,
             }}>
-            <View className="w-10 h-10 rounded-[10px] bg-[#D7F2EA] items-center justify-center">
+            <View className="w-11 h-11 rounded-full bg-[#D7F2EA] items-center justify-center">
               {enCours ? <ActivityIndicator color="#047857" size="small" /> : <Ionicons name="checkmark" size={18} color="#047857" />}
             </View>
             <View className="flex-1">
               <Text className="text-[14px] font-bold text-[#1A1A1A]">Enregistrer</Text>
               <Text className="text-[12px] text-black/45 mt-0.5">Téléphone, WhatsApp, e-mail et ville</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
           </Pressable>
         </ScrollView>
       </SafeAreaView>

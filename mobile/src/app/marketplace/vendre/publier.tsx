@@ -238,9 +238,9 @@ export default function PublierArticleScreen() {
               setPhotos([]);
               setEcran('scan');
             }}
-            className="flex-row items-center gap-3 rounded-[16px] p-3.5"
-            style={{ backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399' }}>
-            <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: '#D7F2EA' }}>
+            className="flex-row items-center gap-3 rounded-full"
+            style={{ backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399', padding: 10, paddingRight: 20 }}>
+            <View className="items-center justify-center" style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#D7F2EA' }}>
               <Ionicons name="camera-outline" size={22} color={FONCE} />
             </View>
             <View className="flex-1">
@@ -253,7 +253,6 @@ export default function PublierArticleScreen() {
               </View>
               <Text className="text-[12.5px] mt-0.5 font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>Une photo suffit, vous mettez le prix</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.3)" />
           </Pressable>
 
           <Pressable
@@ -261,9 +260,9 @@ export default function PublierArticleScreen() {
               setPhotos([]);
               setEcran('categorie');
             }}
-            className="flex-row items-center gap-3.5 rounded-[20px] bg-white p-4"
-            style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }}>
-            <View className="items-center justify-center" style={{ width: 58, height: 58, borderRadius: 16, backgroundColor: '#ECFDF5' }}>
+            className="flex-row items-center gap-3.5 rounded-full bg-white"
+            style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', padding: 10, paddingRight: 22 }}>
+            <View className="items-center justify-center" style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: '#ECFDF5' }}>
               <Text style={{ fontSize: 27 }}>✍️</Text>
             </View>
             <View className="flex-1">
@@ -272,7 +271,6 @@ export default function PublierArticleScreen() {
                 Choisissez la catégorie et remplissez la fiche vous-même.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="rgba(0,0,0,0.3)" />
           </Pressable>
         </View>
       </View>
