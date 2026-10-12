@@ -956,9 +956,26 @@ Envoyez dès maintenant votre CV à l'adresse suivante :
   }
 };
 
+// Panne passagère de la base (réseau, délai dépassé, service indisponible) :
+// à ne JAMAIS confondre avec « cette offre n'existe pas ». Répondre 404 dans ce
+// cas faisait croire à Google que la page était supprimée (Search Console,
+// « Introuvable (404) » sur des offres pourtant actives) ; une erreur serveur
+// 5xx lui dit au contraire de réessayer plus tard sans désindexer.
+class OffreIndisponibleError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "OffreIndisponibleError";
+  }
+}
+
+// PostgREST renvoie PGRST116 quand .single() ne trouve aucune ligne : c'est le
+// seul cas « l'offre n'existe pas ». Toute autre erreur est une panne.
+const CODE_AUCUNE_LIGNE = "PGRST116";
+
 async function fetchOffer(id) {
   if (!id) return null;
   const strId = String(id).trim();
+  let panneBase = false;
 
   // 1. Si présent dans les offres statiques de secours (IDs numériques ou clés enregistrées)
   if (FALLBACK_STATIC_OFFERS[strId]) {
@@ -982,6 +999,11 @@ async function fetchOffer(id) {
         .eq("id", strId)
         .single();
 
+      if (error && error.code !== CODE_AUCUNE_LIGNE) {
+        console.error("fetchOffer DB error:", error.message);
+        panneBase = true;
+      }
+
       if (!error && data) {
         let recruiterVerified = false;
         if (data.recruiter_id) {
@@ -997,6 +1019,7 @@ async function fetchOffer(id) {
       }
     } catch (err) {
       console.error("fetchOffer DB error:", err);
+      panneBase = true;
     }
   }
 
@@ -1006,6 +1029,10 @@ async function fetchOffer(id) {
   );
   if (found) {
     return { ...found, recruiterVerified: true };
+  }
+
+  if (panneBase) {
+    throw new OffreIndisponibleError(`Lecture de l'offre ${strId} impossible : base indisponible`);
   }
 
   return null;
@@ -1088,7 +1115,14 @@ function formatJobDescriptionToHtml(text) {
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const offer = await fetchOffer(id);
+  let offer;
+  try {
+    offer = await fetchOffer(id);
+  } catch (err) {
+    if (!(err instanceof OffreIndisponibleError)) throw err;
+    // Panne passagère : titre neutre, la page elle-même répondra par une erreur serveur.
+    return { title: "Offre d'emploi | Facilité" };
+  }
 
   if (!offer) {
     return { title: "Offre d'emploi introuvable | Facilité" };
@@ -1142,6 +1176,8 @@ export async function generateMetadata({ params }) {
 
 export default async function OffreDetailPage({ params }) {
   const { id } = await params;
+  // Une panne de la base lève OffreIndisponibleError (réponse 5xx, page
+  // d'erreur) ; seul « l'offre n'existe pas » mène au 404.
   const offer = await fetchOffer(id);
 
   if (!offer) {
