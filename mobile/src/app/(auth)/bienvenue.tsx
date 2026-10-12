@@ -5,21 +5,20 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { VERT_BANDEAU, CREME } from '@/components/EcranConnexion';
+import { LogoCle, VERT_BANDEAU, CREME } from '@/components/EcranConnexion';
 import { lireLangue, libelleLangue, marquerBienvenueVue, type CodeLangue } from '@/lib/preferencesConnexion';
 import { SITE_URL } from '@/lib/webEcrans';
 
-// Bienvenue — écran 01, montré UNIQUEMENT au tout premier lancement, tel que
-// sur l'image 01 : titre « Bienvenue sur ffacilite » en vert foncé sur la
-// bande claire, illustration pleine largeur (découpée de cette image dans
-// assets/images/connexion/), puis la feuille crème : « Accepter et continuer »,
-// sélecteur de langue et, tout en bas, la phrase d'acceptation avec ses deux
-// liens vers les vraies pages légales du site.
-//
-// Le texte de la spécification parlait d'un bandeau vert foncé avec le logo
-// clé ; l'image montre l'illustration à la place — c'est l'image qui est
-// reproduite.
-const FOND_TITRE = '#DDE6E2';
+// Bienvenue — écran 01, montré UNIQUEMENT au tout premier lancement.
+// Mise à jour du 12/10/2026 (elle l'emporte sur l'image 01) : bandeau vert
+// foncé #0B3D2A (≈ 330 px) avec le titre « Bienvenue sur ffacilite » en blanc
+// AU-DESSUS du grand logo clé (halo 150 px → disque 104 px → clé), puis la
+// feuille crème : « Accepter et continuer », sélecteur de langue et, tout en
+// bas, la phrase d'acceptation avec ses deux liens vers les pages légales.
+// L'image 01 montrait encore l'illustration des cinq personnages sous un titre
+// vert foncé : elle est remplacée par le logo ; l'emplacement d'une image
+// d'arrière-plan du bandeau est prévu (BANDEAU_IMAGE), à fournir plus tard.
+const BANDEAU_IMAGE: number | null = null;
 
 export default function BienvenueScreen() {
   const router = useRouter();
@@ -38,20 +37,18 @@ export default function BienvenueScreen() {
   const ouvrir = (chemin: string) => Linking.openURL(`${SITE_URL}${chemin}`).catch(() => {});
 
   return (
-    <View className="flex-1" style={{ backgroundColor: FOND_TITRE }}>
-      <View className="items-center justify-center" style={{ paddingTop: insets.top, height: insets.top + 46 }}>
-        <Text className="text-[26px] font-black text-center" style={{ color: VERT_BANDEAU }}>
+    <View className="flex-1" style={{ backgroundColor: VERT_BANDEAU }}>
+      <View className="items-center justify-center" style={{ paddingTop: insets.top, height: insets.top + 330 - 28 }}>
+        {BANDEAU_IMAGE ? (
+          <Image alt="" source={BANDEAU_IMAGE} contentFit="cover" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+        ) : null}
+        <Text className="text-[24px] font-bold text-center text-white" style={{ marginBottom: 22 }}>
           Bienvenue sur ffacilite
         </Text>
+        <LogoCle taille={150} />
       </View>
-      <Image
-        alt=""
-        source={require('../../../assets/images/connexion/bienvenue-illustration.png')}
-        contentFit="cover"
-        style={{ width: '100%', aspectRatio: 792 / 434 }}
-      />
 
-      <View className="flex-1 px-7" style={{ backgroundColor: CREME, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 30, marginTop: -8 }}>
+      <View className="flex-1 px-7" style={{ backgroundColor: CREME, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 30 }}>
         <Pressable
           onPress={accepter}
           accessibilityRole="button"
