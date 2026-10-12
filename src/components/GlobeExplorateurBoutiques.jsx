@@ -13,7 +13,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
-import { calculerDecalagesDissociation } from "@/lib/dissociationMarqueurs";
+import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
@@ -207,6 +207,8 @@ export default function GlobeExplorateurBoutiques({
   // rappelé à chaque clic/changement de sélection, sans ce nettoyage
   // chaque passage accumulerait un écouteur de plus sur la même carte.
   const dissociationCleanupRef = useRef(null);
+  // Rempli par l'effet de la carte : zoome sur le groupe qui cache une boutique.
+  const zoomerSurBoutiqueRef = useRef(() => false);
   // Boutique dont la bulle produits est actuellement "épinglée" (ouverte en
   // permanence suite à un simple clic, jusqu'à un nouveau clic ou un
   // double-clic) — une ref, pas un state : lue depuis des gestionnaires
@@ -517,7 +519,9 @@ export default function GlobeExplorateurBoutiques({
     // impression de saccade/zoom à chaque déplacement dans le carrousel
     // d'articles. Demande explicite de l'utilisateur ("ça devrait être
     // comme Snap[chat]", pas de mouvement de caméra à chaque changement).
-    carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.8 });
+    if (!zoomerSurBoutiqueRef.current(b.id)) {
+      carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.8 });
+    }
     // Les flèches précédent/suivant (allerBoutiquePrecedente/Suivante)
     // n'ont pas d'élément DOM sous la main (pas de clic direct sur un
     // avatar) — sans ce repli, la sélection bouclait bien côté données
@@ -1120,15 +1124,99 @@ export default function GlobeExplorateurBoutiques({
       entree.rafraichirPopup?.();
     }
 
+    // REGROUPEMENT EN BULLES (retour utilisateur du 12/10/2026 : au dézoom, la
+    // dissociation en anneau écartait les avatars loin de leur vraie place —
+    // certains au milieu de la mer, reliés par des traits pointillés — « la
+    // façon dont elles se dispersent ne me plaît pas »). Des boutiques
+    // GÉOGRAPHIQUEMENT distinctes qui se recouvrent à l'écran sont maintenant
+    // remplacées par UNE bulle portant leur nombre, posée au barycentre ; un
+    // appui zoome sur le groupe et elles se séparent d'elles-mêmes. L'anneau
+    // relié par des traits n'est conservé que pour les boutiques situées
+    // vraiment au même endroit (même immeuble, même marché) : elles ne se
+    // séparent jamais, quel que soit le zoom.
+    const ZOOM_SEPARATION = 18;
+    let bullesActives = [];
+    let signatureBulles = "";
+    const groupeDeBoutique = new Map(); // id boutique -> ids du groupe (regroupé)
+
+    function majorationSeparable(ids) {
+      // Séparable = au zoom maximal, au moins deux membres restent distants
+      // de plus d'un diamètre d'avatar : zoomer les sépare réellement.
+      const pts = ids
+        .map((id) => marqueursCreesParId.get(id)?.marqueur?.getLatLng())
+        .filter(Boolean)
+        .map((ll) => carte.project(ll, ZOOM_SEPARATION));
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          if (Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y) > DIAMETRE_AVATAR_PX * 1.1) return true;
+        }
+      }
+      return false;
+    }
+
+    function afficherBulle(ids) {
+      const membres = ids.map((id) => marqueursCreesParId.get(id)?.marqueur?.getLatLng()).filter(Boolean);
+      const lat = membres.reduce((t, ll) => t + ll.lat, 0) / membres.length;
+      const lng = membres.reduce((t, ll) => t + ll.lng, 0) / membres.length;
+      const icone = L.divIcon({
+        className: "bulle-regroupement",
+        html: `<div style="width:46px;height:46px;border-radius:9999px;background:#10B981;color:#04130d;border:3px solid #fff;box-shadow:0 0 0 6px rgba(16,185,129,.28),0 6px 16px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font:800 17px system-ui,sans-serif;cursor:pointer">${ids.length}</div>`,
+        iconSize: [46, 46],
+        iconAnchor: [23, 23],
+      });
+      const bulle = L.marker([lat, lng], { icon: icone, zIndexOffset: 500, keyboard: false, title: `${ids.length} boutiques` });
+      bulle.on("click", (e) => {
+        if (e?.originalEvent) e.originalEvent.stopPropagation();
+        carte.fitBounds(L.latLngBounds(membres), { padding: [70, 70], maxZoom: ZOOM_SEPARATION, animate: true, duration: 0.5 });
+      });
+      bulle.addTo(groupe);
+      bullesActives.push(bulle);
+    }
+
     function recalculerDissociations(zoom = carte.getZoom()) {
       if (!Number.isFinite(zoom)) return;
       const echelle = echelleAvatarPourZoom(zoom);
+
+      // 1) Boutiques seules : lesquelles se recouvrent, et sont-elles séparables par le zoom ?
+      const pixelsBoutiques = boutiquesAffichees.map((b) => {
+        const px = carte.project([b.lat, b.lng], zoom);
+        return { id: b.id, x: px.x, y: px.y, ici: false };
+      });
+      const { groupes } = calculerDecalagesDissociation(pixelsBoutiques, { echelle });
+      const regroupes = new Set();
+      const groupesBulle = [];
+      groupeDeBoutique.clear();
+      groupes.forEach((ids) => {
+        // Au zoom maximal, on ne regroupe plus : l'anneau relié prend le relais.
+        if (zoom < ZOOM_SEPARATION && majorationSeparable(ids)) {
+          groupesBulle.push(ids);
+          ids.forEach((id) => {
+            regroupes.add(id);
+            groupeDeBoutique.set(id, ids);
+          });
+        }
+      });
+
+      // 2) Affichage : membres regroupés masqués, une bulle par groupe (recréées seulement si le découpage change).
+      boutiquesAffichees.forEach((b) => {
+        const el = marqueursCreesParId.get(b.id)?.marqueur?.getElement?.();
+        if (el) el.style.display = regroupes.has(b.id) ? "none" : "";
+      });
+      const signature = groupesBulle.map((ids) => [...ids].sort().join("+")).sort().join("|");
+      if (signature !== signatureBulles) {
+        bullesActives.forEach((m) => groupe.removeLayer(m));
+        bullesActives = [];
+        groupesBulle.forEach((ids) => afficherBulle(ids));
+        signatureBulles = signature;
+      }
       // "Vous êtes ici" inclus dans le même regroupement que les boutiques
       // (pas seulement entre boutiques) : sinon, quand il coïncide avec une
       // boutique, son badge reste caché derrière elle sans jamais être
       // écarté — confirmé par capture d'écran réelle. Son pane est
       // maintenant AU-DESSUS des marqueurs (voir centrerSurPosition).
-      const points = boutiquesAffichees.map((b) => ({ id: b.id, ll: [b.lat, b.lng], ici: false }));
+      const points = boutiquesAffichees
+        .filter((b) => !regroupes.has(b.id))
+        .map((b) => ({ id: b.id, ll: [b.lat, b.lng], ici: false }));
       if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
         points.push({ id: "__ici__", ll: positionOrigineMoiRef.current, ici: true });
       }
@@ -1145,7 +1233,20 @@ export default function GlobeExplorateurBoutiques({
         const d = decalages.get(p.id);
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
+      regroupes.forEach((id) => {
+        const entree = marqueursCreesParId.get(id);
+        if (entree) appliquerDecalageMarqueur(entree, 0, 0);
+      });
     }
+
+    // Permet au carrousel de faire apparaître une boutique cachée dans une bulle.
+    zoomerSurBoutiqueRef.current = (id) => {
+      const ids = groupeDeBoutique.get(id);
+      if (!ids) return false;
+      const membres = ids.map((i) => marqueursCreesParId.get(i)?.marqueur?.getLatLng()).filter(Boolean);
+      carte.fitBounds(L.latLngBounds(membres), { padding: [70, 70], maxZoom: ZOOM_SEPARATION, animate: true, duration: 0.5 });
+      return true;
+    };
 
     boutiquesAffichees.forEach((b, idx) => {
       const avatarInfo = AVATARS_SNAP[idx % AVATARS_SNAP.length];
@@ -1508,44 +1609,39 @@ export default function GlobeExplorateurBoutiques({
       // ce délai annule l'action "simple clic" et déclenche le double-clic
       // à la place. Nouvelle interaction demandée explicitement par
       // l'utilisateur, inspirée des cartes façon Snapchat.
-      let clicEnAttente = null;
+      // Premier clic : réaction IMMÉDIATE (bulle + sélection). Un second clic
+      // dans les 320 ms ouvre la fiche complète. Avant, le premier clic
+      // attendait 260 ms pour distinguer simple et double clic : la carte
+      // « mettait du temps à répondre » (retour utilisateur du 12/10/2026).
+      let dernierClicLe = 0;
       marqueur.on("click", (e) => {
         if (e?.originalEvent) e.originalEvent.stopPropagation();
+        const maintenant = Date.now();
 
-        if (clicEnAttente) {
-          clearTimeout(clicEnAttente);
-          clicEnAttente = null;
+        if (maintenant - dernierClicLe < 320) {
+          dernierClicLe = 0;
           boutiqueEpingleeIdRef.current = null;
           ouvrirBulle();
           setBoutiqueSelectionnee(b);
           setVueBoutiqueDetails(true);
-          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
+          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.4 });
           return;
         }
+        dernierClicLe = maintenant;
 
-        clicEnAttente = setTimeout(() => {
-          clicEnAttente = null;
-          if (boutiqueEpingleeIdRef.current === b.id) {
-            boutiqueEpingleeIdRef.current = null;
-            carte.closePopup(popup);
-            return;
-          }
-          // Une seule boutique épinglée à la fois : ferme la précédente
-          // avant d'épingler celle-ci (closePopup sans argument ferme
-          // n'importe quelle bulle actuellement ouverte sur cette carte).
-          carte.closePopup();
-          boutiqueEpingleeIdRef.current = b.id;
-          ouvrirBulle();
-          setBoutiqueSelectionnee(b);
-          // panTo, pas flyTo à un zoom fixe : un clic sur une boutique doit
-          // seulement recentrer la carte dessus, pas imposer un niveau de
-          // zoom précis à chaque fois (dé-zoome si on avait zoomé plus,
-          // zoome fort si on était dé-zoomé). Demande explicite de
-          // l'utilisateur. marqueur.getLatLng() (pas b.lat/b.lng) suit la
-          // position réelle, potentiellement dissociée automatiquement (voir
-          // recalculerDissociations).
-          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.8 });
-        }, 260);
+        if (boutiqueEpingleeIdRef.current === b.id) {
+          boutiqueEpingleeIdRef.current = null;
+          carte.closePopup(popup);
+          return;
+        }
+        // Une seule boutique épinglée à la fois : ferme la précédente avant
+        // d'épingler celle-ci.
+        carte.closePopup();
+        boutiqueEpingleeIdRef.current = b.id;
+        ouvrirBulle();
+        setBoutiqueSelectionnee(b);
+        // panTo court (pas de flyTo à zoom fixe) : seulement recentrer.
+        carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.4 });
       });
     });
 
@@ -2235,14 +2331,16 @@ export default function GlobeExplorateurBoutiques({
                       data-boutique-id={b.id}
                       type="button"
                       onClick={(e) => selectionnerBoutiqueCarousel(b, e.currentTarget)}
-                      onMouseEnter={() => {
+                      onPointerEnter={(e) => {
+                        if (e.pointerType !== "mouse") return;
                         const handler = popupsBoutiquesRef.current.get(b.id);
                         if (handler) {
                           handler.ouvrir();
                           carteRef.current?.panTo([b.lat, b.lng], { animate: true, duration: 0.4 });
                         }
                       }}
-                      onMouseLeave={() => {
+                      onPointerLeave={(e) => {
+                        if (e.pointerType !== "mouse") return;
                         popupsBoutiquesRef.current.get(b.id)?.fermer();
                       }}
                       className="flex flex-col items-center shrink-0 cursor-pointer group snap-center transition-all duration-300 focus:outline-none"
@@ -2251,7 +2349,7 @@ export default function GlobeExplorateurBoutiques({
                       <div
                         className={`relative rounded-full transition-all duration-300 flex items-center justify-center ${
                           estSelectionne
-                            ? "w-13 h-13 sm:w-14 sm:h-14 p-[3px] bg-white shadow-[0_0_22px_rgba(255,255,255,0.9),0_8px_22px_rgba(0,0,0,0.75)] ring-2 ring-black/50 scale-105 z-20"
+                            ? "w-12 h-12 sm:w-13 sm:h-13 p-[3px] bg-white shadow-[0_0_22px_rgba(255,255,255,0.9),0_8px_22px_rgba(0,0,0,0.75)] ring-2 ring-black/50 scale-110 z-20"
                             : "w-12 h-12 sm:w-13 sm:h-13 p-[1.5px] bg-white/25 opacity-90 hover:opacity-100 hover:scale-105 shadow-sm"
                         }`}
                       >
