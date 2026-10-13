@@ -13,7 +13,7 @@ import { positionActuelle } from "@/lib/marketplaceData";
 
 const CarteOffresVilles = dynamic(() => import("@/components/CarteOffresVilles"), {
   ssr: false,
-  loading: () => <div className="w-full h-full rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />,
+  loading: () => <div className="w-full h-[420px] rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />,
 });
 
 export default function AutourFacilitePage() {
@@ -63,19 +63,10 @@ export default function AutourFacilitePage() {
               : `${totalEntreprises} entreprise${totalEntreprises > 1 ? "s" : ""} recrutent · ${totalOffres} offre${totalOffres > 1 ? "s" : ""} dans ${groupes.length} ville${groupes.length > 1 ? "s" : ""}`}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={localiser}
-          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold flex items-center gap-2"
-        >
-          <i className="fa-solid fa-location-crosshairs"></i> Me localiser
-        </button>
       </div>
       {msgPosition ? <p className="text-xs text-red-600 mb-2">{msgPosition}</p> : null}
 
-      <div className="relative w-full h-[380px] sm:h-[460px] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
-        <CarteOffresVilles groupes={groupes} selection={selection} onSelect={onSelect} position={position} />
-      </div>
+      <CarteOffresVilles groupes={groupes} selection={selection} onSelect={onSelect} position={position} onLocaliser={localiser} />
 
       <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2">
         Position approximative : le centre de chaque ville.
