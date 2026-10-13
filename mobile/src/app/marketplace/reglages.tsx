@@ -121,7 +121,7 @@ export default function ReglagesMarketplaceScreen() {
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0EEE8' }}>
               <Ionicons name="arrow-back" size={19} color="#2563EB" />
             </Pressable>
-            <Text className="flex-1 text-center text-[15px] font-black tracking-widest" style={{ marginRight: 44 }}>RÉGLAGES</Text>
+            <Text className="flex-1 text-center text-[15px] font-black tracking-widest" style={{ marginRight: 44 }} numberOfLines={1}>{(boutique?.nom ?? 'Réglages').toUpperCase()}</Text>
           </View>
 
           <LigneReglage titre="🤑 Faire profit & Boost" onPress={() => BIENTOT('Faire profit & Boost')} />
