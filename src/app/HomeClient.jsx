@@ -1949,25 +1949,9 @@ export default function Home({ initialOffers = [] }) {
                 )}
               </div>
 
-              {/* 📱 Application Android (APK Direct) */}
-              <div className="bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs text-center flex flex-col items-center space-y-2 hover:shadow-md transition">
-                <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs">
-                  <i className="fa-brands fa-android text-lg"></i>
-                </div>
-                <div className="flex items-center gap-1.5 justify-center">
-                  <h4 className="text-[11px] font-black text-gray-900">Application Android (APK)</h4>
-                  <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-black rounded-md uppercase">Direct</span>
-                </div>
-                <p className="text-[9px] text-gray-500 leading-relaxed font-semibold">
-                  Installez directement Facilité sur votre smartphone Android sans passer par le Play Store.
-                </p>
-                <Link
-                  href="/telecharger-android"
-                  className="w-full bg-[#10E688] hover:bg-[#0fd57d] text-gray-950 font-extrabold py-2 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block active:scale-95"
-                >
-                  Télécharger l&apos;APK →
-                </Link>
-              </div>
+              {/* Emplacement réservé à Google AdSense (colonne de droite, sous le Diagnostic CV).
+                  La carte « Application Android (APK) » a été retirée d'ici à la demande du
+                  propriétaire ; la page /telecharger-android reste accessible. */}
 
           </aside>
 
