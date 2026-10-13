@@ -9,13 +9,15 @@ export type Story = {
   imageUrl: string;
   libelleBouton: string;
   lien: string | null;
+  /** false : l'administrateur a caché le bouton (et donc le numéro) de cette story. */
+  boutonVisible: boolean;
   creeLe: string;
 };
 
 export async function chargerStories(): Promise<Story[]> {
   const { data, error } = await supabase
     .from('stories')
-    .select('id, titre, image_url, libelle_bouton, lien, created_at')
+    .select('id, titre, image_url, libelle_bouton, lien, bouton_visible, created_at')
     .eq('actif', true)
     .order('ordre', { ascending: true })
     .order('created_at', { ascending: false });
@@ -26,6 +28,7 @@ export async function chargerStories(): Promise<Story[]> {
     imageUrl: s.image_url as string,
     libelleBouton: s.libelle_bouton as string,
     lien: (s.lien as string | null) ?? null,
+    boutonVisible: s.bouton_visible !== false,
     creeLe: s.created_at as string,
   }));
 }

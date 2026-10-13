@@ -70,7 +70,8 @@ export default function StoryViewer({ stories, debut = 0, onClose }) {
   }, [onClose, suivante, precedente]);
 
   if (!story) return null;
-  const externe = story.lien && /^https?:\/\//.test(story.lien);
+  // Bouton masqué depuis /admin/stories (bouton_visible = false) : ni bouton ni numéro.
+  const externe = story.bouton_visible !== false && story.lien && /^https?:\/\//.test(story.lien);
   const whatsapp = externe && /wa\.me|whatsapp/i.test(story.lien);
 
   return (

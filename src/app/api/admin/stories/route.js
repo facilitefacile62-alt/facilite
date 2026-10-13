@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 const BUCKET = "stories-media";
 const TAILLE_MAX = 5 * 1024 * 1024;
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-const COLONNES = "id, titre, image_url, libelle_bouton, lien, ordre, actif, created_at, updated_at";
+const COLONNES = "id, titre, image_url, libelle_bouton, lien, bouton_visible, ordre, actif, created_at, updated_at";
 
 async function autoriserAdmin(req) {
   const { user, identifier, error: authError } = await requireUser(req, { logDenials: true });
@@ -136,6 +136,7 @@ export async function POST(req) {
       image_url: visuel.url,
       libelle_bouton: champs.libelle || "Commander via WhatsApp",
       lien: lien.lien,
+      bouton_visible: body?.bouton_visible !== false,
       ordre,
       actif: body?.actif !== false,
       created_by: user.id,
@@ -169,6 +170,7 @@ export async function PATCH(req) {
     patch.lien = lien.lien;
   }
   if (typeof body.actif === "boolean") patch.actif = body.actif;
+  if (typeof body.bouton_visible === "boolean") patch.bouton_visible = body.bouton_visible;
   if (Number.isInteger(body.ordre)) patch.ordre = body.ordre;
 
   let ancienChemin = null;

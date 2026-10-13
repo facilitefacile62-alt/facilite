@@ -193,7 +193,7 @@ export default function Home({ initialOffers = [] }) {
     let annule = false;
     supabase
       .from("stories")
-      .select("id, titre, image_url, libelle_bouton, lien, created_at")
+      .select("id, titre, image_url, libelle_bouton, lien, bouton_visible, created_at")
       .eq("actif", true)
       .order("ordre", { ascending: true })
       .order("created_at", { ascending: false })

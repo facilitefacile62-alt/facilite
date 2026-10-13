@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 const TYPES_ACCEPTES = ["image/jpeg", "image/png", "image/webp"];
 const TAILLE_MAX = 5 * 1024 * 1024;
-const VIDE = { id: null, titre: "", libelle_bouton: "Commander via WhatsApp", lien: "", actif: true };
+const VIDE = { id: null, titre: "", libelle_bouton: "Commander via WhatsApp", lien: "", bouton_visible: true, actif: true };
 
 export default function AdminStoriesPage() {
   const [session, setSession] = useState(null);
@@ -84,7 +84,7 @@ export default function AdminStoriesPage() {
   function ouvrirFormulaire(story) {
     setMessage(null);
     choisirFichier(null);
-    setForm(story ? { id: story.id, titre: story.titre, libelle_bouton: story.libelle_bouton, lien: story.lien || "", actif: story.actif, image_url: story.image_url } : { ...VIDE });
+    setForm(story ? { id: story.id, titre: story.titre, libelle_bouton: story.libelle_bouton, lien: story.lien || "", bouton_visible: story.bouton_visible !== false, actif: story.actif, image_url: story.image_url } : { ...VIDE });
   }
 
   async function enregistrer() {
@@ -103,7 +103,7 @@ export default function AdminStoriesPage() {
       if (!form.titre.trim()) throw new Error("Donnez un titre à la story.");
       if (!form.id && !path) throw new Error("Choisissez le visuel de la story.");
 
-      const corps = { titre: form.titre, libelle_bouton: form.libelle_bouton, lien: form.lien, actif: form.actif, ...(path ? { path } : {}) };
+      const corps = { titre: form.titre, libelle_bouton: form.libelle_bouton, lien: form.lien, bouton_visible: form.bouton_visible, actif: form.actif, ...(path ? { path } : {}) };
       if (form.id) await appeler("PATCH", { ...corps, id: form.id });
       else await appeler("POST", corps);
       await recharger();
@@ -268,6 +268,26 @@ export default function AdminStoriesPage() {
           </div>
           <p className="text-[11px] text-gray-500 -mt-2">Un numéro de téléphone devient automatiquement un lien WhatsApp. Sans lien, le bouton n&apos;est pas affiché.</p>
 
+          {/* Interrupteur : bouton (et numéro / lien) visible ou caché dans la story */}
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-3">
+            <div>
+              <p className="text-sm font-extrabold text-gray-900">Bouton et numéro visibles</p>
+              <p className="text-[11px] text-gray-500">
+                {form.bouton_visible ? "Le bouton s'affiche en bas de la story." : "Le bouton est caché : la story s'affiche sans bouton ni numéro."}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.bouton_visible}
+              aria-label="Bouton et numéro visibles"
+              onClick={() => setForm({ ...form, bouton_visible: !form.bouton_visible })}
+              className={`relative w-12 h-7 rounded-full transition flex-shrink-0 cursor-pointer ${form.bouton_visible ? "bg-emerald-500" : "bg-gray-300"}`}
+            >
+              <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${form.bouton_visible ? "left-[22px]" : "left-0.5"}`} />
+            </button>
+          </div>
+
           <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer w-fit">
             <input type="checkbox" checked={form.actif} onChange={(e) => setForm({ ...form, actif: e.target.checked })} className="w-4 h-4" />
             Story visible
@@ -308,8 +328,8 @@ export default function AdminStoriesPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-extrabold text-gray-900 truncate">{s.titre}</p>
                 <p className="text-xs text-gray-500 truncate">
-                  {s.libelle_bouton}
-                  {s.lien ? ` → ${s.lien}` : " · sans lien"}
+                  {s.bouton_visible === false ? "Bouton caché" : s.libelle_bouton}
+                  {s.bouton_visible !== false ? (s.lien ? ` → ${s.lien}` : " · sans lien") : ""}
                 </p>
                 <p className="text-[11px] mt-0.5">
                   <span className={s.actif ? "text-emerald-700 font-bold" : "text-gray-500 font-bold"}>{s.actif ? "Visible" : "Masquée"}</span>

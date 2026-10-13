@@ -106,7 +106,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
         </Pressable>
 
         {/* Bouton d'action */}
-        {story.lien ? (
+        {story.lien && story.boutonVisible ? (
           <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: Math.max(insets.bottom, 12) + 4 }}>
             <Pressable
               onPress={() => Linking.openURL(story.lien as string).catch(() => {})}
