@@ -252,7 +252,7 @@ export default function MaBoutiqueScreen() {
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
         <EnteteMarketplace
-          titre="Devenir Vendeur"
+          titre="Devenir actif"
           sousTitre={etapeCreation === 'identite' ? 'Étape 1 sur 2 · Identité' : 'Étape 2 sur 2 · Boutique'}
           onRetour={retour}
         />

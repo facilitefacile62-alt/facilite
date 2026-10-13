@@ -92,7 +92,7 @@ export default function AProposMarketplaceScreen() {
                 <Ionicons name="storefront" size={20} color="#FFFFFF" />
               </View>
               <View className="flex-1">
-                <Text className="text-[15px] font-black text-white">{estVendeur ? 'Ma boutique' : 'Devenir Vendeur'}</Text>
+                <Text className="text-[15px] font-black text-white">{estVendeur ? 'Ma boutique' : 'Devenir actif'}</Text>
                 <Text className="text-[12px] text-white/90">
                   {estVendeur ? 'Gérer vos articles et vos commandes' : 'Créez votre boutique en 2 étapes'}
                 </Text>

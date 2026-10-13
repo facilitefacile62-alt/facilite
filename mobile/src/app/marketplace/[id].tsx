@@ -177,7 +177,7 @@ export default function ArticleScreen() {
     if (!article) return;
     try {
       await Share.share({
-        message: `${article.titre} — ${prixLisible(article.prixXof)} FCFA sur Facilité Marketplace\n${lienArticle(article.id)}`,
+        message: `${article.titre} — ${prixLisible(article.prixXof)} FCFA sur Facilité Locaux\n${lienArticle(article.id)}`,
       });
     } catch {
       /* partage annulé */
@@ -237,7 +237,7 @@ export default function ArticleScreen() {
           <Text className="text-[12.5px] font-extrabold" style={{ color: '#2563EB' }}>Retour</Text>
         </Pressable>
         <Text className="flex-1 text-[12px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>
-          Marketplace › <Text className="font-bold text-[#1A1A1A]">{article.titre}</Text>
+          Locaux › <Text className="font-bold text-[#1A1A1A]">{article.titre}</Text>
         </Text>
         <Pressable
           onPress={partager}

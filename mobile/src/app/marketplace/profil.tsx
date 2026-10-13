@@ -46,7 +46,7 @@ export default function ProfilMarketplaceScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         {!userId ? (
           <View className="flex-1 items-center justify-center px-8 gap-4">
-            <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour voir votre profil Marketplace.</Text>
+            <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour voir votre profil Locaux.</Text>
             <Pressable onPress={() => router.push('/login')} className="rounded-2xl px-6 py-3" style={{ backgroundColor: VERT_PROFOND }}>
               <Text className="text-white text-[14px] font-bold">Se connecter</Text>
             </Pressable>
@@ -87,7 +87,7 @@ export default function ProfilMarketplaceScreen() {
                 titre="Ma boutique"
                 droite={
                   <Text className="text-[13px] font-extrabold" style={{ color: '#047857' }}>
-                    {estVendeur ? 'Voir ma boutique' : 'Devenir Vendeur'}
+                    {estVendeur ? 'Voir ma boutique' : 'Devenir actif'}
                   </Text>
                 }
                 onPress={() => router.push('/marketplace/vendre')}

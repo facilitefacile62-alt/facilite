@@ -241,7 +241,7 @@ export default function DevenirLivreurScreen() {
             Devenir livreur se fait depuis l&apos;espace Service de votre boutique.
           </Text>
           <Pressable onPress={() => router.replace('/marketplace/vendre')} className="rounded-2xl px-6 py-3" style={{ backgroundColor: VERT_PROFOND }}>
-            <Text className="text-white text-[14px] font-bold">Devenir Vendeur</Text>
+            <Text className="text-white text-[14px] font-bold">Devenir actif</Text>
           </Pressable>
         </View>
       );

@@ -100,7 +100,7 @@ export default function MarketplaceScreen() {
             onPress={() => router.push('/marketplace/vendre')}
             className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-[#D1FAE5]">
             <Ionicons name="storefront-outline" size={15} color="#047857" />
-            <Text className="text-[12.5px] font-bold text-[#047857]">{aBoutique ? 'Ma boutique' : 'Devenir Vendeur'}</Text>
+            <Text className="text-[12.5px] font-bold text-[#047857]">{aBoutique ? 'Ma boutique' : 'Devenir actif'}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push('/marketplace/commandes')}

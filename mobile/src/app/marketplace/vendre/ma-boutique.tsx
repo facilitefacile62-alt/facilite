@@ -148,7 +148,7 @@ export default function MaBoutiqueScreen() {
         </SafeAreaView>
         <View className="flex-1 items-center justify-center px-8 gap-4">
           <Text className="text-[14px] text-center" style={{ color: 'rgba(0,0,0,0.55)' }}>Tu n&apos;as pas encore de boutique.</Text>
-          <BoutonAction titre="Devenir Vendeur" sousTitre="Créer ma boutique" icone="storefront-outline" onPress={() => router.replace('/marketplace/vendre')} />
+          <BoutonAction titre="Devenir actif" sousTitre="Créer ma boutique" icone="storefront-outline" onPress={() => router.replace('/marketplace/vendre')} />
         </View>
       </View>
     );

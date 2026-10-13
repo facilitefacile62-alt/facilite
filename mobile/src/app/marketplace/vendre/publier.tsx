@@ -190,7 +190,7 @@ export default function PublierArticleScreen() {
         urlVideo: cheminVideo,
       });
 
-      Alert.alert('Article publié', 'Il est désormais visible sur le Marketplace.', [{ text: 'OK', onPress: () => router.back() }]);
+      Alert.alert('Article publié', 'Il est désormais visible sur Locaux.', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Publication impossible pour le moment.');
     } finally {

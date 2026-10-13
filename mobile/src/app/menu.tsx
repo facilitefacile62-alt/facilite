@@ -45,7 +45,7 @@ const RACCOURCIS: Raccourci[] = [
   { id: 'extracteur', icone: 'flash', teinte: '#FEF3C7', couleurIcone: '#D97706', titre: 'Extracteur IA', sous: 'Candidature depuis une annonce', route: '/extracteur' },
   { id: 'profil', icone: 'person', teinte: '#E5E7EB', couleurIcone: '#4B5563', titre: 'Mon profil', sous: 'Informations et documents', route: '/profil' },
   { id: 'aide', icone: 'help-circle', teinte: '#DBEAFE', couleurIcone: '#1D4ED8', titre: 'Aide & Assistance', sous: 'Discuter avec le support', support: true },
-  { id: 'marketplace', icone: 'storefront', teinte: '#D1FAE5', couleurIcone: '#047857', titre: 'Marketplace', sous: 'Acheter et vendre', route: '/marketplace' },
+  { id: 'marketplace', icone: 'storefront', teinte: '#D1FAE5', couleurIcone: '#047857', titre: 'Locaux', sous: 'Acheter et vendre', route: '/marketplace' },
   { id: 'ma_boutique', icone: 'bag-handle', teinte: '#FEF3C7', couleurIcone: '#D97706', titre: 'Ma boutique', sous: 'Publier et gérer mes articles', route: '/marketplace/vendre' },
   { id: 'recherche', icone: 'search', teinte: '#DBEAFE', couleurIcone: '#1D4ED8', titre: 'Recherche', sous: 'Offres, entreprises...', route: '/recherche' },
   { id: 'diagnostic_cv', icone: 'document-text', teinte: '#D1FAE5', couleurIcone: '#047857', titre: 'Diagnostic CV Gratuit', sous: 'Analyse IA de votre CV', route: '/web/importer-cv' },
@@ -182,7 +182,7 @@ export default function MenuScreen() {
             </View>
             <View className="flex-1 min-w-0">
               <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>Locaux</Text>
-              <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>Espace Vendeur & Marketplace</Text>
+              <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>Espace Vendeur & Locaux</Text>
             </View>
             {espaceActif === 'business' ? (
               <Ionicons name="checkmark-circle-outline" size={22} color={VERT} />

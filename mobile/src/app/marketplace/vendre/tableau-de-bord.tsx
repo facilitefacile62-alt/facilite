@@ -66,7 +66,7 @@ export default function TableauDeBordScreen() {
     { emoji: '🛠️', titre: 'Service / métier', onPress: () => router.push('/marketplace/vendre') },
     { emoji: '🏢', titre: 'Établissement', onPress: () => router.push('/marketplace/vendre') },
     { emoji: '🚀', titre: 'Faire profit & Boost', onPress: () => BIENTOT('Faire profit & Boost') },
-    { emoji: '👑', titre: 'Premium Marketplace', onPress: () => BIENTOT('Premium Marketplace') },
+    { emoji: '👑', titre: 'Premium Locaux', onPress: () => BIENTOT('Premium Locaux') },
     { emoji: '👥', titre: 'Abonnés', onPress: () => BIENTOT('Abonnés') },
     { emoji: '⭐', titre: 'Avis', onPress: () => BIENTOT('Avis') },
     { emoji: '❔', titre: 'FAQ', onPress: () => router.push('/web/faq') },

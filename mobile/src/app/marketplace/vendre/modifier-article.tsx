@@ -155,7 +155,7 @@ export default function ModifierArticleScreen() {
   }
 
   function demanderSuppression() {
-    Alert.alert('Supprimer cet article ?', `« ${titre} » ne sera plus visible sur le Marketplace.`, [
+    Alert.alert('Supprimer cet article ?', `« ${titre} » ne sera plus visible sur Locaux.`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',

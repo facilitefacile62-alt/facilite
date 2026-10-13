@@ -26,7 +26,7 @@ export default function MarketplaceHeader() {
       <Ionicons name="storefront" size={19} color={BLEU} />
       <Pressable onPress={() => router.navigate('/marketplace')} className="flex-1 -ml-2.5">
         <Text className="text-[18px] font-black" style={{ color: BLEU }}>
-          Marketplace
+          Locaux
         </Text>
       </Pressable>
       <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
