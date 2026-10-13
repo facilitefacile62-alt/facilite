@@ -69,6 +69,22 @@ export default function AdminAideVideoPage() {
     })();
   }, []);
 
+  // Interrupteur « numéro WhatsApp visible » : enregistré dès le clic.
+  async function basculerWhatsapp() {
+    const suivant = video?.whatsapp_visible === false;
+    setEnCours(true);
+    setMessage(null);
+    try {
+      const json = await appeler("PATCH", { whatsapp_visible: suivant });
+      setVideo(json.video);
+      setMessage({ ok: true, texte: suivant ? "Le numéro WhatsApp est visible." : "Le numéro WhatsApp est caché." });
+    } catch (e) {
+      setMessage({ ok: false, texte: e.message });
+    } finally {
+      setEnCours(false);
+    }
+  }
+
   async function enregistrer() {
     setMessage(null);
     setEnCours(true);
@@ -136,6 +152,29 @@ export default function AdminAideVideoPage() {
           appuie sur le bouton <strong>Aide</strong>.
         </p>
       </div>
+
+      {/* Numéro WhatsApp visible ou caché sur la page d'aide */}
+      <section className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-extrabold text-gray-900">Numéro WhatsApp visible</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            {video?.whatsapp_visible === false
+              ? "Caché : la page d'aide n'affiche plus le numéro ni le lien « Nous contacter », sur le site et dans l'application. Personne ne peut vous écrire depuis cette page."
+              : "Visible : la page d'aide propose le numéro +221 77 140 08 32 et le lien « Nous contacter », sur le site et dans l'application."}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={video?.whatsapp_visible !== false}
+          aria-label="Numéro WhatsApp visible"
+          disabled={enCours || !video}
+          onClick={basculerWhatsapp}
+          className={`relative w-12 h-7 rounded-full transition flex-shrink-0 cursor-pointer disabled:opacity-60 ${video?.whatsapp_visible !== false ? "bg-emerald-500" : "bg-gray-300"}`}
+        >
+          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${video?.whatsapp_visible !== false ? "left-[22px]" : "left-0.5"}`} />
+        </button>
+      </section>
 
       {/* Vidéo actuelle */}
       <section className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 space-y-3">
