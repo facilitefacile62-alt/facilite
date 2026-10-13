@@ -1509,21 +1509,18 @@ export default function Header() {
                 <span className="text-[10px] font-bold tracking-tight">Offres</span>
               </Link>
 
-              {/* 3. ⚡ Extracteur (si connecté) */}
-              {userSession && (
-                <Link
-                  href="/candidat/extracteur"
-                  onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                    pathname === "/candidat/extracteur"
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
-                  }`}
-                >
-                  <i className="fa-solid fa-bolt text-amber-500 text-base"></i>
-                  <span className="text-[10px] font-bold tracking-tight">Extracteur</span>
-                </Link>
-              )}
+              {/* 3. 📍 Autour de moi (Facilité) — l'Extracteur est passé dans le bouton flottant (BoutonFlottantFacilite) */}
+              <Link
+                href="/autour"
+                className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  pathname?.startsWith("/autour")
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
+                }`}
+              >
+                <i className="fa-solid fa-location-dot text-emerald-500 text-base"></i>
+                <span className="text-[10px] font-bold tracking-tight">Autour de moi</span>
+              </Link>
             </>
           )}
 
@@ -2210,19 +2207,16 @@ export default function Header() {
 
           {!isBusinessActive && (
             <>
-              {userSession && (
-                <Link
-                  href="/candidat/extracteur"
-                  onClick={(e) => handleNavClick(e, "/candidat/extracteur", "nav_extracteur", "Extracteur")}
-                  className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                    pathname === "/candidat/extracteur" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
-                  }`}
-                  title="L'Extracteur 1-Click"
-                >
-                  <i className="fa-solid fa-bolt text-sm sm:text-base text-amber-500"></i>
-                  <span className="text-[9px] font-bold tracking-tight truncate w-full">Extracteur</span>
-                </Link>
-              )}
+              <Link
+                href="/autour"
+                className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
+                  pathname?.startsWith("/autour") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                }`}
+                title="Où recrutent les entreprises"
+              >
+                <i className="fa-solid fa-location-dot text-sm sm:text-base text-emerald-500"></i>
+                <span className="text-[9px] font-bold tracking-tight truncate w-full">Autour de moi</span>
+              </Link>
               <Link
                 href="/offres"
                 onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
