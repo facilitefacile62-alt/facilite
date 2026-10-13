@@ -22,7 +22,7 @@ export const CHAMP = '#EEECE7';
 
 // La clé du logo, dessinée en vectoriel : le fichier cle-facilite.png a un fond
 // blanc opaque, qui ferait un carré blanc sur le disque vert menthe.
-function CleVectorielle({ hauteur }: { hauteur: number }) {
+export function CleVectorielle({ hauteur }: { hauteur: number }) {
   return (
     <Svg width={hauteur * 0.5} height={hauteur} viewBox="0 0 24 48">
       <Ellipse cx={12} cy={8.5} rx={6} ry={7.2} stroke="#4A3320" strokeWidth={3} fill="none" />

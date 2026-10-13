@@ -3,13 +3,14 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { CleVectorielle } from '@/components/EcranConnexion';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 
 // En-tête de la plateforme Facilité (maquettes 01, 03, 05, 14, 42, 47...) :
-// fond #e3dbcc comme la barre du bas (charte §1.2), « Facilité » en bleu à
-// gauche, puis recherche, cloche et menu — icônes posées à plat, sans
+// fond #e3dbcc comme la barre du bas (charte §1.2), logo clé + « ffacilite » à
+// gauche (logo clé + « ffacilite » en vert foncé depuis les maquettes du 12/10), puis recherche, cloche et menu — icônes posées à plat, sans
 // pastille grise circulaire.
 //
 // La variante sombre a été retirée : les maquettes « Accueil » (01) et
@@ -18,7 +19,7 @@ import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 // design (Recherche 04, Fiche offre 07) n'utilisent pas cet en-tête, ils
 // ont le leur avec un bouton retour rond.
 const FOND = '#e3dbcc';
-const BLEU = '#2563EB';
+const VERT_FONCE = '#0B3D2A';
 const ICONE = '#1A1A1A';
 
 export default function FaciliteHeader() {
@@ -36,8 +37,12 @@ export default function FaciliteHeader() {
           paddingHorizontal: 18,
           paddingVertical: 13,
         }}>
-        <Pressable onPress={() => router.navigate('/')} accessibilityLabel="Accueil Facilité">
-          <Text style={{ color: BLEU, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>Facilité</Text>
+        {/* Logo clé dans son disque menthe + « ffacilite » (nouvelles maquettes du 12/10/2026). */}
+        <Pressable onPress={() => router.navigate('/')} accessibilityLabel="Accueil ffacilite" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#C4F3DD', alignItems: 'center', justifyContent: 'center' }}>
+            <CleVectorielle hauteur={20} />
+          </View>
+          <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
         </Pressable>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
