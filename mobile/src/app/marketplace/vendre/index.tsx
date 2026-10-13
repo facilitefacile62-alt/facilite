@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -223,8 +223,8 @@ export default function MaBoutiqueScreen() {
       const liste = await chargerMesBoutiques(user.id);
       const active = liste[0] ?? null;
       setABoutique(Boolean(active));
-      // Une boutique existe : on ouvre sa page complète.
-      if (active) router.replace(`/marketplace/boutique/${active.id}`);
+      // Une boutique existe : on ouvre « Ma boutique » (ARTICLE · SERVICE · ÉTABLISSEMENT).
+      if (active) router.replace("/marketplace/vendre/ma-boutique" as Href);
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Chargement impossible.');
     } finally {
