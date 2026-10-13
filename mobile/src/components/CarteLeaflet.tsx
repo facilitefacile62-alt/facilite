@@ -34,7 +34,7 @@ const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leafle
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
 const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean): string {
+function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8" />
@@ -46,6 +46,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   ${sombre ? '.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92); }' : ''}
   .etiquette { background: rgba(0,0,0,.72); color: #fff; border: 0; border-radius: 10px; padding: 2px 7px; font: 700 11px system-ui, sans-serif; box-shadow: none; }
   .etiquette:before { display: none; }
+  .bulle-regroupement { background: none; border: 0; }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
 </head><body>
@@ -61,18 +62,62 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(msg);
     else if (window.parent) window.parent.postMessage({ marqueur: msg }, '*');
   }
-  window.majMarqueurs = function (liste, ajuster) {
+  // Regroupement : des marqueurs qui se recouvrent à l'écran (moins de SEUIL px)
+  // deviennent UNE pastille portant leur nombre, au barycentre ; un appui zoome
+  // sur le groupe (il se sépare de lui-même). Au zoom maximal, des boutiques
+  // exactement au même endroit ne se séparent jamais : l'appui renvoie alors
+  // « groupe:id1,id2 » à l'application.
+  var REGROUPER = ${regrouper};
+  var SEUIL = 34;
+  var dernier = [];
+  function dessiner() {
     couche.clearLayers();
-    var points = [];
-    liste.forEach(function (m) {
+    var libres = [], aGrouper = [];
+    dernier.forEach(function (m) { (m.halo || !REGROUPER ? libres : aGrouper).push(m); });
+    var pts = aGrouper.map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
+    var pris = [], groupes = [];
+    pts.forEach(function (a, i) {
+      if (pris[i]) return;
+      pris[i] = true;
+      var g = [a];
+      pts.forEach(function (b, j) {
+        if (pris[j]) return;
+        if (Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < SEUIL) { pris[j] = true; g.push(b); }
+      });
+      groupes.push(g);
+    });
+    groupes.forEach(function (g) {
+      if (g.length === 1) { libres.push(g[0].m); return; }
+      var membres = g.map(function (x) { return x.m; });
+      var lat = membres.reduce(function (t, m) { return t + m.lat; }, 0) / membres.length;
+      var lng = membres.reduce(function (t, m) { return t + m.lng; }, 0) / membres.length;
+      var icone = L.divIcon({
+        className: 'bulle-regroupement',
+        html: '<div style="width:46px;height:46px;border-radius:9999px;background:#10B981;color:#04130d;border:3px solid #fff;box-shadow:0 0 0 6px rgba(16,185,129,.28),0 6px 16px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font:800 17px system-ui,sans-serif;cursor:pointer">' + membres.length + '</div>',
+        iconSize: [46, 46], iconAnchor: [23, 23]
+      });
+      var bulle = L.marker([lat, lng], { icon: icone, zIndexOffset: 500, keyboard: false, title: membres.length + ' boutiques' }).addTo(couche);
+      bulle.on('click', function () {
+        var bornes = L.latLngBounds(membres.map(function (m) { return [m.lat, m.lng]; }));
+        var identiques = bornes.getSouthWest().equals(bornes.getNorthEast());
+        if (identiques || carte.getZoom() >= 18) envoyer('groupe:' + membres.map(function (m) { return m.id; }).join(','));
+        else carte.fitBounds(bornes, { padding: [60, 60], maxZoom: 18, animate: true });
+      });
+    });
+    libres.forEach(function (m) {
       if (m.halo) {
         L.circleMarker([m.lat, m.lng], { radius: (m.rayon || 9) + 9, color: m.couleur, weight: 0, fillColor: m.couleur, fillOpacity: .22, interactive: false }).addTo(couche);
       }
       var c = L.circleMarker([m.lat, m.lng], { radius: m.rayon || 9, color: '#ffffff', weight: 3, fillColor: m.couleur, fillOpacity: 1 }).addTo(couche);
       if (m.libelle) c.bindTooltip(m.libelle, { permanent: true, direction: 'right', offset: [10, 0], className: 'etiquette' });
       c.on('click', function () { envoyer(m.id); });
-      points.push([m.lat, m.lng]);
     });
+  }
+  carte.on('zoomend', dessiner);
+  window.majMarqueurs = function (liste, ajuster) {
+    dernier = liste;
+    dessiner();
+    var points = liste.map(function (m) { return [m.lat, m.lng]; });
     if (ajuster && points.length > 1) carte.fitBounds(points, { padding: [36, 36], maxZoom: 16 });
     else if (ajuster && points.length === 1) carte.setView(points[0], Math.max(carte.getZoom(), 14));
   };
@@ -95,6 +140,7 @@ export default function CarteLeaflet({
   ajuster = true,
   sombre = false,
   interactive = true,
+  regrouper = false,
   onMarqueur,
   commandes,
   style,
@@ -106,6 +152,8 @@ export default function CarteLeaflet({
   ajuster?: boolean;
   sombre?: boolean;
   interactive?: boolean;
+  /** Regroupe en pastilles à compteur les marqueurs qui se recouvrent. */
+  regrouper?: boolean;
   onMarqueur?: (id: string) => void;
   /** Reçoit des commandes impératives (recentrer, zoom ±) pour des contrôles flottants. */
   commandes?: (c: CommandesCarte) => void;
@@ -118,9 +166,9 @@ export default function CarteLeaflet({
   // Le document ne dépend que de la configuration initiale : changer de
   // marqueurs ne le régénère pas (voir plus haut).
   const html = useMemo(
-    () => documentHtml(centre, zoom, sombre, interactive),
+    () => documentHtml(centre, zoom, sombre, interactive, regrouper),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sombre, interactive]
+    [sombre, interactive, regrouper]
   );
 
   const executer = useCallback((script: string) => {
