@@ -108,6 +108,58 @@ export async function POST(req) {
     return NextResponse.json({ path: data.path ?? chemin, token: data.token });
   }
 
+  // Les stories que montre le fil tant que la table est vide (modèles de CV du
+  // code) ne sont pas modifiables. Cette action les copie en vraies stories —
+  // visuel compris, une copie par story pour que supprimer l'une ne casse pas
+  // les autres — afin que l'administrateur puisse en changer le texte, le numéro
+  // ou le lien, les masquer ou les supprimer. Refusée dès qu'une story existe.
+  if (body?.action === "importer-modeles") {
+    const { count } = await admin.from("stories").select("id", { count: "exact", head: true });
+    if ((count ?? 0) > 0) return NextResponse.json({ error: "Des stories existent déjà : rien à importer." }, { status: 409 });
+    const reponse = await fetch(new URL("/affiche_cv_pro.jpg", req.url)).catch(() => null);
+    if (!reponse?.ok) return NextResponse.json({ error: "Visuel des modèles introuvable." }, { status: 502 });
+    const octets = Buffer.from(await reponse.arrayBuffer());
+    const modeles = [
+      { id: "modern", titre: "Moderne" },
+      { id: "minimalist", titre: "Minimaliste" },
+      { id: "classic", titre: "Classique" },
+    ];
+    const crees = [];
+    for (const [i, m] of modeles.entries()) {
+      const chemin = `story-${Date.now()}-${i}-${user.id.slice(0, 8)}.jpg`;
+      const { error: upErr } = await admin.storage.from(BUCKET).upload(chemin, octets, { contentType: "image/jpeg" });
+      if (upErr) {
+        console.error("[admin/stories importer]", upErr);
+        for (const c of crees) await retirerDepot(admin, cheminDepuisUrl(c.image_url));
+        if (crees.length) await admin.from("stories").delete().in("id", crees.map((c) => c.id));
+        return NextResponse.json({ error: "Import impossible : dépôt du visuel refusé." }, { status: 500 });
+      }
+      const { data, error: dbError } = await admin
+        .from("stories")
+        .insert({
+          titre: m.titre,
+          image_url: admin.storage.from(BUCKET).getPublicUrl(chemin).data.publicUrl,
+          libelle_bouton: "Créer mon CV",
+          lien: `https://ffacilite.com/creer-cv?template=${m.id}`,
+          bouton_visible: true,
+          ordre: i + 1,
+          actif: true,
+          created_by: user.id,
+        })
+        .select(COLONNES)
+        .single();
+      if (dbError) {
+        console.error("[admin/stories importer]", dbError);
+        await retirerDepot(admin, chemin);
+        for (const c of crees) await retirerDepot(admin, cheminDepuisUrl(c.image_url));
+        if (crees.length) await admin.from("stories").delete().in("id", crees.map((c) => c.id));
+        return NextResponse.json({ error: "Import impossible." }, { status: 500 });
+      }
+      crees.push(data);
+    }
+    return NextResponse.json({ stories: crees }, { status: 201 });
+  }
+
   const champs = lireChamps(body);
   if (champs.erreur) {
     await retirerDepot(admin, body?.path);
