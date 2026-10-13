@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,7 +34,15 @@ export default function AutourDeMoiScreen() {
   const insets = useSafeAreaInsets();
   const { etat, position, activer } = useLocalisation();
   const [boutiques, setBoutiques] = useState<BoutiqueCarte[] | null>(null);
-  const [onglet, setOnglet] = useState<Onglet>('boutiques');
+  // Onglet de départ choisi par la ligne « Autour de moi » (Articles proches / Pleine carte).
+  const { onglet: ongletParam } = useLocalSearchParams<{ onglet?: string }>();
+  const [onglet, setOnglet] = useState<Onglet>(ongletParam === 'articles' ? 'articles' : 'boutiques');
+  // Un nouvel appui sur « Articles proches » / « Pleine carte » change le paramètre : on suit.
+  const [paramVu, setParamVu] = useState(ongletParam);
+  if (ongletParam !== paramVu) {
+    setParamVu(ongletParam);
+    if (ongletParam === 'articles' || ongletParam === 'boutiques') setOnglet(ongletParam);
+  }
   const [saisie, setSaisie] = useState('');
   const [recherche, setRecherche] = useState('');
   const [selection, setSelection] = useState<string | null>(null);

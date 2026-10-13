@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CarteArticleMarketplace from '@/components/CarteArticleMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
+import MiniCarteBoutiques from '@/components/MiniCarteBoutiques';
 import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES_MARKETPLACE, type ArticleMarketplace } from '@/lib/marketplace';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
@@ -31,7 +32,7 @@ export default function MarketplaceScreen() {
   const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, '');
 
   // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...).
-  const { categorie: categorieParam } = useLocalSearchParams<{ categorie?: string }>();
+  const { categorie: categorieParam, mini } = useLocalSearchParams<{ categorie?: string; mini?: string }>();
   useEffect(() => {
     if (!categorieParam) return;
     queueMicrotask(() => setCategorie(categorieParam));
@@ -61,6 +62,14 @@ export default function MarketplaceScreen() {
     <View className="flex-1" style={{ backgroundColor: '#F2F0EA' }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <MarketplaceHeader />
+
+        {/* Mini carte : ouverte par « Mini carte » de la ligne « Autour de moi » */}
+        {mini ? (
+          <MiniCarteBoutiques
+            onFermer={() => router.setParams({ mini: undefined })}
+            onPleineCarte={() => router.navigate('/marketplace/autour?onglet=boutiques' as Href)}
+          />
+        ) : null}
 
         <View style={{ height: 40, marginTop: 4 }}>
           <ScrollView
