@@ -6,8 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 
-// Barre du bas de la plateforme Facilité (Accueil · Offres · Extracteur ·
-// Messages · Profil), charte §1.1-§1.2 : fond #e3dbcc, actif vert #10B981
+// Barre du bas de la plateforme Facilité (Accueil · Offres · Autour de moi ·
+// Messages · Profil — « Autour de moi » a pris la place de l'Extracteur le
+// 13/10/2026 ; l'Extracteur s'ouvre depuis le bouton flottant), charte §1.1-§1.2 : fond #e3dbcc, actif vert #10B981
 // avec icône pleine, inactif rgba(0,0,0,0.6), libellés 10,5 px gras.
 //
 // Elle est rendue à deux endroits parce que les écrans de Facilité vivent à
@@ -26,7 +27,7 @@ const VERT = '#10B981';
 const FOND = '#e3dbcc';
 const INACTIF = 'rgba(0,0,0,0.6)';
 
-type IdEntree = 'accueil' | 'offres' | 'extracteur' | 'messages' | 'profil';
+type IdEntree = 'accueil' | 'offres' | 'autour' | 'messages' | 'profil';
 
 type Entree = {
   id: IdEntree;
@@ -39,7 +40,7 @@ type Entree = {
 const ENTREES: Entree[] = [
   { id: 'accueil', libelle: 'Accueil', icone: 'home-outline', iconeActive: 'home', cible: '/' },
   { id: 'offres', libelle: 'Offres', icone: 'briefcase-outline', iconeActive: 'briefcase', cible: '/offres' },
-  { id: 'extracteur', libelle: 'Extracteur', icone: 'flash-outline', iconeActive: 'flash', cible: '/extracteur' },
+  { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/autour' },
   { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/messages' },
   { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/profil' },
 ];
@@ -47,7 +48,7 @@ const ENTREES: Entree[] = [
 export function entreeActiveFacilite(chemin: string): IdEntree | null {
   if (chemin === '/' || chemin === '' || chemin.startsWith('/menu')) return 'accueil';
   if (chemin.startsWith('/offres') || chemin.startsWith('/offre/')) return 'offres';
-  if (chemin.startsWith('/extracteur')) return 'extracteur';
+  if (chemin.startsWith('/autour')) return 'autour';
   if (chemin.startsWith('/messages') || chemin.startsWith('/chat/')) return 'messages';
   if (chemin.startsWith('/profil') || chemin.startsWith('/mon-profil')) return 'profil';
   return null;

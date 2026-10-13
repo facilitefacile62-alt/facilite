@@ -26,6 +26,8 @@ export type MarqueurCarte = {
   libelle?: string;
   /** Anneau pulsé autour du point (position de l'utilisateur, du livreur). */
   halo?: boolean;
+  /** Pastille à compteur (ex. nombre d'offres d'une ville) à la place du point. */
+  compteur?: number;
 };
 
 export type CentreCarte = { lat: number; lng: number };
@@ -105,6 +107,18 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       });
     });
     libres.forEach(function (m) {
+      if (m.compteur) {
+        var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
+        var ic = L.divIcon({
+          className: 'bulle-regroupement',
+          html: '<div style="width:' + taille + 'px;height:' + taille + 'px;border-radius:9999px;background:' + m.couleur + ';color:#fff;border:3px solid #fff;box-shadow:0 0 0 6px ' + m.couleur + '33,0 6px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:800 ' + (taille > 45 ? 18 : 16) + 'px system-ui,sans-serif;cursor:pointer">' + m.compteur + '</div>',
+          iconSize: [taille, taille], iconAnchor: [taille / 2, taille / 2]
+        });
+        var mk = L.marker([m.lat, m.lng], { icon: ic, zIndexOffset: 400, keyboard: false, title: m.libelle || '' }).addTo(couche);
+        if (m.libelle) mk.bindTooltip(m.libelle, { permanent: true, direction: 'bottom', offset: [0, taille / 2 - 4], className: 'etiquette' });
+        mk.on('click', function () { envoyer(m.id); });
+        return;
+      }
       if (m.halo) {
         L.circleMarker([m.lat, m.lng], { radius: (m.rayon || 9) + 9, color: m.couleur, weight: 0, fillColor: m.couleur, fillOpacity: .22, interactive: false }).addTo(couche);
       }
