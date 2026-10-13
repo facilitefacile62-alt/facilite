@@ -204,6 +204,12 @@ test.describe("Invariants de sécurité", () => {
       // jamais de RLS/GRANT authenticated, même pour l'admin. Voir
       // 20260821100000_assistant_faq.sql.
       "assistant_faq",
+      // Journal des e-mails écrits depuis le bouton « Écrire un e-mail » de
+      // l'application : sert uniquement à plafonner les envois par utilisateur
+      // (10 par 24 h). Lecture ET écriture exclusivement par la route
+      // /api/envoyer-email (service_role, après contrôle de session) ; aucun
+      // GRANT à anon/authenticated. Voir 20261013150000_emails_envoyes.sql.
+      "emails_envoyes",
       // Config + catalogue de l'onglet admin "Entraînement IA" (Agent IA
       // Facilité) : même principe que assistant_faq, lecture/écriture
       // exclusivement via service_role et une route API admin dédiée. Voir
