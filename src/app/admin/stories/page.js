@@ -163,6 +163,20 @@ export default function AdminStoriesPage() {
     );
   }
 
+  async function importerModeles() {
+    setEnCours(true);
+    setMessage(null);
+    try {
+      await appeler("POST", { action: "importer-modeles" });
+      await recharger();
+      setMessage({ ok: true, texte: "Les 3 stories sont maintenant modifiables ci-dessous." });
+    } catch (e) {
+      setMessage({ ok: false, texte: e.message });
+    } finally {
+      setEnCours(false);
+    }
+  }
+
   const nbActives = stories.filter((s) => s.actif).length;
 
   return (
@@ -313,6 +327,33 @@ export default function AdminStoriesPage() {
           </div>
         </section>
       )}
+
+      {stories.length === 0 && !form ? (
+        <section className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+          <h2 className="text-sm font-extrabold text-gray-900">Stories affichées en ce moment</h2>
+          <p className="text-xs text-gray-500">
+            Le fil montre aujourd&apos;hui les 3 modèles de CV ci-dessous. Ils sont intégrés au site : on ne peut ni les modifier, ni les masquer, ni
+            les supprimer tant qu&apos;ils ne sont pas transformés en stories.
+          </p>
+          <div className="flex items-center gap-4">
+            {["Moderne", "Minimaliste", "Classique"].map((nom) => (
+              <div key={nom} className="flex flex-col items-center gap-1 w-16">
+                {/* eslint-disable-next-line @next/next/no-img-element -- visuel du site */}
+                <img src="/affiche_cv_pro.jpg" alt={`Modèle ${nom}`} className="w-14 h-14 rounded-full object-cover object-top border border-gray-200" />
+                <span className="text-[10px] font-bold text-gray-700">{nom}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={importerModeles}
+            disabled={enCours}
+            className="px-4 py-2 rounded-xl border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs font-black disabled:opacity-60 cursor-pointer"
+          >
+            {enCours ? "Transformation…" : "Les rendre modifiables"}
+          </button>
+        </section>
+      ) : null}
 
       {/* Liste */}
       <section className="space-y-2">
