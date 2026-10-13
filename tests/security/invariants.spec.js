@@ -325,7 +325,15 @@ test.describe("Invariants de sécurité", () => {
     //     séparé des photos parce que celles-ci plafonnent à 2 Mo et
     //     n'acceptent que des images. Décision écrite le 2026-10-09,
     //     migration 20261009100000_marketplace_video_article.sql.
-    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos", "marketplace-videos"]);
+    //   - "aide-videos" : la vidéo d'aide « comment postuler », unique et
+    //     identique pour tous les visiteurs, affichée sur /aide-candidature et
+    //     dans l'application sous chaque publication. Contenu marketing
+    //     déposé par un ADMINISTRATEUR seulement (URL signée générée par la
+    //     route /api/admin/aide-video après contrôle isCallerAdmin, aucune
+    //     policy sur storage.objects) : aucune donnée personnelle n'y
+    //     transite. Plafond 100 Mo, video/mp4, video/quicktime et video/webm.
+    //     Décision écrite le 2026-10-13, migration 20261013120000_aide_video.sql.
+    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos", "marketplace-videos", "aide-videos"]);
 
     const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
     const violations = rows.filter((r) => r.public === true && !JUSTIFIED_PUBLIC_BUCKETS.has(r.id));
@@ -502,6 +510,15 @@ test.describe("Invariants de sécurité", () => {
       // DEFINER activer_premium_marketplace. Décision écrite le 2026-09-12,
       // migration 20260912020000_jetons_marketplace.sql.
       "public.premium_marketplace:Le statut premium est visible de tous",
+      // Vidéo d'aide « comment postuler » (une seule ligne : type/url/
+      // youtube_id/durée) : contenu marketing identique pour tous, lu par le
+      // site et l'application sous chaque publication, y compris pour un
+      // visiteur NON connecté. Aucune donnée personnelle. Écriture
+      // verrouillée : aucun GRANT INSERT/UPDATE/DELETE à anon/authenticated,
+      // modifiée uniquement par /api/admin/aide-video (service_role, après
+      // isCallerAdmin). Décision écrite le 2026-10-13, migration
+      // 20261013120000_aide_video.sql.
+      "public.aide_video:La video d'aide est lisible par tous",
     ]);
 
     const rows = await runIntrospectionSql(`

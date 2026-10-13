@@ -1,17 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 import BoutonAction from '@/components/BoutonAction';
 import FaciliteHeader from '@/components/FaciliteHeader';
-import { AIDE_VIDEO } from '@/lib/aideVideo';
+import { AIDE_VIDEO_VIDE, chargerAideVideo, type AideVideo } from '@/lib/aideVideo';
 
 // « Vidéo d'explication pour postuler » — page ouverte par le bouton « Aide »
 // des publications (elle remplace le « J'aime »). Même contenu que la page du
-// site /aide-candidature : la vidéo d'aide (source unique : lib/aideVideo.ts),
+// site /aide-candidature : la vidéo d'aide (table aide_video, gérée depuis l'admin du site),
 // un bouton pour continuer vers le site officiel de l'offre quand il y en a un,
 // et l'accompagnement WhatsApp de Facilité.
 const NUMERO_WHATSAPP = '221771400832';
@@ -26,6 +27,16 @@ function LecteurFichier({ url }: { url: string }) {
 export default function AideVideoScreen() {
   const router = useRouter();
   const { titre, lien } = useLocalSearchParams<{ titre?: string; lien?: string }>();
+  const [AIDE_VIDEO, setAideVideo] = useState<AideVideo>(AIDE_VIDEO_VIDE);
+  useEffect(() => {
+    let annule = false;
+    chargerAideVideo().then((v) => {
+      if (!annule) setAideVideo(v);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
   const lienOfficiel = typeof lien === 'string' && /^https?:\/\//.test(lien) ? lien : null;
 
   const message = `Bonjour Facilité, j'ai besoin d'aide pour postuler${titre ? ` à « ${titre} »` : ''}.`;

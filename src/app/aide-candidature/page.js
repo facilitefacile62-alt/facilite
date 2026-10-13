@@ -1,16 +1,27 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
-import { AIDE_VIDEO } from "@/lib/aideVideo";
+import { AIDE_VIDEO_VIDE, chargerAideVideo } from "@/lib/aideVideo";
 
 function AideCandidatureContent() {
   const searchParams = useSearchParams();
   const offreTitre = searchParams?.get("titre") || "Recrutement spécial — Enseignement & Fonction Publique";
   const offreLien = searchParams?.get("lien") || "";
   const [isPlaying, setIsPlaying] = useState(false);
+  // Vidéo gérée depuis /admin/aide-video (table aide_video).
+  const [AIDE_VIDEO, setAideVideo] = useState(AIDE_VIDEO_VIDE);
+  useEffect(() => {
+    let annule = false;
+    chargerAideVideo().then((v) => {
+      if (!annule) setAideVideo(v);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
   const [btnClicked, setBtnClicked] = useState(false);
 
   const handleAction = () => {
@@ -59,7 +70,7 @@ function AideCandidatureContent() {
             <strong className="font-extrabold text-gray-900 dark:text-white">{offreTitre}</strong>.
           </p>
 
-          {/* Cadre Lecteur Vidéo — source unique : src/lib/aideVideo.js */}
+          {/* Cadre Lecteur Vidéo — source : table aide_video, gérée depuis /admin/aide-video */}
           <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-800/40 border border-gray-150 dark:border-gray-800 flex items-center justify-center group">
             {AIDE_VIDEO.type === "fichier" && AIDE_VIDEO.url ? (
               <video
