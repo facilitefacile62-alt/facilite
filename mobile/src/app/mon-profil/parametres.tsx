@@ -1,18 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
+import { lireLangue, libelleLangue, type CodeLangue } from '@/lib/preferencesConnexion';
 
-// « Modifier infos » > Paramètres — maquette 41 : le titre « Paramètres », sa
-// phrase d'explication et la carte « Apparence / Thème ». Rien d'autre.
-//
-// Les listes de liens vers les pages du compte (sécurité, facturation, CV,
-// candidatures, outils, informations légales…) qui s'y trouvaient ne figurent
-// pas sur la maquette : elles ont été retirées le 12/10/2026 à la demande du
-// propriétaire, qui indiquera ce qui doit être remis dans l'application. Elles
-// restent dans l'historique git (commit précédant ce retrait).
+// « Modifier infos » > Paramètres — maquette 48 (version du 12/10/2026) : le
+// titre « Paramètres », sa phrase d'explication, la carte APPARENCE (Thème) +
+// LANGUE (Langue de l'application, ouvre le choix de langue), puis
+// CONFIDENTIALITÉ ET SÉCURITÉ (Confidentialité et informations juridiques ;
+// Sécurité & Connexion). Ces éléments reviennent avec la nouvelle maquette ;
+// les anciennes longues listes de liens restent retirées.
 export default function ParametresScreen() {
+  const router = useRouter();
+  const [langue, setLangue] = useState<CodeLangue>('fr');
+  useFocusEffect(
+    useCallback(() => {
+      lireLangue().then(setLangue);
+    }, [])
+  );
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -60,6 +68,44 @@ export default function ParametresScreen() {
                   <Ionicons name="moon-outline" size={17} color="rgba(0,0,0,0.5)" />
                 </Pressable>
               </View>
+            </View>
+
+            <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.07)', marginTop: 14 }} />
+            <Text className="text-[12px] font-extrabold mt-3.5" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>LANGUE</Text>
+            <Pressable onPress={() => router.push('/langue' as Href)} className="flex-row items-center gap-3 mt-3" accessibilityRole="button">
+              <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#F0EEE8' }}>
+                <Ionicons name="globe-outline" size={20} color="#1A1A1A" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[16px] font-black text-[#1A1A1A]">Langue de l&apos;application</Text>
+                <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>{libelleLangue(langue)}</Text>
+              </View>
+              <Ionicons name="chevron-down" size={16} color="rgba(0,0,0,0.4)" />
+            </Pressable>
+          </View>
+
+          <View>
+            <Text className="text-[12px] font-extrabold mb-2 px-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>CONFIDENTIALITÉ ET SÉCURITÉ</Text>
+            <View className="bg-white overflow-hidden" style={{ borderRadius: 18 }}>
+              {[
+                { icone: 'shield-checkmark-outline' as const, titre: 'Confidentialité et informations juridiques', sous: 'Visibilité du profil, pages légales', route: '/mon-profil/confidentialite' },
+                { icone: 'lock-closed-outline' as const, titre: 'Sécurité & Connexion', sous: 'Mot de passe, appareils', route: '/mon-profil/securite' },
+              ].map((r, i) => (
+                <Pressable
+                  key={r.route}
+                  onPress={() => router.push(r.route as Href)}
+                  className="flex-row items-center gap-3 px-4 py-3.5"
+                  style={{ borderTopWidth: i === 0 ? 0 : 1, borderTopColor: 'rgba(0,0,0,0.06)' }}>
+                  <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#F0EEE8' }}>
+                    <Ionicons name={r.icone} size={19} color="rgba(0,0,0,0.6)" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[15px] font-black text-[#1A1A1A]">{r.titre}</Text>
+                    <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>{r.sous}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
+                </Pressable>
+              ))}
             </View>
           </View>
         </ScrollView>
