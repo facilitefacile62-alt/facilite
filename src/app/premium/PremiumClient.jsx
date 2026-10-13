@@ -178,7 +178,7 @@ export default function PremiumClient() {
       await activerPremiumMarketplace(boutique.id);
       await chargerTout();
     } catch (err) {
-      setErreurActivation(err.message || "Impossible d'activer Premium Marketplace.");
+      setErreurActivation(err.message || "Impossible d'activer Premium Locaux.");
     } finally {
       setActivationEnCours(false);
     }
@@ -195,7 +195,7 @@ export default function PremiumClient() {
             <i className="fa-solid fa-crown"></i>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-            Premium Marketplace
+            Premium Locaux
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             Jetons rechargeables pour mettre votre boutique en avant sur la carte et la recherche.
@@ -209,7 +209,7 @@ export default function PremiumClient() {
                 Indisponible dans l&apos;application
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Premium Marketplace n&apos;est pas proposé ici pour le moment.
+                Premium Locaux n&apos;est pas proposé ici pour le moment.
               </p>
             </div>
           ) : !user ? (
@@ -228,7 +228,7 @@ export default function PremiumClient() {
                 Vous n&apos;avez pas encore de boutique
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 mb-4">
-                Premium Marketplace s&apos;active sur une boutique — ouvrez la vôtre d&apos;abord, gratuitement.
+                Premium Locaux s&apos;active sur une boutique — ouvrez la vôtre d&apos;abord, gratuitement.
               </p>
               <Link
                 href="/marketplace?onglet=vendre"
@@ -248,7 +248,7 @@ export default function PremiumClient() {
                 }`}
               >
                 <p className={`text-sm font-black ${premiumActif ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
-                  {premiumActif ? "Premium Marketplace actif" : "Premium Marketplace non actif"}
+                  {premiumActif ? "Premium Locaux actif" : "Premium Locaux non actif"}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {premiumActif
@@ -279,7 +279,7 @@ export default function PremiumClient() {
                     )}
                     {jetonsRequis != null
                       ? `Activer Premium pour ${jetonsRequis} jetons`
-                      : "Activer Premium Marketplace"}
+                      : "Activer Premium Locaux"}
                   </button>
                   {!soldeSuffisant && jetonsRequis != null && (
                     <p className="text-[11px] text-gray-400 dark:text-gray-600 text-center mt-2">

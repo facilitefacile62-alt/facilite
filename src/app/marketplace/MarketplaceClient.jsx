@@ -558,7 +558,7 @@ export default function MarketplaceClient() {
                           onClick={ouvrirProfil}
                           className="h-16 bg-cover bg-center bg-no-repeat relative block cursor-pointer group"
                           style={{ backgroundImage: `url('${bActive.cover_url || profile?.cover_url || "/stellar-cover.png"}')` }}
-                          title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir vendeur"}
+                          title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir actif"}
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-indigo-950/60 group-hover:opacity-75 transition"></div>
                           {estVraieBoutique && (
@@ -575,7 +575,7 @@ export default function MarketplaceClient() {
                           <div
                             onClick={ouvrirProfil}
                             className="-mt-7 mb-2 relative z-10 w-14 h-14 rounded-full border-2 border-white dark:border-gray-900 shadow-md overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg block cursor-pointer group"
-                            title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir vendeur"}
+                            title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir actif"}
                           >
                             {bActive.avatar_url || profile?.avatar_url ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
@@ -596,7 +596,7 @@ export default function MarketplaceClient() {
                             type="button"
                             onClick={ouvrirProfil}
                             className="group cursor-pointer bg-transparent border-none p-0 text-center"
-                            title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir vendeur"}
+                            title={estVraieBoutique ? "Voir le profil de ma boutique" : "Devenir actif"}
                           >
                             <h2 className="text-sm font-extrabold text-gray-900 dark:text-white leading-tight group-hover:text-blue-600 transition">
                               {bActive.nom}
@@ -631,7 +631,7 @@ export default function MarketplaceClient() {
                             className="w-full border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
                           >
                             <i className={`fa-solid ${estVraieBoutique ? "fa-plus" : "fa-store"} text-[8px] text-gray-500`}></i>
-                            <span>{estVraieBoutique ? "Publier un article" : "Devenir Vendeur"}</span>
+                            <span>{estVraieBoutique ? "Publier un article" : "Devenir actif"}</span>
                           </button>
 
                           <button
@@ -724,7 +724,7 @@ export default function MarketplaceClient() {
                     className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
                   >
                     <i className={`fa-solid ${maBoutiqueActive ? "fa-plus" : "fa-store"} text-[10px] text-gray-500`}></i>
-                    {maBoutiqueActive ? "Publier" : "Devenir Vendeur"}
+                    {maBoutiqueActive ? "Publier" : "Devenir actif"}
                   </button>
 
                   <button
@@ -1442,7 +1442,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1 max-w-sm mx-auto">
             {position
               ? "Élargissez le rayon de recherche ou affichez tout le catalogue."
-              : "Soyez le premier à publier un article sur la Marketplace !"}
+              : "Soyez le premier à publier un article sur Locaux !"}
           </p>
           {position && (
             <button
@@ -2108,7 +2108,7 @@ function VueReglages({
     try {
       await definirVisibiliteBoutique(boutique.id, nouvelleValeur);
       setBoutiqueVisible(nouvelleValeur);
-      showToast(nouvelleValeur ? "✓ Boutique visible sur le Marketplace" : "✓ Boutique masquée du Marketplace");
+      showToast(nouvelleValeur ? "✓ Boutique visible sur Locaux" : "✓ Boutique masquée de Locaux");
       onEnregistre?.();
     } catch (err) {
       showToast(err.message || "Erreur lors de la mise à jour");
@@ -2986,7 +2986,7 @@ function VueReglages({
         >
           <div className="flex items-center gap-2">
             <i className="fa-solid fa-arrow-right-from-bracket rotate-180 text-sm text-red-600"></i>
-            <span>Retour au Marketplace</span>
+            <span>Retour à Locaux</span>
           </div>
         </button>
       </div>
@@ -3456,7 +3456,7 @@ function VueReglages({
                 </h4>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-relaxed">
                   Désactivé, votre boutique et ses articles n&apos;apparaissent plus dans les
-                  résultats du Marketplace (recherche, autour de moi, catégories) — vos
+                  résultats de Locaux (recherche, autour de moi, catégories) — vos
                   données restent intactes, rien n&apos;est supprimé.
                 </p>
               </div>
@@ -4320,7 +4320,7 @@ function VueVendeur({
                 >
                   <div className="flex items-center gap-2.5">
                     <i className={`fa-solid ${boutiqueActive ? "fa-circle-plus" : "fa-store"} text-base text-emerald-500`}></i>
-                    <span className="font-extrabold text-xs">{boutiqueActive ? "Publier un article" : "Devenir Vendeur"}</span>
+                    <span className="font-extrabold text-xs">{boutiqueActive ? "Publier un article" : "Devenir actif"}</span>
                   </div>
                   {boutiqueActive && (
                     <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
@@ -4428,7 +4428,7 @@ function VueVendeur({
                     }`}
                   >
                     <span className="text-base">👑</span>
-                    <span className="flex-1">Premium Marketplace</span>
+                    <span className="flex-1">Premium Locaux</span>
                   </button>
 
                   {/* 4. Abonnés */}
@@ -4536,7 +4536,7 @@ function VueVendeur({
                 {ongletVendeur === "service" && "Service / Métier & Prestations"}
                 {ongletVendeur === "etablissement" && "Établissement & Commerces"}
                 {ongletVendeur === "profit" && "Faire profit & Booster mes ventes"}
-                {ongletVendeur === "premium" && "Premium Marketplace"}
+                {ongletVendeur === "premium" && "Premium Locaux"}
                 {ongletVendeur === "abonnes" && "Mes Abonnés & Clients"}
                 {ongletVendeur === "avis" && "Avis & Évaluations Clients"}
                 {ongletVendeur === "faq" && "Foire aux questions"}
@@ -4556,7 +4556,7 @@ function VueVendeur({
                 </div>
                 <div className="space-y-1.5">
                   <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-200">
-                    Devenez vendeur pour publier vos articles
+                    Devenez actif pour publier vos articles
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
                     Vous naviguez pour l&apos;instant en tant que visiteur. Créez votre boutique
@@ -4571,7 +4571,7 @@ function VueVendeur({
                     className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition cursor-pointer"
                   >
                     <i className="fa-solid fa-store"></i>
-                    <span>Devenir Vendeur</span>
+                    <span>Devenir actif</span>
                   </button>
                 </div>
               </div>
@@ -4616,7 +4616,7 @@ function VueVendeur({
                         Il n&apos;y a pas encore d&apos;annonces.
                       </h3>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                        Publiez votre première annonce pour la rendre visible auprès des acheteurs sur le Marketplace.
+                        Publiez votre première annonce pour la rendre visible auprès des acheteurs sur Locaux.
                       </p>
                       <button
                         type="button"
@@ -5097,7 +5097,7 @@ function VueVendeur({
                     </div>
                     <h4 className="text-xs font-black text-gray-900 dark:text-white">Badge Boutique Officielle</h4>
                     <p className="text-[11px] text-gray-500 leading-relaxed">
-                      Augmentez la confiance des acheteurs avec le profil vérifié Facilité Marketplace.
+                      Augmentez la confiance des acheteurs avec le profil vérifié Facilité Locaux.
                     </p>
                   </div>
                 </div>
@@ -5117,7 +5117,7 @@ function VueVendeur({
                   }`}
                 >
                   <p className={`text-sm font-black ${premiumInfo?.actif ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
-                    {premiumInfo === null ? "Chargement…" : premiumInfo.actif ? "Premium Marketplace actif" : "Premium Marketplace non actif"}
+                    {premiumInfo === null ? "Chargement…" : premiumInfo.actif ? "Premium Locaux actif" : "Premium Locaux non actif"}
                   </p>
                   {premiumInfo?.actif && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -6037,7 +6037,7 @@ function CarteProfilBoutique({ profile, boutique, onAjouterArticle, onBoutiqueCl
   const nom = boutique?.nom || profile?.full_name || "Ma boutique";
   const titre = boutique
     ? `Boutique Officielle · ${boutique.quartier ? `${boutique.quartier}, ` : ""}${boutique.ville || "Dakar"}`
-    : "Vendeur Facilité Marketplace";
+    : "Vendeur Facilité Locaux";
   const localisation = boutique?.ville
     ? `${boutique.quartier ? `${boutique.quartier}, ` : ""}${boutique.ville}, Sénégal`
     : (profile?.location || "Dakar, Sénégal");
@@ -6526,7 +6526,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
       if (navigator.share) {
         await navigator.share({
           title: article.titre,
-          text: `Découvrez ${article.titre} à ${prixLisible(prixUnitaire)} FCFA sur Facilité Marketplace !`,
+          text: `Découvrez ${article.titre} à ${prixLisible(prixUnitaire)} FCFA sur Facilité Locaux !`,
           url: urlPartage || window.location.href,
         });
       } else {
@@ -6605,7 +6605,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
             </button>
 
             <nav className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 overflow-x-auto no-scrollbar">
-              <span className="hover:text-blue-600 transition cursor-pointer font-medium truncate" onClick={onFermer}>Marketplace</span>
+              <span className="hover:text-blue-600 transition cursor-pointer font-medium truncate" onClick={onFermer}>Locaux</span>
               <i className="fa-solid fa-chevron-right text-[9px] text-gray-400"></i>
               <span className="capitalize font-medium text-gray-700 dark:text-gray-300 truncate max-w-[90px] sm:max-w-[160px]">
                 {article.categorie || "Articles"}
@@ -6819,7 +6819,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   
                   {/* Fil d'ariane compact */}
                   <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
-                    <span className="hover:text-blue-600 cursor-pointer" onClick={onFermer}>Marketplace</span>
+                    <span className="hover:text-blue-600 cursor-pointer" onClick={onFermer}>Locaux</span>
                     <i className="fa-solid fa-chevron-right text-[8px] text-gray-400"></i>
                     <span className="capitalize text-gray-700 dark:text-gray-300 font-semibold">{article.categorie || "Articles"}</span>
                   </div>
@@ -7359,7 +7359,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   Aucun autre article dans cette boutique
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
-                  Le vendeur publiera prochainement ses autres nouveautés. Vous pouvez explorer les autres boutiques du Marketplace !
+                  Le vendeur publiera prochainement ses autres nouveautés. Vous pouvez explorer les autres boutiques de Locaux !
                 </p>
                 <button
                   type="button"
@@ -7367,7 +7367,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                   className="mt-2 px-4 py-2 rounded-xl bg-[#0d3b34] text-white text-xs font-bold uppercase hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
                 >
                   <i className="fa-solid fa-bag-shopping"></i>
-                  <span>Explorer le Marketplace</span>
+                  <span>Explorer Locaux</span>
                 </button>
               </div>
             </div>
@@ -8250,7 +8250,7 @@ function ModalFicheBoutique({
                 type="button"
                 onClick={onFermer}
                 className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-xs"
-                title="Retour à la Marketplace"
+                title="Retour à Locaux"
               >
                 <i className="fa-solid fa-arrow-left text-sm text-blue-600 dark:text-blue-400"></i>
               </button>
@@ -9267,7 +9267,7 @@ function ModalFicheBoutique({
                   type="button"
                   onClick={onFermer}
                   className="absolute top-3 left-3 z-20 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white dark:bg-black/85 dark:hover:bg-black text-zinc-900 dark:text-white text-xs font-black flex items-center gap-2 shadow-md backdrop-blur-xs transition cursor-pointer active:scale-95 border border-white/20"
-                  title="Retour à la Marketplace"
+                  title="Retour à Locaux"
                 >
                   <i className="fa-solid fa-arrow-left text-blue-600 dark:text-blue-400"></i>
                   <span>Retour</span>
