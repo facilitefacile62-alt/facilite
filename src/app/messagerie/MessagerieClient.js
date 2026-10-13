@@ -944,7 +944,7 @@ export default function MessagerieClient() {
               .eq("owner_id", recipientParam)
               .maybeSingle();
             displayName = boutique?.nom || "Boutique";
-            title = "Vendeur Marketplace";
+            title = "Vendeur Locaux";
             if (boutique?.avatar_config) {
               try {
                 const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique");
@@ -1259,7 +1259,7 @@ export default function MessagerieClient() {
             let logo = null;
             if (estMarketplace && boutique) {
               name = boutique.nom || "Boutique";
-              title = "Vendeur Marketplace";
+              title = "Vendeur Locaux";
               if (boutique.avatar_config && dataUriAvatarBoutique) {
                 try { logo = dataUriAvatarBoutique(boutique.avatar_config); } catch {}
               }
@@ -2420,7 +2420,7 @@ export default function MessagerieClient() {
                     discussionTypeFilter === "MARKETPLACE" ? "bg-[#111B21] text-white shadow-xs" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
                   }`}
                 >
-                  Marketplace
+                  Locaux
                 </button>
               )}
             </div>
@@ -2538,8 +2538,8 @@ export default function MessagerieClient() {
                   ) : discussionTypeFilter === "MARKETPLACE" ? (
                     <>
                       <div className="text-2xl mb-1">🛍️</div>
-                      <p className="text-gray-700 font-bold">Aucun échange Marketplace</p>
-                      <p className="text-[11px] text-gray-400">Vos discussions avec un client ou un vendeur du Marketplace s'affichent ici.</p>
+                      <p className="text-gray-700 font-bold">Aucun échange Locaux</p>
+                      <p className="text-[11px] text-gray-400">Vos discussions avec un client ou un vendeur de Locaux s'affichent ici.</p>
                     </>
                   ) : (
                     <p className="italic">Aucune discussion trouvée.</p>
@@ -2814,7 +2814,7 @@ export default function MessagerieClient() {
                       <i className="fa-solid fa-lock text-[10px] text-amber-700"></i>
                       <span>
                         {activeConversation?.typeDiscussion === "MARKETPLACE"
-                          ? "Les échanges avec ce vendeur/client du Marketplace sont chiffrés."
+                          ? "Les échanges avec ce vendeur/client de Locaux sont chiffrés."
                           : "Les échanges avec le Support RH Facilité sont chiffrés et assistés par nos conseillers & IA."}
                       </span>
                     </span>

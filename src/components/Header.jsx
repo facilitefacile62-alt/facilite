@@ -1617,6 +1617,24 @@ export default function Header() {
                     </div>
                   </Link>
 
+                  {/* 2b. Autour de moi (Facilité) */}
+                  <Link
+                    href="/autour"
+                    className={`flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      pathname?.startsWith("/autour")
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-gray-800 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-location-dot text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-extrabold">Autour de moi</div>
+                      <div className="text-[10px] text-gray-500 font-normal">Où recrutent les entreprises</div>
+                    </div>
+                  </Link>
+
                   {/* 3. Dépôts Physiques */}
                   <Link
                     href="/recrutement-journalier"
@@ -1781,7 +1799,7 @@ export default function Header() {
           {/* 6. 🏪 Bouton Marketplace Desktop */}
           <Link
             href="/marketplace"
-            onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
+            onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Locaux")}
             title="Marketplace — Sélection du jour"
             className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
               !checkFeatureAllowed("nav_marketplace")
@@ -1793,10 +1811,10 @@ export default function Header() {
           >
             <img
               src="/marketplace.svg"
-              alt="Marketplace"
+              alt="Locaux"
               className="w-5 h-5 object-contain transition-transform hover:scale-110 drop-shadow-xs"
             />
-            <span className="text-[10px] font-bold tracking-tight">Marketplace</span>
+            <span className="text-[10px] font-bold tracking-tight">Locaux</span>
           </Link>
 
           {/* 🎯 Bouton Autour de moi (Uniquement sur Marketplace) */}
@@ -1822,7 +1840,7 @@ export default function Header() {
                   router.push("/marketplace?action=publier");
                 }
               }}
-              title="Publier un nouvel article sur la Marketplace"
+              title="Publier un nouvel article sur Locaux"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-bold shadow-2xs hover:shadow-xs transition active:scale-95 cursor-pointer"
             >
               <i className="fa-solid fa-plus text-[11px]"></i>
@@ -1876,7 +1894,7 @@ export default function Header() {
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 className="relative flex items-center gap-2 p-1 rounded-full hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-700 transition cursor-pointer flex-shrink-0 group"
-                title="Basculer entre l'Espace Candidat et l'Espace Marketplace"
+                title="Basculer entre l'Espace Candidat et l'Espace Locaux"
                 aria-label="Basculer de compte ou d'espace"
               >
                 <div className="relative">
@@ -1940,7 +1958,7 @@ export default function Header() {
                     <>
                       {/* 1. SÉLECTIONNÉ EN HAUT : amène directement sur SA
                           propre fiche boutique (pas juste l'accueil générique
-                          du Marketplace, voir "Marketplace" dans les liens
+                          de Locaux, voir "Locaux" dans les liens
                           rapides plus bas pour ça) */}
                       <button
                         type="button"
@@ -1958,7 +1976,7 @@ export default function Header() {
                           <div className="relative shrink-0">
                             <img
                               src="/business_avatar.jpg"
-                              alt={maBoutiqueInfo?.nom || "Marketplace"}
+                              alt={maBoutiqueInfo?.nom || "Locaux"}
                               className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
                             />
                           </div>
@@ -1967,7 +1985,7 @@ export default function Header() {
                               {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                             </h4>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
-                              Marketplace &amp; Boutiques
+                              Locaux &amp; Boutiques
                             </p>
                           </div>
                         </div>
@@ -2081,7 +2099,7 @@ export default function Header() {
                           <div className="relative shrink-0">
                             <img
                               src="/business_avatar.jpg"
-                              alt={maBoutiqueInfo?.nom || "Marketplace"}
+                              alt={maBoutiqueInfo?.nom || "Locaux"}
                               className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs"
                             />
 
@@ -2127,7 +2145,7 @@ export default function Header() {
                       className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                     >
                       <i className="fa-solid fa-store text-sm text-blue-600 dark:text-blue-400"></i>
-                      <span className="font-bold">Marketplace</span>
+                      <span className="font-bold">Locaux</span>
                     </Link>
                   </div>
 
@@ -2265,7 +2283,7 @@ export default function Header() {
                 }
               }}
               className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition text-gray-700 dark:text-gray-200 hover:text-emerald-600 group"
-              title="Publier un nouvel article sur la Marketplace"
+              title="Publier un nouvel article sur Locaux"
             >
               <i className="fa-solid fa-plus text-sm sm:text-base text-[#1877F2] group-hover:scale-110 transition-transform"></i>
               <span className="text-[9px] font-bold tracking-tight truncate w-full group-hover:text-emerald-600">Vendre</span>
@@ -2384,14 +2402,14 @@ export default function Header() {
                       <div className="flex items-center gap-3 min-w-0">
                         <img
                           src="/business_avatar.jpg"
-                          alt={maBoutiqueInfo?.nom || "Marketplace"}
+                          alt={maBoutiqueInfo?.nom || "Locaux"}
                           className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
                         />
                         <div className="min-w-0">
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
                             {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                           </h4>
-                          <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Locaux &amp; Boutiques</p>
                         </div>
                       </div>
                       <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
@@ -2502,7 +2520,7 @@ export default function Header() {
                         <div className="relative shrink-0">
                           <img
                             src="/business_avatar.jpg"
-                            alt={maBoutiqueInfo?.nom || "Marketplace"}
+                            alt={maBoutiqueInfo?.nom || "Locaux"}
                             className="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0"
                           />
                           <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 flex items-center justify-center shadow-xs">
@@ -2513,7 +2531,7 @@ export default function Header() {
                           <h4 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition">
                             {maBoutiqueInfo?.nom ? maBoutiqueInfo.nom : "Ma boutique"}
                           </h4>
-                          <p className="text-[10px] text-gray-500 font-medium">Marketplace &amp; Boutiques</p>
+                          <p className="text-[10px] text-gray-500 font-medium">Locaux &amp; Boutiques</p>
                         </div>
                       </div>
 
@@ -2539,7 +2557,7 @@ export default function Header() {
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-700 flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 transition"
                   >
                     <i className="fa-solid fa-store text-sm"></i>
-                    <span>Marketplace</span>
+                    <span>Locaux</span>
                   </Link>
                 </div>
               </div>
@@ -2586,7 +2604,7 @@ export default function Header() {
                     </span>
                   </div>
                   <h4 className="text-xs sm:text-sm font-black text-white mb-1">
-                    {maBoutiqueInfo?.nom || "Ma boutique Marketplace"}
+                    {maBoutiqueInfo?.nom || "Ma boutique Locaux"}
                   </h4>
                   <p className="text-[11px] text-gray-300 font-medium leading-normal mb-2.5">
                     Publiez vos articles, gérez vos ventes et développez votre clientèle en ligne.
@@ -2653,7 +2671,7 @@ export default function Header() {
                         if (typeof window !== "undefined") {
                           window.dispatchEvent(new CustomEvent("marketplace_set_onglet", { detail: "acheter" }));
                         }
-                        handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace");
+                        handleNavClick(e, "/marketplace", "nav_marketplace", "Locaux");
                       }}
                       className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer"
                     >
@@ -2664,7 +2682,7 @@ export default function Header() {
                         <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-[#1877F2] text-[9px] font-black rounded-md uppercase">Ventes</span>
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Marketplace</h4>
+                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Locaux</h4>
                         <p className="text-[10px] text-gray-500 font-medium truncate">Explorer le catalogue</p>
                       </div>
                     </Link>
@@ -2972,6 +2990,22 @@ export default function Header() {
                       </div>
                     </Link>
 
+                    {/* 6b. Autour de moi (Facilité) */}
+                    <Link
+                      href="/autour"
+                      className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 flex items-center justify-center text-sm shadow-2xs">
+                          <i className="fa-solid fa-location-dot"></i>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Autour de moi</h4>
+                        <p className="text-[10px] text-gray-500 font-medium truncate">Où recrutent les entreprises</p>
+                      </div>
+                    </Link>
+
                     {/* 7. Dépôts Physiques & Stations */}
                     <Link
                       href="/recrutement-journalier"
@@ -3055,7 +3089,7 @@ export default function Header() {
                     {/* 8. Marketplace */}
                     <Link
                       href="/marketplace"
-                      onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Marketplace")}
+                      onClick={(e) => handleNavClick(e, "/marketplace", "nav_marketplace", "Locaux")}
                       className="rounded-2xl p-3.5 border shadow-xs transition active:scale-95 flex flex-col justify-between min-h-[92px] bg-white dark:bg-gray-900 border-gray-200/80 dark:border-gray-800 hover:shadow-md cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
@@ -3065,7 +3099,7 @@ export default function Header() {
                         <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-[#1877F2] text-[9px] font-black rounded-md uppercase">Nouveau</span>
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Marketplace</h4>
+                        <h4 className="text-xs font-black text-gray-900 dark:text-white leading-tight">Locaux</h4>
                         <p className="text-[10px] text-gray-500 font-medium truncate">Sélection du jour & Ventes</p>
                       </div>
                     </Link>
@@ -3075,7 +3109,7 @@ export default function Header() {
                         vocabulaire Marketplace (Point Wave/pharmacie/clinique)
                         mélangé aux raccourcis Facilité classiques (Offres,
                         Candidature, Concours...) alors que la carte
-                        "Marketplace" ci-dessus donne déjà accès à cet
+                        "Locaux" ci-dessus donne déjà accès à cet
                         univers. Les deux liens restent disponibles dans
                         "Raccourcis Vendeur & Boutique" (espace Business),
                         leur place naturelle — voir plus haut dans ce fichier. */}

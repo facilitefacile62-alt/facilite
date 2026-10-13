@@ -2040,7 +2040,7 @@ export default function GlobeExplorateurBoutiques({
               onClick={onFermer}
               className="w-10 h-10 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white flex items-center justify-center cursor-pointer transition backdrop-blur-md border border-gray-700 shadow-xl"
               aria-label="Fermer la carte"
-              title="Retourner au Marketplace"
+              title="Retourner à Locaux"
             >
               <i className="fa-solid fa-xmark text-base"></i>
             </button>

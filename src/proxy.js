@@ -126,6 +126,9 @@ const PUBLIC_BROWSABLE_ROUTES = [
   // nouvelle route — c'est le même oubli que ci-dessus, découvert dans le
   // même test.
   "/etablissements",
+  // « Autour de moi » de Facilité : où recrutent les entreprises. Les offres
+  // approuvées sont déjà publiques (/offres) ; cette carte ne montre rien de plus.
+  "/autour",
 ];
 
 // Comparaison par segment de chemin plutôt que préfixe brut

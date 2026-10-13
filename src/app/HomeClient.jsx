@@ -1876,14 +1876,14 @@ export default function Home({ initialOffers = [] }) {
               }`}>
                 <img
                   src="/marketplace.svg"
-                  alt="Marketplace"
+                  alt="Locaux"
                   width={24}
                   height={24}
                   className={`w-6 h-6 object-contain drop-shadow-xs ${!checkFeatureAllowed("nav_marketplace") ? "grayscale opacity-50" : ""}`}
                 />
               </div>
               <div className="flex items-center gap-1.5 justify-center">
-                <h4 className="text-[11px] font-black text-gray-900">Marketplace Facilité</h4>
+                <h4 className="text-[11px] font-black text-gray-900">Locaux Facilité</h4>
                 {!checkFeatureAllowed("nav_marketplace") ? (
                   <span className="px-1.5 py-0.2 bg-gray-200 text-gray-600 text-[8px] font-black rounded-md uppercase">Indisponible</span>
                 ) : (
@@ -1906,7 +1906,7 @@ export default function Home({ initialOffers = [] }) {
                   href="/marketplace"
                   className="w-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-extrabold py-2 px-3 rounded-lg text-[9px] transition text-center shadow-xs cursor-pointer block active:scale-95"
                 >
-                  Explorer le Marketplace →
+                  Explorer Locaux →
                 </Link>
               )}
             </div>

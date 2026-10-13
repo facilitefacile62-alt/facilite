@@ -24,6 +24,18 @@ function matchYesNo(text) {
 
 const ORB_GRADIENT = 'conic-gradient(from 0deg, #085041, #14b89a, #9FE1CB, #085041)';
 
+// Appelle onDemande à chaque nouvelle demande d'ouverture (compteur qui monte).
+function DeclencheurVoix({ demande, onDemande }) {
+  const dernier = useRef(0);
+  useEffect(() => {
+    if (demande > dernier.current) {
+      dernier.current = demande;
+      onDemande();
+    }
+  });
+  return null;
+}
+
 // Widget global (monté une fois dans layout.js, visible sur toutes les
 // pages) — contrôlé dynamiquement par le Feature Flag 'feat_voice_assistant'.
 export default function VoiceAssistant() {
@@ -66,6 +78,28 @@ export default function VoiceAssistant() {
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isAllowed = isFeatureAllowed(featureFlagsTree, "feat_voice_assistant", userRole);
 
+  // L'orbe flottant propre à l'assistant a été remplacé par le bouton flottant
+  // commun (BoutonFlottantFacilite : Extracteur, Assistant vocal, Écrire un
+  // e-mail). Ce bouton demande l'assistant par un évènement window ; ici on
+  // l'ouvre (et on lance l'écoute) ou, si l'admin l'a désactivé, on explique
+  // pourquoi il ne répond pas (même message que l'ancien orbe grisé).
+  const [demande, setDemande] = useState(0);
+  useEffect(() => {
+    if (isDashboard) return undefined;
+    const surDemande = () => {
+      if (!isAllowed) {
+        triggerFeatureDisabledModal(
+          "Assistant vocal temporairement indisponible",
+          "L'assistant vocal est temporairement désactivé le temps de finaliser les travaux et chantiers sur la plateforme. Merci pour votre patience !"
+        );
+        return;
+      }
+      setDemande((n) => n + 1);
+    };
+    window.addEventListener('facilite:assistant-vocal', surDemande);
+    return () => window.removeEventListener('facilite:assistant-vocal', surDemande);
+  }, [isAllowed, isDashboard]);
+
   // isDashboard reste un MASQUAGE PUR : le widget n'a rien à faire sur le
   // panneau d'administration, où il recouvrirait les réglages. Ce n'est pas
   // une désactivation par l'admin, c'est une question de place.
@@ -82,27 +116,7 @@ export default function VoiceAssistant() {
   // donc à sa place, grisé, et explique au clic pourquoi il ne répond pas —
   // même dispositif que handleGuardedClick dans Header.jsx.
   if (!isAllowed) {
-    return (
-      <div className="fixed bottom-32 right-4 sm:right-6 z-[999] flex flex-col items-end gap-3">
-        <button
-          type="button"
-          onClick={() =>
-            triggerFeatureDisabledModal(
-              "Assistant vocal temporairement indisponible",
-              "L'assistant vocal est temporairement désactivé le temps de finaliser les travaux et chantiers sur la plateforme. Merci pour votre patience !"
-            )
-          }
-          aria-label="Assistant vocal temporairement indisponible"
-          title="Assistant vocal temporairement indisponible"
-          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center cursor-pointer bg-gray-300 opacity-60 grayscale"
-        >
-          <i className="fa-solid fa-microphone-slash text-2xl text-gray-600"></i>
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-500 text-white text-[10px] font-black flex items-center justify-center">
-            <i className="fa-solid fa-lock text-[9px]"></i>
-          </span>
-        </button>
-      </div>
-    );
+    return null;
   }
 
   const requireLogin = () => {
@@ -363,11 +377,12 @@ export default function VoiceAssistant() {
   return (
     <>
       <LiveMapLocation onLocationUpdate={handleLocationUpdate} render={false} active={hasEngaged} />
+      <DeclencheurVoix demande={demande} onDemande={() => (isOpen ? (resetReplyFlow(), setIsOpen(false)) : startVoice())} />
 
       {/* bottom-32 : dégage ScrollToTop.jsx (bottom-20/bottom-8, jusqu'à 112px
           de hauteur sur mobile) pour éviter que les deux boutons flottants
           se chevauchent en bas d'écran. */}
-      <div className="fixed bottom-32 right-4 sm:right-6 z-[999] flex flex-col items-end gap-3">
+      <div className="fixed bottom-52 right-4 sm:right-6 z-[999] flex flex-col items-end gap-3">
         {isOpen && (
           <div className="w-[320px] max-w-[calc(100vw-2.5rem)] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 bg-[#085041] text-white flex-shrink-0">
@@ -454,30 +469,6 @@ export default function VoiceAssistant() {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => {
-            if (isOpen) {
-              resetReplyFlow();
-              return setIsOpen(false);
-            }
-            // Un seul geste : ouvrir ET démarrer l'écoute (comme décrocher un
-            // appel), plutôt que d'exiger un second clic sur le bouton
-            // d'appel interne une fois le panneau ouvert — c'est ce second
-            // clic manquant qui donnait l'impression que l'assistant ne
-            // répondait jamais à la voix. startVoice() gère déjà la
-            // vérification de session, l'ouverture du panneau et
-            // l'engagement GPS ; le bouton d'appel interne reste disponible
-            // pour relancer l'écoute après une réponse.
-            startVoice();
-          }}
-          aria-label="Assistant Facilite"
-          className="relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center cursor-pointer"
-          style={{ background: ORB_GRADIENT }}
-        >
-          {isListening && <span className="absolute -inset-2 rounded-full bg-[#14b89a]/30 animate-ping" />}
-          <i className={`fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-microphone-lines'} text-white text-lg relative`}></i>
-        </button>
       </div>
     </>
   );
