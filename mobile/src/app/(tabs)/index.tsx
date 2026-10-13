@@ -7,7 +7,6 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CarteOffre from '@/components/CarteOffre';
-import BoutonAssistantVocal from '@/components/BoutonAssistantVocal';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import StoryViewer from '@/components/StoryViewer';
 import { useAuth } from '@/context/AuthContext';
@@ -211,7 +210,6 @@ export default function AccueilScreen() {
           />
         )}
 
-        <BoutonAssistantVocal />
       </SafeAreaView>
 
       {storyOuverte !== null && stories.length > 0 ? (
