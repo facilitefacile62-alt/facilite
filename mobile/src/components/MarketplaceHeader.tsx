@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -42,7 +42,7 @@ export default function MarketplaceHeader() {
         style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}>
         <Ionicons name="search" size={18} color="#1A1A1A" />
       </Pressable>
-      <Pressable onPress={() => router.push('/marketplace/profil')} accessibilityLabel="Menu" hitSlop={8}>
+      <Pressable onPress={() => router.push('/marketplace/menu' as Href)} accessibilityLabel="Menu" hitSlop={8}>
         <Ionicons name="menu" size={22} color="#1A1A1A" />
       </Pressable>
 
