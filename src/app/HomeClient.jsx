@@ -11,6 +11,7 @@ import ApplyModal from "@/components/ApplyModal";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
+import StoryViewer from "@/components/StoryViewer";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import SocialShareButtons from "@/components/SocialShareButtons";
@@ -182,6 +183,27 @@ export default function Home({ initialOffers = [] }) {
   const pathname = usePathname();
   const router = useRouter();
   const [previewTemplate, setPreviewTemplate] = useState(null);
+
+  // Stories gérées depuis /admin/stories (table stories, lecture publique des
+  // stories actives). Tant qu'il n'y en a aucune, le carrousel des modèles de CV
+  // reste affiché.
+  const [stories, setStories] = useState([]);
+  const [storyOuverte, setStoryOuverte] = useState(null);
+  useEffect(() => {
+    let annule = false;
+    supabase
+      .from("stories")
+      .select("id, titre, image_url, libelle_bouton, lien, created_at")
+      .eq("actif", true)
+      .order("ordre", { ascending: true })
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!annule && Array.isArray(data)) setStories(data);
+      });
+    return () => {
+      annule = true;
+    };
+  }, []);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   // État pour les descriptions longues (Voir plus / Voir moins)
@@ -1608,7 +1630,22 @@ export default function Home({ initialOffers = [] }) {
                 déjà ?template= au montage). */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-3.5">
               <div className="flex items-center gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-0.5">
-                {CV_TEMPLATE_STORIES.map((tpl) => (
+                {stories.length > 0 && stories.map((st, i) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => setStoryOuverte(i)}
+                    className="flex flex-col items-center gap-1.5 flex-shrink-0 w-16 snap-start cursor-pointer group"
+                  >
+                    <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
+                      <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
+                        <img src={st.image_url} alt={st.titre} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                      </span>
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{st.titre}</span>
+                  </button>
+                ))}
+                {stories.length === 0 && CV_TEMPLATE_STORIES.map((tpl) => (
                   <button
                     key={tpl.id}
                     type="button"
@@ -1940,6 +1977,10 @@ export default function Home({ initialOffers = [] }) {
 
 
 
+
+      {storyOuverte !== null && stories.length > 0 ? (
+        <StoryViewer stories={stories} debut={storyOuverte} onClose={() => setStoryOuverte(null)} />
+      ) : null}
 
       {/* Aperçu plein écran d'un modèle de CV (carrousel Stories ci-dessus) */}
       <TemplatePreviewModal

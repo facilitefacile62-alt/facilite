@@ -9,7 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CarteOffre from '@/components/CarteOffre';
 import BoutonAssistantVocal from '@/components/BoutonAssistantVocal';
 import FaciliteHeader from '@/components/FaciliteHeader';
+import StoryViewer from '@/components/StoryViewer';
 import { useAuth } from '@/context/AuthContext';
+import { chargerStories, type Story } from '@/lib/stories';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles } from '@/lib/useOffresReelles';
 
@@ -51,6 +53,20 @@ export default function AccueilScreen() {
   const [rafraichissement, setRafraichissement] = useState(false);
   const candidateMatchScores = useCandidateMatchScores(user?.id);
   const router = useRouter();
+
+  // Stories gérées depuis l'admin du site (table stories). Tant qu'il n'y en a
+  // aucune, le carrousel des modèles de CV reste affiché.
+  const [stories, setStories] = useState<Story[]>([]);
+  const [storyOuverte, setStoryOuverte] = useState<number | null>(null);
+  useEffect(() => {
+    let annule = false;
+    chargerStories().then((liste) => {
+      if (!annule) setStories(liste);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   // Une page pleine (autant d'offres que demandées) signale qu'il peut en
   // rester : on n'en redemande qu'une fois la page précédente arrivée, ce qui
@@ -122,7 +138,19 @@ export default function AccueilScreen() {
                   borderColor: BORDURE,
                 }}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
-                  {STORIES_CV.map((s) => (
+                  {stories.map((st, i) => (
+                    <Pressable key={st.id} onPress={() => setStoryOuverte(i)} accessibilityLabel={`Story : ${st.titre}`} style={{ alignItems: 'center', gap: 6, width: 66 }}>
+                      <LinearGradient
+                        colors={['#10E688', '#2563EB']}
+                        style={{ width: 62, height: 62, borderRadius: 31, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}>
+                        <View style={{ width: '100%', height: '100%', borderRadius: 30, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
+                          <Image source={{ uri: st.imageUrl }} alt={st.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                        </View>
+                      </LinearGradient>
+                      <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '700', color: BLEU }}>{st.titre}</Text>
+                    </Pressable>
+                  ))}
+                  {stories.length === 0 && STORIES_CV.map((s) => (
                     <Pressable
                       key={s.id}
                       onPress={() => router.push({ pathname: '/web/[cle]', params: { cle: 'creer-cv', template: s.template } })}
@@ -185,6 +213,10 @@ export default function AccueilScreen() {
 
         <BoutonAssistantVocal />
       </SafeAreaView>
+
+      {storyOuverte !== null && stories.length > 0 ? (
+        <StoryViewer stories={stories} debut={storyOuverte} onFermer={() => setStoryOuverte(null)} />
+      ) : null}
     </View>
   );
 }

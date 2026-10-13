@@ -333,7 +333,15 @@ test.describe("Invariants de sécurité", () => {
     //     policy sur storage.objects) : aucune donnée personnelle n'y
     //     transite. Plafond 100 Mo, video/mp4, video/quicktime et video/webm.
     //     Décision écrite le 2026-10-13, migration 20261013120000_aide_video.sql.
-    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos", "marketplace-videos", "aide-videos"]);
+    //   - "stories-media" : visuels des stories du fil d'actualité (pastilles
+    //     rondes en tête du site et de l'application), affichés à tout visiteur
+    //     — du contenu marketing par nature. Déposés par un ADMINISTRATEUR
+    //     seulement (URL signée générée par /api/admin/stories après contrôle
+    //     isCallerAdmin, aucune policy sur storage.objects) : aucune donnée
+    //     personnelle n'y transite. Plafond 5 Mo, image/jpeg, image/png et
+    //     image/webp. Décision écrite le 2026-10-13, migration
+    //     20261013130000_stories.sql.
+    const JUSTIFIED_PUBLIC_BUCKETS = new Set(["job-offers", "marketplace-photos", "marketplace-videos", "aide-videos", "stories-media"]);
 
     const rows = await runIntrospectionSql(`SELECT id, public FROM storage.buckets ORDER BY id;`);
     const violations = rows.filter((r) => r.public === true && !JUSTIFIED_PUBLIC_BUCKETS.has(r.id));
