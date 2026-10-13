@@ -193,13 +193,13 @@ export default function MenuScreen() {
 
           <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
           <View className="flex-row items-center justify-between px-2.5 py-1.5">
-            <Pressable onPress={() => router.navigate('/')} className="flex-row items-center gap-2">
+            <Pressable onPress={() => router.navigate('/profil')} className="flex-row items-center gap-2">
               <Ionicons name="id-card-outline" size={18} color={VERT} />
-              <Text className="text-[15px] font-black" style={{ color: VERT }}>Facilité</Text>
+              <Text className="text-[15px] font-black" style={{ color: VERT }}>Profil</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/marketplace')} className="flex-row items-center gap-2">
               <Ionicons name="storefront" size={18} color={BLEU} />
-              <Text className="text-[15px] font-black" style={{ color: BLEU }}>Marketplace</Text>
+              <Text className="text-[15px] font-black" style={{ color: BLEU }}>Boutique</Text>
             </Pressable>
           </View>
           <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />

@@ -120,9 +120,12 @@ export default function ProfilScreen() {
   };
 
   const nomAffiche = boutique?.nom || profile?.full_name || 'Mon profil';
+  // Sous le nom : la description de la boutique, sinon le titre professionnel ou la bio
+  // du profil (maquette 44) — jamais l'adresse e-mail du compte.
+  const texteProfil = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const sousTitre = boutique
     ? [boutique.quartier, boutique.ville].filter(Boolean).join(', ') || 'Boutique sur Facilité'
-    : user?.email || '';
+    : texteProfil(profile?.headline) ?? texteProfil(profile?.bio) ?? '';
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
@@ -260,7 +263,7 @@ export default function ProfilScreen() {
               keyExtractor={(item) => item.id}
               contentContainerClassName="px-4 py-3"
               ItemSeparatorComponent={() => <View className="h-2.5" />}
-              renderItem={({ item }) => <LigneOutil outil={item} onPress={() => item.ouvrir(router)} />}
+              renderItem={({ item, index }) => <LigneOutil outil={item} vedette={index === 0} onPress={() => item.ouvrir(router)} />}
             />
           )}
         </ScrollView>

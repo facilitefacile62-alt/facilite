@@ -22,7 +22,9 @@ export async function seConnecterAvecGoogle() {
 
   const resultat = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (resultat.type !== 'success' || !('url' in resultat) || !resultat.url) {
-    throw new Error('Connexion annulée.');
+    // DIAGNOSTIC TEMPORAIRE (12/10/2026) : montre l'adresse de retour réellement envoyée, à comparer
+    // avec la liste « Redirect URLs » de Supabase. À retirer une fois le problème réglé.
+    throw new Error(`Connexion annulée. (retour demandé : ${redirectTo} ; résultat : ${resultat.type})`);
   }
 
   const { params, errorCode } = getQueryParams(resultat.url);
