@@ -64,7 +64,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
         {/* Zones de toucher */}
         <View style={{ position: 'absolute', top: insets.top + 80, bottom: 110, left: 0, right: 0, flexDirection: 'row' }}>
           <Pressable onPress={precedente} accessibilityLabel="Story précédente" style={{ flex: 1 }} />
-          <View style={{ flex: 1 }} pointerEvents="none" />
+          <View style={{ flex: 1, pointerEvents: 'none' }} />
           <Pressable onPress={suivante} accessibilityLabel="Story suivante" style={{ flex: 1 }} />
         </View>
 

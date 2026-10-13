@@ -83,7 +83,7 @@ export default function MarketplaceBottomBar() {
 
   return (
     <View style={{ backgroundColor: FOND, paddingBottom: Math.max(insets.bottom, 6), borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
-      <Animated.View style={{ height: hauteur, overflow: 'hidden' }} pointerEvents={deplie ? 'auto' : 'none'}>
+      <Animated.View style={{ height: hauteur, overflow: 'hidden', pointerEvents: deplie ? 'auto' : 'none' }}>
         <View className="flex-row items-center justify-center gap-2 px-3" style={{ height: HAUTEUR_LIGNE }}>
           {PILULES.map((pl) => (
             <Pressable
