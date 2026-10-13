@@ -18,10 +18,8 @@ import { enregistrerChampsProfil } from '@/lib/profilChamps';
 // site : on le garde synchronisé ici (vrai dès qu'au moins l'un des deux
 // champs est affiché), sinon activer « Afficher mon téléphone » depuis
 // l'app ne produirait rien sur la page publique.
-// Seules les pages qui EXISTENT sur le site sont proposées. La maquette 55
-// montre aussi « Mentions légales » : aucune page de ce nom n'existe sur
-// ffacilite.com (ni contenu d'éditeur/hébergeur dans les autres pages
-// légales), donc pas de lien tant que le texte n'est pas fourni. Les clés
+// « Mentions légales » (maquette 55) est affichée, mais aucune page de ce nom
+// n'existe encore sur ffacilite.com : un appui annonce « bientôt ». Les clés
 // ci-dessous sont celles de lib/webEcrans.ts ET de la liste blanche du pont
 // de session côté serveur.
 const LIENS_LEGAUX = [
@@ -103,6 +101,12 @@ export default function ProfilConfidentialiteScreen() {
                 <Text className="text-[13.5px] font-bold text-[#2563EB]">{l.titre}</Text>
               </Pressable>
             ))}
+            {/* « Mentions légales » : sur la maquette 55, mais la page n'existe pas encore sur le site. */}
+            <Pressable
+              onPress={() => Alert.alert('Mentions légales', 'Cette page arrive bientôt.')}
+              className="py-4 border-t border-black/[0.06]">
+              <Text className="text-[13.5px] font-bold text-[#2563EB]">Mentions légales</Text>
+            </Pressable>
           </View>
         </ScrollView>
       </SafeAreaView>

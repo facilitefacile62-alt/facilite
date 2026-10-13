@@ -92,14 +92,24 @@ export default function ProfilSecuriteScreen() {
             {lignes.map((l, i) => (
               <View key={l.cle} className={`py-3.5 ${i > 0 ? 'border-t border-black/[0.06]' : 'mt-1'}`}>
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-[12px] text-black/45 flex-1">{l.libelle}</Text>
-                  {l.confirme ? (
-                    <View className="bg-[#D1FAE5] rounded-full px-2 py-0.5">
-                      <Text className="text-[10px] font-bold text-[#047857]">Confirmé</Text>
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-[12px] font-bold text-black/70">{l.libelle}</Text>
+                      {l.confirme ? (
+                        <View className="bg-[#D1FAE5] rounded-full px-2 py-0.5">
+                          <Text className="text-[10px] font-bold text-[#047857]">Confirmé</Text>
+                        </View>
+                      ) : null}
                     </View>
-                  ) : null}
+                    {/* Valeurs absentes en italique gris, comme la maquette 56. */}
+                    <Text
+                      className="text-[13.5px] mt-1"
+                      style={/^(Non renseign|Aucun num)/.test(l.valeur) ? { fontStyle: 'italic', color: 'rgba(0,0,0,0.45)' } : { fontWeight: '700', color: '#1A1A1A' }}>
+                      {l.valeur}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={15} color="rgba(0,0,0,0.35)" />
                 </View>
-                <Text className="text-[13.5px] font-bold text-[#1A1A1A] mt-1">{l.valeur}</Text>
               </View>
             ))}
           </View>
@@ -107,13 +117,13 @@ export default function ProfilSecuriteScreen() {
           <View className="bg-white rounded-2xl p-3.5 mt-3.5">
             <View className="flex-row items-center gap-2">
               <Ionicons name="key-outline" size={15} color="#2563EB" />
-              <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Mot de passe</Text>
+              <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Créer un mot de passe</Text>
             </View>
 
             <View className="bg-[#F7F7F5] rounded-xl p-3 mt-3">
               <Text className="text-[12px] text-black/60 leading-[17px]">
-                Définissez un mot de passe pour pouvoir vous connecter avec votre e-mail, en plus de Google ou du code
-                SMS.
+                Ce compte n&apos;a pas encore de mot de passe (connexion Google ou téléphone). Vous pourrez ensuite aussi
+                vous connecter avec un mot de passe.
               </Text>
             </View>
 
