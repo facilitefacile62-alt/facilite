@@ -96,9 +96,11 @@ export default function AideVideoScreen() {
                     <Ionicons name="videocam" size={20} color="#166534" />
                   </View>
                   <Text className="text-[14px] font-extrabold text-center text-[#1A1A1A]">La vidéo d&apos;aide arrive bientôt</Text>
-                  <Text className="text-[12px] text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>
-                    En attendant, notre équipe vous accompagne sur WhatsApp.
-                  </Text>
+                  {AIDE_VIDEO.whatsappVisible ? (
+                    <Text className="text-[12px] text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                      En attendant, notre équipe vous accompagne sur WhatsApp.
+                    </Text>
+                  ) : null}
                 </View>
               )}
               {AIDE_VIDEO.type !== 'aucune' && AIDE_VIDEO.duree ? (
@@ -115,7 +117,8 @@ export default function AideVideoScreen() {
             ) : null}
           </View>
 
-          {/* Accompagnement WhatsApp */}
+          {/* Accompagnement WhatsApp — masqué par l'interrupteur admin « Vidéo d'aide » */}
+          {AIDE_VIDEO.whatsappVisible ? (
           <View className="bg-white p-4 gap-3" style={{ borderRadius: 20, borderWidth: 1, borderColor: '#A7F3D0' }}>
             <View className="flex-row items-center gap-3">
               <View className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#25D366' }}>
@@ -135,6 +138,7 @@ export default function AideVideoScreen() {
               <Text className="text-[13px] font-black text-white">WhatsApp (+221 77 140 08 32)</Text>
             </Pressable>
           </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>

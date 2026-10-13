@@ -111,9 +111,11 @@ function AideCandidatureContent() {
                   <i className="fa-solid fa-video"></i>
                 </div>
                 <p className="text-sm font-extrabold text-gray-900 dark:text-white">La vidéo d&apos;aide arrive bientôt</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  En attendant, notre équipe vous accompagne sur WhatsApp.
-                </p>
+                {AIDE_VIDEO.whatsappVisible ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    En attendant, notre équipe vous accompagne sur WhatsApp.
+                  </p>
+                ) : null}
               </div>
             )}
           </div>
@@ -142,7 +144,8 @@ function AideCandidatureContent() {
 
         </div>
 
-        {/* Assistance Directe WhatsApp */}
+        {/* Assistance Directe WhatsApp — masquée par l'interrupteur admin (/admin/aide-video) */}
+        {AIDE_VIDEO.whatsappVisible ? (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center text-xl shadow-xs shrink-0">
@@ -164,7 +167,10 @@ function AideCandidatureContent() {
           </a>
         </div>
 
+        ) : null}
+
         {/* Footer d'assistance */}
+        {AIDE_VIDEO.whatsappVisible ? (
         <div className="flex items-center justify-between pt-1 px-1 text-xs text-gray-600 dark:text-gray-400 font-medium">
           <div className="flex items-center gap-2">
             <i className="fa-solid fa-headset text-gray-500 text-sm"></i>
@@ -179,6 +185,7 @@ function AideCandidatureContent() {
             Nous contacter
           </a>
         </div>
+        ) : null}
 
       </div>
     </div>

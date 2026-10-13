@@ -52,7 +52,7 @@ export async function GET(req) {
   const { admin, error } = await autoriserAdmin(req);
   if (error) return error;
 
-  const { data, error: dbError } = await admin.from("aide_video").select("type, url, youtube_id, duree, updated_at").eq("id", 1).single();
+  const { data, error: dbError } = await admin.from("aide_video").select("type, url, youtube_id, duree, whatsapp_visible, updated_at").eq("id", 1).single();
   if (dbError) {
     console.error("[admin/aide-video GET]", dbError);
     return NextResponse.json({ error: "Impossible de charger la vidéo d'aide." }, { status: 500 });
@@ -125,7 +125,7 @@ export async function PUT(req) {
     .from("aide_video")
     .update({ ...ligne, updated_at: new Date().toISOString(), updated_by: user.id })
     .eq("id", 1)
-    .select("type, url, youtube_id, duree, updated_at")
+    .select("type, url, youtube_id, duree, whatsapp_visible, updated_at")
     .single();
 
   if (dbError) {
@@ -139,5 +139,27 @@ export async function PUT(req) {
     await admin.storage.from(BUCKET).remove([ancien]).catch(() => {});
   }
 
+  return NextResponse.json({ video: data });
+}
+
+// Interrupteur « numéro WhatsApp visible » de la page d'aide (site et application).
+export async function PATCH(req) {
+  const { admin, user, error } = await autoriserAdmin(req);
+  if (error) return error;
+
+  const body = await req.json().catch(() => null);
+  if (typeof body?.whatsapp_visible !== "boolean") {
+    return NextResponse.json({ error: "Valeur invalide." }, { status: 400 });
+  }
+  const { data, error: dbError } = await admin
+    .from("aide_video")
+    .update({ whatsapp_visible: body.whatsapp_visible, updated_at: new Date().toISOString(), updated_by: user.id })
+    .eq("id", 1)
+    .select("type, url, youtube_id, duree, whatsapp_visible, updated_at")
+    .single();
+  if (dbError) {
+    console.error("[admin/aide-video PATCH]", dbError);
+    return NextResponse.json({ error: "Impossible d'enregistrer le réglage." }, { status: 500 });
+  }
   return NextResponse.json({ video: data });
 }

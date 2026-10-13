@@ -5,16 +5,19 @@ import { supabase } from '@/lib/supabase';
 // l'espace admin du site (« Vidéo d'aide ») : table aide_video, lecture
 // publique. Sans vidéo, l'écran annonce qu'elle arrive bientôt.
 export type AideVideo =
-  | { type: 'aucune' }
-  | { type: 'fichier'; url: string; duree?: string }
-  | { type: 'youtube'; id: string; duree?: string };
+  | { type: 'aucune'; whatsappVisible: boolean }
+  | { type: 'fichier'; url: string; duree?: string; whatsappVisible: boolean }
+  | { type: 'youtube'; id: string; duree?: string; whatsappVisible: boolean };
 
-export const AIDE_VIDEO_VIDE: AideVideo = { type: 'aucune' };
+// whatsappVisible : interrupteur admin du numéro WhatsApp ; masqué tant que la
+// valeur n'est pas lue.
+export const AIDE_VIDEO_VIDE: AideVideo = { type: 'aucune', whatsappVisible: false };
 
 export async function chargerAideVideo(): Promise<AideVideo> {
-  const { data, error } = await supabase.from('aide_video').select('type, url, youtube_id, duree').eq('id', 1).maybeSingle();
+  const { data, error } = await supabase.from('aide_video').select('type, url, youtube_id, duree, whatsapp_visible').eq('id', 1).maybeSingle();
   if (error || !data) return AIDE_VIDEO_VIDE;
-  if (data.type === 'fichier' && data.url) return { type: 'fichier', url: data.url as string, duree: (data.duree as string | null) ?? undefined };
-  if (data.type === 'youtube' && data.youtube_id) return { type: 'youtube', id: data.youtube_id as string, duree: (data.duree as string | null) ?? undefined };
-  return AIDE_VIDEO_VIDE;
+  const whatsappVisible = data.whatsapp_visible !== false;
+  if (data.type === 'fichier' && data.url) return { type: 'fichier', url: data.url as string, duree: (data.duree as string | null) ?? undefined, whatsappVisible };
+  if (data.type === 'youtube' && data.youtube_id) return { type: 'youtube', id: data.youtube_id as string, duree: (data.duree as string | null) ?? undefined, whatsappVisible };
+  return { type: 'aucune', whatsappVisible };
 }
