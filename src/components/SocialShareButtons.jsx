@@ -6,18 +6,14 @@ import { supabase } from "@/lib/supabase";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 import { isOfferExpired } from "@/lib/offerExpiration";
 
-const REACTIONS = [
-  { id: "like", emoji: "👍", label: "J'aime", color: "text-blue-600", bg: "bg-blue-50" },
-  { id: "love", emoji: "❤️", label: "J'adore", color: "text-rose-600", bg: "bg-rose-50" },
-  { id: "care", emoji: "🥰", label: "Solidaire", color: "text-amber-500", bg: "bg-amber-50" },
-  { id: "clap", emoji: "👏", label: "Bravo", color: "text-emerald-600", bg: "bg-emerald-50" },
-  { id: "insightful", emoji: "💡", label: "Instructif", color: "text-amber-600", bg: "bg-amber-50" },
-  { id: "boost", emoji: "🚀", label: "Boost", color: "text-purple-600", bg: "bg-purple-50" },
-];
+function effectiveLinkForHelp(offer, externalLink) {
+  const l = externalLink || offer?.external_link || offer?.externalLink || "";
+  return typeof l === "string" && /^https?:\/\//.test(l) ? l : "";
+}
 
 /**
  * Barre d'Engagement & Partage Réseau Social (Design 3 Actions Ultra-Propre)
- * 1. 👍 J'aime (avec barre de réactions animées au survol)
+ * 1. ❓ Aide (page vidéo « comment postuler », remplace l'ancien « J'aime »)
  * 2. ↪️ Partager (Bouton avec menu déroulant de tous les réseaux sociaux)
  * 3. ✈️ Envoyer / Postuler (WhatsApp / Lien Officiel / Interne) ou Offre expirée (désactivé)
  */
@@ -32,11 +28,8 @@ export default function SocialShareButtons({
   isExpired,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [reactionsOpen, setReactionsOpen] = useState(false);
-  const [activeReaction, setActiveReaction] = useState(null);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef(null);
-  const reactionsTimeoutRef = useRef(null);
 
   const offerExpired = typeof isExpired === "boolean" ? isExpired : isOfferExpired(offer);
 
@@ -48,10 +41,8 @@ export default function SocialShareButtons({
 
   const strOfferId = offerId ? String(offerId) : "";
   const hash = strOfferId ? strOfferId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 42;
-  const initialLikes = (hash * 17) % 800 + 45;
   const initialShares = (hash * 3) % 80 + 5;
 
-  const [likesCount, setLikesCount] = useState(initialLikes);
   const [sharesCount, setSharesCount] = useState(initialShares);
 
   const [applicantsCount, setApplicantsCount] = useState(
@@ -109,6 +100,10 @@ export default function SocialShareButtons({
   };
 
   const shareUrl = offerId ? `${getBaseUrl()}/offres/${offerId}` : getBaseUrl();
+  // Page d'aide vidéo : le titre de l'offre est repris, et le lien officiel (s'il y en
+  // a un) sert au bouton « continuer » de la page.
+  const aideLien = effectiveLinkForHelp(offer, externalLink);
+  const aideHref = `/aide-candidature?titre=${encodeURIComponent(title)}${aideLien ? `&lien=${encodeURIComponent(aideLien)}` : ""}`;
   const shareText = `🚀 Recrutement : ${title} chez ${company} (${contract} - ${location}) sur Facilité.\nDécouvrez l'offre et postulez ici :`;
 
   // Extraction complète de tous les moyens de contact (Email + WhatsApp + Site)
@@ -140,16 +135,15 @@ export default function SocialShareButtons({
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
-        setReactionsOpen(false);
-      }
+              }
     }
-    if (dropdownOpen || reactionsOpen) {
+    if (dropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownOpen, reactionsOpen]);
+  }, [dropdownOpen]);
 
   const handleCopyLink = (platformName = "") => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -183,43 +177,6 @@ export default function SocialShareButtons({
     } else {
       handleCopyLink();
     }
-  };
-
-  const handleReactionClick = (reaction, e) => {
-    if (e) e.stopPropagation();
-    if (activeReaction?.id === reaction.id) {
-      setActiveReaction(null);
-      setLikesCount((prev) => Math.max(0, prev - 1));
-    } else {
-      if (!activeReaction) setLikesCount((prev) => prev + 1);
-      setActiveReaction(reaction);
-    }
-    setReactionsOpen(false);
-  };
-
-  const handleLikeButtonClick = (e) => {
-    if (e) e.stopPropagation();
-    if (activeReaction) {
-      setActiveReaction(null);
-      setLikesCount((prev) => Math.max(0, prev - 1));
-    } else {
-      setActiveReaction(REACTIONS[0]); // Par défaut : 👍 J'aime
-      setLikesCount((prev) => prev + 1);
-    }
-  };
-
-  const handleMouseEnterLike = () => {
-    if (reactionsTimeoutRef.current) clearTimeout(reactionsTimeoutRef.current);
-    reactionsTimeoutRef.current = setTimeout(() => {
-      setReactionsOpen(true);
-    }, 250);
-  };
-
-  const handleMouseLeaveLike = () => {
-    if (reactionsTimeoutRef.current) clearTimeout(reactionsTimeoutRef.current);
-    reactionsTimeoutRef.current = setTimeout(() => {
-      setReactionsOpen(false);
-    }, 350);
   };
 
   const [isSaved, setIsSaved] = useState(false);
@@ -445,51 +402,17 @@ export default function SocialShareButtons({
 
         {/* Ligne d'actions 3 boutons alignés au même endroit : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Bouton 1 : J'aime avec Barre de Réactions Flottante */}
-          <div
-            className="relative"
-            onMouseEnter={handleMouseEnterLike}
-            onMouseLeave={handleMouseLeaveLike}
+          {/* Bouton 1 : Aide — ouvre la page « vidéo d'explication pour postuler » (remplace « J'aime ») */}
+          <Link
+            href={aideHref}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl text-xs font-black transition-all cursor-pointer border select-none text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700 active:scale-95"
+            title="Aide : comment postuler (vidéo)"
+            aria-label="Aide : comment postuler"
           >
-            {/* Barre flottante des réactions emojis au survol (👍 ❤️ 🥰 👏 💡 🚀) */}
-            {reactionsOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full mb-2 left-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center gap-2 z-50 animate-in fade-in zoom-in-95 duration-150"
-              >
-                {REACTIONS.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={(e) => handleReactionClick(r, e)}
-                    title={r.label}
-                    className="text-xl sm:text-2xl transform hover:scale-135 hover:-translate-y-1 transition-all duration-150 cursor-pointer active:scale-110 select-none"
-                  >
-                    {r.emoji}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Bouton J'aime */}
-            <button
-              type="button"
-              onClick={handleLikeButtonClick}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl text-xs font-black transition-all cursor-pointer border select-none ${
-                activeReaction
-                  ? `${activeReaction.color} ${activeReaction.bg} border-transparent shadow-xs`
-                  : "text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700"
-              }`}
-              title="J'aime"
-            >
-              {activeReaction ? (
-                <span className="text-sm select-none">{activeReaction.emoji}</span>
-              ) : (
-                <i className="fa-regular fa-thumbs-up text-sm"></i>
-              )}
-              <span className="hidden xs:inline">{activeReaction ? activeReaction.label : "J'aime"}</span>
-            </button>
-          </div>
+            <i className="fa-regular fa-circle-question text-sm"></i>
+            <span className="hidden xs:inline">Aide</span>
+          </Link>
 
           {/* Bouton 2 : Partager */}
           <button
@@ -773,51 +696,17 @@ export default function SocialShareButtons({
       <div className={`relative w-full ${className}`} ref={dropdownRef}>
         {/* Boutons d'Action Principaux Alignés : [ 👍 J'aime ] [ 📤 Partager ] [ ↗ Postuler sur le site officiel ] [ 🔖 Bookmark ] */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Action 1 : J'aime avec Barre de Réactions Flottante */}
-          <div
-            className="relative"
-            onMouseEnter={handleMouseEnterLike}
-            onMouseLeave={handleMouseLeaveLike}
+          {/* Bouton 1 : Aide — ouvre la page « vidéo d'explication pour postuler » (remplace « J'aime ») */}
+          <Link
+            href={aideHref}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl text-xs font-black transition-all cursor-pointer border select-none text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700 active:scale-95"
+            title="Aide : comment postuler (vidéo)"
+            aria-label="Aide : comment postuler"
           >
-            {/* Barre flottante des réactions emojis au survol (👍 ❤️ 🥰 👏 💡 🚀) */}
-            {reactionsOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full mb-2 left-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center gap-2 z-50 animate-in fade-in zoom-in-95 duration-150"
-              >
-                {REACTIONS.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={(e) => handleReactionClick(r, e)}
-                    title={r.label}
-                    className="text-xl sm:text-2xl transform hover:scale-135 hover:-translate-y-1 transition-all duration-150 cursor-pointer active:scale-110 select-none"
-                  >
-                    {r.emoji}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Bouton J'aime */}
-            <button
-              type="button"
-              onClick={handleLikeButtonClick}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-3 sm:px-4 rounded-xl text-xs font-black transition-all cursor-pointer border select-none ${
-                activeReaction
-                  ? `${activeReaction.color} ${activeReaction.bg} border-transparent shadow-xs`
-                  : "text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700"
-              }`}
-              title="J'aime"
-            >
-              {activeReaction ? (
-                <span className="text-sm select-none">{activeReaction.emoji}</span>
-              ) : (
-                <i className="fa-regular fa-thumbs-up text-sm"></i>
-              )}
-              <span className="hidden xs:inline">{activeReaction ? activeReaction.label : "J'aime"}</span>
-            </button>
-          </div>
+            <i className="fa-regular fa-circle-question text-sm"></i>
+            <span className="hidden xs:inline">Aide</span>
+          </Link>
 
           {/* Action 2 : Partager */}
           <button

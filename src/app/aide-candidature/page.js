@@ -1,15 +1,27 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
+import { AIDE_VIDEO_VIDE, chargerAideVideo } from "@/lib/aideVideo";
 
 function AideCandidatureContent() {
   const searchParams = useSearchParams();
   const offreTitre = searchParams?.get("titre") || "Recrutement spécial — Enseignement & Fonction Publique";
   const offreLien = searchParams?.get("lien") || "";
   const [isPlaying, setIsPlaying] = useState(false);
+  // Vidéo gérée depuis /admin/aide-video (table aide_video).
+  const [AIDE_VIDEO, setAideVideo] = useState(AIDE_VIDEO_VIDE);
+  useEffect(() => {
+    let annule = false;
+    chargerAideVideo().then((v) => {
+      if (!annule) setAideVideo(v);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
   const [btnClicked, setBtnClicked] = useState(false);
 
   const handleAction = () => {
@@ -58,30 +70,50 @@ function AideCandidatureContent() {
             <strong className="font-extrabold text-gray-900 dark:text-white">{offreTitre}</strong>.
           </p>
 
-          {/* Cadre Lecteur Vidéo */}
+          {/* Cadre Lecteur Vidéo — source : table aide_video, gérée depuis /admin/aide-video */}
           <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-800/40 border border-gray-150 dark:border-gray-800 flex items-center justify-center group">
-            {isPlaying ? (
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
-                title="Vidéo d'explication"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              ></iframe>
+            {AIDE_VIDEO.type === "fichier" && AIDE_VIDEO.url ? (
+              <video
+                className="w-full h-full bg-black"
+                src={AIDE_VIDEO.url}
+                controls
+                playsInline
+                preload="metadata"
+                onPlay={() => setIsPlaying(true)}
+              />
+            ) : AIDE_VIDEO.type === "youtube" && AIDE_VIDEO.id ? (
+              isPlaying ? (
+                <iframe
+                  className="w-full h-full"
+                  src={`https://www.youtube-nocookie.com/embed/${AIDE_VIDEO.id}?autoplay=1`}
+                  title="Vidéo d'explication"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                ></iframe>
+              ) : (
+                <div
+                  onClick={() => setIsPlaying(true)}
+                  className="relative w-full h-full flex items-center justify-center cursor-pointer select-none"
+                >
+                  {AIDE_VIDEO.duree && (
+                    <div className="absolute top-3 right-3 bg-gray-600/90 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full z-10 shadow-xs">
+                      {AIDE_VIDEO.duree}
+                    </div>
+                  )}
+                  <div className="w-14 h-14 rounded-full bg-[#009639] hover:bg-[#008030] flex items-center justify-center shadow-md transform group-hover:scale-105 transition duration-200">
+                    <i className="fa-solid fa-play ml-1 text-white text-base"></i>
+                  </div>
+                </div>
+              )
             ) : (
-              <div
-                onClick={() => setIsPlaying(true)}
-                className="relative w-full h-full flex items-center justify-center cursor-pointer select-none"
-              >
-                {/* Badge durée 2 min en haut à droite */}
-                <div className="absolute top-3 right-3 bg-gray-600/90 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full z-10 shadow-xs">
-                  2 min
+              <div className="flex flex-col items-center gap-2 px-6 text-center select-none">
+                <div className="w-12 h-12 rounded-full bg-[#dcfce7] text-[#166534] flex items-center justify-center text-lg">
+                  <i className="fa-solid fa-video"></i>
                 </div>
-
-                {/* Bouton Play Vert Central */}
-                <div className="w-14 h-14 rounded-full bg-[#009639] hover:bg-[#008030] text-black flex items-center justify-center text-xl shadow-md transform group-hover:scale-105 transition duration-200">
-                  <i className="fa-solid fa-play ml-1 text-white text-base"></i>
-                </div>
+                <p className="text-sm font-extrabold text-gray-900 dark:text-white">La vidéo d&apos;aide arrive bientôt</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  En attendant, notre équipe vous accompagne sur WhatsApp.
+                </p>
               </div>
             )}
           </div>
