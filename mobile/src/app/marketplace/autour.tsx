@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte } from '@/components/CarteLeaflet';
@@ -209,12 +209,35 @@ export default function AutourDeMoiScreen() {
             className="flex-1 text-[13.5px] text-[#1A1A1A]"
           />
           <Pressable
+            onPress={() => Alert.alert('Recherche par photo', 'Cette fonction arrive dans une prochaine mise à jour.')}
+            accessibilityLabel="Rechercher par photo"
+            hitSlop={8}>
+            <Ionicons name="camera-outline" size={19} color="rgba(0,0,0,0.55)" />
+          </Pressable>
+          <Pressable
             onPress={lancerRecherche}
             accessibilityRole="button"
             className="flex-row items-center gap-1.5 rounded-[14px]"
             style={{ height: 40, paddingHorizontal: 14, backgroundColor: VERT }}>
             <Ionicons name="search" size={15} color="#fff" />
             <Text className="text-white text-[13.5px] font-black">Rechercher</Text>
+          </Pressable>
+        </View>
+
+        {/* Filtres de la maquette 22 : « Toutes les boutiques » est le comportement actuel ;
+            « Les plus visités » n'a aucun compteur de visites derrière, il l'annonce. */}
+        <View className="flex-row gap-2">
+          <View className="flex-row items-center gap-1.5 rounded-full bg-white" style={{ height: 38, paddingHorizontal: 14 }}>
+            <Ionicons name="storefront" size={14} color={BLEU} />
+            <Text className="text-[12.5px] font-black text-[#1A1A1A]">Toutes les boutiques</Text>
+          </View>
+          <Pressable
+            onPress={() => Alert.alert('Les plus visités', 'Ce filtre arrive dans une prochaine mise à jour.')}
+            accessibilityRole="button"
+            className="flex-row items-center gap-1.5 rounded-full"
+            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)' }}>
+            <Ionicons name="trophy" size={14} color="#F59E0B" />
+            <Text className="text-[12.5px] font-black text-white">Les plus visités</Text>
           </Pressable>
         </View>
 
@@ -226,7 +249,7 @@ export default function AutourDeMoiScreen() {
       </View>
 
       {/* Commandes de carte */}
-      <View style={{ position: 'absolute', right: 14, top: insets.top + 150, gap: 10 }}>
+      <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
           { icone: 'add' as const, nom: 'Zoom avant', action: () => carte?.zoomer(1), couleur: '#fff' },
@@ -292,6 +315,7 @@ export default function AutourDeMoiScreen() {
                 )}
               />
             )}
+            <Text className="text-center text-[10.5px] mt-2" style={{ color: 'rgba(0,0,0,0.4)' }}>Double appui pour ouvrir la boutique</Text>
           </View>
         ) : null}
         <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>
