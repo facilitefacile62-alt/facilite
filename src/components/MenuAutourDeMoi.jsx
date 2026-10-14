@@ -15,10 +15,17 @@ export const OPTIONS_AUTOUR_DE_MOI = [
   { mode: "pleine", libelle: "Pleine carte", sous: "Carte en grand écran", icone: "fa-expand" },
 ];
 
+// Même menu pour « Autour de moi » de Facilité (offres des entreprises par ville).
+export const OPTIONS_AUTOUR_OFFRES = [
+  { mode: "liste", libelle: "Offres proches", sous: "Les offres rangées par ville", icone: "fa-table-cells-large" },
+  { mode: "mini", libelle: "Mini carte", sous: "Aperçu de la carte sur la page", icone: "fa-map" },
+  { mode: "pleine", libelle: "Pleine carte", sous: "Carte en grand écran", icone: "fa-expand" },
+];
+
 const LARGEUR_MENU = 248;
 const DUREE_ANIMATION_MS = 160;
 
-export default function MenuAutourDeMoi({ onChoisir, className = "", title = "", children }) {
+export default function MenuAutourDeMoi({ onChoisir, className = "", title = "", children, options = OPTIONS_AUTOUR_DE_MOI }) {
   const boutonRef = useRef(null);
   const menuRef = useRef(null);
   const minuterieRef = useRef(null);
@@ -106,7 +113,7 @@ export default function MenuAutourDeMoi({ onChoisir, className = "", title = "",
             ouvert ? "opacity-100 translate-y-0 scale-100" : "opacity-0 -translate-y-1 scale-95 pointer-events-none"
           }`}
         >
-          {OPTIONS_AUTOUR_DE_MOI.map((o) => (
+          {options.map((o) => (
             <button
               key={o.mode}
               type="button"

@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import DiagnosticModal from "@/components/DiagnosticModal";
 import ApplyModal from "@/components/ApplyModal";
 import RoleNavLink from "@/components/RoleNavLink";
+import AutourCentre from "@/app/autour/AutourCentre";
 import UnreadBadge from "@/components/UnreadBadge";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import StoryViewer from "@/components/StoryViewer";
@@ -179,7 +180,7 @@ const translations = {
   }
 };
 
-export default function Home({ initialOffers = [] }) {
+export default function Home({ initialOffers = [], mode = "accueil" }) {
   const pathname = usePathname();
   const router = useRouter();
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -1623,6 +1624,12 @@ export default function Home({ initialOffers = [] }) {
           {/* --- COLONNE CENTRALE : Filtres & Fil d'attente d'offres --- */}
           <section className="w-full lg:w-[500px] xl:w-[560px] flex-shrink-0 flex flex-col space-y-4">
 
+            {mode === "autour" ? (
+              <Suspense fallback={null}>
+                <AutourCentre />
+              </Suspense>
+            ) : (
+            <>
             {/* Carrousel "Stories" des modèles de CV — tout en haut du fil,
                 juste sous la navbar. Le clic ouvre TemplatePreviewModal (même
                 composant que /creer-cv) ; "Utiliser ce modèle" redirige vers
@@ -1841,6 +1848,8 @@ export default function Home({ initialOffers = [] }) {
                 </div>
               )}
             </div>
+            </>
+            )}
 
           </section>
 

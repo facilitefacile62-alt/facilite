@@ -41,7 +41,7 @@ function detruire(carte) {
   }
 }
 
-export default function CarteOffresVilles({ groupes, selection, onSelect, position, onLocaliser }) {
+export default function CarteOffresVilles({ groupes, selection, onSelect, position, onLocaliser, plein = false }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
@@ -222,7 +222,7 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
   const bouton = "w-8 h-8 rounded-full text-xs font-black transition cursor-pointer flex items-center justify-center shadow-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white active:scale-95 shrink-0";
 
   return (
-    <div className={`relative w-full ${compact ? "h-[200px] sm:h-[230px]" : "h-[420px] sm:h-[480px]"} transition-all duration-300 rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-800/80 bg-[#0B0F17] shadow-xl`}>
+    <div className={`relative w-full ${plein ? "h-full" : compact ? "h-[200px] sm:h-[230px]" : "h-[420px] sm:h-[480px]"} transition-all duration-300 ${plein ? "" : "rounded-2xl sm:rounded-3xl"} overflow-hidden border border-gray-800/80 bg-[#0B0F17] shadow-xl`}>
       <div ref={conteneur} className="w-full h-full z-0 bg-[#0B0F17]" role="region" aria-label="Carte des villes où des entreprises recrutent" />
 
       {/* Bandeau flottant du haut */}
