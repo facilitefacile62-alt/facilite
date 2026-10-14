@@ -12,7 +12,7 @@ import { notifierConnexion } from "@/lib/confirmerConnexion";
 import { triggerFeatureDisabledModal } from "@/components/FeatureDisabledModal";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import BoutonInstallerApp from "@/components/BoutonInstallerApp";
-import MenuAutourDeMoi from "@/components/MenuAutourDeMoi";
+import MenuAutourDeMoi, { OPTIONS_AUTOUR_OFFRES } from "@/components/MenuAutourDeMoi";
 import { chargerTousLesArticles, urlPhoto } from "@/lib/marketplaceData";
 
 // Répertoire exhaustif des sections, rubriques et outils pour une navigation instantanée (zéro défilement)
@@ -269,6 +269,16 @@ export default function Header() {
       window.dispatchEvent(new CustomEvent("facilite:autour-de-moi", { detail: { mode } }));
     } else {
       router.push(`/marketplace?autour_de_moi=1&vue=${mode}`);
+    }
+  };
+
+  // Menu « Autour de moi » de Facilité (offres par ville) : sur /autour on prévient la page par un événement,
+  // depuis une autre page on y navigue avec le choix dans l'adresse.
+  const choisirAutourOffres = (mode) => {
+    if (pathname?.startsWith("/autour")) {
+      window.dispatchEvent(new CustomEvent("facilite:autour-offres", { detail: { mode } }));
+    } else {
+      router.push(`/autour?vue=${mode}`);
     }
   };
 
@@ -1509,9 +1519,11 @@ export default function Header() {
                 <span className="text-[10px] font-bold tracking-tight">Offres</span>
               </Link>
 
-              {/* 3. 📍 Autour de moi (Facilité) — l'Extracteur est passé dans le bouton flottant (BoutonFlottantFacilite) */}
-              <Link
-                href="/autour"
+              {/* 3. 📍 Autour de moi (Facilité) — menu à trois choix ; l'Extracteur est passé dans le bouton flottant (BoutonFlottantFacilite) */}
+              <MenuAutourDeMoi
+                options={OPTIONS_AUTOUR_OFFRES}
+                onChoisir={choisirAutourOffres}
+                title="Où recrutent les entreprises"
                 className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                   pathname?.startsWith("/autour")
                     ? "text-emerald-600 dark:text-emerald-400"
@@ -1520,7 +1532,7 @@ export default function Header() {
               >
                 <i className="fa-solid fa-location-dot text-emerald-500 text-base"></i>
                 <span className="text-[10px] font-bold tracking-tight">Autour de moi</span>
-              </Link>
+              </MenuAutourDeMoi>
             </>
           )}
 
@@ -2207,16 +2219,17 @@ export default function Header() {
 
           {!isBusinessActive && (
             <>
-              <Link
-                href="/autour"
+              <MenuAutourDeMoi
+                options={OPTIONS_AUTOUR_OFFRES}
+                onChoisir={choisirAutourOffres}
+                title="Où recrutent les entreprises"
                 className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
                   pathname?.startsWith("/autour") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
                 }`}
-                title="Où recrutent les entreprises"
               >
                 <i className="fa-solid fa-location-dot text-sm sm:text-base text-emerald-500"></i>
                 <span className="text-[9px] font-bold tracking-tight truncate w-full">Autour de moi</span>
-              </Link>
+              </MenuAutourDeMoi>
               <Link
                 href="/offres"
                 onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
