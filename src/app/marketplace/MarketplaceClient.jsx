@@ -26,6 +26,7 @@ import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import GroupagesLivreur from "@/components/GroupagesLivreur";
 import EspaceChauffeur from "@/components/EspaceChauffeur";
+import VoyagesPassager from "@/components/VoyagesPassager";
 import RejoindreGroupageModal from "@/components/RejoindreGroupageModal";
 import { useAuth } from "@/context/AuthContext";
 import { etatDiscussionArticle, construireLienDiscussion } from "@/lib/discussionArticle";
@@ -223,6 +224,7 @@ export default function MarketplaceClient() {
   const [chargementBoutique, setChargementBoutique] = useState(true);
   const [boutiqueModal, setBoutiqueModal] = useState(null);
   const [commandesAcheteurOuvert, setCommandesAcheteurOuvert] = useState(false);
+  const [voyagesOuverts, setVoyagesOuverts] = useState(false);
   const [articleSelectionne, setArticleSelectionne] = useState(null);
 
   const userId = session?.user?.id || null;
@@ -648,6 +650,15 @@ export default function MarketplaceClient() {
                             <span>Mes commandes</span>
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => setVoyagesOuverts(true)}
+                            className="w-full mt-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                          >
+                            <i className="fa-solid fa-car-side text-[8px] text-gray-500"></i>
+                            <span>Voyages</span>
+                          </button>
+
                           {isLivreurAllowed && (
                             <button
                               type="button"
@@ -739,6 +750,15 @@ export default function MarketplaceClient() {
                   >
                     <i className="fa-solid fa-box text-[10px] text-gray-500"></i>
                     Mes commandes
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVoyagesOuverts(true)}
+                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
+                  >
+                    <i className="fa-solid fa-car-side text-[10px] text-gray-500"></i>
+                    Voyages
                   </button>
 
                   {isLivreurAllowed && (
@@ -836,6 +856,8 @@ export default function MarketplaceClient() {
         )}
 
         {/* Mes commandes (acheteur) : historique + suivi en direct */}
+        {voyagesOuverts && <VoyagesPassager userId={userId} onFermer={() => setVoyagesOuverts(false)} />}
+
         {commandesAcheteurOuvert && (
           <ModalMesCommandesAcheteur userId={userId} onFermer={() => setCommandesAcheteurOuvert(false)} />
         )}

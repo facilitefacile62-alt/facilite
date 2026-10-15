@@ -1617,3 +1617,66 @@ export async function envoyerPositionVoyage(voyageId, lat, lng) {
   if (error) throw new Error(error.message);
   return data;
 }
+
+/** Voyages ouverts qui font mon trajet (prise en charge + destination). Prénom et type de véhicule seulement. */
+export async function rechercherVoyages({ priseLat, priseLng, destLat, destLng, rayonKm = 25, limite = 30 }) {
+  const { data, error } = await supabase.rpc("rechercher_voyages", {
+    p_prise_lat: priseLat, p_prise_lng: priseLng, p_dest_lat: destLat, p_dest_lng: destLng, p_rayon_km: rayonKm, p_limite: limite,
+  });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function reserverVoyage({ voyageId, places, priseLibelle, priseLat, priseLng, destLat, destLng }) {
+  const { data, error } = await supabase.rpc("reserver_voyage", {
+    p_voyage_id: voyageId, p_places: places, p_prise_libelle: priseLibelle,
+    p_prise_lat: priseLat, p_prise_lng: priseLng, p_dest_lat: destLat, p_dest_lng: destLng,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function annulerReservationVoyage(reservationId) {
+  const { data, error } = await supabase.rpc("annuler_reservation_voyage", { p_reservation_id: reservationId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Mes réservations de voyage, les plus récentes d'abord (RLS : uniquement les miennes). */
+export async function chargerMesReservationsVoyage(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from("voyages_reservations")
+    .select("*")
+    .eq("passager_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/** Infos des voyages ouverts ou en route auxquels je suis rattaché (les voyages terminés ne sont plus lisibles). */
+export async function chargerVoyagesParIds(ids) {
+  const liste = [...new Set((ids || []).filter(Boolean))];
+  if (liste.length === 0) return {};
+  const { data, error } = await supabase
+    .from("voyages")
+    .select("id, depart_libelle, depart_lat, depart_lng, destination_libelle, destination_lat, destination_lng, heure_depart, statut, prix_par_place_xof")
+    .in("id", liste);
+  if (error) throw new Error(error.message);
+  return Object.fromEntries((data || []).map((v) => [v.id, v]));
+}
+
+/** Nom, téléphone, véhicule et plaque du chauffeur : renvoyés seulement une fois ma réservation acceptée. */
+export async function infosChauffeurDeMaReservation(reservationId) {
+  const { data, error } = await supabase.rpc("infos_chauffeur_de_ma_reservation", { p_reservation_id: reservationId });
+  if (error) throw new Error(error.message);
+  return (data && data[0]) || null;
+}
+
+/** Dernière position connue du chauffeur (lisible seulement par lui et les passagers acceptés). */
+export async function chargerPositionVoyage(voyageId) {
+  const { data, error } = await supabase.from("voyages_positions").select("lat, lng, maj_le").eq("voyage_id", voyageId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data || null;
+}
