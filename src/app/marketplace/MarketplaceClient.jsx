@@ -25,6 +25,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import GroupagesLivreur from "@/components/GroupagesLivreur";
+import RejoindreGroupageModal from "@/components/RejoindreGroupageModal";
 import { useAuth } from "@/context/AuthContext";
 import { etatDiscussionArticle, construireLienDiscussion } from "@/lib/discussionArticle";
 import { ratioAffichage } from "@/lib/formatImage";
@@ -95,6 +96,8 @@ import {
   chargerMesCommandesAcheteur,
   supprimerPhoto,
   urlPhoto,
+  chargerGroupagesParIds,
+  detacherCommandeDeGroupage,
 } from "@/lib/marketplaceData";
 
 // Les identifiants correspondent exactement au CHECK de marketplace_items :
@@ -6264,6 +6267,32 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [suivie, setSuivie] = useState(null);
+  const [rejoindre, setRejoindre] = useState(null); // commande qui cherche un groupage
+  const [groupagesInfo, setGroupagesInfo] = useState({}); // id -> { destination, heure, statut }
+  const [retraitEnCours, setRetraitEnCours] = useState(null);
+
+  // Infos des groupages auxquels mes commandes sont rattachées.
+  useEffect(() => {
+    let annule = false;
+    chargerGroupagesParIds(liste.map((c) => c.groupage_id))
+      .then((m) => !annule && setGroupagesInfo(m))
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [liste]);
+
+  const retirerDuGroupage = async (commandeId) => {
+    setRetraitEnCours(commandeId);
+    try {
+      await detacherCommandeDeGroupage(commandeId);
+      setListe(await chargerMesCommandesAcheteur(userId));
+    } catch (e) {
+      setErreur(e.message);
+    } finally {
+      setRetraitEnCours(null);
+    }
+  };
 
   const recharger = async () => {
     try {
@@ -6361,6 +6390,45 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
                   {new Date(c.created_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
                 </p>
 
+                {c.groupage_id && groupagesInfo[c.groupage_id] && (
+                  <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 space-y-1">
+                    <p className="text-[11px] font-black text-blue-700 dark:text-blue-300">
+                      <i className="fa-solid fa-people-group mr-1"></i>
+                      Groupage vers {groupagesInfo[c.groupage_id].destination_libelle} ·{" "}
+                      {new Date(groupagesInfo[c.groupage_id].heure_depart).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <p className="text-[10px] text-gray-600 dark:text-gray-300">
+                      {c.groupage_decision === "acceptee"
+                        ? "Le livreur a accepté ta commande."
+                        : "En attente de l'accord du livreur."}
+                      {" "}Livraison : {Number(groupagesInfo[c.groupage_id].frais_par_livraison_xof).toLocaleString("fr-FR")} FCFA, à régler au livreur.
+                    </p>
+                    {groupagesInfo[c.groupage_id].statut === "ouvert" && ["en_attente_livreur", "assignee"].includes(c.statut) && (
+                      <button
+                        type="button"
+                        onClick={() => retirerDuGroupage(c.id)}
+                        disabled={retraitEnCours === c.id}
+                        className="text-[11px] font-black text-red-600 disabled:opacity-60 cursor-pointer"
+                      >
+                        Retirer ma commande du groupage
+                      </button>
+                    )}
+                  </div>
+                )}
+                {c.groupage_decision === "refusee" && !c.groupage_id && c.statut === "en_attente_livreur" && (
+                  <p className="text-[10px] text-amber-600">Le livreur n&apos;a pas pu prendre cette commande dans son groupage : elle reste disponible pour d&apos;autres livreurs.</p>
+                )}
+                {c.statut === "en_attente_livreur" && !c.groupage_id && (
+                  <button
+                    type="button"
+                    onClick={() => setRejoindre(c)}
+                    className="w-full py-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-[#1877F2] text-xs font-black cursor-pointer"
+                  >
+                    <i className="fa-solid fa-people-group mr-1"></i>
+                    Rejoindre un groupage
+                  </button>
+                )}
+
                 {SUIVABLE.includes(c.statut) && (
                   <button
                     type="button"
@@ -6375,6 +6443,14 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
           </ul>
         )}
       </div>
+
+      {rejoindre && (
+        <RejoindreGroupageModal
+          commande={rejoindre}
+          onFermer={() => setRejoindre(null)}
+          onChange={recharger}
+        />
+      )}
 
       {suivie && (
         <SuiviLivraisonModal
