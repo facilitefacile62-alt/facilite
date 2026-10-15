@@ -5,6 +5,23 @@ import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 export const runtime = "nodejs";
 
+// Événement déjà traité : 202 au corps vide, la réponse recommandée par Orange
+// (tout 2xx marque l'événement livré, un 4xx serait un rejet définitif).
+const deja_traite = () => new NextResponse(null, { status: 202 });
+
+// Le journal des événements sert de mécanisme d'idempotence (clé UNIQUE) : il
+// est écrit AVANT le traitement. Si le traitement échoue en 5xx, Orange relance
+// avec la même clé ; il faut donc retirer l'événement du journal, sinon la
+// relance serait prise pour un doublon et ignorée. Meilleur effort : une
+// erreur ici est journalisée, jamais propagée.
+async function retirerJournal(supabaseAdmin, idempotencyKey) {
+  try {
+    await supabaseAdmin.from("formation_redaction_cv_webhook_events").delete().eq("idempotency_key", idempotencyKey);
+  } catch (err) {
+    console.error("[Webhook Formation CV] Impossible de retirer l'événement du journal :", err?.message);
+  }
+}
+
 // Confirmation de paiement de la formation "Rédaction de CV" via Orange
 // Money "Paiement Marchand" (QR code) — événement asynchrone, jamais une
 // réponse directe à l'appel d'initiation (voir formation-cv-checkout/route.js).
@@ -75,7 +92,7 @@ export async function POST(req) {
 
   if (insertLogError) {
     if (insertLogError.code === "23505") {
-      return NextResponse.json({ received: true, alreadyProcessed: true });
+      return deja_traite();
     }
     console.error("[Webhook Formation CV] Échec journalisation :", insertLogError.message);
     captureCriticalPaymentError("[Webhook Formation CV] Échec journalisation", { message: insertLogError.message });
@@ -119,7 +136,7 @@ export async function POST(req) {
     if (inscription.paye) {
       // Déjà traité par un événement précédent (idempotence de la
       // transition elle-même, en plus de la déduplication ci-dessus).
-      return NextResponse.json({ received: true, alreadyProcessed: true });
+      return deja_traite();
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -131,6 +148,7 @@ export async function POST(req) {
     if (updateError) {
       console.error("[Webhook Formation CV] Échec mise à jour de l'inscription :", updateError.message);
       captureCriticalPaymentError("[Webhook Formation CV] Échec mise à jour de l'inscription", { message: updateError.message, inscriptionId: inscription.id, userId: inscription.user_id });
+      await retirerJournal(supabaseAdmin, idempotencyKey);
       return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
     }
 
@@ -138,6 +156,7 @@ export async function POST(req) {
   } catch (error) {
     console.error("[Webhook Formation CV] Erreur interne :", error);
     captureCriticalPaymentError("[Webhook Formation CV] Erreur interne", { message: error?.message, reference, orangeTransactionId });
+    await retirerJournal(supabaseAdmin, idempotencyKey);
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
   }
 }

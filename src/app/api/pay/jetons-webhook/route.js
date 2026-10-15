@@ -5,6 +5,23 @@ import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 export const runtime = "nodejs";
 
+// Événement déjà traité : 202 au corps vide, la réponse recommandée par Orange
+// (tout 2xx marque l'événement livré, un 4xx serait un rejet définitif).
+const deja_traite = () => new NextResponse(null, { status: 202 });
+
+// Le journal des événements sert de mécanisme d'idempotence (clé UNIQUE) : il
+// est écrit AVANT le traitement. Si le traitement échoue en 5xx, Orange relance
+// avec la même clé ; il faut donc retirer l'événement du journal, sinon la
+// relance serait prise pour un doublon et ignorée. Meilleur effort : une
+// erreur ici est journalisée, jamais propagée.
+async function retirerJournal(supabaseAdmin, idempotencyKey) {
+  try {
+    await supabaseAdmin.from("jetons_webhook_events").delete().eq("idempotency_key", idempotencyKey);
+  } catch (err) {
+    console.error("[Webhook Jetons] Impossible de retirer l'événement du journal :", err?.message);
+  }
+}
+
 // Confirmation d'achat de jetons Marketplace via Orange Money "Paiement
 // Marchand" (QR code) — événement asynchrone, jamais une réponse directe à
 // l'appel d'initiation (voir jetons-checkout/route.js). Structure identique
@@ -76,7 +93,7 @@ export async function POST(req) {
 
   if (insertLogError) {
     if (insertLogError.code === "23505") {
-      return NextResponse.json({ received: true, alreadyProcessed: true });
+      return deja_traite();
     }
     console.error("[Webhook Jetons] Échec journalisation :", insertLogError.message);
     captureCriticalPaymentError("[Webhook Jetons] Échec journalisation", { message: insertLogError.message });
@@ -134,6 +151,7 @@ export async function POST(req) {
     if (updateError) {
       console.error("[Webhook Jetons] Échec mise à jour de la transaction :", updateError.message);
       captureCriticalPaymentError("[Webhook Jetons] Échec mise à jour de la transaction", { message: updateError.message, transactionId: transaction.id });
+      await retirerJournal(supabaseAdmin, idempotencyKey);
       return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
     }
 
@@ -145,7 +163,7 @@ export async function POST(req) {
     if (!updatedTransactions || updatedTransactions.length === 0) {
       // Déjà passée à "success" par un événement précédent (idempotence de
       // la transition elle-même, en plus de la déduplication ci-dessus).
-      return NextResponse.json({ received: true, alreadyProcessed: true });
+      return deja_traite();
     }
 
     const updatedTransaction = updatedTransactions[0];
@@ -162,9 +180,14 @@ export async function POST(req) {
     if (creditError) {
       console.error("[Webhook Jetons] Échec crédit du solde :", creditError.message);
       captureCriticalPaymentError("[Webhook Jetons] Échec crédit du solde", { message: creditError.message, storeId: updatedTransaction.store_id, transactionId: transaction.id });
-      // La transaction est déjà "success" (traçable), mais le crédit a
-      // échoué : erreur critique remontée pour intervention manuelle
-      // plutôt qu'un jeton d'achat payé mais jamais crédité en silence.
+      // Le crédit a échoué alors que la transaction vient de passer à
+      // "success" : on la remet à "pending" et on retire l'événement du
+      // journal pour que la relance d'Orange (5xx, même clé d'idempotence)
+      // refasse tout. Sans cela la relance trouvait l'événement « déjà
+      // traité » et l'achat restait payé mais jamais crédité. L'alerte
+      // critique reste remontée pour suivi.
+      await supabaseAdmin.from("jetons_transactions").update({ status: "pending" }).eq("id", transaction.id).eq("status", "success");
+      await retirerJournal(supabaseAdmin, idempotencyKey);
       return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
     }
 
@@ -172,6 +195,7 @@ export async function POST(req) {
   } catch (error) {
     console.error("[Webhook Jetons] Erreur interne :", error);
     captureCriticalPaymentError("[Webhook Jetons] Erreur interne", { message: error?.message, reference, orangeTransactionId });
+    await retirerJournal(supabaseAdmin, idempotencyKey);
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
   }
 }
