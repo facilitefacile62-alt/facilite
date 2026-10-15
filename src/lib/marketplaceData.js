@@ -1413,3 +1413,72 @@ export async function obtenirBoutiquesPremiumActives() {
   if (error) throw new Error(error.message);
   return new Set((data || []).map((r) => r.store_id));
 }
+
+
+// ---------------------------------------------------------------------------
+// Groupages (voir supabase/migrations/20261015120000_marketplace_groupages.sql)
+// ---------------------------------------------------------------------------
+
+/** Annonce une tournée (livreur accrédité). Les règles (futur, Sénégal, 3 ouverts max…) sont revérifiées en base. */
+export async function publierGroupage(c) {
+  const { data, error } = await supabase.rpc("publier_groupage", {
+    p_depart_libelle: c.departLibelle,
+    p_depart_lat: c.departLat,
+    p_depart_lng: c.departLng,
+    p_destination_libelle: c.destinationLibelle,
+    p_destination_lat: c.destinationLat,
+    p_destination_lng: c.destinationLng,
+    p_heure_depart: c.heureDepart,
+    p_places_max: c.placesMax,
+    p_frais_xof: c.fraisXof,
+    p_rayon_depart_km: c.rayonDepartKm,
+    p_rayon_destination_km: c.rayonDestinationKm,
+    p_note: c.note || null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Mes groupages (RLS : le livreur voit les siens, y compris terminés et annulés). */
+export async function chargerMesGroupages(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from("marketplace_groupages")
+    .select("*")
+    .eq("livreur_id", userId)
+    .order("heure_depart", { ascending: false })
+    .limit(20);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/** Commandes d'un de mes groupages ; nom, téléphone et adresse restent vides tant que je n'ai pas accepté. */
+export async function listerCommandesDeMonGroupage(groupageId) {
+  const { data, error } = await supabase.rpc("lister_commandes_de_mon_groupage", { p_groupage_id: groupageId });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function repondreCommandeGroupage(commandeId, accepter) {
+  const { data, error } = await supabase.rpc("repondre_commande_groupage", { p_commande_id: commandeId, p_accepter: accepter });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function demarrerGroupage(groupageId) {
+  const { data, error } = await supabase.rpc("demarrer_groupage", { p_groupage_id: groupageId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function terminerGroupage(groupageId) {
+  const { data, error } = await supabase.rpc("terminer_groupage", { p_groupage_id: groupageId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function annulerGroupage(groupageId) {
+  const { data, error } = await supabase.rpc("annuler_groupage", { p_groupage_id: groupageId });
+  if (error) throw new Error(error.message);
+  return data;
+}

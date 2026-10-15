@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
+import GroupagesLivreur from "@/components/GroupagesLivreur";
 import { useAuth } from "@/context/AuthContext";
 import { etatDiscussionArticle, construireLienDiscussion } from "@/lib/discussionArticle";
 import { ratioAffichage } from "@/lib/formatImage";
@@ -5594,6 +5595,7 @@ function VueLivreurActif({ userId }) {
   const [declencheur, setDeclencheur] = useState(0);
   return (
     <div className="space-y-6">
+      <GroupagesLivreur userId={userId} />
       <MesLivraisonsEnCours userId={userId} declencheur={declencheur} />
       <TableauLivraisonsDisponibles onReclamee={() => setDeclencheur((n) => n + 1)} />
     </div>
