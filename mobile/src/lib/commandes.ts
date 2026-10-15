@@ -37,6 +37,9 @@ export type MaCommande = {
   livreur_position_lat: number | null;
   livreur_position_lng: number | null;
   livreur_position_maj_le: string | null;
+  // Groupage (migration 20261015120000) : tournée du livreur à laquelle la commande est rattachée.
+  groupage_id?: string | null;
+  groupage_decision?: 'en_attente' | 'acceptee' | 'refusee' | null;
   created_at: string;
   item: { titre: string; photos?: unknown } | null;
   store?: { nom: string; quartier: string | null; ville: string | null } | null;
