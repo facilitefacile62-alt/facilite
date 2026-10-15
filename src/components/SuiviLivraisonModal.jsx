@@ -177,7 +177,10 @@ export default function SuiviLivraisonModal({ commande, onFermer, onConfirme }) 
   const libelleDistance = restant == null ? null : restant < 1 ? `${Math.round(restant * 1000)} m` : `${restant.toFixed(1).replace(".", ",")} km`;
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] bg-[#0B0F17]" role="dialog" aria-label="Suivi de livraison">
+    // stopPropagation : la fenêtre est rendue dans un portail, mais React fait quand même remonter les clics
+    // jusqu'à « Mes commandes » (son parent dans l'arbre React), dont le fond se ferme au clic — ce qui
+    // refermait aussi le suivi à chaque appui sur la carte.
+    <div className="fixed inset-0 z-[80] bg-[#0B0F17]" role="dialog" aria-label="Suivi de livraison" onClick={(e) => e.stopPropagation()}>
       <div ref={conteneur} className="absolute inset-0 z-0" aria-label="Carte du suivi de livraison" />
 
       {/* Bandeau flottant du haut */}
