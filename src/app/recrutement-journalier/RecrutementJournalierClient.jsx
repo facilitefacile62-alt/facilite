@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 // Liste des entreprises pour le recrutement journalier / dépôt physique
-const companiesList = [
+export const companiesList = [
   // --- GRANDS RÉSEAUX PÉTROLIERS & STATIONS-SERVICES ---
   {
     id: "totalenergies-senegal-siege",

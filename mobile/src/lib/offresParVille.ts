@@ -11,9 +11,9 @@ export type Ville = { nom: string; lat: number; lng: number; alias: string[] };
 
 // Centre de chaque ville ; `alias` : quartiers et noms voisins qui désignent la même zone.
 export const VILLES: Ville[] = [
-  { nom: 'Dakar', lat: 14.7167, lng: -17.4677, alias: ['dakar', 'mermoz', 'plateau', 'almadies', 'medina', 'médina', 'ouakam', 'yoff', 'ngor', 'sacre-coeur', 'sacré-coeur', 'hann', 'parcelles', 'liberté', 'point e', 'fann'] },
+  { nom: 'Dakar', lat: 14.7167, lng: -17.4677, alias: ['dakar', 'mermoz', 'plateau', 'almadies', 'medina', 'médina', 'ouakam', 'yoff', 'ngor', 'sacre-coeur', 'sacré-coeur', 'hann', 'parcelles', 'liberté', 'point e', 'fann', 'keur gorgui', 'foire', 'sicap'] },
   { nom: 'Guédiawaye', lat: 14.7692, lng: -17.39, alias: ['guédiawaye', 'guediawaye'] },
-  { nom: 'Pikine', lat: 14.7549, lng: -17.3985, alias: ['pikine'] },
+  { nom: 'Pikine', lat: 14.7549, lng: -17.3985, alias: ['pikine', 'thiaroye'] },
   { nom: 'Rufisque', lat: 14.7167, lng: -17.2667, alias: ['rufisque'] },
   { nom: 'Diamniadio', lat: 14.7172, lng: -17.1833, alias: ['diamniadio'] },
   { nom: 'Thiès', lat: 14.791, lng: -16.9359, alias: ['thiès', 'thies'] },
@@ -31,6 +31,16 @@ export const VILLES: Ville[] = [
   { nom: 'Sédhiou', lat: 12.7081, lng: -15.5569, alias: ['sédhiou', 'sedhiou'] },
   { nom: 'Ziguinchor', lat: 12.5833, lng: -16.2719, alias: ['ziguinchor'] },
   { nom: 'Matam', lat: 15.6559, lng: -13.2554, alias: ['matam'] },
+  { nom: 'Ngaparou', lat: 14.45, lng: -17.05, alias: ['ngaparou'] },
+  { nom: 'Joal-Fadiouth', lat: 14.1667, lng: -16.8333, alias: ['joal', 'joal-fadiouth', 'fadiouth'] },
+  { nom: 'Tivaouane', lat: 14.95, lng: -16.8167, alias: ['tivaouane'] },
+  { nom: 'Richard-Toll', lat: 16.4625, lng: -15.7, alias: ['richard-toll', 'richard toll'] },
+  { nom: 'Podor', lat: 16.65, lng: -14.9667, alias: ['podor'] },
+  { nom: 'Linguère', lat: 15.3944, lng: -15.1139, alias: ['linguère', 'linguere'] },
+  { nom: 'Bambey', lat: 14.7, lng: -16.45, alias: ['bambey'] },
+  { nom: 'Bignona', lat: 12.8089, lng: -16.2261, alias: ['bignona'] },
+  { nom: 'Vélingara', lat: 13.15, lng: -14.1167, alias: ['vélingara', 'velingara'] },
+  { nom: 'Oussouye', lat: 12.485, lng: -16.5469, alias: ['oussouye', 'cap skirring'] },
 ];
 
 export type OffreVille = { id: string; titre: string; entreprise: string };
