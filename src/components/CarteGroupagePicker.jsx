@@ -21,7 +21,7 @@ function detruire(carte) {
 const pastille = (couleur, lettre) =>
   `<div style="width:30px;height:30px;border-radius:9999px;background:${couleur};color:#fff;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font:900 11px system-ui,sans-serif">${lettre}</div>`;
 
-export default function CarteGroupagePicker({ depart, destination, trace, mode, onPick, point = null, hauteur = 260 }) {
+export default function CarteGroupagePicker({ depart, destination, trace, mode, onPick, point = null, hauteur = 260, pointLibelle = "Toi", pointCouleur = "#2563EB" }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
@@ -88,7 +88,7 @@ export default function CarteGroupagePicker({ depart, destination, trace, mode, 
         points.push([destination.lat, destination.lng]);
       }
       if (point) {
-        L.marker([point.lat, point.lng], { icon: L.divIcon({ className: "", html: pastille("#2563EB", "Toi"), iconSize: [30, 30], iconAnchor: [15, 15] }), keyboard: false, title: "Ton lieu de livraison" }).addTo(couches);
+        L.marker([point.lat, point.lng], { icon: L.divIcon({ className: "", html: pastille(pointCouleur, pointLibelle), iconSize: [30, 30], iconAnchor: [15, 15] }), keyboard: false, title: "Ton lieu de livraison" }).addTo(couches);
         points.push([point.lat, point.lng]);
       }
       if (points.length === 1) carte.setView(points[0], Math.max(carte.getZoom(), 12));
@@ -100,7 +100,7 @@ export default function CarteGroupagePicker({ depart, destination, trace, mode, 
     const surPrete = () => dessiner();
     window.addEventListener("facilite:carte-groupage-prete", surPrete);
     return () => window.removeEventListener("facilite:carte-groupage-prete", surPrete);
-  }, [depart, destination, trace, point]);
+  }, [depart, destination, trace, point, pointLibelle, pointCouleur]);
 
   return (
     <div className="relative">
