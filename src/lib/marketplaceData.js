@@ -1482,3 +1482,40 @@ export async function annulerGroupage(groupageId) {
   if (error) throw new Error(error.message);
   return data;
 }
+
+/** Groupages ouverts qui vont vers ce point (lieu de livraison de l'acheteur). Prénom du livreur seulement, jamais son téléphone. */
+export async function rechercherGroupages({ lat, lng, rayonKm = 25, limite = 30 }) {
+  const { data, error } = await supabase.rpc("rechercher_groupages", { p_lat: lat, p_lng: lng, p_rayon_km: rayonKm, p_limite: limite });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/** Rattache ma commande à un groupage ; la boutique, la destination et les places sont revérifiées en base. */
+export async function rattacherCommandeAGroupage({ commandeId, groupageId, lat, lng }) {
+  const { data, error } = await supabase.rpc("rattacher_commande_a_groupage", {
+    p_commande_id: commandeId,
+    p_groupage_id: groupageId,
+    p_lat: lat,
+    p_lng: lng,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function detacherCommandeDeGroupage(commandeId) {
+  const { data, error } = await supabase.rpc("detacher_commande_de_groupage", { p_commande_id: commandeId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Infos de groupages (destination, heure, statut) pour les afficher sur mes commandes. RLS : ouverts et en route seulement. */
+export async function chargerGroupagesParIds(ids) {
+  const liste = [...new Set((ids || []).filter(Boolean))];
+  if (liste.length === 0) return {};
+  const { data, error } = await supabase
+    .from("marketplace_groupages")
+    .select("id, depart_libelle, destination_libelle, heure_depart, statut, frais_par_livraison_xof")
+    .in("id", liste);
+  if (error) throw new Error(error.message);
+  return Object.fromEntries((data || []).map((g) => [g.id, g]));
+}

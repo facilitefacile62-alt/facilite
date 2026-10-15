@@ -19,9 +19,9 @@ function detruire(carte) {
 }
 
 const pastille = (couleur, lettre) =>
-  `<div style="width:30px;height:30px;border-radius:9999px;background:${couleur};color:#fff;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font:900 13px system-ui,sans-serif">${lettre}</div>`;
+  `<div style="width:30px;height:30px;border-radius:9999px;background:${couleur};color:#fff;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font:900 11px system-ui,sans-serif">${lettre}</div>`;
 
-export default function CarteGroupagePicker({ depart, destination, trace, mode, onPick }) {
+export default function CarteGroupagePicker({ depart, destination, trace, mode, onPick, point = null, hauteur = 260 }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
@@ -87,6 +87,10 @@ export default function CarteGroupagePicker({ depart, destination, trace, mode, 
         L.marker([destination.lat, destination.lng], { icon: L.divIcon({ className: "", html: pastille("#EF4444", "B"), iconSize: [30, 30], iconAnchor: [15, 15] }), keyboard: false, title: "Destination" }).addTo(couches);
         points.push([destination.lat, destination.lng]);
       }
+      if (point) {
+        L.marker([point.lat, point.lng], { icon: L.divIcon({ className: "", html: pastille("#2563EB", "Toi"), iconSize: [30, 30], iconAnchor: [15, 15] }), keyboard: false, title: "Ton lieu de livraison" }).addTo(couches);
+        points.push([point.lat, point.lng]);
+      }
       if (points.length === 1) carte.setView(points[0], Math.max(carte.getZoom(), 12));
       else if (points.length > 1) carte.fitBounds(points, { padding: [30, 30], maxZoom: 14 });
       return true;
@@ -96,14 +100,14 @@ export default function CarteGroupagePicker({ depart, destination, trace, mode, 
     const surPrete = () => dessiner();
     window.addEventListener("facilite:carte-groupage-prete", surPrete);
     return () => window.removeEventListener("facilite:carte-groupage-prete", surPrete);
-  }, [depart, destination, trace]);
+  }, [depart, destination, trace, point]);
 
   return (
     <div className="relative">
-      <div ref={conteneur} className="w-full h-[260px] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 z-0" role="region" aria-label="Carte du groupage" />
+      <div ref={conteneur} style={{ height: hauteur }} className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 z-0" role="region" aria-label="Carte du groupage" />
       {mode ? (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[400] px-3 py-1.5 rounded-full bg-black/75 text-white text-[11px] font-black pointer-events-none">
-          Touche la carte pour placer {mode === "depart" ? "le DÉPART (A)" : "la DESTINATION (B)"}
+          Touche la carte pour placer {mode === "depart" ? "le DÉPART (A)" : mode === "point" ? "TON LIEU DE LIVRAISON" : "la DESTINATION (B)"}
         </div>
       ) : null}
     </div>
