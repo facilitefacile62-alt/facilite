@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import CarteLeaflet, { type MarqueurCarte } from '@/components/CarteLeaflet';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { chargerCommande, confirmerReceptionCommande, refCommande, type MaCommande, type StatutCommande } from '@/lib/commandes';
+import { supabase } from '@/lib/supabase';
 import { chargerLivreurDeCommande, LIBELLES_VEHICULE, type LivreurDeCommande } from '@/lib/livraison';
 
 // Suivi de livraison — maquettes 67 « Suivi de livraison » et 68 « Suivi —
@@ -87,6 +88,28 @@ export default function SuiviLivraisonScreen() {
     }, [recharger, enRoute])
   );
 
+  // Temps réel : dès que le livreur envoie sa position (ou que le statut change),
+  // la ligne de la commande est poussée ici — le point bouge sans attendre les
+  // 15 s du rechargement ci-dessus, qui reste en secours si la connexion
+  // temps réel est coupée. La RLS ne diffuse qu'aux parties de la commande.
+  useEffect(() => {
+    if (!id) return;
+    const canal = supabase
+      .channel(`suivi_commande_${id}_${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'marketplace_commandes', filter: `id=eq.${id}` },
+        (payload) => {
+          const maj = payload.new as Partial<MaCommande>;
+          setCommande((c) => (c ? { ...c, ...maj } : c));
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [id]);
+
   async function confirmer() {
     if (!commande) return;
     setConfirmation(true);
@@ -109,6 +132,12 @@ export default function SuiviLivraisonScreen() {
         ? [{ id: 'livreur', lat: latLivreur, lng: lngLivreur, couleur: VERT, rayon: 10, halo: true, libelle: 'Livreur' }]
         : [],
     [latLivreur, lngLivreur]
+  );
+  const latDest = commande?.livraison_lat ?? null;
+  const lngDest = commande?.livraison_lng ?? null;
+  const marqueursCarte = useMemo<MarqueurCarte[]>(
+    () => (latDest !== null && lngDest !== null ? [...marqueurs, { id: 'destination', lat: latDest, lng: lngDest, couleur: '#EF4444', rayon: 9, libelle: 'Ma livraison' }] : marqueurs),
+    [marqueurs, latDest, lngDest]
   );
 
   const positionConnue = marqueurs.length > 0;
@@ -142,7 +171,7 @@ export default function SuiviLivraisonScreen() {
             />
           }>
           <View style={{ height: 270 }}>
-            <CarteLeaflet centre={centre} zoom={14} marqueurs={marqueurs} ajuster={positionConnue} style={{ flex: 1 }} />
+            <CarteLeaflet centre={centre} zoom={14} marqueurs={marqueursCarte} ajuster={positionConnue} style={{ flex: 1 }} />
             {!positionConnue ? (
               <View className="absolute left-3 top-3 rounded-[10px] px-3 py-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.92)' }}>
                 <Text className="text-[12px] font-semibold" style={{ color: 'rgba(0,0,0,0.6)' }}>
