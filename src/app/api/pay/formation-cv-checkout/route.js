@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { genererQrCodePaiement, obtenirStatutTransaction } from "@/lib/orangeMoney";
+import { genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 // Paiement de la formation "Rédaction de CV" (15 000 FCFA, accès permanent)
@@ -96,7 +96,8 @@ export async function POST(req) {
     } catch (orangeError) {
       console.error("[Formation CV Checkout] Échec génération QR code :", orangeError.message);
       captureCriticalPaymentError("[Formation CV Checkout] Échec génération QR code", { inscriptionId, message: orangeError.message });
-      return NextResponse.json({ error: orangeError.message }, { status: 502 });
+      // Détail technique dans les journaux ci-dessus ; l'utilisateur ne voit qu'une phrase claire.
+      return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
 
     await supabase

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { genererQrCodePaiement, obtenirStatutTransaction } from "@/lib/orangeMoney";
+import { genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 import { z } from "zod";
 
@@ -126,7 +126,8 @@ export async function POST(req) {
       // La transaction "pending" reste en base : elle n'a jamais eu de
       // provider_reference (qrId), distinguable plus tard d'un paiement
       // réellement initié mais jamais confirmé.
-      return NextResponse.json({ error: orangeError.message }, { status: 502 });
+      // Détail technique dans les journaux ci-dessus ; l'utilisateur ne voit qu'une phrase claire.
+      return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
 
     await supabase.from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
