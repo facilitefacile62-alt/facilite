@@ -1519,3 +1519,101 @@ export async function chargerGroupagesParIds(ids) {
   if (error) throw new Error(error.message);
   return Object.fromEntries((data || []).map((g) => [g.id, g]));
 }
+
+
+// ---------------------------------------------------------------------------
+// Voyages — transport de passagers (voir supabase/migrations/20261015160000_voyages.sql)
+// ---------------------------------------------------------------------------
+
+/** Mon profil chauffeur (s'il existe) et ma plus récente demande (en attente ou refusée, avec son motif). */
+export async function chargerMonStatutChauffeur(userId) {
+  if (!userId) return { chauffeur: null, demande: null };
+  const [{ data: chauffeur }, { data: demande }] = await Promise.all([
+    supabase.from("chauffeurs").select("*").eq("user_id", userId).maybeSingle(),
+    supabase.from("chauffeurs_demandes").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  return { chauffeur: chauffeur || null, demande: demande || null };
+}
+
+export async function demanderDevenirChauffeur(c) {
+  const { data, error } = await supabase.rpc("demander_devenir_chauffeur", {
+    p_nom_complet: c.nomComplet,
+    p_telephone: c.telephone,
+    p_ville_zone: c.villeZone,
+    p_type_vehicule: c.typeVehicule,
+    p_marque_modele: c.marqueModele,
+    p_immatriculation: c.immatriculation,
+    p_places_passagers: c.placesPassagers,
+    p_document_urls: c.documentUrls,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function publierVoyage(c) {
+  const { data, error } = await supabase.rpc("publier_voyage", {
+    p_depart_libelle: c.departLibelle,
+    p_depart_lat: c.departLat,
+    p_depart_lng: c.departLng,
+    p_destination_libelle: c.destinationLibelle,
+    p_destination_lat: c.destinationLat,
+    p_destination_lng: c.destinationLng,
+    p_heure_depart: c.heureDepart,
+    p_places_max: c.placesMax,
+    p_prix_par_place_xof: c.prixParPlaceXof,
+    p_rayon_prise_km: c.rayonPriseKm,
+    p_rayon_destination_km: c.rayonDestinationKm,
+    p_note: c.note || null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function chargerMesVoyages(userId) {
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from("voyages")
+    .select("*")
+    .eq("chauffeur_id", userId)
+    .order("heure_depart", { ascending: false })
+    .limit(20);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/** Réservations de mon voyage ; nom et téléphone du passager vides tant que je ne l'ai pas accepté. */
+export async function listerReservationsDeMonVoyage(voyageId) {
+  const { data, error } = await supabase.rpc("lister_reservations_de_mon_voyage", { p_voyage_id: voyageId });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function repondreReservationVoyage(reservationId, accepter) {
+  const { data, error } = await supabase.rpc("repondre_reservation_voyage", { p_reservation_id: reservationId, p_accepter: accepter });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function demarrerVoyage(voyageId) {
+  const { data, error } = await supabase.rpc("demarrer_voyage", { p_voyage_id: voyageId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function terminerVoyage(voyageId) {
+  const { data, error } = await supabase.rpc("terminer_voyage", { p_voyage_id: voyageId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function annulerVoyage(voyageId) {
+  const { data, error } = await supabase.rpc("annuler_voyage", { p_voyage_id: voyageId });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function envoyerPositionVoyage(voyageId, lat, lng) {
+  const { data, error } = await supabase.rpc("mettre_a_jour_position_voyage", { p_voyage_id: voyageId, p_lat: lat, p_lng: lng });
+  if (error) throw new Error(error.message);
+  return data;
+}
