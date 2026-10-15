@@ -19,6 +19,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { chargerOffresParVille } from "@/lib/offresParVille";
 import { positionActuelle } from "@/lib/marketplaceData";
+import { depotsAvecPosition } from "@/lib/depotsSurPlace";
 
 const CarteOffresVilles = dynamic(() => import("@/components/CarteOffresVilles"), {
   ssr: false,
@@ -91,6 +92,7 @@ export default function AutourCentre() {
   }, [mode, position]);
 
   const groupes = useMemo(() => resultat?.groupes ?? [], [resultat]);
+  const depots = useMemo(() => depotsAvecPosition(), []);
   const courant = groupes.find((g) => g.ville === selection) ?? null;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
@@ -101,7 +103,7 @@ export default function AutourCentre() {
 
 
   const carte = (plein) => (
-    <CarteOffresVilles groupes={groupes} selection={selection} onSelect={setSelection} position={position} onLocaliser={localiser} plein={plein} />
+    <CarteOffresVilles groupes={groupes} selection={selection} onSelect={setSelection} position={position} onLocaliser={localiser} plein={plein} depots={depots} />
   );
 
   const ligneOffre = (o) => (
@@ -128,7 +130,7 @@ export default function AutourCentre() {
             ? erreur
               ? "Impossible de charger les offres."
               : "Chargement…"
-            : `${totalEntreprises} entreprise${totalEntreprises > 1 ? "s" : ""} recrutent · ${totalOffres} offre${totalOffres > 1 ? "s" : ""} dans ${groupes.length} ville${groupes.length > 1 ? "s" : ""}`}
+            : `${totalEntreprises} entreprise${totalEntreprises > 1 ? "s" : ""} recrutent · ${totalOffres} offre${totalOffres > 1 ? "s" : ""} dans ${groupes.length} ville${groupes.length > 1 ? "s" : ""} · ${depots.length} dépôts sur place à Dakar`}
         </p>
       </div>
       {msgPosition ? <p className="text-xs text-red-600">{msgPosition}</p> : null}
@@ -145,6 +147,25 @@ export default function AutourCentre() {
               <ul className="grid gap-1.5">{g.offres.map(ligneOffre)}</ul>
             </section>
           ))}
+          <section aria-label="Dépôts sur place">
+            <h2 className="text-sm font-black text-gray-900 mb-1.5">Dépôts sur place · {depots.length}</h2>
+            <ul className="grid gap-1.5">
+              {depots.map((d) => (
+                <li key={d.id}>
+                  <Link href="/recrutement-journalier" className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 hover:shadow-md transition">
+                    <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0">
+                      <i className="fa-solid fa-hand-holding"></i>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-gray-900 truncate">{d.nom}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2">{d.adresse}</div>
+                    </div>
+                    <i className="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       ) : mode === "pleine" ? (
         <div className="fixed inset-0 z-[600] bg-[#0B0F17] flex flex-col">

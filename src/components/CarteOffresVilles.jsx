@@ -24,6 +24,7 @@ const BLEU = "#2563EB";
 const ORANGE = "#F59E0B";
 const FILTRE_TUILES_SOMBRE = "invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)";
 const DISTANCE_MIN_PX = 44;
+const ZOOM_DEPOTS = 10;
 
 const PASTILLES_FILTRE = [
   { id: "toutes", label: "Toutes les villes", icone: "fa-compass" },
@@ -41,7 +42,7 @@ function detruire(carte) {
   }
 }
 
-export default function CarteOffresVilles({ groupes, selection, onSelect, position, onLocaliser, plein = false }) {
+export default function CarteOffresVilles({ groupes, selection, onSelect, position, onLocaliser, plein = false, depots = [] }) {
   const conteneur = useRef(null);
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
@@ -55,6 +56,9 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
   const [filtre, setFiltre] = useState("toutes");
   const [menuOuvert, setMenuOuvert] = useState(false);
   const [compact, setCompact] = useState(false);
+  // Dépôts sur place (page « Dépôts physiques ») : affichés à partir de ce zoom, sinon ils se superposent à Dakar.
+  const [avecDepots, setAvecDepots] = useState(true);
+  const pleinRef = useRef(plein);
 
   const affichees = useMemo(() => (filtre === "actives" ? groupes.slice(0, Math.max(3, Math.ceil(groupes.length / 2))) : groupes), [groupes, filtre]);
 
@@ -67,15 +71,19 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
       await import("leaflet/dist/leaflet.css");
       if (annule || !conteneur.current || carteRef.current) return;
       leafletRef.current = L;
-      const carte = L.map(conteneur.current, { zoomControl: false, scrollWheelZoom: false, attributionControl: true }).setView([14.5, -15.5], 7);
+      const carte = L.map(conteneur.current, { zoomControl: false, scrollWheelZoom: pleinRef.current, attributionControl: true }).setView([14.5, -15.5], 7);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(carte);
       const paneTuiles = carte.getPane("tilePane");
       if (paneTuiles) paneTuiles.style.filter = FILTRE_TUILES_SOMBRE;
       L.control.zoom({ position: "bottomright" }).addTo(carte);
       couchesRef.current = L.layerGroup().addTo(carte);
       carteRef.current = carte;
+      // En plein écran la molette zoome toujours ; sur la page elle ne zoome qu'après un clic sur la carte
+      // (sinon elle bloquerait le défilement de la page), et se coupe quand la souris sort.
       carte.on("focus", () => carte.scrollWheelZoom.enable());
-      carte.on("blur", () => carte.scrollWheelZoom.disable());
+      carte.on("click", () => carte.scrollWheelZoom.enable());
+      carte.on("blur", () => !pleinRef.current && carte.scrollWheelZoom.disable());
+      carte.on("mouseout", () => !pleinRef.current && carte.scrollWheelZoom.disable());
       carte.on("zoomend", () => setZoom(carte.getZoom()));
       // Le cadre change de taille (chargement, mode compact, rotation de l'écran) :
       // sans ceci des bandes de tuiles restent vides.
@@ -171,6 +179,28 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
     }
     for (const g of affichees) points.push([g.lat, g.lng]);
 
+    if (avecDepots && carte.getZoom() >= ZOOM_DEPOTS) {
+      for (const d of depots) {
+        const icone = L.divIcon({
+          className: "depot-sur-place",
+          html: `<div style="width:30px;height:30px;border-radius:9999px;background:#7C3AED;color:#fff;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer"><i class="fa-solid fa-hand-holding"></i></div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        });
+        // Plusieurs dépôts au même quartier : léger décalage régulier pour ne pas les empiler.
+        const meme = depots.filter((x) => x.quartier === d.quartier);
+        const rang = meme.indexOf(d);
+        const angle = (rang / Math.max(meme.length, 1)) * 2 * Math.PI;
+        const rayon = meme.length > 1 ? 0.0035 : 0;
+        const m = L.marker([d.lat + Math.sin(angle) * rayon, d.lng + Math.cos(angle) * rayon], { icon: icone, keyboard: false, title: d.nom }).addTo(couches);
+        const tel = d.telephone ? `<div style="font-size:10px;margin-top:2px">📞 ${echapperHtml(d.telephone)}</div>` : "";
+        m.bindPopup(
+          `<div style="min-width:190px"><div style="font-size:10px;font-weight:900;color:#c4b5fd">DÉPÔT SUR PLACE</div><div style="font-size:12px;font-weight:900">${echapperHtml(d.nom)}</div><div style="font-size:11px;margin-top:2px">${echapperHtml(d.adresse)}</div>${tel}<div style="font-size:9px;color:#9ca3af;margin-top:3px">Position approximative : ${echapperHtml(d.quartier)}</div><a href="/recrutement-journalier" style="display:inline-block;margin-top:5px;font-size:10px;font-weight:900;color:#6ee7b7">Voir tous les dépôts →</a></div>`,
+          { className: "carte-boutique-bulle-custom", offset: [0, -12] }
+        );
+      }
+    }
+
     if (position) {
       if (!carte.getPane("paneMoi")) {
         carte.createPane("paneMoi");
@@ -190,7 +220,7 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
       if (points.length === 1) carte.setView(points[0], 10);
       else carte.fitBounds(points, { padding: [40, 80], maxZoom: 9 });
     }
-  }, [affichees, selection, position, zoom, prete, choisir]);
+  }, [affichees, selection, position, zoom, prete, choisir, avecDepots, depots]);
 
   // Le dock suit la sélection.
   useEffect(() => {
@@ -204,6 +234,13 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
     const i = affichees.findIndex((g) => g.ville === selection);
     const suivant = affichees[(i + sens + affichees.length) % affichees.length];
     choisir(suivant);
+  };
+
+  // Zoome sur la zone qui contient les dépôts sur place pour les faire apparaître.
+  const voirDepots = () => {
+    const carte = carteRef.current;
+    if (!carte || depots.length === 0) return;
+    carte.flyToBounds(depots.map((d) => [d.lat, d.lng]), { padding: [60, 60], maxZoom: 12, duration: 0.8 });
   };
 
   const recentrerSurMoi = () => {
@@ -262,6 +299,17 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => setAvecDepots(!avecDepots)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition text-left cursor-pointer ${avecDepots ? "bg-white/20 text-white font-black" : "text-gray-200 hover:bg-white/10 hover:text-white"}`}
+              >
+                <span className="flex items-center gap-2">
+                  <i className={`fa-solid fa-hand-holding text-xs ${avecDepots ? "text-violet-400" : "text-gray-400"}`}></i>
+                  Dépôts sur place ({depots.length})
+                </span>
+                {avecDepots ? <i className="fa-solid fa-check text-emerald-400 text-xs"></i> : null}
+              </button>
               <div className="h-px bg-white/10 my-1"></div>
               <button
                 type="button"
@@ -296,6 +344,19 @@ export default function CarteOffresVilles({ groupes, selection, onSelect, positi
               <i className="fa-solid fa-chevron-left text-[10px]"></i>
             </button>
             <div ref={dockRef} className="flex-1 bg-white/10 backdrop-blur-md rounded-full py-1 px-2 flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar scroll-smooth">
+              {avecDepots && depots.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={voirDepots}
+                  className="flex flex-col items-center gap-0.5 shrink-0 w-14 cursor-pointer"
+                  title={`${depots.length} dépôts sur place à Dakar`}
+                >
+                  <span className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white border-2 bg-violet-600 border-white/70">
+                    <i className="fa-solid fa-hand-holding"></i>
+                  </span>
+                  <span className="text-[9px] font-extrabold truncate w-full text-center text-violet-200">Dépôts {depots.length}</span>
+                </button>
+              ) : null}
               {affichees.map((g) => {
                 const actif = selection === g.ville;
                 return (
