@@ -25,6 +25,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import GroupagesLivreur from "@/components/GroupagesLivreur";
+import EspaceChauffeur from "@/components/EspaceChauffeur";
 import RejoindreGroupageModal from "@/components/RejoindreGroupageModal";
 import { useAuth } from "@/context/AuthContext";
 import { etatDiscussionArticle, construireLienDiscussion } from "@/lib/discussionArticle";
@@ -791,7 +792,10 @@ export default function MarketplaceClient() {
                 onRetourCatalogue={() => setOnglet("acheter")}
               />
             ) : isLivreurAllowed ? (
-              <VueLivreur userId={userId} />
+              <div className="space-y-6">
+                <VueLivreur userId={userId} />
+                <EspaceChauffeur userId={userId} />
+              </div>
             ) : (
               <div className="py-16 text-center text-xs text-gray-400">Fonctionnalité momentanément indisponible.</div>
             )}
