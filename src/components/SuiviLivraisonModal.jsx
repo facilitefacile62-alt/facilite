@@ -46,7 +46,20 @@ export default function SuiviLivraisonModal({ commande, onFermer, onConfirme }) 
   const carteRef = useRef(null);
   const leafletRef = useRef(null);
   const couchesRef = useRef(null);
-  const traceRef = useRef([]);
+  // Trajet déjà parcouru, gardé dans le navigateur : sans cela il repartait de zéro à chaque réouverture
+  // du suivi (la base ne conserve que la dernière position du livreur, pas l'historique).
+  const cleTrace = `facilite_trace_livraison_${commande.id}`;
+  const traceRef = useRef(null);
+  if (traceRef.current === null) {
+    let initial = [];
+    try {
+      const lu = JSON.parse(window.localStorage.getItem(cleTrace) || "[]");
+      if (Array.isArray(lu)) initial = lu.filter((p) => Array.isArray(p) && p.length === 2);
+    } catch {
+      initial = [];
+    }
+    traceRef.current = initial;
+  }
   const [commandeLive, setCommandeLive] = useState(commande);
   const [boutique, setBoutique] = useState(null);
   const [prete, setPrete] = useState(false);
@@ -149,14 +162,22 @@ export default function SuiviLivraisonModal({ commande, onFermer, onConfirme }) 
     }
     if (lat != null && lng != null) {
       const dernier = traceRef.current[traceRef.current.length - 1];
-      if (!dernier || dernier[0] !== lat || dernier[1] !== lng) traceRef.current.push([lat, lng]);
+      if (!dernier || dernier[0] !== lat || dernier[1] !== lng) {
+        traceRef.current.push([lat, lng]);
+        if (traceRef.current.length > 600) traceRef.current.shift();
+        try {
+          window.localStorage.setItem(cleTrace, JSON.stringify(traceRef.current));
+        } catch {
+          /* stockage indisponible : le trajet reste affiché tant que la fenêtre est ouverte */
+        }
+      }
       if (traceRef.current.length > 1) L.polyline(traceRef.current, { color: "#38bdf8", weight: 5, opacity: 0.9 }).addTo(couches);
       L.marker([lat, lng], { icon: L.divIcon({ className: "", html: pastille("#2563EB", "🛵", true), iconSize: [34, 34], iconAnchor: [17, 17] }), keyboard: false, title: "Livreur", zIndexOffset: 1000 }).addTo(couches);
       points.push([lat, lng]);
     }
     if (points.length === 1) carte.setView(points[0], 15, { animate: true });
     else if (points.length > 1) carte.fitBounds(points, { padding: [70, 70], maxZoom: 16, animate: true });
-  }, [prete, boutique, lat, lng, destLat, destLng]);
+  }, [prete, boutique, lat, lng, destLat, destLng, cleTrace]);
 
   const confirmer = async () => {
     setConfirmation(true);
