@@ -23,6 +23,8 @@
 // PayDunya — une bascule vers la production doit être un choix explicite
 // (changer la variable d'environnement), jamais un effet de bord d'un
 // déploiement Vercel en production.
+import crypto from "node:crypto";
+
 const SANDBOX_BASE_URL = "https://api.sandbox.orange-sonatel.com";
 
 function baseUrl() {
@@ -143,22 +145,30 @@ const FENETRE_ANTI_REJEU_SECONDES = 300;
 
 /**
  * Vérifie l'en-tête X-Sonatel-Signature d'un webhook : format
- * "t={timestamp},v1={hmac_hex}", hmac = HMAC_SHA256(secret,
- * "{t},{corpsBrut}"). `corpsBrut` DOIT être le corps de la requête tel que
- * reçu, avant tout JSON.parse — un corps re-sérialisé ne produirait pas le
- * même octet-à-octet et casserait la vérification silencieusement.
+ * "t={timestamp},v1={hmac_hex}[,v1={hmac_hex}…]", hmac = HMAC_SHA256(secret,
+ * "{t},{corpsBrut}"). Pendant une rotation de secret Orange envoie PLUSIEURS
+ * v1= (un par secret valide) : la requête est acceptée si N'IMPORTE LEQUEL
+ * correspond, jamais seulement le premier. `corpsBrut` DOIT être le corps de
+ * la requête tel que reçu, avant tout JSON.parse — un corps re-sérialisé ne
+ * produirait pas le même octet-à-octet et casserait la vérification
+ * silencieusement.
  *
- * `secret` est ORANGE_MONEY_WEBHOOK_SECRET (le "endpoint_secret"/apiKey de
- * l'enregistrement du callback, distinct de ORANGE_MONEY_CLIENT_SECRET
- * OAuth2 — encore à confirmer en testant, voir le "point 6" de la demande).
+ * `secret` est ORANGE_MONEY_WEBHOOK_SECRET. Orange distingue le « partner
+ * endpoint secret » qui signe de l'apiKey renvoyée en `Authorization: Basic` :
+ * lequel des deux est stocké ici reste à confirmer auprès d'Orange.
  */
 export function verifierSignatureWebhook(corpsBrut, enTeteSignature, secret) {
   if (!enTeteSignature) return { valide: false, motif: "en-tête X-Sonatel-Signature absent" };
 
-  const correspondance = /^t=(\d+),v1=([0-9a-f]+)$/i.exec(enTeteSignature.trim());
-  if (!correspondance) return { valide: false, motif: "format d'en-tête inattendu" };
+  // Forme documentée : ^t=\d+(,v1=[0-9a-f]{64})+$ (casse des chiffres hexa tolérée).
+  const entete = enTeteSignature.trim();
+  if (!/^t=\d+(,v1=[0-9a-f]{64})+$/i.test(entete)) {
+    return { valide: false, motif: "format d'en-tête inattendu" };
+  }
+  const [partieT, ...partiesV1] = entete.split(",");
+  const timestampTexte = partieT.slice(2);
+  const signaturesRecues = partiesV1.map((p) => p.slice(3).toLowerCase());
 
-  const [, timestampTexte, signatureRecue] = correspondance;
   const timestamp = Number(timestampTexte);
   if (!Number.isFinite(timestamp)) return { valide: false, motif: "timestamp invalide" };
 
@@ -167,17 +177,20 @@ export function verifierSignatureWebhook(corpsBrut, enTeteSignature, secret) {
     return { valide: false, motif: `timestamp hors fenêtre anti-rejeu (${Math.round(ecartSecondes)}s d'écart)` };
   }
 
-  const crypto = require("crypto");
   const signatureAttendue = crypto
     .createHmac("sha256", secret)
     .update(`${timestampTexte},${corpsBrut}`)
     .digest("hex");
-
   const bufAttendu = Buffer.from(signatureAttendue, "utf8");
-  const bufRecu = Buffer.from(signatureRecue, "utf8");
-  if (bufAttendu.length !== bufRecu.length || !crypto.timingSafeEqual(bufAttendu, bufRecu)) {
-    return { valide: false, motif: "signature invalide" };
+
+  // Toutes les signatures sont comparées (pas de sortie anticipée sur la
+  // première qui correspond) : durée indépendante du rang du bon v1.
+  let correspond = false;
+  for (const recue of signaturesRecues) {
+    const bufRecu = Buffer.from(recue, "utf8");
+    if (bufRecu.length === bufAttendu.length && crypto.timingSafeEqual(bufAttendu, bufRecu)) correspond = true;
   }
+  if (!correspond) return { valide: false, motif: "signature invalide" };
 
   return { valide: true };
 }
