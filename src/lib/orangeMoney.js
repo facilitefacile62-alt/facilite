@@ -31,6 +31,45 @@ function baseUrl() {
   return process.env.ORANGE_MONEY_API_BASE_URL || SANDBOX_BASE_URL;
 }
 
+/**
+ * Erreur d'un appel à l'API Orange Money. `message` garde le détail technique
+ * (journaux et alertes uniquement) ; `messageUtilisateur` est la phrase claire,
+ * en français, qu'on peut montrer à la personne qui paie.
+ */
+export class ErreurOrangeMoney extends Error {
+  constructor(messageTechnique, { httpStatus = null, donnees = null } = {}) {
+    super(messageTechnique);
+    this.name = "ErreurOrangeMoney";
+    this.httpStatus = httpStatus;
+    this.codeOrange = extraireCodeOrange(donnees);
+    this.messageUtilisateur = traduireErreurOrange({ httpStatus, codeOrange: this.codeOrange });
+  }
+}
+
+function extraireCodeOrange(donnees) {
+  if (!donnees || typeof donnees !== "object") return null;
+  const brut = donnees.code ?? donnees.errorCode ?? donnees.error_code ?? donnees.errors?.[0]?.code ?? null;
+  if (brut !== null && brut !== undefined && String(brut) !== "") return String(brut);
+  // Corps de forme inattendue : le code d'un QR expiré (4004) est le seul qu'on reconnaît en texte libre.
+  return /\b4004\b/.test(JSON.stringify(donnees)) ? "4004" : null;
+}
+
+/** Traduit un code Orange / un statut HTTP en phrase claire — jamais le texte brut de l'API. */
+export function traduireErreurOrange({ httpStatus, codeOrange }) {
+  if (codeOrange === "4004") return "Le code de paiement a expiré. Générez-en un nouveau pour réessayer.";
+  if (httpStatus === 429 || codeOrange === "9") return "Trop de demandes en même temps. Patientez une minute, puis réessayez.";
+  if (codeOrange === "51") return "Votre paiement est en attente de confirmation par Orange Money. Patientez quelques instants avant de réessayer.";
+  if (httpStatus === 401 || httpStatus === 403 || codeOrange === "10" || codeOrange === "11") {
+    return "Le paiement par Orange Money est momentanément indisponible. Réessayez plus tard ou contactez-nous.";
+  }
+  return "Le paiement Orange Money n'a pas pu être lancé. Réessayez dans un instant.";
+}
+
+/** Phrase à montrer à l'utilisateur pour n'importe quelle erreur levée par ce module. */
+export function messageUtilisateurOrange(erreur) {
+  return erreur instanceof ErreurOrangeMoney ? erreur.messageUtilisateur : traduireErreurOrange({ httpStatus: null, codeOrange: null });
+}
+
 // Jeton OAuth2 mis en cache en mémoire de process — best effort seulement :
 // une fonction serverless Vercel peut démarrer "à froid" sans ce cache,
 // auquel cas un nouveau jeton est simplement redemandé. Le but est
@@ -63,7 +102,7 @@ async function obtenirJetonAcces() {
 
   const donnees = await reponse.json().catch(() => ({}));
   if (!reponse.ok || !donnees.access_token) {
-    throw new Error(`Échec d'obtention du jeton Orange Money (${reponse.status}) : ${donnees.error_description || donnees.error || "réponse invalide"}.`);
+    throw new ErreurOrangeMoney(`Échec d'obtention du jeton Orange Money (${reponse.status}) : ${donnees.error_description || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
   }
 
   jetonCache = {
@@ -111,7 +150,7 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
 
   const donnees = await reponse.json().catch(() => ({}));
   if (!reponse.ok || !donnees.qrId) {
-    throw new Error(`Échec de génération du QR code Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`);
+    throw new ErreurOrangeMoney(`Échec de génération du QR code Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
   }
 
   return {
@@ -136,7 +175,7 @@ export async function obtenirStatutTransaction(transactionId) {
   });
   const donnees = await reponse.json().catch(() => ({}));
   if (!reponse.ok) {
-    throw new Error(`Échec de lecture du statut Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`);
+    throw new ErreurOrangeMoney(`Échec de lecture du statut Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
   }
   return donnees;
 }
