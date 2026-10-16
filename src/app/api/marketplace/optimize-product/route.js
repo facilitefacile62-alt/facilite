@@ -1,3 +1,4 @@
+import { refuserSiIaEnPause } from "@/lib/iaPause";
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
@@ -36,6 +37,9 @@ function cleanAndParseJSON(text) {
 
 export async function POST(req) {
   try {
+    const enPause = await refuserSiIaEnPause(req);
+    if (enPause) return enPause;
+
     const { user, error: authError } = await requireUser(req);
     if (authError) return authError;
 

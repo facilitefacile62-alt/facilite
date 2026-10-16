@@ -20,6 +20,7 @@
 // fichier ne fait que de l'interface.
 
 import { sansAccent } from "@/lib/texte";
+import { useIaAutorisee, MESSAGE_IA_EN_PAUSE } from "@/lib/useIaAutorisee";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -104,6 +105,9 @@ import {
   signalerLivraisonBloquee,
   chargerLitigesOuverts,
 } from "@/lib/marketplaceData";
+
+// Boutons IA en pause : grisés, non cliquables.
+const STYLE_IA_EN_PAUSE = { filter: "grayscale(1)", opacity: 0.45, cursor: "not-allowed" };
 
 // Les identifiants correspondent exactement au CHECK de marketplace_items :
 // un écart ici produirait un rejet côté base au moment de publier.
@@ -11214,6 +11218,7 @@ function FormulaireArticle({
   boutiqueVerifie = false,
 }) {
   const { session } = useAuth();
+  const iaAutorisee = useIaAutorisee();
   const estEdition = Boolean(articleAEditer?.id);
   const [champs, setChamps] = useState({
     titre: articleAEditer?.titre || "",
@@ -11448,7 +11453,8 @@ function FormulaireArticle({
 
       // Scanner automatiquement la première photo ajoutée
       const premierePhoto = nouvellesPhotos[0];
-      if (premierePhoto && declencherScanAuto) {
+      // Fonctions IA en pause : la photo est ajoutée, mais pas analysée.
+      if (premierePhoto && declencherScanAuto && iaAutorisee) {
         await scannerProduitParPhoto(premierePhoto.rawFile, premierePhoto.chemin);
       }
     } catch (err) {
@@ -11612,9 +11618,10 @@ function FormulaireArticle({
           <button
             type="button"
             onClick={declencherScanPrincipal}
-            disabled={scanIAEnCours || compression}
+            disabled={scanIAEnCours || compression || !iaAutorisee}
+            style={iaAutorisee ? undefined : STYLE_IA_EN_PAUSE}
             className="relative group inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-black shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 cursor-pointer disabled:opacity-60 transition-all transform active:scale-95"
-            title="Importez ou prenez une photo : l'IA remplit la fiche complète instantanément"
+            title={iaAutorisee ? "Importez ou prenez une photo : l'IA remplit la fiche complète instantanément" : MESSAGE_IA_EN_PAUSE}
           >
             <i className={`fa-solid ${scanIAEnCours ? "fa-circle-notch fa-spin" : "fa-camera-retro"} text-sm text-yellow-200`}></i>
             <span>{scanIAEnCours ? "Identification IA..." : "📸 Scanner le produit avec l'IA"}</span>
@@ -11628,9 +11635,10 @@ function FormulaireArticle({
           <button
             type="button"
             onClick={optimiserAvecIA}
-            disabled={optimisationIA || scanIAEnCours}
+            disabled={optimisationIA || scanIAEnCours || !iaAutorisee}
+            style={iaAutorisee ? undefined : STYLE_IA_EN_PAUSE}
             className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 text-xs font-bold cursor-pointer disabled:opacity-60 transition"
-            title="Optimiser le titre et la description textuelle"
+            title={iaAutorisee ? "Optimiser le titre et la description textuelle" : MESSAGE_IA_EN_PAUSE}
           >
             <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"} text-violet-600 dark:text-violet-400`}></i>
             {optimisationIA ? "Optimisation..." : "Optimiser texte SEO"}
@@ -11886,9 +11894,10 @@ function FormulaireArticle({
             <button
               type="button"
               onClick={declencherScanPrincipal}
-              disabled={compression || scanIAEnCours}
+              disabled={compression || scanIAEnCours || !iaAutorisee}
+              style={iaAutorisee ? undefined : STYLE_IA_EN_PAUSE}
               className="h-20 px-4 rounded-2xl border-2 border-dashed border-violet-400 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-300 hover:bg-violet-100/60 dark:hover:bg-violet-900/40 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 transition"
-              title="Scanner directement un produit sans rien saisir"
+              title={iaAutorisee ? "Scanner directement un produit sans rien saisir" : MESSAGE_IA_EN_PAUSE}
             >
               <div className="flex items-center gap-1.5 text-xs font-black">
                 <i className="fa-solid fa-wand-magic-sparkles text-amber-500 animate-pulse"></i>

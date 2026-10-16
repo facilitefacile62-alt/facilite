@@ -1,5 +1,6 @@
 "use client";
 
+import { useIaAutorisee, MESSAGE_IA_EN_PAUSE } from "@/lib/useIaAutorisee";
 import { sansAccent, contientTousLesMots } from "@/lib/texte";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
@@ -381,6 +382,7 @@ export default function GlobeExplorateurBoutiques({
   // ne ressemble à aucun produit de la base : on essaie donc les mots-clés un par un, puis les mots du
   // titre, et on garde le premier qui trouve au moins un produit sur la plateforme.
   const [messageScan, setMessageScan] = useState("");
+  const iaAutorisee = useIaAutorisee();
   const handleScanPhotoRecherche = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2183,8 +2185,11 @@ export default function GlobeExplorateurBoutiques({
 
             {/* Icône Appareil Photo / Recherche Visuelle IA (Style signature AliExpress) */}
             <label
-              className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-black/5 cursor-pointer text-stone-800 hover:text-black transition group mr-1.5 shrink-0"
-              title="Rechercher par photo (IA Scanner Vision)"
+              className={`relative flex items-center justify-center w-8 h-8 rounded-full text-stone-800 transition group mr-1.5 shrink-0 ${
+                iaAutorisee ? "hover:bg-black/5 hover:text-black cursor-pointer" : "opacity-40 grayscale cursor-not-allowed"
+              }`}
+              title={iaAutorisee ? "Rechercher par photo (IA Scanner Vision)" : `Recherche par photo : ${MESSAGE_IA_EN_PAUSE.toLowerCase()}`}
+              aria-disabled={!iaAutorisee}
             >
               <input
                 ref={fileInputPhotoRef}
@@ -2192,7 +2197,7 @@ export default function GlobeExplorateurBoutiques({
                 accept="image/*"
                 onChange={handleScanPhotoRecherche}
                 className="hidden"
-                disabled={scanPhotoEnCours}
+                disabled={scanPhotoEnCours || !iaAutorisee}
               />
               {scanPhotoEnCours ? (
                 <i className="fa-solid fa-circle-notch fa-spin text-sm text-[#10E688]"></i>

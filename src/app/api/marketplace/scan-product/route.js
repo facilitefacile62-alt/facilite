@@ -1,3 +1,4 @@
+import { refuserSiIaEnPause } from "@/lib/iaPause";
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
@@ -217,6 +218,9 @@ async function analyserAvecOpenAIVision(base64Data, mimeType, indiceTexte = "") 
 
 export async function POST(req) {
   try {
+    const enPause = await refuserSiIaEnPause(req);
+    if (enPause) return enPause;
+
     // Vérification d'authentification facultative ou souple
     const authHeader = req.headers.get("authorization") || "";
     if (authHeader.startsWith("Bearer ")) {
@@ -305,6 +309,14 @@ export async function POST(req) {
     let analyseIA = true;
     if (!analyse?.titre) {
       analyseIA = false;
+      // Sans indice de titre fourni par le vendeur, un titre générique rempli à sa place serait
+      // faux (et pourrait être publié tel quel) : on répond clairement que l'analyse est indisponible.
+      if (!indiceTexte?.trim()) {
+        return NextResponse.json(
+          { success: false, analyse_ia: false, error: "L'analyse de la photo est momentanément indisponible. Saisissez le produit à la main." },
+          { status: 503 }
+        );
+      }
       const nomGen = indiceTexte?.trim() ? indiceTexte.trim() : "Article Boutique";
       analyse = {
         titre: nomGen.charAt(0).toUpperCase() + nomGen.slice(1),
