@@ -12026,6 +12026,9 @@ function ListeMesArticles({ articles, onChange, onPublier, userId, storeId }) {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Gérez vos stocks, modifiez les détails ou supprimez vos annonces
           </p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+            Le stock affiché est ce qui reste disponible : les pièces commandées sur Facilité sont déjà retirées, ne les retirez pas à la main.
+          </p>
         </div>
 
         {onPublier && (
