@@ -1,5 +1,6 @@
 "use client";
 
+import { sansAccent } from "@/lib/texte";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import {
@@ -607,7 +608,7 @@ export default function GlobeExplorateurBoutiques({
     if (nextB) selectionnerBoutiqueCarousel(nextB);
   };
 
-  const rechercheNormalisee = rechercheCarte.trim().toLowerCase();
+  const rechercheNormalisee = sansAccent(rechercheCarte.trim());
   const rechercheActiveRef = useRef(false);
   useEffect(() => {
     rechercheActiveRef.current = rechercheNormalisee.length > 0;
@@ -638,10 +639,10 @@ export default function GlobeExplorateurBoutiques({
     if (!rechercheNormalisee) return tousArticles;
     return tousArticles.filter(
       (a) =>
-        (a.titre || "").toLowerCase().includes(rechercheNormalisee) ||
-        (a.description || "").toLowerCase().includes(rechercheNormalisee) ||
-        (a.categorie || "").toLowerCase().includes(rechercheNormalisee) ||
-        (a.boutique_nom || "").toLowerCase().includes(rechercheNormalisee)
+        sansAccent(a.titre).includes(rechercheNormalisee) ||
+        sansAccent(a.description).includes(rechercheNormalisee) ||
+        sansAccent(a.categorie).includes(rechercheNormalisee) ||
+        sansAccent(a.boutique_nom).includes(rechercheNormalisee)
     );
   }, [tousArticles, rechercheNormalisee]);
 
@@ -731,7 +732,7 @@ export default function GlobeExplorateurBoutiques({
     }
     if (!rechercheNormalisee) return base;
     return base.filter(
-      (b) => (b.nom || "").toLowerCase().includes(rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
+      (b) => sansAccent(b.nom).includes(rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
     );
   }, [marqueurs, filtreActif, rechercheNormalisee, idsBoutiquesArticlesFiltres]);
 
@@ -2395,7 +2396,9 @@ export default function GlobeExplorateurBoutiques({
           <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/95 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-2xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
             <i className="fa-solid fa-house text-xs"></i>
             <span>
-              {boutiqueSelectionnee
+              {rechercheNormalisee && boutiquesAffichees.length === 0
+                ? `Aucun résultat pour « ${rechercheCarte.trim()} »`
+                : boutiqueSelectionnee
                 ? `${boutiqueSelectionnee.nom} est ouvert à ${boutiqueSelectionnee.quartier || "Dakar"}`
                 : `${marqueurs.length} boutiques vérifiées prêtes à vous servir au Sénégal`}
             </span>

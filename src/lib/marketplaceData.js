@@ -13,6 +13,7 @@
 // marcher dessus.
 
 import { supabase } from "@/lib/supabase";
+import { sansAccent } from "@/lib/texte";
 
 export const BUCKET = "marketplace-photos";
 
@@ -738,60 +739,72 @@ export async function chargerTousLesArticles({
   texte = null,
   seulementEnStock = false,
   limite = 60,
-  // Recherche élargie (carte) : le mot peut aussi figurer dans la description ou la catégorie,
-  // pas seulement dans le titre.
-  rechercheLarge = false,
+  // Seulement les articles des boutiques dont le NOM contient ce texte.
+  boutiqueNom = null,
 } = {}) {
-  let query = supabase
-    .from("marketplace_items")
-    .select(`
-      id,
-      titre,
-      description,
-      categorie,
-      prix_xof,
-      quantite,
-      statut,
-      photos,
-      updated_at,
-      store:marketplace_stores!inner (
+  // Recherche sans accents ni majuscules : on compare à des colonnes calculées par la base
+  // (recherche_norm, nom_norm — voir 20261016280000_recherche_sans_accent.sql). Les caractères
+  // qui ont un sens dans un filtre (virgule, parenthèses, %, *, _, \) sont retirés.
+  const motNettoye = (t) => sansAccent(t).replace(/[,()%*_\\]/g, " ").trim();
+
+  const lancer = async (appliquerFiltre) => {
+    let query = supabase
+      .from("marketplace_items")
+      .select(`
         id,
-        nom,
-        quartier,
-        ville,
-        telephone_whatsapp,
-        latitude,
-        longitude,
-        avatar_config,
-        owner_id,
-        verifie
-      )
-    `)
-    .eq("actif", true)
-    .eq("store.actif", true)
-    .order("updated_at", { ascending: false })
-    .limit(limite);
+        titre,
+        description,
+        categorie,
+        prix_xof,
+        quantite,
+        statut,
+        photos,
+        updated_at,
+        store:marketplace_stores!inner (
+          id,
+          nom,
+          quartier,
+          ville,
+          telephone_whatsapp,
+          latitude,
+          longitude,
+          avatar_config,
+          owner_id,
+          verifie
+        )
+      `)
+      .eq("actif", true)
+      .eq("store.actif", true)
+      .order("updated_at", { ascending: false })
+      .limit(limite);
+    if (categorie) query = query.eq("categorie", categorie);
+    if (seulementEnStock) query = query.gt("quantite", 0);
+    query = appliquerFiltre(query);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data || [];
+  };
 
-  if (categorie) {
-    query = query.eq("categorie", categorie);
-  }
-  if (seulementEnStock) {
-    query = query.gt("quantite", 0);
-  }
-  if (texte && texte.trim()) {
-    if (rechercheLarge) {
-      // Virgules, parenthèses et pourcentages casseraient la syntaxe du filtre « or » : retirés.
-      const mot = texte.trim().replace(/[,()%*\\]/g, " ").trim();
-      if (mot) query = query.or(`titre.ilike.%${mot}%,description.ilike.%${mot}%,categorie.ilike.%${mot}%`);
-    } else {
-      query = query.ilike("titre", `%${texte.trim()}%`);
-    }
+  const mot = motNettoye(texte);
+  const motBoutique = motNettoye(boutiqueNom);
+  let lignes;
+  if (motBoutique) {
+    lignes = await lancer((q) => q.ilike("store.nom_norm", `%${motBoutique}%`));
+  } else if (mot) {
+    // Le texte peut être dans le produit (titre, description, catégorie) OU dans le nom de la boutique.
+    const [parProduit, parBoutique] = await Promise.all([
+      lancer((q) => q.ilike("recherche_norm", `%${mot}%`)),
+      lancer((q) => q.ilike("store.nom_norm", `%${mot}%`)),
+    ]);
+    const vus = new Set(parProduit.map((r) => r.id));
+    lignes = [...parProduit, ...parBoutique.filter((r) => !vus.has(r.id))]
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+      .slice(0, limite);
+  } else {
+    lignes = await lancer((q) => q);
   }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-
-  return (data || []).map((r) => ({
+  return lignes.map((r) => ({
     id: r.id,
     titre: r.titre,
     description: r.description,
