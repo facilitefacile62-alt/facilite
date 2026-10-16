@@ -8,12 +8,14 @@ import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
 import {
   annulerCommande,
+  chargerLitigesOuverts,
   chargerMesCommandesAcheteur,
   confirmerReceptionCommande,
   jourMois,
   pastilleAcheteur,
   premierePhoto,
   refCommande,
+  signalerLivraisonBloquee,
   type MaCommande,
 } from '@/lib/commandes';
 import { chargerGroupagesParIds, detacherCommandeDeGroupage, heureLisible, type InfoGroupage } from '@/lib/groupages';
@@ -33,6 +35,8 @@ function CarteCommande({
   groupage,
   onRejoindre,
   onRetirer,
+  signalee,
+  onSignaler,
 }: {
   commande: MaCommande;
   occupee: boolean;
@@ -42,6 +46,8 @@ function CarteCommande({
   groupage?: InfoGroupage;
   onRejoindre: () => void;
   onRetirer: () => void;
+  signalee: boolean;
+  onSignaler: () => void;
 }) {
   const pastille = pastilleAcheteur(commande.statut);
   const photo = premierePhoto(commande.item?.photos);
@@ -105,6 +111,17 @@ function CarteCommande({
         </Pressable>
       )}
 
+      {['assignee', 'recuperee', 'en_livraison'].includes(commande.statut) &&
+        (signalee ? (
+          <Text className="text-[12px] font-bold" style={{ color: '#B45309' }}>
+            Signalement envoyé : l’équipe examine cette livraison et vous tiendra au courant.
+          </Text>
+        ) : (
+          <Pressable onPress={onSignaler} hitSlop={6} className="self-start py-0.5">
+            <Text className="text-[12.5px] font-bold underline" style={{ color: 'rgba(0,0,0,0.5)' }}>Le livreur ne répond plus ? Signaler un blocage</Text>
+          </Pressable>
+        ))}
+
       {suivable && (
         <Pressable
           onPress={onSuivre}
@@ -141,6 +158,7 @@ export default function MesCommandesScreen() {
   const [rafraichissement, setRafraichissement] = useState(false);
   const [occupee, setOccupee] = useState<string | null>(null);
   const [groupagesInfo, setGroupagesInfo] = useState<Record<string, InfoGroupage>>({});
+  const [litiges, setLitiges] = useState<string[]>([]);
 
   const userId = user?.id;
   const recharger = useCallback(async () => {
@@ -175,6 +193,30 @@ export default function MesCommandesScreen() {
       annule = true;
     };
   }, [commandes]);
+
+  // Commandes déjà signalées comme bloquées (pour ne pas proposer deux fois le signalement).
+  useEffect(() => {
+    let annule = false;
+    chargerLitigesOuverts()
+      .then((l) => {
+        if (!annule) setLitiges(l);
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [commandes]);
+
+  async function signaler(commande: MaCommande) {
+    try {
+      await signalerLivraisonBloquee(commande.id);
+      setLitiges((l) => [...l, commande.id]);
+      Alert.alert('Signalement envoyé', 'L’équipe examine cette livraison et vous tiendra au courant.');
+    } catch (e) {
+      // Le message de la base explique le délai d'inactivité à attendre avant de pouvoir signaler.
+      Alert.alert('Signalement impossible pour le moment', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    }
+  }
 
   async function retirerDuGroupage(commande: MaCommande) {
     setOccupee(commande.id);
@@ -285,6 +327,8 @@ export default function MesCommandesScreen() {
                   router.push({ pathname: '/marketplace/rejoindre-groupage', params: { commandeId: item.id, titre: item.item?.titre ?? '' } } as Href)
                 }
                 onRetirer={() => retirerDuGroupage(item)}
+                signalee={litiges.includes(item.id)}
+                onSignaler={() => signaler(item)}
               />
             )}
           />
