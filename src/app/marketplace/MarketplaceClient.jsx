@@ -6441,6 +6441,7 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
                 </div>
                 <p className="text-xs text-gray-500">
                   {c.quantite} pièce(s) · {prixLisible(c.prix_total_xof)} FCFA
+                  {c.frais_livraison_xof > 0 ? ` + ${prixLisible(c.frais_livraison_xof)} FCFA de livraison, à régler au livreur` : ""}
                 </p>
                 <p className="text-[10px] text-gray-400">
                   {new Date(c.created_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}

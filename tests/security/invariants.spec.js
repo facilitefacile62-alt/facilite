@@ -210,6 +210,11 @@ test.describe("Invariants de sécurité", () => {
       // /api/envoyer-email (service_role, après contrôle de session) ; aucun
       // GRANT à anon/authenticated. Voir 20261013150000_emails_envoyes.sql.
       "emails_envoyes",
+      // Tarif de livraison (une seule ligne) : aucun GRANT ni policy, lu uniquement par
+      // lire_tarif_livraison() et modifié uniquement par definir_tarif_livraison() (administrateur,
+      // SECURITY DEFINER). Une policy de lecture « pour tous » serait tautologique (invariant 7).
+      // Voir 20261016260000_tarif_livraison.sql.
+      "livraison_tarif",
       // Config + catalogue de l'onglet admin "Entraînement IA" (Agent IA
       // Facilité) : même principe que assistant_faq, lecture/écriture
       // exclusivement via service_role et une route API admin dédiée. Voir
