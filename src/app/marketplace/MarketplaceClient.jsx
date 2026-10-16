@@ -19,6 +19,7 @@
 // La logique d'accès aux données vit dans src/lib/marketplaceData.js : ce
 // fichier ne fait que de l'interface.
 
+import { sansAccent } from "@/lib/texte";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1241,7 +1242,9 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       return;
     }
     try {
-      const trouves = await chargerTousLesArticles({ texte, rechercheLarge: true, limite: 100 });
+      // chargerTousLesArticles cherche déjà dans le produit ET dans le nom de la boutique,
+      // sans tenir compte des accents.
+      const trouves = await chargerTousLesArticles({ texte, limite: 100 });
       if (numero === rechercheCarteRequeteRef.current) setArticlesRechercheCarte(trouves);
     } catch {
       // La recherche locale (articles déjà chargés) continue de fonctionner.
@@ -2675,7 +2678,7 @@ function VueReglages({
 
                     <div className="max-h-40 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                       {DEPARTEMENTS_SENEGAL.filter((dep) =>
-                        dep.toLowerCase().includes(rechercheDep.toLowerCase().trim())
+                        sansAccent(dep).includes(sansAccent(rechercheDep.trim()))
                       ).map((dep) => (
                         <button
                           key={dep}
