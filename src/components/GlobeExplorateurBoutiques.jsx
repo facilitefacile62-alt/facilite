@@ -1,6 +1,6 @@
 "use client";
 
-import { sansAccent } from "@/lib/texte";
+import { sansAccent, contientTousLesMots } from "@/lib/texte";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import {
@@ -130,6 +130,9 @@ function prixLisible(val) {
   if (!Number.isFinite(n)) return "0";
   return n.toLocaleString("fr-FR");
 }
+
+// Mots que l'analyse d'une photo ajoute souvent et qui ne désignent pas le produit.
+const MOTS_TROP_GENERAUX = new Set(["dakar", "senegal", "boutique", "qualite", "disponible", "marketplace", "article", "produit", "promo", "pas", "cher", "neuf", "pour", "avec", "les", "des", "une", "bio"]);
 
 export default function GlobeExplorateurBoutiques({
   boutiques = [],
@@ -373,12 +376,17 @@ export default function GlobeExplorateurBoutiques({
     };
   }, []);
 
-  // Recherche par photo (IA Scanner Vision)
+  // Recherche par photo (IA Scanner Vision) : la route /api/marketplace/scan-product reconnaît le produit
+  // (titre commercial long + mots-clés). Un titre complet comme « Crème Hydratante Visage Bio 200ml »
+  // ne ressemble à aucun produit de la base : on essaie donc les mots-clés un par un, puis les mots du
+  // titre, et on garde le premier qui trouve au moins un produit sur la plateforme.
+  const [messageScan, setMessageScan] = useState("");
   const handleScanPhotoRecherche = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setScanPhotoEnCours(true);
+    setMessageScan("");
     try {
       const formData = new FormData();
       formData.append("image", file);
@@ -387,24 +395,38 @@ export default function GlobeExplorateurBoutiques({
         method: "POST",
         body: formData,
       });
+      const json = res.ok ? await res.json() : null;
+      const fiche = json?.data;
 
-      if (res.ok) {
-        const data = await res.json();
-        const titreDetecte = data?.fiche?.titre || data?.titre || "";
-        if (titreDetecte) {
-          setRechercheCarte(titreDetecte);
-        } else {
-          const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
-          setRechercheCarte(fallback || "article");
+      // analyse_ia = false : l'IA n'a pas pu analyser la photo, le titre est un texte générique.
+      if (!json?.analyse_ia || !fiche?.titre) {
+        setMessageScan("Analyse de la photo indisponible pour le moment : tapez le nom du produit.");
+        return;
+      }
+
+      const motsTitre = String(fiche.titre).split(/\s+/);
+      const candidats = [];
+      for (const m of [...(fiche.mots_cles || []), ...motsTitre]) {
+        const mot = sansAccent(m).replace(/[^a-z0-9 ]/g, "").trim();
+        if (mot.length >= 3 && !/^\d/.test(mot) && !MOTS_TROP_GENERAUX.has(mot) && !candidats.includes(mot)) candidats.push(mot);
+      }
+      let choisi = null;
+      for (const c of candidats.slice(0, 8)) {
+        const n = onRechercheTexte ? await onRechercheTexte(c) : 0;
+        if (n > 0) {
+          choisi = c;
+          break;
         }
+      }
+      if (choisi) {
+        setRechercheCarte(choisi);
       } else {
-        const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
-        setRechercheCarte(fallback || "article");
+        setRechercheCarte(candidats[0] || String(fiche.titre));
+        setMessageScan(`Aucun produit similaire à « ${fiche.titre} » pour le moment.`);
       }
     } catch (err) {
       console.warn("Erreur recherche par image:", err);
-      const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
-      setRechercheCarte(fallback || "article");
+      setMessageScan("Analyse de la photo impossible : tapez le nom du produit.");
     } finally {
       setScanPhotoEnCours(false);
       if (fileInputPhotoRef.current) {
@@ -637,14 +659,24 @@ export default function GlobeExplorateurBoutiques({
   // boutiques, sans geste de zoom inventé séparément.
   const articlesFiltres = useMemo(() => {
     if (!rechercheNormalisee) return tousArticles;
-    return tousArticles.filter(
-      (a) =>
-        sansAccent(a.titre).includes(rechercheNormalisee) ||
-        sansAccent(a.description).includes(rechercheNormalisee) ||
-        sansAccent(a.categorie).includes(rechercheNormalisee) ||
-        sansAccent(a.boutique_nom).includes(rechercheNormalisee)
+    return tousArticles.filter((a) =>
+      contientTousLesMots(`${a.titre || ""} ${a.description || ""} ${a.categorie || ""} ${a.boutique_nom || ""}`, rechercheNormalisee)
     );
   }, [tousArticles, rechercheNormalisee]);
+
+  // Dès qu'une recherche trouve des produits, le dock montre les PRODUITS (onglet Articles) : toucher
+  // un produit centre la carte sur sa boutique. Recherche effacée : retour aux boutiques.
+  const rechercheActiveAvecResultats = rechercheNormalisee.length >= 2 && articlesFiltres.length > 0;
+  const basculeSurArticlesRef = useRef(false);
+  useEffect(() => {
+    if (rechercheActiveAvecResultats && !basculeSurArticlesRef.current) {
+      basculeSurArticlesRef.current = true;
+      queueMicrotask(() => setVueCarrousel("articles"));
+    } else if (!rechercheNormalisee && basculeSurArticlesRef.current) {
+      basculeSurArticlesRef.current = false;
+      queueMicrotask(() => setVueCarrousel("boutiques"));
+    }
+  }, [rechercheActiveAvecResultats, rechercheNormalisee]);
 
   const idsBoutiquesArticlesFiltres = useMemo(
     () => new Set(articlesFiltres.map((a) => a.boutique_id).filter(Boolean)),
@@ -732,7 +764,7 @@ export default function GlobeExplorateurBoutiques({
     }
     if (!rechercheNormalisee) return base;
     return base.filter(
-      (b) => sansAccent(b.nom).includes(rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
+      (b) => contientTousLesMots(b.nom, rechercheNormalisee) || idsBoutiquesArticlesFiltres.has(b.id)
     );
   }, [marqueurs, filtreActif, rechercheNormalisee, idsBoutiquesArticlesFiltres]);
 
@@ -2120,7 +2152,10 @@ export default function GlobeExplorateurBoutiques({
               ref={inputRechercheRef}
               type="text"
               value={rechercheCarte}
-              onChange={(e) => setRechercheCarte(e.target.value)}
+              onChange={(e) => {
+                setRechercheCarte(e.target.value);
+                setMessageScan("");
+              }}
               placeholder={
                 scanPhotoEnCours
                   ? "Scan IA en cours, analyse de l'image..."
@@ -2396,7 +2431,9 @@ export default function GlobeExplorateurBoutiques({
           <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/95 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-2xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
             <i className="fa-solid fa-house text-xs"></i>
             <span>
-              {rechercheNormalisee && boutiquesAffichees.length === 0
+              {messageScan
+                ? messageScan
+                : rechercheNormalisee && boutiquesAffichees.length === 0
                 ? `Aucun résultat pour « ${rechercheCarte.trim()} »`
                 : boutiqueSelectionnee
                 ? `${boutiqueSelectionnee.nom} est ouvert à ${boutiqueSelectionnee.quartier || "Dakar"}`
