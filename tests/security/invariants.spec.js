@@ -446,6 +446,11 @@ test.describe("Invariants de sécurité", () => {
       // ciblée sur un utilisateur précis ; ajouter un faux marqueur
       // user_id juste pour passer ce test serait malhonnête.
       "src/app/api/cron/purge-access-log-ips/route.js",
+      // Expiration quotidienne (cron, CRON_SECRET) des commandes Marketplace restées 48 h sans
+      // livreur — 16/10/2026. Opération système par nature : elle ne lit ni n'écrit rien ellemême,
+      // elle appelle une fonction SQL réservée à service_role qui traite TOUTES les commandes
+      // concernées et prévient leurs acheteurs et vendeurs. Aucun utilisateur précis à filtrer.
+      "src/app/api/cron/expirer-commandes-sans-livreur/route.js",
     ]);
 
     const unscoped = files.filter((f) => {

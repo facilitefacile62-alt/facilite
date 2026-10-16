@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/purge-deleted-accounts",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/expirer-commandes-sans-livreur",
+      "schedule": "0 6 * * *"
     }
   ]
 }
