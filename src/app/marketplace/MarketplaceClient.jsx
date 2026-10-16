@@ -6571,6 +6571,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
   const [commandeEnvoyee, setCommandeEnvoyee] = useState(false);
   const [erreurCommande, setErreurCommande] = useState("");
   const [enregistrementCommandeEchoue, setEnregistrementCommandeEchoue] = useState(false);
+  const [motifEchecCommande, setMotifEchecCommande] = useState("");
   const [livraisonNom, setLivraisonNom] = useState(profile?.full_name || "");
   const [livraisonTel, setLivraisonTel] = useState(profile?.phone || "");
   const [livraisonAdresse, setLivraisonAdresse] = useState(profile?.city ? `${profile?.quartier || ""}, ${profile?.city}` : "");
@@ -6697,6 +6698,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
     // pas de `await` avant `window.open` — un `window.open` qui n'est plus
     // synchrone avec le clic déclenche le bloqueur de pop-up du navigateur.
     setEnregistrementCommandeEchoue(false);
+    setMotifEchecCommande("");
     creerCommandeMarketplace({
       itemId: article.id,
       quantite,
@@ -6706,6 +6708,8 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
       moyenPaiement,
     }).catch((err) => {
       console.warn("[Commande Marketplace] persistance échouée", err);
+      // Le message de la base est clair et sans secret (boutique sans position, article introuvable…).
+      setMotifEchecCommande(typeof err?.message === "string" ? err.message : "");
       setEnregistrementCommandeEchoue(true);
     });
 
@@ -7657,7 +7661,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                 </p>
                 {enregistrementCommandeEchoue && (
                   <p className="text-[11px] text-gray-400">
-                    (La commande n&apos;a pas pu être enregistrée dans votre historique, mais le message WhatsApp est bien prêt à être envoyé.)
+                    ({motifEchecCommande || "La commande n'a pas pu être enregistrée dans votre historique."} Le message WhatsApp est bien prêt à être envoyé.)
                   </p>
                 )}
                 <button
