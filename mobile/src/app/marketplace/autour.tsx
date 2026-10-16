@@ -208,12 +208,7 @@ export default function AutourDeMoiScreen() {
             placeholderTextColor="rgba(0,0,0,0.45)"
             className="flex-1 text-[13.5px] text-[#1A1A1A]"
           />
-          <Pressable
-            onPress={() => Alert.alert('Recherche par photo', 'Cette fonction arrive dans une prochaine mise à jour.')}
-            accessibilityLabel="Rechercher par photo"
-            hitSlop={8}>
-            <Ionicons name="camera-outline" size={19} color="rgba(0,0,0,0.55)" />
-          </Pressable>
+          {/* Recherche par photo : retirée de l'application pour le moment (fonctions IA en pause). */}
           <Pressable
             onPress={lancerRecherche}
             accessibilityRole="button"

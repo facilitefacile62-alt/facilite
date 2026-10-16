@@ -220,18 +220,7 @@ export default function ModifierArticleScreen() {
               <Text className="text-[18px]" style={{ color: 'rgba(0,0,0,0.6)' }}>+</Text>
               <Text className="text-[11.5px] font-black text-[#1A1A1A]">Photos</Text>
             </Pressable>
-            <Pressable
-              onPress={() => Alert.alert('Scanner avec l’IA', 'Le remplissage de la fiche depuis une photo arrive dans une prochaine mise à jour.')}
-              className="flex-1 flex-row items-center gap-3"
-              style={{ backgroundColor: '#F3FBF7', borderRadius: 16, borderWidth: 1.5, borderColor: '#34D399', paddingHorizontal: 12 }}>
-              <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: '#D7F2EA' }}>
-                <Ionicons name="camera-outline" size={21} color="#0B3D2A" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-[15px] font-black text-[#1A1A1A]">Scanner avec l&apos;IA</Text>
-                <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Remplit la fiche depuis une photo</Text>
-              </View>
-            </Pressable>
+            {/* « Scanner avec l'IA » : retiré de l'application pour le moment (fonctions IA en pause). */}
           </View>
 
           {totalPhotos > 0 ? (

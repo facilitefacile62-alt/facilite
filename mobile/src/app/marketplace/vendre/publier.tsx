@@ -233,27 +233,7 @@ export default function PublierArticleScreen() {
         <View className="px-4 pt-7 gap-3.5">
           <Text className="text-[20px] font-black text-[#1A1A1A] text-center mb-1">Comment voulez-vous vendre ?</Text>
 
-          <Pressable
-            onPress={() => {
-              setPhotos([]);
-              setEcran('scan');
-            }}
-            className="flex-row items-center gap-3 rounded-full"
-            style={{ backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399', padding: 10, paddingRight: 20 }}>
-            <View className="items-center justify-center" style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#D7F2EA' }}>
-              <Ionicons name="camera-outline" size={22} color={FONCE} />
-            </View>
-            <View className="flex-1">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-[16px] font-black text-[#0B3D2A]">Scanner avec l&apos;IA</Text>
-                <View className="flex-row items-center gap-1 rounded-full px-2 py-0.5" style={{ backgroundColor: '#FEF3C7' }}>
-                  <Ionicons name="trophy-outline" size={10} color="#B45309" />
-                  <Text className="text-[10.5px] font-black text-[#B45309]">PRO</Text>
-                </View>
-              </View>
-              <Text className="text-[12.5px] mt-0.5 font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>Une photo suffit, vous mettez le prix</Text>
-            </View>
-          </Pressable>
+          {/* « Scanner avec l'IA » : retiré de l'application pour le moment (fonctions IA en pause). */}
 
           <Pressable
             onPress={() => {

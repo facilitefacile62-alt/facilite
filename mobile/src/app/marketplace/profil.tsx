@@ -101,15 +101,12 @@ export default function ProfilMarketplaceScreen() {
                     onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
                   />
                   <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} />
-                  <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />
-                  <LigneMenu emoji="🧑‍✈️" titre="Mes voyages (chauffeur)" onPress={() => router.push('/marketplace/mes-voyages' as Href)} />
+                  {/* Voyages et « Mes voyages (chauffeur) » : retirés de l'application pour le moment (fonctionnalité en pause). */}
                 </>
               ) : (
                 <>
                   <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
                   <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
-                  <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />
-                  <LigneMenu emoji="🧑‍✈️" titre="Mes voyages (chauffeur)" onPress={() => router.push('/marketplace/mes-voyages' as Href)} />
                 </>
               )}
               <LigneMenu emoji="⚙️" titre="Réglages" derniere onPress={() => router.push('/marketplace/reglages')} />
