@@ -12,6 +12,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/purge-livreur-documents",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/cron/purge-access-log-ips",
       "schedule": "0 4 * * *"
     },
