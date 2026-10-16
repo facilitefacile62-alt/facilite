@@ -1,3 +1,4 @@
+import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
@@ -19,9 +20,9 @@ export default function SelecteurDepartement({
   const [recherche, setRecherche] = useState('');
 
   const filtres = useMemo(() => {
-    const q = recherche.trim().toLowerCase();
+    const q = recherche.trim();
     if (!q) return DEPARTEMENTS_SENEGAL;
-    return DEPARTEMENTS_SENEGAL.filter((d) => d.toLowerCase().includes(q));
+    return DEPARTEMENTS_SENEGAL.filter((d) => contientSansAccent(d, q));
   }, [recherche]);
 
   return (

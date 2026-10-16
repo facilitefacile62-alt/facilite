@@ -1,3 +1,4 @@
+import { contientTousLesMots } from '@/lib/texte';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -40,11 +41,9 @@ export default function CandidatureSpontaneeScreen() {
 
   const listeAffichee = useMemo(() => {
     const base = filtre === 'stations' ? STATIONS : SPONTANEOUS_COMPANIES;
-    const requete = recherche.trim().toLowerCase();
+    const requete = recherche.trim();
     if (!requete) return base;
-    return base.filter(
-      (e) => e.company.toLowerCase().includes(requete) || e.domains.toLowerCase().includes(requete)
-    );
+    return base.filter((e) => contientTousLesMots(`${e.company} ${e.domains}`, requete));
   }, [filtre, recherche]);
 
   return (

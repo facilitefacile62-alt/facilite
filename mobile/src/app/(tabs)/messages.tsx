@@ -1,3 +1,4 @@
+import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -41,10 +42,8 @@ export default function MessagesScreen() {
     let liste = conversations;
     if (puceActive === 'non_lues') liste = liste.filter((c) => c.nonLue);
     if (recherche.trim()) {
-      const q = recherche.trim().toLowerCase();
-      liste = liste.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.lastText.toLowerCase().includes(q)
-      );
+      const q = recherche.trim();
+      liste = liste.filter((c) => contientSansAccent(c.name, q) || contientSansAccent(c.lastText, q));
     }
     return liste;
   }, [conversations, puceActive, recherche]);

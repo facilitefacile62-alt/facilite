@@ -1,3 +1,4 @@
+import { contientTousLesMots } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -72,10 +73,10 @@ export default function AutourDeMoiScreen() {
   }, [position]);
 
   const visibles = useMemo(() => {
-    const q = recherche.trim().toLowerCase();
+    const q = recherche.trim();
     if (!boutiques) return [];
     if (!q) return boutiques;
-    return boutiques.filter((b) => `${b.nom} ${b.quartier ?? ''} ${b.ville ?? ''}`.toLowerCase().includes(q));
+    return boutiques.filter((b) => contientTousLesMots(`${b.nom} ${b.quartier ?? ''} ${b.ville ?? ''}`, q));
   }, [boutiques, recherche]);
 
   const marqueurs = useMemo<MarqueurCarte[]>(() => {

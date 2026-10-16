@@ -1,3 +1,4 @@
+import { motPourFiltre } from '@/lib/texte';
 import { supabase } from '@/lib/supabase';
 
 // Marketplace natif — port mobile de src/lib/marketplaceData.js (web) : mêmes
@@ -166,24 +167,42 @@ export async function chargerArticles({
   /** Restreint aux articles d'une boutique (page publique d'une boutique). */
   boutiqueId?: string | null;
 } = {}): Promise<ArticleMarketplace[]> {
-  let requete = supabase
-    .from('marketplace_items')
-    .select(
-      `id, titre, description, categorie, prix_xof, quantite, statut, photos, url_video, store:marketplace_stores!inner(${COLONNES_STORE})`
-    )
-    .eq('actif', true)
-    .eq('store.actif', true)
-    .order('updated_at', { ascending: false })
-    .limit(limite);
+  const lancer = async (filtre: (r: any) => any): Promise<LigneArticle[]> => {
+    let requete = supabase
+      .from('marketplace_items')
+      .select(
+        `id, titre, description, categorie, prix_xof, quantite, statut, photos, url_video, store:marketplace_stores!inner(${COLONNES_STORE})`
+      )
+      .eq('actif', true)
+      .eq('store.actif', true)
+      .order('updated_at', { ascending: false })
+      .limit(limite);
+    if (categorie) requete = requete.eq('categorie', categorie);
+    if (boutiqueId) requete = requete.eq('store_id', boutiqueId);
+    requete = filtre(requete);
+    const { data, error } = await requete;
+    if (error) throw new Error(error.message);
+    return (data ?? []) as unknown as LigneArticle[];
+  };
 
-  if (categorie) requete = requete.eq('categorie', categorie);
-  if (boutiqueId) requete = requete.eq('store_id', boutiqueId);
-  const recherche = texte.trim();
-  if (recherche) requete = requete.ilike('titre', `%${recherche.replace(/[%_]/g, ' ')}%`);
-
-  const { data, error } = await requete;
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as LigneArticle[]).map(versArticle);
+  // Recherche sans accents, plusieurs mots dans n'importe quel ordre (colonnes recherche_norm et
+  // nom_norm calculées par la base), dans le produit OU dans le nom de la boutique — comme sur le site.
+  const mots = motPourFiltre(texte).split(' ').filter(Boolean);
+  const surChaqueMot = (colonne: string) => (r: any) => mots.reduce((acc, m) => acc.ilike(colonne, `%${m}%`), r);
+  let lignes: LigneArticle[];
+  if (mots.length === 0) {
+    lignes = await lancer((r) => r);
+  } else if (boutiqueId) {
+    lignes = await lancer(surChaqueMot('recherche_norm'));
+  } else {
+    const [parProduit, parBoutique] = await Promise.all([
+      lancer(surChaqueMot('recherche_norm')),
+      lancer(surChaqueMot('store.nom_norm')),
+    ]);
+    const vus = new Set(parProduit.map((l) => l.id));
+    lignes = [...parProduit, ...parBoutique.filter((l) => !vus.has(l.id))].slice(0, limite);
+  }
+  return lignes.map(versArticle);
 }
 
 type LigneProche = {

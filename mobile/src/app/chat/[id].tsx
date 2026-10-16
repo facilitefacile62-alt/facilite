@@ -1,3 +1,4 @@
+import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
@@ -158,7 +159,7 @@ export default function ChatDetailScreen() {
   }
   const messagesAffiches =
     messages && termeRecherche.trim()
-      ? messages.filter((m) => (m.text ?? '').toLowerCase().includes(termeRecherche.trim().toLowerCase()))
+      ? messages.filter((m) => contientSansAccent(m.text, termeRecherche.trim()))
       : messages;
 
   useEffect(() => {
