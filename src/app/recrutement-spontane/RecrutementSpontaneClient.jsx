@@ -1,5 +1,6 @@
 "use client";
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -101,12 +102,12 @@ export default function RecrutementSpontanePage() {
     }
 
     // Filtrage par terme de recherche
-    const q = searchTerm.toLowerCase().trim();
+    const q = sansAccent(searchTerm.trim());
     if (!q) return true;
     return (
-      item.company.toLowerCase().includes(q) ||
-      item.domains.toLowerCase().includes(q) ||
-      item.rawContact.toLowerCase().includes(q)
+      sansAccent(item.company).includes(q) ||
+      sansAccent(item.domains).includes(q) ||
+      sansAccent(item.rawContact).includes(q)
     );
   });
 

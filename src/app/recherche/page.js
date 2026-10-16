@@ -1,5 +1,6 @@
 "use client";
 
+import { sansAccent, motPourFiltre } from "@/lib/texte";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -154,7 +155,8 @@ function RechercheContent() {
     let isMounted = true;
     async function performGlobalSearch() {
       setLoading(true);
-      const q = searchQuery.trim().toLowerCase();
+      const q = sansAccent(searchQuery.trim());
+      const mot = motPourFiltre(searchQuery);
 
       if (!q) {
         if (isMounted) {
@@ -167,13 +169,13 @@ function RechercheContent() {
       // 1. Filtrage des Services & Outils du site
       const matchedServices = SITE_SERVICES.filter(
         (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q)
+          sansAccent(s.title).includes(q) ||
+          sansAccent(s.description).includes(q)
       );
 
       // 2. Filtrage des Candidatures Spontanées (77 Entreprises)
       const matchedCompanies = SPONTANEOUS_COMPANIES.filter((c) => {
-        const text = `${c.company} ${c.domains} ${(c.poles || []).join(" ")} ${c.rawContact} ${c.description}`.toLowerCase();
+        const text = sansAccent(`${c.company} ${c.domains} ${(c.poles || []).join(" ")} ${c.rawContact} ${c.description}`);
         return text.includes(q);
       });
 
@@ -183,9 +185,7 @@ function RechercheContent() {
         const { data: jobData } = await supabase
           .from("job_offers")
           .select("*")
-          .or(
-            `title.ilike.%${q}%,company.ilike.%${q}%,description.ilike.%${q}%,location.ilike.%${q}%`
-          )
+          .ilike("recherche_norm", `%${mot}%`)
           .order("created_at", { ascending: false });
 
         if (jobData) {
@@ -223,13 +223,16 @@ function RechercheContent() {
         const { data: profileData, error: profileError } = await supabase
           .rpc("get_profils_publics")
           .select("id, full_name, avatar_url, slug")
-          .ilike("full_name", `%${q}%`)
-          .limit(20);
+          // La fonction ne renvoie pas de colonne sans accents : les lettres qui peuvent porter un accent
+          // deviennent un joker d'un caractère (« aissatou » trouve « Aïssatou »), puis le résultat est
+          // re-filtré précisément ici.
+          .ilike("full_name", `%${mot.replace(/[aeiouycn]/g, "_")}%`)
+          .limit(100);
 
         if (profileError) {
           console.error("Erreur recherche profils publics:", profileError.message);
         } else if (profileData) {
-          matchedRecruiters = profileData;
+          matchedRecruiters = profileData.filter((p) => sansAccent(p.full_name).includes(mot)).slice(0, 20);
         }
       } catch (err) {
         console.error("Erreur recherche profils publics:", err);
