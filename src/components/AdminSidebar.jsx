@@ -46,6 +46,7 @@ const NAV_SECTIONS = [
       { type: "link", href: "/admin/assistant-faq", icon: "❓", label: "FAQ Assistant Vocal" },
       { type: "link", href: "/admin/aide-video", icon: "🎬", label: "Vidéo d'aide" },
       { type: "link", href: "/admin/chauffeurs", icon: "🚗", label: "Chauffeurs" },
+      { type: "link", href: "/admin/litiges-livraison", icon: "⚠️", label: "Livraisons bloquées" },
       { type: "link", href: "/admin/stories", icon: "🖼️", label: "Stories" },
     ],
   },

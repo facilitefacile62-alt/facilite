@@ -1680,3 +1680,21 @@ export async function chargerPositionVoyage(voyageId) {
   if (error) throw new Error(error.message);
   return data || null;
 }
+
+// ---------------------------------------------------------------------------
+// Livraison bloquée (voir supabase/migrations/20261016120000_livraison_litiges.sql)
+// ---------------------------------------------------------------------------
+
+/** L'acheteur signale une livraison qui n'avance plus ; refusé tant que le délai d'inactivité n'est pas écoulé. */
+export async function signalerLivraisonBloquee(commandeId, motif) {
+  const { data, error } = await supabase.rpc("signaler_livraison_bloquee", { p_commande_id: commandeId, p_motif: motif || null });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Ids des commandes pour lesquelles un signalement est déjà en cours d'examen. */
+export async function chargerLitigesOuverts() {
+  const { data, error } = await supabase.from("livraison_litiges").select("commande_id").is("resolu_le", null);
+  if (error) throw new Error(error.message);
+  return (data || []).map((l) => l.commande_id);
+}
