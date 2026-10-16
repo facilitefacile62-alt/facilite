@@ -63,8 +63,9 @@ function CarteCommande({
           <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={2}>
             {commande.item?.titre ?? 'Article'}
           </Text>
-          <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>
+          <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={3}>
             {commande.store?.nom ?? 'Boutique'} · {prixLisible(commande.prix_total_xof)} FCFA
+            {commande.frais_livraison_xof > 0 ? ` + ${prixLisible(commande.frais_livraison_xof)} FCFA de livraison, à régler au livreur` : ''}
           </Text>
         </View>
       </View>
