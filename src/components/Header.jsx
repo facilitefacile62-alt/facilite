@@ -1,5 +1,6 @@
 "use client";
 
+import { motPourFiltre } from "@/lib/texte";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -774,6 +775,7 @@ export default function Header() {
     async function fetchSearchResults() {
       try {
         const q = debouncedQuery.toLowerCase().trim();
+        const mot = motPourFiltre(q);
         const combinedResults = [];
         const seenTitles = new Set();
 
@@ -821,7 +823,7 @@ export default function Header() {
               .from("marketplace_stores")
               .select("id, nom, quartier, ville")
               .eq("actif", true)
-              .ilike("nom", `%${q}%`)
+              .ilike("nom_norm", `%${mot}%`)
               .limit(5);
             if (storeData && Array.isArray(storeData)) {
               storeData.forEach((store) => {
@@ -853,7 +855,7 @@ export default function Header() {
                 .select("id, titre, prix_xof, photos, store:marketplace_stores!inner(id, nom, actif)")
                 .eq("actif", true)
                 .eq("store.actif", true)
-                .or(`description.ilike.%${q}%,categorie.ilike.%${q}%`)
+                .ilike("recherche_norm", `%${mot}%`)
                 .limit(6);
               (elargi || []).forEach((art) => {
                 addResult({
@@ -947,7 +949,7 @@ export default function Header() {
           const { data: jobData } = await supabase
             .from("job_offers")
             .select("id, title, company, location, contract_type")
-            .or(`title.ilike.%${q}%,company.ilike.%${q}%,location.ilike.%${q}%,description.ilike.%${q}%`)
+            .ilike("recherche_norm", `%${mot}%`)
             .limit(5);
 
           if (jobData && Array.isArray(jobData)) {
@@ -971,7 +973,7 @@ export default function Header() {
           const { data: profData } = await supabase
             .from("profiles")
             .select("id, full_name, email")
-            .ilike("full_name", `%${q}%`)
+            .ilike("nom_norm", `%${mot}%`)
             .limit(5);
 
           if (profData && Array.isArray(profData)) {

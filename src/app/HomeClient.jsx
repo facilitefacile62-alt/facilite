@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -530,17 +531,17 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
 
     // Filtre mot-clé (titre ou entreprise ou description)
     if (keyword.trim()) {
-      const key = keyword.toLowerCase();
+      const key = sansAccent(keyword);
       filtered = filtered.filter(job => {
-        const title = (selectedLang === "FR" ? job.titleFR : job.titleEN).toLowerCase();
-        const desc = (selectedLang === "FR" ? job.descFR : job.descEN).toLowerCase();
-        return title.includes(key) || job.company.toLowerCase().includes(key) || desc.includes(key);
+        const title = sansAccent(selectedLang === "FR" ? job.titleFR : job.titleEN);
+        const desc = sansAccent(selectedLang === "FR" ? job.descFR : job.descEN);
+        return title.includes(key) || sansAccent(job.company).includes(key) || desc.includes(key);
       });
     }
 
     // Filtre Localisation
     if (locationFilter) {
-      filtered = filtered.filter(job => job.location.toLowerCase().includes(locationFilter.toLowerCase()));
+      filtered = filtered.filter(job => sansAccent(job.location).includes(sansAccent(locationFilter)));
     }
 
     // Filtre Contrat

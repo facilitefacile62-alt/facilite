@@ -1,5 +1,6 @@
 "use client";
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -393,11 +394,10 @@ export default function RecrutementJournalierPage() {
   const filteredCompanies = useMemo(() => {
     return companiesList.filter((company) => {
       const matchesSearch =
-        company.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (selectedLang === "FR" ? company.activityFR : company.activityEN)
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        sansAccent(company.company_name).includes(sansAccent(searchTerm)) ||
+        sansAccent(company.location).includes(sansAccent(searchTerm)) ||
+        sansAccent(selectedLang === "FR" ? company.activityFR : company.activityEN)
+          .includes(sansAccent(searchTerm));
 
       const matchesCategory =
         selectedCategory === "All" || company.category === selectedCategory;

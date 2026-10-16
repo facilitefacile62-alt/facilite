@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -368,15 +369,15 @@ function OffresContent({ listingType } = {}) {
       if (semanticResults !== null) {
         if (!(offer.id in semanticResults)) return false;
       } else if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = offer.title?.toLowerCase().includes(q);
-        const matchComp = offer.company?.toLowerCase().includes(q);
-        const matchDesc = offer.description?.toLowerCase().includes(q);
-        const matchLoc = offer.location?.toLowerCase().includes(q);
+        const q = sansAccent(searchQuery);
+        const matchTitle = sansAccent(offer.title).includes(q);
+        const matchComp = sansAccent(offer.company).includes(q);
+        const matchDesc = sansAccent(offer.description).includes(q);
+        const matchLoc = sansAccent(offer.location).includes(q);
 
         const reqSkills = Array.isArray(offer.required_skills)
-          ? offer.required_skills.join(" ").toLowerCase()
-          : (offer.required_skills || "").toLowerCase();
+          ? sansAccent(offer.required_skills.join(" "))
+          : sansAccent(offer.required_skills);
         const matchSkills = reqSkills.includes(q);
 
         if (!matchTitle && !matchComp && !matchDesc && !matchLoc && !matchSkills) {
@@ -385,7 +386,7 @@ function OffresContent({ listingType } = {}) {
       }
 
       if (locationFilter) {
-        const locMatch = offer.location?.toLowerCase().includes(locationFilter.toLowerCase());
+        const locMatch = sansAccent(offer.location).includes(sansAccent(locationFilter));
         if (!locMatch) return false;
       }
 

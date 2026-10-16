@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -2269,9 +2270,9 @@ export default function MessagerieClient() {
       }
     }
 
-    return (c.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-           (c.company || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-           (c.title || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return sansAccent(c.name).includes(sansAccent(searchQuery)) ||
+           sansAccent(c.company).includes(sansAccent(searchQuery)) ||
+           sansAccent(c.title).includes(sansAccent(searchQuery));
   });
 
   const activeConversation = conversations.find(c => c.id === activeConvId) || null;

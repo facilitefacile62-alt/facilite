@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -3085,7 +3086,7 @@ Laisse vide les champs non trouvés.`;
                     <div className="grid grid-cols-2 gap-2.5">
                       {cvTemplates
                         .filter(t => !deletedTemplateIds.includes(t.id))
-                        .filter(t => !canvaSearchQuery || t.name.toLowerCase().includes(canvaSearchQuery.toLowerCase()) || t.category.toLowerCase().includes(canvaSearchQuery.toLowerCase()))
+                        .filter(t => !canvaSearchQuery || sansAccent(t.name).includes(sansAccent(canvaSearchQuery)) || sansAccent(t.category).includes(sansAccent(canvaSearchQuery)))
                         .map((tpl) => {
                           const isCur = selectedTemplate === tpl.id;
                           return (

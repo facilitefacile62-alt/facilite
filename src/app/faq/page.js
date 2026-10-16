@@ -1,6 +1,7 @@
 "use strict";
 "use client";
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
@@ -78,8 +79,8 @@ export default function FaqPage() {
   const filteredFaqs = useMemo(() => {
     return FAQ_ITEMS.filter((item) => {
       const matchesCategory = selectedCategory === "Tous" || item.category === selectedCategory;
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = !q || item.question.toLowerCase().includes(q) || item.answer.toLowerCase().includes(q) || item.category.toLowerCase().includes(q);
+      const q = sansAccent(searchQuery.trim());
+      const matchesSearch = !q || sansAccent(item.question).includes(q) || sansAccent(item.answer).includes(q) || sansAccent(item.category).includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [searchQuery, selectedCategory]);
