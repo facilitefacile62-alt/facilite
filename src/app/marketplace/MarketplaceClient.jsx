@@ -1229,15 +1229,40 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   // un rechargement de page (Explorer s'ouvre immédiatement via l'URL
   // restaurée, pendant que resultats est encore en train de charger et
   // déclenche plusieurs rendus rapprochés).
+  // Recherche de la barre de la carte : porte sur TOUS les produits de la plateforme, pas seulement
+  // sur ceux déjà chargés par la page (rayon « autour de moi », 60 articles). Les produits trouvés
+  // sont ajoutés à ceux de la page, ce qui fait apparaître leurs boutiques sur la carte.
+  const [articlesRechercheCarte, setArticlesRechercheCarte] = useState([]);
+  const rechercheCarteRequeteRef = useRef(0);
+  const rechercherPourCarte = useCallback(async (texte) => {
+    const numero = ++rechercheCarteRequeteRef.current;
+    if (!texte) {
+      setArticlesRechercheCarte([]);
+      return;
+    }
+    try {
+      const trouves = await chargerTousLesArticles({ texte, rechercheLarge: true, limite: 100 });
+      if (numero === rechercheCarteRequeteRef.current) setArticlesRechercheCarte(trouves);
+    } catch {
+      // La recherche locale (articles déjà chargés) continue de fonctionner.
+      if (numero === rechercheCarteRequeteRef.current) setArticlesRechercheCarte([]);
+    }
+  }, []);
+  const articlesPourCarte = useMemo(() => {
+    if (articlesRechercheCarte.length === 0) return resultats;
+    const dejaLa = new Set(resultats.map((r) => r.id));
+    return [...resultats, ...articlesRechercheCarte.filter((r) => !dejaLa.has(r.id))];
+  }, [resultats, articlesRechercheCarte]);
+
   const boutiquesPourGlobe = useMemo(() => {
     const liste = [];
     const idsVus = new Set();
-    for (const a of resultats) {
+    for (const a of articlesPourCarte) {
       const lat = coordonnee(a.boutique_lat);
       const lng = coordonnee(a.boutique_lng);
       if (lat == null || lng == null || idsVus.has(a.boutique_id)) continue;
       idsVus.add(a.boutique_id);
-      const articlesDeBoutique = resultats.filter((r) => r.boutique_id === a.boutique_id);
+      const articlesDeBoutique = articlesPourCarte.filter((r) => r.boutique_id === a.boutique_id);
       liste.push({
         id: a.boutique_id,
         lat,
@@ -1310,7 +1335,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     // clé de tri) — celle-ci est donc nouvelle.
     liste.sort((a, b) => (b.estPremium ? 1 : 0) - (a.estPremium ? 1 : 0));
     return liste;
-  }, [resultats, resultatsServices, storeIdsPremium]);
+  }, [articlesPourCarte, resultatsServices, storeIdsPremium]);
 
   // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
   const CATEGORIES_DEFILEMENT_MOBILE = [
@@ -1336,7 +1361,8 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
       {globeOuvert && (
         <GlobeExplorateurBoutiques
           boutiques={boutiquesPourGlobe}
-          tousArticles={resultats}
+          tousArticles={articlesPourCarte}
+          onRechercheTexte={rechercherPourCarte}
           positionInitiale={position}
           itineraireCible={itineraireCible}
           onVoirBoutique={(b) => {

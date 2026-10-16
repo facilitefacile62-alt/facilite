@@ -738,6 +738,9 @@ export async function chargerTousLesArticles({
   texte = null,
   seulementEnStock = false,
   limite = 60,
+  // Recherche élargie (carte) : le mot peut aussi figurer dans la description ou la catégorie,
+  // pas seulement dans le titre.
+  rechercheLarge = false,
 } = {}) {
   let query = supabase
     .from("marketplace_items")
@@ -776,7 +779,13 @@ export async function chargerTousLesArticles({
     query = query.gt("quantite", 0);
   }
   if (texte && texte.trim()) {
-    query = query.ilike("titre", `%${texte.trim()}%`);
+    if (rechercheLarge) {
+      // Virgules, parenthèses et pourcentages casseraient la syntaxe du filtre « or » : retirés.
+      const mot = texte.trim().replace(/[,()%*\\]/g, " ").trim();
+      if (mot) query = query.or(`titre.ilike.%${mot}%,description.ilike.%${mot}%,categorie.ilike.%${mot}%`);
+    } else {
+      query = query.ilike("titre", `%${texte.trim()}%`);
+    }
   }
 
   const { data, error } = await query;

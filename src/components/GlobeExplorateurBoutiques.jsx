@@ -133,6 +133,9 @@ function prixLisible(val) {
 export default function GlobeExplorateurBoutiques({
   boutiques = [],
   tousArticles = [],
+  // Appelé (après une courte pause de frappe) avec le texte tapé : le parent cherche alors dans
+  // tous les produits de la plateforme et complète tousArticles / boutiques. "" = recherche effacée.
+  onRechercheTexte,
   onVoirBoutique,
   onVoirArticle,
   onFermer,
@@ -605,6 +608,20 @@ export default function GlobeExplorateurBoutiques({
   };
 
   const rechercheNormalisee = rechercheCarte.trim().toLowerCase();
+  const rechercheActiveRef = useRef(false);
+  useEffect(() => {
+    rechercheActiveRef.current = rechercheNormalisee.length > 0;
+  }, [rechercheNormalisee]);
+
+  useEffect(() => {
+    if (!onRechercheTexte) return;
+    if (rechercheNormalisee.length < 2) {
+      onRechercheTexte("");
+      return;
+    }
+    const minuteur = setTimeout(() => onRechercheTexte(rechercheNormalisee), 350);
+    return () => clearTimeout(minuteur);
+  }, [rechercheNormalisee, onRechercheTexte]);
 
   // Articles correspondant à la recherche (Point C) — filtre local sur
   // tousArticles, déjà chargé par le Marketplace (même tableau que
@@ -622,6 +639,7 @@ export default function GlobeExplorateurBoutiques({
     return tousArticles.filter(
       (a) =>
         (a.titre || "").toLowerCase().includes(rechercheNormalisee) ||
+        (a.description || "").toLowerCase().includes(rechercheNormalisee) ||
         (a.categorie || "").toLowerCase().includes(rechercheNormalisee) ||
         (a.boutique_nom || "").toLowerCase().includes(rechercheNormalisee)
     );
@@ -1038,7 +1056,8 @@ export default function GlobeExplorateurBoutiques({
             }
             setCartePrete(true);
             rafraichirMarqueursRef.current();
-            if (positionInitiale) {
+            // Pendant une recherche, le recentrage sur les résultats prime sur « Vous êtes ici ».
+            if (positionInitiale && !rechercheActiveRef.current) {
               const cle = `${positionInitiale.latitude},${positionInitiale.longitude}`;
               if (dernierePositionAutoRef.current !== cle) {
                 dernierePositionAutoRef.current = cle;
@@ -1827,6 +1846,16 @@ export default function GlobeExplorateurBoutiques({
   // chargement des données (boutiques passe de [] à la vraie liste) sans
   // aucune action de l'utilisateur, ce qui écraserait le centrage initial
   // existant (centreInitial, plus haut) sans que ce soit demandé ici.
+  // Pendant une recherche, la boutique sélectionnée doit faire partie des résultats : sinon la bannière
+  // et la fiche resteraient sur une boutique qui n'est plus affichée.
+  useEffect(() => {
+    if (!rechercheNormalisee || boutiquesAffichees.length === 0) return;
+    if (boutiquesAffichees.some((b) => b.id === boutiqueSelectionnee?.id)) return;
+    const premiere = boutiquesAffichees[0];
+    queueMicrotask(() => setBoutiqueSelectionnee(premiere));
+  }, [rechercheNormalisee, boutiquesAffichees, boutiqueSelectionnee]);
+
+  const clefBoutiquesRecherche = rechercheNormalisee ? boutiquesAffichees.map((b) => b.id).join(",") : "";
   const premierFiltreRef = useRef(true);
   useEffect(() => {
     if (premierFiltreRef.current) {
@@ -1846,6 +1875,24 @@ export default function GlobeExplorateurBoutiques({
     // commentaire ci-dessus, seul le déclencheur (recherche/onglet) compte.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtreActif, rechercheNormalisee]);
+
+  // Pendant une recherche, des boutiques trouvées sur toute la plateforme arrivent APRÈS la frappe :
+  // la carte est alors entièrement recréée (elle revient à son centre initial). Une fois la nouvelle
+  // carte prête, on la recentre sur les résultats. Hors recherche, rien n'est recentré ici.
+  useEffect(() => {
+    if (!rechercheNormalisee || !cartePrete || boutiquesAffichees.length === 0) return;
+    const carte = carteRef.current;
+    if (!carte) return;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      carte.fitBounds(L.latLngBounds(boutiquesAffichees.map((b) => [b.lat, b.lng])), {
+        padding: [28, 28],
+        maxZoom: 15,
+      });
+    })();
+    // boutiquesAffichees : la clé des identifiants suffit (évite un recentrage à chaque rendu).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartePrete, rechercheNormalisee, clefBoutiquesRecherche]);
 
   // Horaires d'ouverture, chargés seulement pour un établissement dont la
   // fiche est ouverte — inutile pour produit/service, qui n'ont pas de
@@ -1968,7 +2015,7 @@ export default function GlobeExplorateurBoutiques({
   // cas où positionInitiale arrive/change alors qu'une carte valide existe
   // déjà (rare, mais possible).
   useEffect(() => {
-    if (positionInitiale && cartePrete) {
+    if (positionInitiale && cartePrete && !rechercheActiveRef.current) {
       const cle = `${positionInitiale.latitude},${positionInitiale.longitude}`;
       if (dernierePositionAutoRef.current !== cle) {
         dernierePositionAutoRef.current = cle;
@@ -2419,7 +2466,7 @@ export default function GlobeExplorateurBoutiques({
                     laissant une zone transparente immense de chaque côté —
                     signalé par l'utilisateur. */}
                 <div aria-hidden="true" className="shrink-0" style={{ width: "min(calc(50% - 27px), 90px)" }} />
-                {marqueurs.map((b, idx) => {
+                {(rechercheNormalisee ? boutiquesAffichees : marqueurs).map((b, idx) => {
                   const avatar = AVATARS_SNAP[idx % AVATARS_SNAP.length];
                   const aPhoto = b.photo ? urlPhoto(b.photo) : null;
                   const estSelectionne = boutiqueSelectionnee ? boutiqueSelectionnee.id === b.id : idx === 0;
