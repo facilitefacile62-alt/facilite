@@ -1,3 +1,4 @@
+import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -33,28 +34,31 @@ type Raccourci = {
   tag?: Tag;
   route?: string;
   support?: boolean;
+  // Interrupteur du site (Administration → Fonctionnalités) qui commande ce raccourci.
+  interrupteur?: string;
 };
 
 const NB_ENTREPRISES = SPONTANEOUS_COMPANIES.length;
 
 const RACCOURCIS: Raccourci[] = [
-  { id: 'fonctionnalites', icone: 'hammer-outline', teinte: '#EDE7FB', couleurIcone: '#7C3AED', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E5E7EB', couleur: '#4B5563' }, route: '/fonctionnalites' },
-  { id: 'messages', icone: 'chatbubble-ellipses-outline', teinte: '#EDE7FB', couleurIcone: '#7C3AED', titre: 'Messages', sous: 'Échanges directs', route: '/messages' },
-  { id: 'offres', icone: 'briefcase', teinte: '#D1FAE5', couleurIcone: '#B91C1C', titre: "Offres d'emploi", sous: 'Catalogue complet', tag: { texte: 'LIVE', fond: '#D1FAE5', couleur: '#047857' }, route: '/offres' },
-  { id: 'candidature_spontanee', icone: 'business', teinte: '#DBEAFE', couleurIcone: '#1D4ED8', titre: 'Candidature Spontanée', sous: 'Répertoire des entreprises', tag: { texte: `${NB_ENTREPRISES} ENTR.`, fond: '#DBEAFE', couleur: '#1D4ED8' }, route: '/candidature-spontanee' },
-  { id: 'extracteur', icone: 'flash', teinte: '#FEF3C7', couleurIcone: '#D97706', titre: 'Extracteur IA', sous: 'Candidature depuis une annonce', route: '/extracteur' },
+  { id: 'fonctionnalites', icone: 'hammer-outline', teinte: '#EDE7FB', couleurIcone: '#7C3AED', interrupteur: 'nav_plus_fonctionnalites', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E5E7EB', couleur: '#4B5563' }, route: '/fonctionnalites' },
+  { id: 'messages', icone: 'chatbubble-ellipses-outline', teinte: '#EDE7FB', couleurIcone: '#7C3AED', interrupteur: 'nav_messagerie', titre: 'Messages', sous: 'Échanges directs', route: '/messages' },
+  { id: 'offres', icone: 'briefcase', teinte: '#D1FAE5', couleurIcone: '#B91C1C', interrupteur: 'nav_offres', titre: "Offres d'emploi", sous: 'Catalogue complet', tag: { texte: 'LIVE', fond: '#D1FAE5', couleur: '#047857' }, route: '/offres' },
+  { id: 'candidature_spontanee', icone: 'business', teinte: '#DBEAFE', couleurIcone: '#1D4ED8', interrupteur: 'nav_plus_recrutement_spontane', titre: 'Candidature Spontanée', sous: 'Répertoire des entreprises', tag: { texte: `${NB_ENTREPRISES} ENTR.`, fond: '#DBEAFE', couleur: '#1D4ED8' }, route: '/candidature-spontanee' },
+  { id: 'extracteur', icone: 'flash', teinte: '#FEF3C7', couleurIcone: '#D97706', interrupteur: 'nav_extracteur', titre: 'Extracteur IA', sous: 'Candidature depuis une annonce', route: '/extracteur' },
   { id: 'profil', icone: 'person', teinte: '#E5E7EB', couleurIcone: '#4B5563', titre: 'Mon profil', sous: 'Informations et documents', route: '/profil' },
   { id: 'aide', icone: 'help-circle', teinte: '#DBEAFE', couleurIcone: '#1D4ED8', titre: 'Aide & Assistance', sous: 'Discuter avec le support', support: true },
-  { id: 'marketplace', icone: 'storefront', teinte: '#D1FAE5', couleurIcone: '#047857', titre: 'Locaux', sous: 'Acheter et vendre', route: '/marketplace' },
-  { id: 'ma_boutique', icone: 'bag-handle', teinte: '#FEF3C7', couleurIcone: '#D97706', titre: 'Ma boutique', sous: 'Publier et gérer mes articles', route: '/marketplace/vendre' },
+  { id: 'marketplace', icone: 'storefront', teinte: '#D1FAE5', couleurIcone: '#047857', interrupteur: 'nav_marketplace', titre: 'Locaux', sous: 'Acheter et vendre', route: '/marketplace' },
+  { id: 'ma_boutique', icone: 'bag-handle', teinte: '#FEF3C7', couleurIcone: '#D97706', interrupteur: 'nav_marketplace', titre: 'Ma boutique', sous: 'Publier et gérer mes articles', route: '/marketplace/vendre' },
   { id: 'recherche', icone: 'search', teinte: '#DBEAFE', couleurIcone: '#1D4ED8', titre: 'Recherche', sous: 'Offres, entreprises...', route: '/recherche' },
-  { id: 'diagnostic_cv', icone: 'document-text', teinte: '#D1FAE5', couleurIcone: '#047857', titre: 'Diagnostic CV Gratuit', sous: 'Analyse IA de votre CV', route: '/web/importer-cv' },
+  { id: 'diagnostic_cv', icone: 'document-text', teinte: '#D1FAE5', couleurIcone: '#047857', interrupteur: 'feat_diagnostic_cv', titre: 'Diagnostic CV Gratuit', sous: 'Analyse IA de votre CV', route: '/web/importer-cv' },
 ];
 
 export default function MenuScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile, signOut } = useAuth();
+  const ouvert = useFonctionnalites();
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
   const [espaceActif, setEspaceActif] = useState<'candidat' | 'business'>('candidat');
@@ -230,7 +234,7 @@ export default function MenuScreen() {
 
         <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>TOUS LES RACCOURCIS</Text>
         <View className="flex-row flex-wrap" style={{ gap: 12 }}>
-          {RACCOURCIS.map((r) => (
+          {RACCOURCIS.filter((r) => ouvert(r.interrupteur)).map((r) => (
             <Pressable
               key={r.id}
               onPress={() => (r.support ? ouvrirSupport() : router.push(r.route as Href))}

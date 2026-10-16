@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
@@ -41,6 +42,7 @@ type Onglet = 'article' | 'service' | 'etablissement';
 
 export default function MaBoutiqueScreen() {
   const router = useRouter();
+  const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
   const { user } = useAuth();
   const userId = user?.id;
   const [boutique, setBoutique] = useState<MaBoutique | null | undefined>(undefined); // undefined = chargement
@@ -403,7 +405,9 @@ export default function MaBoutiqueScreen() {
                 <Text className="text-[13px] font-black text-[#111]">Programmer des horaires</Text>
               </Pressable>
 
-              <BoutonAction titre="Devenir livreur" sousTitre="Livrez les commandes autour de vous" icone="bicycle-outline" onPress={() => router.push('/marketplace/vendre/livreur')} />
+              {livreurOuvert ? (
+                <BoutonAction titre="Devenir livreur" sousTitre="Livrez les commandes autour de vous" icone="bicycle-outline" onPress={() => router.push('/marketplace/vendre/livreur')} />
+              ) : null}
             </>
           ) : null}
 

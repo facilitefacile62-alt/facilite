@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
@@ -13,6 +14,9 @@ const VERT_PROFOND = '#0d3b34';
 
 export default function ProfilMarketplaceScreen() {
   const router = useRouter();
+  // Interrupteurs du site (Administration → Fonctionnalités).
+  const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
+  const voyagesOuverts = useFonctionnalite('nav_marketplace_voyages');
   const { user, profile } = useAuth();
   const userId = user?.id;
   const [chargement, setChargement] = useState(true);
@@ -100,13 +104,24 @@ export default function ProfilMarketplaceScreen() {
                     titre="Commandes reçues"
                     onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
                   />
-                  <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} />
-                  {/* Voyages et « Mes voyages (chauffeur) » : retirés de l'application pour le moment (fonctionnalité en pause). */}
+                  {livreurOuvert ? <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} /> : null}
+                  {voyagesOuverts ? (
+                    <>
+                      <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />
+                      <LigneMenu emoji="🧑‍✈️" titre="Mes voyages (chauffeur)" onPress={() => router.push('/marketplace/mes-voyages' as Href)} />
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <>
                   <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
                   <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
+                  {voyagesOuverts ? (
+                    <>
+                      <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />
+                      <LigneMenu emoji="🧑‍✈️" titre="Mes voyages (chauffeur)" onPress={() => router.push('/marketplace/mes-voyages' as Href)} />
+                    </>
+                  ) : null}
                 </>
               )}
               <LigneMenu emoji="⚙️" titre="Réglages" derniere onPress={() => router.push('/marketplace/reglages')} />

@@ -1,3 +1,4 @@
+import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
@@ -15,18 +16,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Il flotte au-dessus de la barre du bas sur les cinq onglets de Facilité.
 const VERT = '#10B981';
 
-type Action = { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; couleur: string; agir: () => void };
+type Action = { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; couleur: string; agir: () => void; interrupteur?: string };
 
 export default function BoutonFlottantFacilite() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [ouvert, setOuvert] = useState(false);
+  const autorise = useFonctionnalites();
 
-  const actions: Action[] = [
+  // Chaque action peut être coupée depuis le site (Administration → Fonctionnalités).
+  const toutesActions: Action[] = [
     { id: 'email', libelle: 'Écrire un e-mail', icone: 'mail', couleur: '#2563EB', agir: () => router.push('/ecrire-email' as Href) },
-    { id: 'assistant', libelle: 'Assistant vocal', icone: 'mic', couleur: VERT, agir: () => Alert.alert('Assistant vocal', 'Cette fonctionnalité arrive dans une prochaine mise à jour.') },
-    { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur') },
+    { id: 'assistant', libelle: 'Assistant vocal', icone: 'mic', couleur: VERT, agir: () => Alert.alert('Assistant vocal', 'Cette fonctionnalité arrive dans une prochaine mise à jour.'), interrupteur: 'feat_voice_assistant' },
+    { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur'), interrupteur: 'nav_extracteur' },
   ];
+  const actions = toutesActions.filter((a) => autorise(a.interrupteur));
 
   const bas = Math.max(insets.bottom, 6) + 76;
 

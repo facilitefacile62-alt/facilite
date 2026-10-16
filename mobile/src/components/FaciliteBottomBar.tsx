@@ -1,3 +1,4 @@
+import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
@@ -35,13 +36,15 @@ type Entree = {
   icone: keyof typeof Ionicons.glyphMap;
   iconeActive: keyof typeof Ionicons.glyphMap;
   cible: string;
+  // Interrupteur du site (Administration → Fonctionnalités) qui commande cet onglet.
+  interrupteur?: string;
 };
 
 const ENTREES: Entree[] = [
   { id: 'accueil', libelle: 'Accueil', icone: 'home-outline', iconeActive: 'home', cible: '/' },
-  { id: 'offres', libelle: 'Offres', icone: 'briefcase-outline', iconeActive: 'briefcase', cible: '/offres' },
-  { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/autour' },
-  { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/messages' },
+  { id: 'offres', libelle: 'Offres', icone: 'briefcase-outline', iconeActive: 'briefcase', cible: '/offres', interrupteur: 'nav_offres' },
+  { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/autour', interrupteur: 'nav_offres' },
+  { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/messages', interrupteur: 'nav_messagerie' },
   { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/profil' },
 ];
 
@@ -60,6 +63,7 @@ export default function FaciliteBottomBar() {
   const insets = useSafeAreaInsets();
   const compteurs = useCompteursNonLus();
   const active = entreeActiveFacilite(chemin);
+  const ouvert = useFonctionnalites();
 
   return (
     <View
@@ -70,7 +74,7 @@ export default function FaciliteBottomBar() {
         borderTopColor: 'rgba(0,0,0,0.08)',
       }}>
       <View className="flex-row">
-        {ENTREES.map((e) => {
+        {ENTREES.filter((e) => ouvert(e.interrupteur)).map((e) => {
           const estActif = active === e.id;
           const couleur = estActif ? VERT : INACTIF;
           return (
