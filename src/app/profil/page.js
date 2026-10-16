@@ -7,7 +7,7 @@ import Link from "next/link";
 // constructeur DOM natif — un import nommé "Image" l'aurait masqué dans tout
 // le fichier (piège rencontré en testant : "Image is not a constructor").
 import NextImage from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl, getSignedCvDownloadUrl, getSignedAvatarUrl, getSignedCoverUrl } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import RoleBadge from "@/components/RoleBadge";
@@ -42,6 +42,7 @@ function dataUriToBlob(dataUri) {
 
 export default function ProfilPage() {
   const pathname = usePathname();
+  const router = useRouter();
   const [selectedLang, setSelectedLang] = useState("FR");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -2133,7 +2134,16 @@ export default function ProfilPage() {
               <span className="text-xl font-extrabold tracking-tight text-gray-900">Facilité</span>
             </Link>
 
-            <div className="hidden md:block relative w-60 lg:w-72">
+            {/* Entrée : ouvre la page de recherche du site (offres, entreprises, profils, outils). */}
+            <form
+              role="search"
+              className="hidden md:block relative w-60 lg:w-72"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = searchQuery.trim();
+                if (q) router.push(`/recherche?q=${encodeURIComponent(q)}`);
+              }}
+            >
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                   <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
@@ -2148,7 +2158,7 @@ export default function ProfilPage() {
                   placeholder="Rechercher sur Facilité..."
                 />
               </div>
-            </div>
+            </form>
           </div>
 
           {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
