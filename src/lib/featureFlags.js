@@ -340,6 +340,18 @@ export const DEFAULT_FEATURE_TREE = [
         roles: { user: false, recruiter: false, visitor: false },
         description: "Widget et bouton d'Assistant Vocal IA flottant sur le site",
       },
+      {
+        id: "feat_marketplace_ia",
+        name: "Marketplace — Fonctions IA (photo, optimisation)",
+        path: null,
+        icon: "✨",
+        // EN PAUSE (migration 20261016340000) : l'abonnement à l'API d'analyse d'images est à régler.
+        // Coupé par défaut, y compris si Supabase est injoignable. L'administrateur garde l'accès ;
+        // réactivation : Administration → Fonctionnalités.
+        enabled: false,
+        roles: { user: true, recruiter: true, visitor: true },
+        description: "Recherche par photo (en-tête et carte), « Scanner le produit avec l'IA » et « Optimiser texte SEO » de la Marketplace",
+      },
     ],
   },
 ];

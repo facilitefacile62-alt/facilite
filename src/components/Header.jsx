@@ -1,5 +1,6 @@
 "use client";
 
+import { useIaAutorisee, MESSAGE_IA_EN_PAUSE } from "@/lib/useIaAutorisee";
 import { motPourFiltre } from "@/lib/texte";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
@@ -248,6 +249,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [maBoutiqueInfo, setMaBoutiqueInfo] = useState(null);
   const [headerScanPhotoEnCours, setHeaderScanPhotoEnCours] = useState(false);
+  const iaAutorisee = useIaAutorisee();
   const headerFileInputPhotoRef = useRef(null);
 
   // /marketplace* est l'essentiel du signal, mais /messagerie?contexte=
@@ -1166,27 +1168,18 @@ export default function Header() {
         body: formData,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const titreDetecte = data?.fiche?.titre || data?.titre || "";
-        if (titreDetecte) {
-          setQuery(titreDetecte);
-          executeSearch(titreDetecte);
-        } else {
-          const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
-          setQuery(fallback);
-          executeSearch(fallback);
-        }
-      } else {
-        const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
-        setQuery(fallback);
-        executeSearch(fallback);
+      // La route renvoie { success, analyse_ia, data: { titre, mots_cles } }. Sans analyse réelle (IA
+      // indisponible), on ne cherche rien : un nom de fichier ou un titre générique ne trouve rien.
+      const json = res.ok ? await res.json() : null;
+      const fiche = json?.data;
+      if (json?.analyse_ia && fiche?.titre) {
+        // Le titre commercial complet ne correspond à aucun produit : on cherche par un mot-clé.
+        const terme = (fiche.mots_cles || []).find((m) => String(m).length >= 4) || String(fiche.titre).split(/\s+/)[0];
+        setQuery(terme);
+        executeSearch(terme);
       }
     } catch (err) {
       console.warn("Erreur recherche par image:", err);
-      const fallback = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
-      setQuery(fallback);
-      executeSearch(fallback);
     } finally {
       setHeaderScanPhotoEnCours(false);
       if (headerFileInputPhotoRef.current) {
@@ -1297,8 +1290,13 @@ export default function Header() {
 
                 {/* Icône Appareil Photo / Recherche Visuelle IA (Style signature AliExpress) */}
                 <label
-                  className="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer text-gray-700 dark:text-gray-300 hover:text-gray-950 dark:hover:text-white transition group mr-1 shrink-0"
-                  title="Rechercher par photo (IA Scanner Vision)"
+                  className={`relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-gray-700 dark:text-gray-300 transition group mr-1 shrink-0 ${
+                    iaAutorisee
+                      ? "hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer hover:text-gray-950 dark:hover:text-white"
+                      : "opacity-40 grayscale cursor-not-allowed"
+                  }`}
+                  title={iaAutorisee ? "Rechercher par photo (IA Scanner Vision)" : `Recherche par photo : ${MESSAGE_IA_EN_PAUSE.toLowerCase()}`}
+                  aria-disabled={!iaAutorisee}
                 >
                   <input
                     ref={headerFileInputPhotoRef}
@@ -1306,7 +1304,7 @@ export default function Header() {
                     accept="image/*"
                     onChange={handleHeaderScanPhoto}
                     className="hidden"
-                    disabled={headerScanPhotoEnCours}
+                    disabled={headerScanPhotoEnCours || !iaAutorisee}
                   />
                   {headerScanPhotoEnCours ? (
                     <i className="fa-solid fa-circle-notch fa-spin text-xs sm:text-sm text-[#10E688]"></i>
