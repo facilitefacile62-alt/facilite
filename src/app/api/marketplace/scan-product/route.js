@@ -301,7 +301,10 @@ export async function POST(req) {
     }
 
     // 3. Repli intelligent sans crash si les APIs externes sont saturées
+    // (analyseIA = false : l'appelant sait que le titre est un texte générique, pas une reconnaissance).
+    let analyseIA = true;
     if (!analyse?.titre) {
+      analyseIA = false;
       const nomGen = indiceTexte?.trim() ? indiceTexte.trim() : "Article Boutique";
       analyse = {
         titre: nomGen.charAt(0).toUpperCase() + nomGen.slice(1),
@@ -330,6 +333,7 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
+      analyse_ia: analyseIA,
       data: dataFinal,
     });
   } catch (err) {

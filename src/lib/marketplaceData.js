@@ -788,13 +788,16 @@ export async function chargerTousLesArticles({
   const mot = motNettoye(texte);
   const motBoutique = motNettoye(boutiqueNom);
   let lignes;
+  // Plusieurs mots : chacun doit être présent, dans n'importe quel ordre (« visage creme »).
+  const surChaqueMot = (colonne, texteNettoye) => (q) =>
+    texteNettoye.split(" ").reduce((acc, m) => acc.ilike(colonne, `%${m}%`), q);
   if (motBoutique) {
-    lignes = await lancer((q) => q.ilike("store.nom_norm", `%${motBoutique}%`));
+    lignes = await lancer(surChaqueMot("store.nom_norm", motBoutique));
   } else if (mot) {
     // Le texte peut être dans le produit (titre, description, catégorie) OU dans le nom de la boutique.
     const [parProduit, parBoutique] = await Promise.all([
-      lancer((q) => q.ilike("recherche_norm", `%${mot}%`)),
-      lancer((q) => q.ilike("store.nom_norm", `%${mot}%`)),
+      lancer(surChaqueMot("recherche_norm", mot)),
+      lancer(surChaqueMot("store.nom_norm", mot)),
     ]);
     const vus = new Set(parProduit.map((r) => r.id));
     lignes = [...parProduit, ...parBoutique.filter((r) => !vus.has(r.id))]

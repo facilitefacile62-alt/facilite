@@ -1239,16 +1239,18 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     const numero = ++rechercheCarteRequeteRef.current;
     if (!texte) {
       setArticlesRechercheCarte([]);
-      return;
+      return 0;
     }
     try {
       // chargerTousLesArticles cherche déjà dans le produit ET dans le nom de la boutique,
       // sans tenir compte des accents.
       const trouves = await chargerTousLesArticles({ texte, limite: 100 });
       if (numero === rechercheCarteRequeteRef.current) setArticlesRechercheCarte(trouves);
+      return trouves.length;
     } catch {
       // La recherche locale (articles déjà chargés) continue de fonctionner.
       if (numero === rechercheCarteRequeteRef.current) setArticlesRechercheCarte([]);
+      return 0;
     }
   }, []);
   const articlesPourCarte = useMemo(() => {

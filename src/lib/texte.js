@@ -24,3 +24,15 @@ export function contientSansAccent(texte, recherche) {
 export function motPourFiltre(texte) {
   return sansAccent(texte).replace(/[,()%*_\\]/g, " ").replace(/\s+/g, " ").trim();
 }
+
+/**
+ * Vrai si `texte` contient CHACUN des mots de `recherche` (dans n'importe quel ordre), sans tenir
+ * compte des accents ni des majuscules : « visage creme » trouve « Crème hydratante pour le visage ».
+ */
+export function contientTousLesMots(texte, recherche) {
+  const cible = sansAccent(texte);
+  return sansAccent(recherche)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((mot) => cible.includes(mot));
+}
