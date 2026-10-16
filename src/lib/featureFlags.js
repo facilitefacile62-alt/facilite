@@ -53,6 +53,18 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Formulaire d'accréditation livreur et accès à l'onglet « Livrer » du Marketplace",
       },
       {
+        id: "nav_marketplace_voyages",
+        name: "Marketplace — Voyages (transport de passagers)",
+        path: "/marketplace?voyages=1",
+        icon: "🚗",
+        // EN PAUSE (migration 20261015180000) : coupé par défaut, y compris si Supabase est
+        // injoignable (le repli « tout activé » ne doit pas rouvrir une fonctionnalité en pause).
+        // L'administrateur garde l'accès pour tester ; réactivation : Administration → Fonctionnalités.
+        enabled: false,
+        roles: { user: true, recruiter: true, visitor: false },
+        description: "Boutons « Voyages » et « Devenir chauffeur » de la Marketplace (réservation de places chez un chauffeur validé)",
+      },
+      {
         id: "feat_offres_filtres",
         name: "Filtres sur les offres d'emploi",
         path: null,

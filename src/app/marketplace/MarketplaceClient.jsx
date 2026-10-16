@@ -231,6 +231,8 @@ export default function MarketplaceClient() {
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
   const isLivreurAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace_livreur", userRole);
+  // Voyages (transport de passagers) : en pause, réactivable depuis Administration → Fonctionnalités ; l'administrateur garde l'accès.
+  const isVoyagesAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace_voyages", userRole);
 
   // Compteur de génération : sans lui, un changement rapide de session
   // (déconnexion pendant que ce chargement est en vol, ou reconnexion sous
@@ -650,14 +652,16 @@ export default function MarketplaceClient() {
                             <span>Mes commandes</span>
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => setVoyagesOuverts(true)}
-                            className="w-full mt-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
-                          >
-                            <i className="fa-solid fa-car-side text-[8px] text-gray-500"></i>
-                            <span>Voyages</span>
-                          </button>
+                          {isVoyagesAllowed && (
+                            <button
+                              type="button"
+                              onClick={() => setVoyagesOuverts(true)}
+                              className="w-full mt-1.5 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-1 px-2.5 rounded-full text-[10px] transition flex items-center justify-center space-x-1 cursor-pointer bg-white dark:bg-gray-900"
+                            >
+                              <i className="fa-solid fa-car-side text-[8px] text-gray-500"></i>
+                              <span>Voyages</span>
+                            </button>
+                          )}
 
                           {isLivreurAllowed && (
                             <button
@@ -752,14 +756,16 @@ export default function MarketplaceClient() {
                     Mes commandes
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setVoyagesOuverts(true)}
-                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
-                  >
-                    <i className="fa-solid fa-car-side text-[10px] text-gray-500"></i>
-                    Voyages
-                  </button>
+                  {isVoyagesAllowed && (
+                    <button
+                      type="button"
+                      onClick={() => setVoyagesOuverts(true)}
+                      className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px] cursor-pointer"
+                    >
+                      <i className="fa-solid fa-car-side text-[10px] text-gray-500"></i>
+                      Voyages
+                    </button>
+                  )}
 
                   {isLivreurAllowed && (
                     <button
@@ -814,7 +820,7 @@ export default function MarketplaceClient() {
             ) : isLivreurAllowed ? (
               <div className="space-y-6">
                 <VueLivreur userId={userId} />
-                <EspaceChauffeur userId={userId} />
+                {isVoyagesAllowed && <EspaceChauffeur userId={userId} />}
               </div>
             ) : (
               <div className="py-16 text-center text-xs text-gray-400">Fonctionnalité momentanément indisponible.</div>
@@ -856,7 +862,7 @@ export default function MarketplaceClient() {
         )}
 
         {/* Mes commandes (acheteur) : historique + suivi en direct */}
-        {voyagesOuverts && <VoyagesPassager userId={userId} onFermer={() => setVoyagesOuverts(false)} />}
+        {voyagesOuverts && isVoyagesAllowed && <VoyagesPassager userId={userId} onFermer={() => setVoyagesOuverts(false)} />}
 
         {commandesAcheteurOuvert && (
           <ModalMesCommandesAcheteur userId={userId} onFermer={() => setCommandesAcheteurOuvert(false)} />
