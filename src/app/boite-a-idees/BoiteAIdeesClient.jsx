@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -198,10 +199,10 @@ export default function BoiteAIdees() {
   // ajoutait un aller-retour de rendu superflu à chaque frappe.
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const query = searchQuery.toLowerCase();
+    const query = sansAccent(searchQuery.trim());
     return slides.filter(slide => {
-      const title = (selectedLang === "FR" ? slide.titleFR : slide.titleEN).toLowerCase();
-      const desc = (selectedLang === "FR" ? slide.descFR : slide.descEN).toLowerCase();
+      const title = sansAccent(selectedLang === "FR" ? slide.titleFR : slide.titleEN);
+      const desc = sansAccent(selectedLang === "FR" ? slide.descFR : slide.descEN);
       return title.includes(query) || desc.includes(query);
     });
   }, [searchQuery, selectedLang]);

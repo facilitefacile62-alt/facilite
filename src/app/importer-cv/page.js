@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedAvatarUrl } from "@/lib/supabase";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
@@ -138,6 +138,8 @@ const scanStepsGB = [
 
 export default function ImporterCvPage() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [rechercheNav, setRechercheNav] = useState("");
   const [selectedLang, setSelectedLang] = useState("FR");
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
@@ -677,18 +679,29 @@ export default function ImporterCvPage() {
             </Link>
 
             {/* Barre de recherche de la Navbar */}
-            <div className="hidden md:block relative w-60 lg:w-72">
+            {/* Entrée : ouvre la page de recherche du site (offres, entreprises, profils, outils). */}
+            <form
+              role="search"
+              className="hidden md:block relative w-60 lg:w-72"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = rechercheNav.trim();
+                if (q) router.push(`/recherche?q=${encodeURIComponent(q)}`);
+              }}
+            >
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                   <i className="fa-solid fa-magnifying-glass text-[#9CA3AF] text-sm"></i>
                 </span>
                 <input
                   type="text"
+                  value={rechercheNav}
+                  onChange={(e) => setRechercheNav(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white border border-[#E5E7EB] rounded-full text-sm text-gray-900 placeholder-[#9CA3AF] focus:outline-none focus:border-[#10E688] focus:ring-2 focus:ring-[#10E688]/20 transition-all font-medium"
                   placeholder={t.searchPlaceholder || "Rechercher une offre d'emploi..."}
                 />
               </div>
-            </div>
+            </form>
           </div>
 
           {/* Groupe Centre : Liens principaux (Accueil, Messagerie, Notifications, Recrutement, Plus) */}
