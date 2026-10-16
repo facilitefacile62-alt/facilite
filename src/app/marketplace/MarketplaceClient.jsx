@@ -100,6 +100,8 @@ import {
   urlPhoto,
   chargerGroupagesParIds,
   detacherCommandeDeGroupage,
+  signalerLivraisonBloquee,
+  chargerLitigesOuverts,
 } from "@/lib/marketplaceData";
 
 // Les identifiants correspondent exactement au CHECK de marketplace_items :
@@ -6302,6 +6304,28 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
   const [rejoindre, setRejoindre] = useState(null); // commande qui cherche un groupage
   const [groupagesInfo, setGroupagesInfo] = useState({}); // id -> { destination, heure, statut }
   const [retraitEnCours, setRetraitEnCours] = useState(null);
+  const [litigesOuverts, setLitigesOuverts] = useState([]); // commandes déjà signalées comme bloquées
+  const [messageLitige, setMessageLitige] = useState({}); // id commande -> { ok, texte }
+
+  useEffect(() => {
+    let annule = false;
+    chargerLitigesOuverts()
+      .then((l) => !annule && setLitigesOuverts(l))
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [liste]);
+
+  const signalerBlocage = async (commandeId) => {
+    setMessageLitige((m) => ({ ...m, [commandeId]: null }));
+    try {
+      await signalerLivraisonBloquee(commandeId, "");
+      setLitigesOuverts((l) => [...l, commandeId]);
+    } catch (e) {
+      setMessageLitige((m) => ({ ...m, [commandeId]: { ok: false, texte: e.message } }));
+    }
+  };
 
   // Infos des groupages auxquels mes commandes sont rattachées.
   useEffect(() => {
@@ -6459,6 +6483,19 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
                     <i className="fa-solid fa-people-group mr-1"></i>
                     Rejoindre un groupage
                   </button>
+                )}
+
+                {["assignee", "recuperee", "en_livraison"].includes(c.statut) && (
+                  <div className="space-y-1">
+                    {litigesOuverts.includes(c.id) ? (
+                      <p className="text-[11px] font-bold text-amber-600">Signalement envoyé : l&apos;équipe examine cette livraison et vous tiendra au courant.</p>
+                    ) : (
+                      <button type="button" onClick={() => signalerBlocage(c.id)} className="text-[11px] font-black text-gray-500 hover:text-red-600 underline cursor-pointer">
+                        Le livreur ne répond plus ? Signaler un blocage
+                      </button>
+                    )}
+                    {messageLitige[c.id] ? <p role="alert" className="text-[11px] font-bold text-red-600">{messageLitige[c.id].texte}</p> : null}
+                  </div>
                 )}
 
                 {SUIVABLE.includes(c.statut) && (
