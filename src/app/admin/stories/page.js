@@ -15,7 +15,16 @@ const TAILLE_MAX = 5 * 1024 * 1024;
 // Type « cv » : modèle de CV, bouton « Commander via WhatsApp ». Type « offre » : offre d'emploi, bouton « Postuler » avec le lien
 // de l'offre (obligatoire) — une offre n'est jamais publiée sans ce bouton.
 const LIBELLE_PAR_TYPE = { cv: "Commander via WhatsApp", offre: "Postuler" };
-const VIDE = { id: null, type: "cv", titre: "", libelle_bouton: "Commander via WhatsApp", lien: "", bouton_visible: true, actif: true };
+const VIDE = { id: null, type: "cv", titre: "", libelle_bouton: "Commander via WhatsApp", lien: "", bouton_visible: true, actif: true, date_debut: "", date_fin: "", message_whatsapp: "" };
+
+// <input type="datetime-local"> attend « AAAA-MM-JJTHH:MM » en heure locale.
+const versChampDate = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 
 export default function AdminStoriesPage() {
   const [session, setSession] = useState(null);
@@ -89,7 +98,7 @@ export default function AdminStoriesPage() {
   function ouvrirFormulaire(story) {
     setMessage(null);
     choisirFichier(null);
-    setForm(story ? { id: story.id, type: story.type || "cv", titre: story.titre, libelle_bouton: story.libelle_bouton, lien: story.lien || "", bouton_visible: story.bouton_visible !== false, actif: story.actif, image_url: story.image_url } : { ...VIDE });
+    setForm(story ? { id: story.id, type: story.type || "cv", titre: story.titre, libelle_bouton: story.libelle_bouton, lien: story.lien || "", bouton_visible: story.bouton_visible !== false, actif: story.actif, image_url: story.image_url, date_debut: versChampDate(story.date_debut), date_fin: versChampDate(story.date_fin), message_whatsapp: story.message_whatsapp || "" } : { ...VIDE });
   }
 
   async function enregistrer() {
@@ -109,7 +118,7 @@ export default function AdminStoriesPage() {
       if (!form.id && !path) throw new Error("Choisissez le visuel de la story.");
 
       if (form.type === "offre" && !/^https?:\/\//i.test(form.lien.trim())) throw new Error("Une offre d'emploi doit avoir un bouton « Postuler » : indiquez le lien de l'offre (http:// ou https://).");
-      const corps = { type: form.type, titre: form.titre, libelle_bouton: form.libelle_bouton, lien: form.lien, bouton_visible: form.bouton_visible, actif: form.actif, ...(path ? { path } : {}) };
+      const corps = { type: form.type, titre: form.titre, libelle_bouton: form.libelle_bouton, lien: form.lien, bouton_visible: form.bouton_visible, actif: form.actif, date_debut: form.date_debut ? new Date(form.date_debut).toISOString() : null, date_fin: form.date_fin ? new Date(form.date_fin).toISOString() : null, message_whatsapp: form.message_whatsapp, ...(path ? { path } : {}) };
       if (form.id) await appeler("PATCH", { ...corps, id: form.id });
       else await appeler("POST", corps);
       await recharger();
@@ -340,6 +349,38 @@ export default function AdminStoriesPage() {
             >
               <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-all ${form.bouton_visible ? "left-[22px]" : "left-0.5"}`} />
             </button>
+          </div>
+
+          {/* Message WhatsApp pré-rempli (modèles de CV) */}
+          <div className={`space-y-2 ${form.type === "offre" ? "hidden" : ""}`}>
+            <label htmlFor="story-message" className="block text-xs font-bold text-gray-700">
+              Message WhatsApp pré-rempli (facultatif — {"{nom}"} = titre de la story)
+            </label>
+            <textarea
+              id="story-message"
+              value={form.message_whatsapp}
+              maxLength={300}
+              rows={2}
+              onChange={(e) => setForm({ ...form, message_whatsapp: e.target.value })}
+              placeholder="Bonjour, je souhaite commander : {nom}."
+              className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm"
+            />
+          </div>
+
+          {/* Période d'affichage */}
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label htmlFor="story-debut" className="block text-xs font-bold text-gray-700">
+                Afficher à partir du (facultatif)
+              </label>
+              <input id="story-debut" type="datetime-local" value={form.date_debut} onChange={(e) => setForm({ ...form, date_debut: e.target.value })} className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm" />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="story-fin" className="block text-xs font-bold text-gray-700">
+                Jusqu'au (facultatif)
+              </label>
+              <input id="story-fin" type="datetime-local" value={form.date_fin} onChange={(e) => setForm({ ...form, date_fin: e.target.value })} className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm" />
+            </div>
           </div>
 
           <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer w-fit">
