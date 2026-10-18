@@ -1,11 +1,32 @@
 import { supabase } from '@/lib/supabase';
 import { SITE_URL } from '@/lib/webEcrans';
+import * as DocumentPicker from 'expo-document-picker';
 import type { FichierLocal } from '@/lib/candidature';
 
 // « Écrire un e-mail » : envoi par la route /api/envoyer-email du site, qui
 // contrôle la session, plafonne à 10 envois par 24 h et envoie depuis le domaine
 // de Facilité avec « Répondre à » = l'adresse de l'utilisateur.
 export const MAX_PIECES = 3;
+const TAILLE_MAX_PIECE_O = 10 * 1024 * 1024;
+
+/** Choisit sur l'appareil un fichier à joindre : PDF, Word ou image. */
+export async function choisirPieceJointe(): Promise<FichierLocal | null> {
+  const choix = await DocumentPicker.getDocumentAsync({
+    type: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+    ],
+    copyToCacheDirectory: true,
+    multiple: false,
+  });
+  if (choix.canceled || !choix.assets?.length) return null;
+  const f = choix.assets[0];
+  if (typeof f.size === 'number' && f.size > TAILLE_MAX_PIECE_O) throw new Error('Fichier trop lourd : 10 Mo maximum.');
+  return { uri: f.uri, nom: f.name || 'document', type: f.mimeType || 'application/octet-stream' };
+}
 
 export async function envoyerEmail(champs: { to: string; subject: string; message: string; pieces: FichierLocal[]; resumeIds?: string[] }): Promise<void> {
   const { data } = await supabase.auth.getSession();

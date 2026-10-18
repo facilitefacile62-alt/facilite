@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
-import { choisirFichierCv, type FichierLocal } from '@/lib/candidature';
+import type { FichierLocal } from '@/lib/candidature';
 import { chargerMesDocuments, type DocumentProfil } from '@/lib/documents';
-import { MAX_PIECES, envoyerEmail } from '@/lib/envoiEmail';
+import { MAX_PIECES, choisirPieceJointe, envoyerEmail } from '@/lib/envoiEmail';
 
 // « Écrire un e-mail » (maquette 18), ouverte À L'INTÉRIEUR de la messagerie par le bouton « Écrire » : la barre du
 // bas reste visible. En-tête #e3dbcc (retour ‹, titre, « Fermer »), carte blanche : À (une seule adresse), Objet,
@@ -28,7 +28,9 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
   const [message, setMessage] = useState('');
   const [pieces, setPieces] = useState<FichierLocal[]>([]);
   const [documents, setDocuments] = useState<DocumentProfil[] | null>(null);
-  const [joints, setJoints] = useState<{ cv: boolean; lettre: boolean }>({ cv: false, lettre: false });
+  // Documents du profil joints (identifiants) : Mon CV, Lettre, ou n'importe quel autre document choisi dans la liste.
+  const [idsDocs, setIdsDocs] = useState<string[]>([]);
+  const [listeOuverte, setListeOuverte] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
 
@@ -50,7 +52,8 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
   // Le plus récent de chaque sorte (la liste arrive triée du plus récent au plus ancien).
   const cv = documents?.find(estCv) ?? documents?.find((d) => !estLettre(d) && !d.estImage) ?? null;
   const lettre = documents?.find(estLettre) ?? null;
-  const idsJoints = [joints.cv && cv ? cv.id : null, joints.lettre && lettre ? lettre.id : null].filter((x): x is string => Boolean(x));
+  const idsJoints = idsDocs;
+  const docsJoints = (documents ?? []).filter((d) => idsDocs.includes(d.id));
   const nbPieces = pieces.length + idsJoints.length;
 
   const adresseValide = REGEX_EMAIL.test(a.trim());
@@ -62,11 +65,15 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
       Alert.alert(sorte === 'cv' ? 'Mon CV' : 'Lettre', `Aucun ${sorte === 'cv' ? 'CV' : 'document de lettre de motivation'} dans votre profil. Ajoutez-le d'abord dans l'onglet Documents du profil.`);
       return;
     }
-    if (!joints[sorte] && nbPieces >= MAX_PIECES) {
+    basculerDocument(doc.id);
+  }
+
+  function basculerDocument(id: string) {
+    if (!idsDocs.includes(id) && nbPieces >= MAX_PIECES) {
       Alert.alert('Pièces jointes', `${MAX_PIECES} pièces jointes au maximum.`);
       return;
     }
-    setJoints((j) => ({ ...j, [sorte]: !j[sorte] }));
+    setIdsDocs((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   }
 
   async function ajouterFichier() {
@@ -75,7 +82,7 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
       return;
     }
     try {
-      const f = await choisirFichierCv();
+      const f = await choisirPieceJointe();
       if (f) setPieces((l) => [...l, f]);
     } catch (e) {
       Alert.alert('Fichier refusé', e instanceof Error ? e.message : 'Ce fichier ne peut pas être ajouté.');
@@ -149,7 +156,8 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
                   { id: 'cv' as const, libelle: 'Mon CV', icone: 'document-text' as const, couleur: '#7C6BCF' },
                   { id: 'lettre' as const, libelle: 'Lettre', icone: 'mail-open' as const, couleur: '#C084FC' },
                 ]).map((p) => {
-                  const actif = joints[p.id];
+                  const doc = p.id === 'cv' ? cv : lettre;
+                  const actif = Boolean(doc && idsDocs.includes(doc.id));
                   return (
                     <Pressable
                       key={p.id}
@@ -179,8 +187,20 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
                 style={[{ minHeight: 230, paddingTop: 16 }, { outlineStyle: 'none' } as object]}
               />
 
-              {pieces.length > 0 ? (
+              {docsJoints.length > 0 || pieces.length > 0 ? (
                 <View className="gap-2 mb-3">
+                  {docsJoints.map((d) => (
+                    <View key={d.id} className="flex-row items-center gap-2.5 rounded-[12px] px-3 py-3" style={{ backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0' }}>
+                      <Ionicons name={estLettre(d) ? 'mail-open-outline' : 'document-text-outline'} size={18} color="#047857" />
+                      <View className="flex-1 min-w-0">
+                        <Text className="text-[13px] font-bold text-[#1A1A1A]" numberOfLines={1}>{d.titre}</Text>
+                        <Text className="text-[11px]" style={{ color: '#047857' }}>{estLettre(d) ? 'Lettre de motivation' : d.estImage ? 'Photo' : 'CV / document'} · de votre profil</Text>
+                      </View>
+                      <Pressable onPress={() => basculerDocument(d.id)} accessibilityLabel="Retirer le document" hitSlop={8}>
+                        <Ionicons name="close-circle" size={20} color="rgba(0,0,0,0.4)" />
+                      </Pressable>
+                    </View>
+                  ))}
                   {pieces.map((f, i) => (
                     <View key={`${f.uri}-${i}`} className="flex-row items-center gap-2.5 rounded-[12px] px-3 py-3" style={{ backgroundColor: '#F3F4F6' }}>
                       <Ionicons name="document-attach-outline" size={18} color="#4B5563" />
@@ -200,10 +220,16 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
               ) : null}
 
               <View className="flex-row items-center justify-between">
-                <Pressable onPress={ajouterFichier} accessibilityRole="button" className="flex-row items-center gap-2" hitSlop={8}>
-                  <Ionicons name="attach" size={20} color="#374151" />
-                  <Text className="text-[14px] font-black" style={{ color: '#374151' }}>Joindre un fichier</Text>
-                </Pressable>
+                <View className="gap-3">
+                  <Pressable onPress={ajouterFichier} accessibilityRole="button" className="flex-row items-center gap-2" hitSlop={8}>
+                    <Ionicons name="attach" size={20} color="#374151" />
+                    <Text className="text-[14px] font-black" style={{ color: '#374151' }}>Joindre un fichier</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setListeOuverte(true)} accessibilityRole="button" className="flex-row items-center gap-2" hitSlop={8}>
+                    <Ionicons name="folder-open-outline" size={19} color="#374151" />
+                    <Text className="text-[14px] font-black" style={{ color: '#374151' }}>Mes documents</Text>
+                  </Pressable>
+                </View>
                 <Pressable
                   onPress={envoyer}
                   disabled={!pret || envoi}
@@ -221,6 +247,51 @@ export default function EcrireEmailPage({ onFermer }: { onFermer: () => void }) 
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Mes documents : tous les documents du profil, à cocher pour les joindre */}
+      <Modal visible={listeOuverte} transparent animationType="slide" onRequestClose={() => setListeOuverte(false)}>
+        <Pressable onPress={() => setListeOuverte(false)} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <Pressable onPress={() => {}} style={{ maxHeight: '75%', backgroundColor: '#fff', borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingBottom: 20 }}>
+            <View className="flex-row items-center justify-between px-5 pt-5 pb-2">
+              <View>
+                <Text className="text-[17px] font-black text-[#111]">Mes documents</Text>
+                <Text className="text-[12px]" style={{ color: '#6B7280' }}>{nbPieces} / {MAX_PIECES} pièces jointes</Text>
+              </View>
+              <Pressable onPress={() => setListeOuverte(false)} accessibilityRole="button" hitSlop={10}>
+                <Text className="text-[14px] font-black" style={{ color: '#2563EB' }}>OK</Text>
+              </Pressable>
+            </View>
+            {documents === null ? (
+              <View className="py-10"><ActivityIndicator color="#10B981" /></View>
+            ) : documents.length === 0 ? (
+              <Text className="text-center text-[13px] px-8 py-10" style={{ color: '#6B7280' }}>Aucun document dans votre profil. Ajoutez-en dans l’onglet Documents du profil.</Text>
+            ) : (
+              <FlatList
+                data={documents}
+                keyExtractor={(d) => d.id}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8 }}
+                renderItem={({ item }) => {
+                  const coche = idsDocs.includes(item.id);
+                  return (
+                    <Pressable
+                      onPress={() => basculerDocument(item.id)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: coche }}
+                      className="flex-row items-center gap-3 rounded-2xl px-4 py-3"
+                      style={{ borderWidth: 1.5, borderColor: coche ? '#10B981' : '#E5E7EB', backgroundColor: coche ? '#ECFDF5' : '#fff' }}>
+                      <Ionicons name={coche ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={coche ? '#10B981' : '#9CA3AF'} />
+                      <View className="flex-1 min-w-0">
+                        <Text className="text-[14px] font-bold text-[#111]" numberOfLines={1}>{item.titre}</Text>
+                        <Text className="text-[11.5px]" style={{ color: '#6B7280' }}>{estLettre(item) ? 'Lettre de motivation' : item.estImage ? 'Photo' : 'CV / document'}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                }}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
