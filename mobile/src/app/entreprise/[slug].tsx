@@ -68,7 +68,13 @@ export default function FicheEntrepriseScreen() {
           </Pressable>
 
           {entreprise.image_url ? (
-            <Image source={{ uri: entreprise.image_url }} alt={entreprise.company} contentFit="cover" className="w-full h-44" />
+            <Image
+              source={{ uri: entreprise.image_url }}
+              alt={entreprise.company}
+              contentFit={entreprise.logo ? 'contain' : 'cover'}
+              className="w-full h-44"
+              style={entreprise.logo ? { backgroundColor: '#fff' } : undefined}
+            />
           ) : (
             <View style={{ width: '100%', height: 180, backgroundColor: '#D8E3F5', overflow: 'hidden' }}>
               <Svg width="100%" height="100%">

@@ -154,8 +154,9 @@ function CarteEntreprise({ entreprise }: { entreprise: EntrepriseSpontanee }) {
           <Image
             source={{ uri: entreprise.image_url }}
             alt={entreprise.company}
-            contentFit="cover"
+            contentFit={entreprise.logo ? 'contain' : 'cover'}
             className="w-full h-full"
+            style={entreprise.logo ? { backgroundColor: '#fff' } : undefined}
           />
         ) : (
           <LinearGradient

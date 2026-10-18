@@ -27,6 +27,8 @@ export type EntrepriseSpontanee = {
   externalLink?: string;
   documentsRequired: string;
   image_url: string | null;
+  /** L'image est un logo (carré, fond blanc) : affiché en entier au lieu d'être recadré. */
+  logo?: boolean;
   poles: string[];
 };
 
@@ -706,6 +708,7 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     externalLink: "https://sociumjob.com",
     documentsRequired: "Profil candidat / CV en ligne",
     image_url: "https://ffacilite.com/auchan-logo.png",
+    logo: true,
     poles: ["Caisse", "Libre-service", "Sécurité"],
   },
   {
