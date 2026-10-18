@@ -51,7 +51,7 @@ const HAUTEUR_LIGNE = 62;
 
 const PILULES: { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; cible: string }[] = [
   { id: 'articles', libelle: 'Articles proches', icone: 'grid-outline', cible: '/marketplace/autour?onglet=articles' },
-  { id: 'mini', libelle: 'Mini carte', icone: 'map-outline', cible: '/marketplace?mini=1' },
+  // « Mini carte » est retirée pour le moment (trop compliquée), comme sur le site : Articles proches et Pleine carte restent.
   { id: 'pleine', libelle: 'Pleine carte', icone: 'scan-outline', cible: '/marketplace/autour?onglet=boutiques' },
 ];
 

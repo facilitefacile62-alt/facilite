@@ -315,7 +315,7 @@ export default function MaBoutiqueScreen() {
             [
               { id: 'article' as const, label: 'Article', icone: 'pricetag-outline' as const },
               { id: 'service' as const, label: 'Service', icone: 'construct-outline' as const },
-              { id: 'etablissement' as const, label: 'Établissement', icone: 'storefront-outline' as const },
+              // « Établissement » est masqué pour le moment (18/10/2026) : le code de la rubrique est conservé.
             ]
           ).map((o) => {
             const actif = onglet === o.id;
@@ -372,88 +372,15 @@ export default function MaBoutiqueScreen() {
 
           {onglet === 'service' ? (
             <>
-              {interrupteur('Rendre mon service visible')}
-
-              <View className="p-3.5 gap-2" style={{ borderRadius: 18, backgroundColor: '#EAF2FF', borderWidth: 1, borderColor: '#D5E4FB' }}>
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="construct-outline" size={15} color="#1A1A1A" />
-                    <Text className="text-[12.5px] font-black text-[#111]">Métier / Prestation</Text>
-                  </View>
-                  {!editionMetier ? (
-                    <Pressable
-                      onPress={() => {
-                        setMetierSaisi(boutique.metier ?? '');
-                        setDescriptionSaisie(boutique.description_prestation ?? '');
-                        setEditionMetier(true);
-                      }}
-                      hitSlop={8}
-                      className="rounded-full px-2.5 py-1"
-                      style={{ backgroundColor: '#DCE8FB' }}>
-                      <Text className="text-[11px] font-black" style={{ color: BLEU }}>✎ Modifier</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-                {editionMetier ? (
-                  <View className="gap-2.5">
-                    <View className="flex-row flex-wrap gap-1.5">
-                      {METIERS_SERVICE.map((m) => (
-                        <Pressable key={m} onPress={() => setMetierSaisi(m)} className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: metierSaisi === m ? BLEU : '#fff' }}>
-                          <Text className="text-[11px] font-bold" style={{ color: metierSaisi === m ? '#fff' : '#374151' }}>{m}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                    <TextInput
-                      value={metierSaisi}
-                      onChangeText={setMetierSaisi}
-                      placeholder="Autre (précisez)"
-                      placeholderTextColor="rgba(0,0,0,0.4)"
-                      className="bg-white text-[13px] text-[#111]"
-                      style={{ height: 44, borderRadius: 12, paddingHorizontal: 12 }}
-                    />
-                    <TextInput
-                      value={descriptionSaisie}
-                      onChangeText={setDescriptionSaisie}
-                      placeholder="Spécialités, zone d'intervention…"
-                      placeholderTextColor="rgba(0,0,0,0.4)"
-                      multiline
-                      className="bg-white text-[13px] text-[#111]"
-                      style={{ minHeight: 64, borderRadius: 12, paddingHorizontal: 12, paddingTop: 10, textAlignVertical: 'top' }}
-                    />
-                    <View className="flex-row gap-2">
-                      <Pressable onPress={() => setEditionMetier(false)} className="flex-1 items-center justify-center bg-white" style={{ height: 44, borderRadius: 12 }}>
-                        <Text className="text-[12.5px] font-black" style={{ color: 'rgba(0,0,0,0.6)' }}>Annuler</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => enregistrerRubrique({ metier: metierSaisi, descriptionPrestation: descriptionSaisie, typeBoutique: 'service' })}
-                        disabled={enregistrement}
-                        className="flex-1 items-center justify-center"
-                        style={{ height: 44, borderRadius: 12, backgroundColor: BLEU, opacity: enregistrement ? 0.6 : 1 }}>
-                        {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-[12.5px] font-black text-white">Enregistrer</Text>}
-                      </Pressable>
-                    </View>
-                  </View>
-                ) : (
-                  <>
-                    <Text className="text-[14.5px] font-black" style={{ color: BLEU }}>{boutique.metier || 'Non renseigné'}</Text>
-                    <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.55)' }}>{boutique.description_prestation || 'Prestation de service sur mesure.'}</Text>
-                  </>
-                )}
-              </View>
-
-              {blocDisponibilite}
-
-              <Pressable
-                onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
-                className="flex-row items-center justify-center gap-2"
-                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.25)', backgroundColor: 'rgba(255,255,255,0.6)' }}>
-                <Ionicons name="calendar-outline" size={16} color={BLEU} />
-                <Text className="text-[13px] font-black text-[#111]">Programmer des horaires</Text>
-              </Pressable>
-
+              {/* Rubrique Service : pour le moment, seul « Devenir livreur » est proposé (18/10/2026). */}
               {livreurOuvert ? (
                 <BoutonAction titre="Devenir livreur" sousTitre="Livrez les commandes autour de vous" icone="bicycle-outline" onPress={() => router.push('/marketplace/vendre/livreur')} />
-              ) : null}
+              ) : (
+                <View className="items-center py-10 px-6">
+                  <Ionicons name="bicycle-outline" size={32} color="rgba(0,0,0,0.25)" />
+                  <Text className="text-[13px] text-black/50 text-center mt-2">Cette rubrique n&apos;est pas disponible pour le moment.</Text>
+                </View>
+              )}
             </>
           ) : null}
 
