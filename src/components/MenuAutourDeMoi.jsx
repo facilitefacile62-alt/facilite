@@ -4,21 +4,21 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Bouton « Autour de moi » de la barre de navigation Marketplace, avec son menu
- * déroulant à trois choix :
+ * déroulant à deux choix :
  *  - liste  : « Articles proches »  → grille des articles de la zone, sans carte ;
- *  - mini   : « Mini carte »        → carte compacte au-dessus des catégories ;
  *  - pleine : « Pleine carte »      → explorateur de carte en grand écran.
+ * « Mini carte » (carte compacte sur la page) est RETIRÉE pour le moment : trop compliquée, les
+ * boutiques proches s'y superposaient sans qu'on puisse les toucher. Le code de la mini carte reste
+ * dans MarketplaceClient (mode "mini") et AutourCentre, inactif, pour pouvoir la rouvrir plus tard.
  */
 export const OPTIONS_AUTOUR_DE_MOI = [
   { mode: "liste", libelle: "Articles proches", sous: "Les articles de votre zone", icone: "fa-table-cells-large" },
-  { mode: "mini", libelle: "Mini carte", sous: "Aperçu de la carte sur la page", icone: "fa-map" },
   { mode: "pleine", libelle: "Pleine carte", sous: "Carte en grand écran", icone: "fa-expand" },
 ];
 
 // Même menu pour « Autour de moi » de Facilité (offres des entreprises par ville).
 export const OPTIONS_AUTOUR_OFFRES = [
   { mode: "liste", libelle: "Offres proches", sous: "Les offres rangées par ville", icone: "fa-table-cells-large" },
-  { mode: "mini", libelle: "Mini carte", sous: "Aperçu de la carte sur la page", icone: "fa-map" },
   { mode: "pleine", libelle: "Pleine carte", sous: "Carte en grand écran", icone: "fa-expand" },
 ];
 

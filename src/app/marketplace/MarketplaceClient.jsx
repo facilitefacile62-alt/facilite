@@ -435,8 +435,8 @@ export default function MarketplaceClient() {
     const surAutourDeMoi = (e) => {
       sequenceDemandeRef.current += 1;
       setOnglet("acheter");
-      // mode : "liste" (articles proches), "mini" (mini carte, défaut) ou "pleine" (pleine carte) — voir MenuAutourDeMoi.
-      setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "autour", mode: e?.detail?.mode || "mini" });
+      // mode : "liste" (articles proches) ou "pleine" (pleine carte) — voir MenuAutourDeMoi.
+      setDemandeAcheteur({ id: sequenceDemandeRef.current, type: "autour", mode: e?.detail?.mode || "liste" });
     };
     // Recherche de la barre du header : la page n'était jamais prévenue
     // quand on y était déjà (voir Header.jsx, allerVers). Un événement plutôt
@@ -946,9 +946,9 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
   const [itineraireCible, setItineraireCible] = useState(null);
-  // Vue « Autour de moi » : "mini" = carte compacte au-dessus des catégories (défaut), "liste" = articles proches sans carte.
+  // Vue « Autour de moi » : "liste" = articles proches sans carte (défaut) ; "mini" (carte compacte) est retirée pour le moment.
   // La pleine carte est le globe (globeOuvert).
-  const [vueProches, setVueProches] = useState("mini");
+  const [vueProches, setVueProches] = useState("liste");
   // « Pleine carte » demandée avant que la position soit connue : le globe s'ouvre dès qu'elle arrive (ou échoue).
   const [pleineEnAttente, setPleineEnAttente] = useState(false);
   const [modalEasyReturn, setModalEasyReturn] = useState(false);
@@ -1159,8 +1159,10 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     queueMicrotask(() => {
       onDemandeTraitee?.();
       if (demande.type === "autour") {
-        const mode = demande.mode || "mini";
-        setVueProches(mode === "liste" ? "liste" : "mini");
+        const mode = demande.mode || "liste";
+        // « Mini carte » est retirée pour le moment : il n'y a plus que la liste d'articles proches
+        // et la pleine carte (qui s'ouvre par-dessus la liste).
+        setVueProches("liste");
         if (mode === "pleine") {
           if (position) setGlobeOuvert(true);
           else {
