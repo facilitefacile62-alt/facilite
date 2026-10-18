@@ -1,3 +1,4 @@
+import BoutonAudioOffre from '@/components/BoutonAudioOffre';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
@@ -194,6 +195,9 @@ export default function CarteOffre({
           }}>
           <Ionicons name="help-circle-outline" size={20} color="rgba(0,0,0,0.55)" />
         </Pressable>
+
+        {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
+        <BoutonAudioOffre url={offre.audioUrl} />
 
         <Pressable
           onPress={partager}

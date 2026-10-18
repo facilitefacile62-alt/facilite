@@ -61,6 +61,8 @@ export type OffreReelle = {
   salaire?: string;
   posterUri?: string;
   rawImage?: unknown;
+  /** Audio facultatif de l'offre (lecteur sur la carte). */
+  audioUrl?: string;
   description?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -118,7 +120,7 @@ export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') 
         const { data: lignes, error } = await appliquerEtat(
           supabase
             .from('job_offers')
-            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, created_at, listing_type, view_count, status'),
+            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, audio_url, created_at, listing_type, view_count, status'),
           etat
         )
           .order('created_at', { ascending: false })
@@ -146,6 +148,7 @@ export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') 
           salaire: o.salary_range || undefined,
           posterUri: getPrimaryOfferImage(o.image_url),
           rawImage: o.image_url,
+          audioUrl: (o.audio_url as string | null) ?? undefined,
           description: o.description || undefined,
           contactEmail: o.contact_email || undefined,
           contactPhone: o.contact_phone || undefined,
