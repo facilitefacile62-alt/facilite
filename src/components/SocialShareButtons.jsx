@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import LecteurAudioOffre from "@/components/LecteurAudioOffre";
 
 function effectiveLinkForHelp(offer, externalLink) {
   const l = externalLink || offer?.external_link || offer?.externalLink || "";
@@ -414,6 +415,9 @@ export default function SocialShareButtons({
             <span className="hidden xs:inline">Aide</span>
           </Link>
 
+          {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
+          <LecteurAudioOffre url={offer?.audio_url || offer?.audioUrl || null} />
+
           {/* Bouton 2 : Partager */}
           <button
             type="button"
@@ -707,6 +711,9 @@ export default function SocialShareButtons({
             <i className="fa-regular fa-circle-question text-sm"></i>
             <span className="hidden xs:inline">Aide</span>
           </Link>
+
+          {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
+          <LecteurAudioOffre url={offer?.audio_url || offer?.audioUrl || null} />
 
           {/* Action 2 : Partager */}
           <button

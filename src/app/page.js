@@ -36,6 +36,7 @@ async function getInitialOffers() {
       tags: [offer.location, offer.contract_type].filter(Boolean),
       image: offer.image_url || null,
       image_url: offer.image_url || null,
+      audio_url: offer.audio_url || null,
       recruiterEmail: offer.contact_email || null,
       contact_email: offer.contact_email || null,
       recruiterPhone: offer.contact_phone || null,
