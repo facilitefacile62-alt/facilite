@@ -108,15 +108,13 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
         const ctx = await chargerContexteCandidature(userId);
         if (annule) return;
         if (!ctx.emailConfirme) {
-          Alert.alert(
-            'E-mail confirmé requis',
-            "Un e-mail confirmé est obligatoire pour postuler. Ajoutez et confirmez le vôtre dans Sécurité & Connexion.",
-            [
-              { text: 'Plus tard', style: 'cancel' },
-              { text: 'Ajouter mon e-mail', onPress: () => router.push('/web/securite') },
-            ]
-          );
+          // Sans e-mail confirmé (inscription par téléphone) : page « Confirmer mon compte », qui ramène ensuite
+          // sur cette offre.
           onFermer();
+          router.push({
+            pathname: '/confirmer-compte',
+            params: { titre: offre.titre, entreprise: offre.entreprise, retour: `/offre/${offre.id}` },
+          });
           return;
         }
         setContexte(ctx);
