@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { LIBELLES_VEHICULE, type TypeVehicule } from '@/lib/livraison';
+import { REGIONS_SENEGAL, zoneDansRegion, type RegionSenegal } from '@/lib/regionsSenegal';
 import { supabase } from '@/lib/supabase';
+import { contientTousLesMots } from '@/lib/texte';
 
 // « Trouver un livreur » : livreurs accrédités et actifs, filtrés par zone (prénom, véhicule, zone, numéro).
 // La liste vient de la fonction lister_livreurs_actifs, lisible seulement par un compte connecté.
@@ -20,23 +22,26 @@ export default function ModalTrouverLivreur({ visible, onFermer }: { visible: bo
   const router = useRouter();
   const { user } = useAuth();
   const [zone, setZone] = useState('');
+  const [region, setRegion] = useState<RegionSenegal | null>(null);
   const [livreurs, setLivreurs] = useState<LivreurZone[] | null>(null);
   const [erreur, setErreur] = useState(false);
 
+  // Tous les livreurs actifs sont chargés une fois ; la région et la zone saisie filtrent ensuite sur place.
   useEffect(() => {
     if (!visible || !user) return;
     let annule = false;
-    const delai = setTimeout(async () => {
-      const { data, error } = await supabase.rpc('lister_livreurs_actifs', { p_zone: zone.trim() || null, p_limite: 30 });
+    supabase.rpc('lister_livreurs_actifs', { p_zone: null, p_limite: 100 }).then(({ data, error }) => {
       if (annule) return;
       setErreur(Boolean(error));
       setLivreurs(error ? [] : ((data ?? []) as LivreurZone[]));
-    }, zone ? 350 : 0);
+    });
     return () => {
       annule = true;
-      clearTimeout(delai);
     };
-  }, [visible, user, zone]);
+  }, [visible, user]);
+
+  const comptes = REGIONS_SENEGAL.map((r) => (livreurs ?? []).filter((l) => zoneDansRegion(l.zone, r)).length);
+  const affiches = (livreurs ?? []).filter((l) => (!region || zoneDansRegion(l.zone, region)) && (!zone.trim() || contientTousLesMots(l.zone ?? '', zone)));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onFermer}>
@@ -80,17 +85,41 @@ export default function ModalTrouverLivreur({ visible, onFermer }: { visible: bo
                   style={{ height: 44, backgroundColor: '#F2F0EA' }}
                 />
               </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, gap: 6 }}>
+                {REGIONS_SENEGAL.map((r, i) => {
+                  const actif = region?.nom === r.nom;
+                  return (
+                    <Pressable
+                      key={r.nom}
+                      onPress={() => setRegion(actif ? null : r)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: actif }}
+                      className="rounded-full"
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        backgroundColor: actif ? VERT : comptes[i] > 0 ? '#fff' : '#F7F6F2',
+                        borderWidth: 1,
+                        borderColor: actif ? VERT : 'rgba(0,0,0,0.15)',
+                      }}>
+                      <Text className="text-[11.5px] font-extrabold" style={{ color: actif ? '#fff' : comptes[i] > 0 ? '#1A1A1A' : 'rgba(0,0,0,0.35)' }}>
+                        {r.nom} · {comptes[i]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
               {livreurs === null ? (
                 <View className="py-10"><ActivityIndicator color={VERT} /></View>
               ) : erreur ? (
                 <Text className="text-center text-[12.5px] text-red-600 py-8">Impossible de charger les livreurs pour le moment.</Text>
-              ) : livreurs.length === 0 ? (
+              ) : affiches.length === 0 ? (
                 <Text className="text-center text-[12.5px] text-black/50 py-8 px-6">
-                  {zone.trim() ? 'Aucun livreur inscrit dans cette zone pour le moment.' : 'Aucun livreur inscrit pour le moment.'}
+                  {region || zone.trim() ? 'Aucun livreur inscrit dans cette zone pour le moment.' : 'Aucun livreur inscrit pour le moment.'}
                 </Text>
               ) : (
                 <FlatList
-                  data={livreurs}
+                  data={affiches}
                   keyExtractor={(l, i) => `${l.prenom}-${l.telephone}-${i}`}
                   contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6, gap: 8 }}
                   renderItem={({ item }) => (
