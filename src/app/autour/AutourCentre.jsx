@@ -26,7 +26,8 @@ const CarteOffresVilles = dynamic(() => import("@/components/CarteOffresVilles")
   loading: () => <div className="w-full h-[420px] rounded-2xl bg-gray-100 animate-pulse" />,
 });
 
-const MODES = ["liste", "mini", "pleine"];
+// « Mini carte » est retirée pour le moment (trop compliquée) : seuls « liste » et « pleine » sont proposés.
+const MODES = ["liste", "pleine"];
 
 function kilometres(a, b) {
   const R = 6371;
@@ -47,7 +48,7 @@ export default function AutourCentre() {
   const [msgPosition, setMsgPosition] = useState("");
   // Choix fait depuis le menu quand on est déjà sur la page (événement) ; sinon l'adresse (?vue=) fait foi.
   const [choixMenu, setChoixMenu] = useState(null);
-  const mode = MODES.includes(choixMenu?.vue) && choixMenu.depuis === vueUrl ? choixMenu.vue : MODES.includes(vueUrl) ? vueUrl : "mini";
+  const mode = MODES.includes(choixMenu?.vue) && choixMenu.depuis === vueUrl ? choixMenu.vue : MODES.includes(vueUrl) ? vueUrl : "liste";
 
   useEffect(() => {
     let annule = false;
@@ -170,7 +171,7 @@ export default function AutourCentre() {
       ) : mode === "pleine" ? (
         <div className="fixed inset-0 z-[600] bg-[#0B0F17] flex flex-col">
           <div className="flex-1 min-h-0">{carte(true)}</div>
-          <Link href="/autour?vue=mini" className="absolute top-3 right-3 z-[650] px-4 py-2 rounded-full bg-white text-gray-900 text-xs font-black shadow-xl">
+          <Link href="/autour?vue=liste" className="absolute top-3 right-3 z-[650] px-4 py-2 rounded-full bg-white text-gray-900 text-xs font-black shadow-xl">
             <i className="fa-solid fa-compress mr-1.5"></i>Fermer la carte
           </Link>
         </div>
