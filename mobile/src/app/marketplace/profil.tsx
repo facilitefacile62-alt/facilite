@@ -116,6 +116,8 @@ export default function ProfilMarketplaceScreen() {
                 <>
                   <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
                   <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
+                  {/* Seul bouton « transport » ouvert à tous : plus il y a de livreurs, plus on en trouve dans sa zone. */}
+                  {livreurOuvert ? <LigneMenu emoji="🛵" titre="Devenir livreur" onPress={() => router.push('/marketplace/vendre/livreur')} /> : null}
                   {voyagesOuverts ? (
                     <>
                       <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />

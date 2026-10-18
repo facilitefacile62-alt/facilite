@@ -23,7 +23,7 @@ const PAR_DEFAUT: Record<string, Interrupteur> = {
   nav_extracteur: actif(),
   nav_messagerie: actif(),
   nav_marketplace: actif(),
-  nav_marketplace_livreur: actif(CONNECTES),
+  nav_marketplace_livreur: actif(TOUS),
   nav_marketplace_voyages: coupe(CONNECTES),
   nav_plus_fonctionnalites: actif(),
   nav_plus_recrutement_spontane: actif(),
