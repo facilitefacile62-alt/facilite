@@ -662,7 +662,11 @@ export const SPONTANEOUS_COMPANIES = [
     company: "Auchan Sénégal",
     title: "Candidature Spontanée - Auchan Sénégal",
     domains: "Caissiers, Libre-service, Logistique, Chefs de rayon, Sécurité, Entretien",
-    location: "Sénégal",
+    // Auchan Yoff (Route de l'aéroport, à côté de l'imprimerie Tandian) : position exacte relevée sur Google Maps,
+    // utilisée pour poser Auchan à son emplacement réel sur la carte « Autour de moi ».
+    location: "Yoff, Dakar, Sénégal",
+    lat: 14.7538292,
+    lng: -17.4670725,
     contract_type: "Candidature Spontanée",
     description: "Auchan Sénégal recrute via SociumJob.",
     rawContact: "sociumjob.com",
