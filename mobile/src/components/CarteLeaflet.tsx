@@ -62,6 +62,8 @@ export type PopupBoutique = {
   dx?: number;
   titre: string;
   sous?: string;
+  /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
+  action?: { id: string; libelle: string };
   /** null = chargement des articles en cours. */
   articles: { id: string; titre: string; prix: string; photo?: string; icone?: string }[] | null;
 };
@@ -105,6 +107,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-prix { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pb-action { display: block; margin: 0 14px 14px; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
@@ -284,7 +287,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         }).join('') + '</div>';
     var el = document.createElement('div');
     el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
-      + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps;
+      + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps
+      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">🧭 ' + esc(d.action.libelle) + '</div>' : '');
     el.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));

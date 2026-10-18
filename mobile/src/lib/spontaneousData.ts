@@ -16,6 +16,9 @@ export type EntrepriseSpontanee = {
   title: string;
   domains: string;
   location: string;
+  /** Position exacte (quand elle est connue) : l'entreprise est alors posée à cet endroit sur la carte. */
+  lat?: number;
+  lng?: number;
   contract_type?: string;
   description: string;
   rawContact: string;
@@ -691,7 +694,11 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     company: "Auchan Sénégal",
     title: "Candidature Spontanée - Auchan Sénégal",
     domains: "Caissiers, Libre-service, Logistique, Chefs de rayon, Sécurité, Entretien",
-    location: "Sénégal",
+    // Auchan Yoff (Route de l'aéroport, à côté de l'imprimerie Tandian) : position exacte relevée sur Google Maps,
+    // utilisée pour poser Auchan à son emplacement réel sur la carte « Autour de moi ».
+    location: "Yoff, Dakar, Sénégal",
+    lat: 14.7538292,
+    lng: -17.4670725,
     contract_type: "Candidature Spontanée",
     description: "Auchan Sénégal recrute via SociumJob.",
     rawContact: "sociumjob.com",

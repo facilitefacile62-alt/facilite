@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
+import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
 import { chargerOffresParVille, trouverVille, type GroupeVille, type ResultatAutour } from '@/lib/offresParVille';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import type { Position } from '@/lib/marketplace';
@@ -31,6 +32,9 @@ const couleurVille = (rang: number) => COULEURS_VILLES[rang % COULEURS_VILLES.le
 const libelleOffres = (n: number) => `${n} offre${n > 1 ? 's' : ''}`;
 const libelleSpontanees = (n: number) => `${n} dépôt${n > 1 ? 's' : ''}`;
 
+// Entreprises dont la position exacte est connue (ex. Auchan Yoff) : un marqueur à leur emplacement réel.
+const LIEUX = SPONTANEOUS_COMPANIES.filter((e) => e.lat != null && e.lng != null);
+
 type Vue = 'offres' | 'spontanees';
 type GroupeSpontane = { ville: string; lat: number; lng: number; entreprises: typeof SPONTANEOUS_COMPANIES };
 
@@ -40,6 +44,7 @@ const { groupesSpontanes, spontanesSansVille } = (() => {
   const parVille = new Map<string, GroupeSpontane>();
   let sansVille = 0;
   for (const e of SPONTANEOUS_COMPANIES) {
+    if (e.lat != null && e.lng != null) continue; // posée à son emplacement exact (voir LIEUX)
     const v = trouverVille(e.location);
     if (!v) {
       sansVille += 1;
@@ -84,6 +89,7 @@ export default function AutourFaciliteScreen() {
 
   const groupes = useMemo(() => resultat?.groupes ?? [], [resultat]);
   const courant: GroupeVille | null = groupes.find((g) => g.ville === selection) ?? null;
+  const lieuSel = selection?.startsWith('lieu:') ? LIEUX.find((e) => `lieu:${e.slug}` === selection) ?? null : null;
   const courantSp: GroupeSpontane | null = selection?.startsWith('sp:') ? groupesSpontanes.find((g) => `sp:${g.ville}` === selection) ?? null : null;
 
   const marqueurs = useMemo<MarqueurCarte[]>(() => {
@@ -117,6 +123,16 @@ export default function AutourFaciliteScreen() {
         },
       })
     );
+    LIEUX.forEach((e) =>
+      liste.push({
+        id: `lieu:${e.slug}`,
+        lat: e.lat as number,
+        lng: e.lng as number,
+        couleur: VIOLET,
+        libelle: e.company,
+        avatar: { emoji: '🏬', bordure: VIOLET, sous: 'Candidature spontanée', selectionne: selection === `lieu:${e.slug}`, actif: true },
+      })
+    );
     if (position) {
       liste.push({ id: 'moi', lat: position.latitude, lng: position.longitude, couleur: BLEU, halo: true, libelle: 'Vous êtes ici', avatar: { emoji: '🧑🏾', bordure: '#1877F2', moi: true } });
     }
@@ -125,6 +141,17 @@ export default function AutourFaciliteScreen() {
 
   // Bulle d'aperçu au-dessus du rond de la ville : ses offres (poste + entreprise), comme celle des boutiques.
   const popup = useMemo<PopupBoutique | null>(() => {
+    if (lieuSel) {
+      return {
+        cle: `lieu:${lieuSel.slug}`,
+        lat: lieuSel.lat as number,
+        lng: lieuSel.lng as number,
+        titre: lieuSel.company,
+        sous: lieuSel.location,
+        articles: [{ id: `sp-${lieuSel.slug}`, titre: lieuSel.domains, prix: 'Candidature spontanée', photo: lieuSel.image_url ?? undefined, icone: '🏬' }],
+        action: { id: `itineraire:${lieuSel.slug}`, libelle: 'Itinéraire' },
+      };
+    }
     if (courantSp) {
       return {
         cle: `sp:${courantSp.ville}`,
@@ -144,16 +171,37 @@ export default function AutourFaciliteScreen() {
       sous: `${libelleOffres(courant.offres.length)} · ${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''}`,
       articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, photo: o.affiche && !o.affiche.startsWith('data:') ? o.affiche : undefined, icone: '🏢' })),
     };
-  }, [courant, courantSp]);
+  }, [courant, courantSp, lieuSel]);
 
   const origine = position ?? DAKAR;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
 
+  // Itinéraire vers une entreprise posée à son emplacement exact : ligne droite tout de suite, puis le trajet routier.
+  const [trajet, setTrajet] = useState<Itineraire | null>(null);
+  const allerAuLieu = (slug: string) => {
+    const lieu = LIEUX.find((e) => e.slug === slug);
+    if (!lieu) return;
+    if (!position) {
+      Alert.alert('Position nécessaire', 'Activez votre position pour calculer l’itinéraire.');
+      activer();
+      return;
+    }
+    const arrivee = { latitude: lieu.lat as number, longitude: lieu.lng as number };
+    setSelection(null);
+    setTrajet(ligneDroite(position, arrivee));
+    calculerItineraire(position, arrivee).then(setTrajet);
+  };
+
   const choisirVille = (cle: string) => {
     setSelection(cle);
-    const sp = cle.startsWith('sp:');
+    const lieu = cle.startsWith('lieu:') ? LIEUX.find((e) => `lieu:${e.slug}` === cle) : undefined;
+    const sp = cle.startsWith('sp:') || Boolean(lieu);
     setVue(sp ? 'spontanees' : 'offres');
+    if (lieu) {
+      carte?.centrer(lieu.lat as number, lieu.lng as number, 15, -0.07);
+      return;
+    }
     const g = sp ? groupesSpontanes.find((x) => `sp:${x.ville}` === cle) : groupes.find((x) => x.ville === cle);
     if (g) carte?.centrer(g.lat, g.lng, 10, -0.07);
   };
@@ -165,13 +213,15 @@ export default function AutourFaciliteScreen() {
         zoom={7}
         sombre
         marqueurs={marqueurs}
-        ajuster={!selection}
+        ajuster={!selection && !trajet}
         focus={selection}
         popup={popup}
+        trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
         commandes={setCarte}
         onMarqueur={(id) => {
           if (id === 'moi' || id === 'boutique') return;
           if (id === 'fermer') setSelection(null);
+          else if (id.startsWith('itineraire:')) allerAuLieu(id.slice(11));
           else if (id.startsWith('article:sp-')) router.push(`/entreprise/${id.slice(11)}` as Href);
           else if (id.startsWith('article:')) router.push(`/offre/${id.slice(8)}` as Href);
           else choisirVille(id);
@@ -214,6 +264,18 @@ export default function AutourFaciliteScreen() {
       ) : null}
 
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
+        {trajet ? (
+          <View className="self-center flex-row items-center gap-2 rounded-full bg-white" style={{ paddingLeft: 14, paddingRight: 6, paddingVertical: 6 }}>
+            <Ionicons name={trajet.profil === 'pieton' ? 'walk' : 'car'} size={16} color="#0284C7" />
+            <Text className="text-[12.5px] font-extrabold text-[#1A1A1A]">
+              {trajet.approximatif ? 'À vol d’oiseau · ' : ''}
+              {trajet.distanceKm.toLocaleString('fr-FR')} km{trajet.dureeMin != null ? ` · ${trajet.dureeMin} min` : ''}
+            </Text>
+            <Pressable onPress={() => setTrajet(null)} accessibilityLabel="Effacer le trajet" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
+              <Ionicons name="close" size={15} color="#1A1A1A" />
+            </Pressable>
+          </View>
+        ) : null}
         <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: courantSp || vue === 'spontanees' ? 'rgba(124,58,237,0.96)' : 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
           <Ionicons name={vue === 'spontanees' ? 'mail' : 'briefcase'} size={13} color="#fff" />
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
@@ -253,14 +315,14 @@ export default function AutourFaciliteScreen() {
         </View>
 
         <View className="rounded-[22px] py-3" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 108 }}>
-          {(vue === 'offres' ? groupes.length === 0 : groupesSpontanes.length === 0) ? (
+          {(vue === 'offres' ? groupes.length === 0 : groupesSpontanes.length + LIEUX.length === 0) ? (
             <Text className="text-center text-[12.5px] py-8" style={{ color: 'rgba(255,255,255,0.6)' }}>
               {resultat === null ? 'Chargement…' : vue === 'offres' ? 'Aucune offre à afficher.' : 'Aucun dépôt à afficher.'}
             </Text>
           ) : (
             <FlatList
               horizontal
-              data={vue === 'offres' ? groupes.map((g, rang) => ({ cle: g.ville, ville: g.ville, n: g.offres.length, couleur: couleurVille(rang), texte: libelleOffres(g.offres.length) })) : groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, couleur: VIOLET, texte: libelleSpontanees(g.entreprises.length) }))}
+              data={vue === 'offres' ? groupes.map((g, rang) => ({ cle: g.ville, ville: g.ville, n: g.offres.length, couleur: couleurVille(rang), texte: libelleOffres(g.offres.length) })) : [...LIEUX.map((e) => ({ cle: `lieu:${e.slug}`, ville: e.company, n: '🏬', couleur: VIOLET, texte: 'Emplacement exact' })), ...groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, couleur: VIOLET, texte: libelleSpontanees(g.entreprises.length) }))]}
               keyExtractor={(g) => g.cle}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
