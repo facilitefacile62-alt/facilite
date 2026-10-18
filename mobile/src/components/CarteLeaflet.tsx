@@ -288,7 +288,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.createElement('div');
     el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
       + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps
-      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">🧭 ' + esc(d.action.libelle) + '</div>' : '');
+      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">📨 ' + esc(d.action.libelle) + '</div>' : '');
     el.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));

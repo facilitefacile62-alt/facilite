@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
-import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
 import { chargerOffresParVille, trouverVille, type GroupeVille, type ResultatAutour } from '@/lib/offresParVille';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import type { Position } from '@/lib/marketplace';
@@ -149,7 +148,8 @@ export default function AutourFaciliteScreen() {
         titre: lieuSel.company,
         sous: lieuSel.location,
         articles: [{ id: `sp-${lieuSel.slug}`, titre: lieuSel.domains, prix: 'Candidature spontanée', photo: lieuSel.image_url ?? undefined, icone: '🏬' }],
-        action: { id: `itineraire:${lieuSel.slug}`, libelle: 'Itinéraire' },
+        // Site externe : le bouton « Postuler » ouvre le canal de candidature de l'entreprise (pas d'itinéraire).
+        action: { id: `postuler:${lieuSel.slug}`, libelle: 'Postuler' },
       };
     }
     if (courantSp) {
@@ -177,20 +177,13 @@ export default function AutourFaciliteScreen() {
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
 
-  // Itinéraire vers une entreprise posée à son emplacement exact : ligne droite tout de suite, puis le trajet routier.
-  const [trajet, setTrajet] = useState<Itineraire | null>(null);
-  const allerAuLieu = (slug: string) => {
-    const lieu = LIEUX.find((e) => e.slug === slug);
-    if (!lieu) return;
-    if (!position) {
-      Alert.alert('Position nécessaire', 'Activez votre position pour calculer l’itinéraire.');
-      activer();
-      return;
-    }
-    const arrivee = { latitude: lieu.lat as number, longitude: lieu.lng as number };
-    setSelection(null);
-    setTrajet(ligneDroite(position, arrivee));
-    calculerItineraire(position, arrivee).then(setTrajet);
+  // « Postuler » : même canal que la fiche de l'entreprise (site officiel, sinon e-mail).
+  const postuler = (slug: string) => {
+    const e = LIEUX.find((x) => x.slug === slug);
+    if (!e) return;
+    if (e.contactType === 'url' && e.externalLink) Linking.openURL(e.externalLink).catch(() => {});
+    else if (e.email) Linking.openURL(`mailto:${e.email}?subject=${encodeURIComponent(`Candidature - ${e.company}`)}`).catch(() => {});
+    else router.push(`/entreprise/${e.slug}` as Href);
   };
 
   const choisirVille = (cle: string) => {
@@ -213,15 +206,14 @@ export default function AutourFaciliteScreen() {
         zoom={7}
         sombre
         marqueurs={marqueurs}
-        ajuster={!selection && !trajet}
+        ajuster={!selection}
         focus={selection}
         popup={popup}
-        trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
         commandes={setCarte}
         onMarqueur={(id) => {
           if (id === 'moi' || id === 'boutique') return;
           if (id === 'fermer') setSelection(null);
-          else if (id.startsWith('itineraire:')) allerAuLieu(id.slice(11));
+          else if (id.startsWith('postuler:')) postuler(id.slice(9));
           else if (id.startsWith('article:sp-')) router.push(`/entreprise/${id.slice(11)}` as Href);
           else if (id.startsWith('article:')) router.push(`/offre/${id.slice(8)}` as Href);
           else choisirVille(id);
@@ -264,18 +256,6 @@ export default function AutourFaciliteScreen() {
       ) : null}
 
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
-        {trajet ? (
-          <View className="self-center flex-row items-center gap-2 rounded-full bg-white" style={{ paddingLeft: 14, paddingRight: 6, paddingVertical: 6 }}>
-            <Ionicons name={trajet.profil === 'pieton' ? 'walk' : 'car'} size={16} color="#0284C7" />
-            <Text className="text-[12.5px] font-extrabold text-[#1A1A1A]">
-              {trajet.approximatif ? 'À vol d’oiseau · ' : ''}
-              {trajet.distanceKm.toLocaleString('fr-FR')} km{trajet.dureeMin != null ? ` · ${trajet.dureeMin} min` : ''}
-            </Text>
-            <Pressable onPress={() => setTrajet(null)} accessibilityLabel="Effacer le trajet" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
-              <Ionicons name="close" size={15} color="#1A1A1A" />
-            </Pressable>
-          </View>
-        ) : null}
         <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: courantSp || vue === 'spontanees' ? 'rgba(124,58,237,0.96)' : 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
           <Ionicons name={vue === 'spontanees' ? 'mail' : 'briefcase'} size={13} color="#fff" />
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
