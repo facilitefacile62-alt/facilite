@@ -17,7 +17,7 @@ export default function CarteArticleMarketplace({ article, onPress }: { article:
   const photo = article.photos[0];
   // « M'y rendre » reste dans l'application : la carte Autour de moi s'ouvre sur la boutique de l'article.
   const ouvrirItineraire = () => {
-    if (article.boutiqueId) router.push(`/marketplace/autour?boutique=${article.boutiqueId}` as Href);
+    if (article.boutiqueId) router.push(`/marketplace/autour?boutique=${article.boutiqueId}&route=1` as Href);
   };
   const positionConnue = Boolean(article.boutiqueId);
   return (

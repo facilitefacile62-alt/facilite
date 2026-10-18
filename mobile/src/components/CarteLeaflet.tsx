@@ -54,6 +54,8 @@ export type MarqueurCarte = {
 
 /** Bulle d'aperçu posée AU-DESSUS du rond d'une boutique (comme la carte Locaux du site). */
 export type PopupBoutique = {
+  /** Identifiant du marqueur auquel la bulle est attachée (pour suivre son écartement). */
+  cle?: string;
   lat: number;
   lng: number;
   /** Même décalage que le marqueur de la bulle. */
@@ -63,6 +65,9 @@ export type PopupBoutique = {
   /** null = chargement des articles en cours. */
   articles: { id: string; titre: string; prix: string; photo?: string; icone?: string }[] | null;
 };
+
+/** Trajet tracé sur la carte (ex. « M'y rendre ») ; `approximatif` = ligne droite en pointillés. */
+export type TrajetCarte = { points: [number, number][]; approximatif?: boolean };
 
 export type CentreCarte = { lat: number; lng: number };
 
@@ -91,7 +96,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-nom { font: 900 15px system-ui, sans-serif; color: #111; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .pb-lieu { font: 700 12px system-ui, sans-serif; color: #2563EB; margin-top: 2px; }
   .pb-x { width: 30px; height: 30px; border-radius: 9999px; background: #EFEDE7; color: #111; display: flex; align-items: center; justify-content: center; font: 700 15px system-ui, sans-serif; cursor: pointer; flex: none; }
-  .pb-liste { display: flex; gap: 10px; overflow-x: auto; padding: 4px 14px 14px; max-width: 280px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pb-liste { touch-action: pan-x; display: flex; gap: 10px; overflow-x: auto; padding: 4px 14px 14px; max-width: 280px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .pb-liste::-webkit-scrollbar { display: none; }
   .pb-art { flex: none; width: 118px; cursor: pointer; }
   .pb-photo { position: relative; width: 118px; height: 118px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
@@ -125,13 +130,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   // Boutique fixée (mode « focus ») : seules elle et « Vous êtes ici » restent affichées ; les autres
   // boutiques et leurs regroupements disparaissent jusqu'à ce que la fixation soit levée.
   var focusId = null;
+  var spread = {};
+  var popupCourant = null;
+  var popupDonnees = null;
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function htmlAvatar(m) {
     var a = m.avatar, ring = a.bordure;
     var src = a.photo || a.uri;
     var contenu = src
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
-      : '<span style="font-size:17px;line-height:1">' + esc(a.emoji || '🏪') + '</span>';
+      : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
     var rond = '<div style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
     var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
     if (a.moi) {
@@ -185,6 +193,29 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         else carte.fitBounds(bornes, { padding: [60, 60], maxZoom: 18, animate: true });
       });
     });
+    // Marqueurs qui se recouvrent à l'écran (boutiques voisines, au marché) : écartés en cercle autour de leur
+    // centre, à taille constante, pour que chacun reste visible et touchable. Recalculé à chaque zoom.
+    spread = {};
+    var cand = libres.filter(function (m) { return m.avatar && !m.compteur; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
+    var vus = [];
+    cand.forEach(function (a, i) {
+      if (vus[i]) return;
+      vus[i] = true;
+      var g = [a];
+      cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < 40) { vus[j] = true; g.push(b); } });
+      if (g.length < 2) return;
+      var i0 = 0, anneau = 0;
+      while (i0 < g.length) {
+        var r = 26 + anneau * 30;
+        var cap = Math.max(2, Math.floor(2 * Math.PI * r / 42));
+        var n = Math.min(cap, g.length - i0);
+        for (var t = 0; t < n; t++) {
+          var ang = 2 * Math.PI * t / n + (anneau % 2 ? Math.PI / n : 0);
+          spread[g[i0 + t].m.id] = { dx: Math.cos(ang) * r, dy: Math.sin(ang) * r };
+        }
+        i0 += n; anneau++;
+      }
+    });
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
@@ -202,7 +233,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0), m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 640 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () { envoyer(m.id); });
         return;
@@ -215,7 +246,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       c.on('click', function () { envoyer(m.id); });
     });
   }
-  carte.on('zoomend', dessiner);
+  function decalagePopup() {
+    var sp = popupDonnees && popupDonnees.cle ? spread[popupDonnees.cle] : null;
+    return [((popupDonnees && popupDonnees.dx) || 0) + (sp ? sp.dx : 0), -74 + (sp ? sp.dy : 0)];
+  }
+  function suivrePopup() {
+    if (!popupCourant || !popupDonnees) return;
+    popupCourant.options.offset = L.point(decalagePopup());
+    popupCourant._updatePosition();
+  }
+  carte.on('zoomend', function () { dessiner(); suivrePopup(); });
   window.majMarqueurs = function (liste, ajuster, focus) {
     dernier = liste;
     focusId = focus || null;
@@ -229,9 +269,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     carte.setView([lat, lng], z || carte.getZoom(), { animate: false });
     if (decalage) carte.panBy([0, Math.round(carte.getSize().y * decalage)], { animate: false });
   };
-  var popupCourant = null;
   window.majPopup = function (d) {
     if (popupCourant) { carte.closePopup(popupCourant); popupCourant = null; }
+    popupDonnees = d || null;
     if (!d) return;
     var corps = d.articles === null ? '<div class="pb-vide">Chargement…</div>'
       : d.articles.length === 0 ? '<div class="pb-vide">Cette boutique n’a pas encore d’article.</div>'
@@ -247,8 +287,15 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
     });
-    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: [d.dx || 0, -74], minWidth: 250, maxWidth: 300 })
+    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: decalagePopup(), minWidth: 250, maxWidth: 300 })
       .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
+  };
+  var trace = null;
+  window.majTrajet = function (t) {
+    if (trace) { carte.removeLayer(trace); trace = null; }
+    if (!t || !t.points || t.points.length < 2) return;
+    trace = L.polyline(t.points, { color: '#38BDF8', weight: 5, opacity: .95, dashArray: t.approximatif ? '9 9' : null, lineCap: 'round', interactive: false }).addTo(carte);
+    carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, 300], paddingBottomRight: [40, 330], maxZoom: 17, animate: false });
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
@@ -273,6 +320,7 @@ export default function CarteLeaflet({
   commandes,
   focus = null,
   popup = null,
+  trajet = null,
   style,
 }: {
   centre: CentreCarte;
@@ -291,6 +339,8 @@ export default function CarteLeaflet({
   focus?: string | null;
   /** Bulle d'aperçu au-dessus du rond de la boutique fixée. */
   popup?: PopupBoutique | null;
+  /** Trajet à tracer (ligne bleue). */
+  trajet?: TrajetCarte | null;
   style?: StyleProp<ViewStyle>;
 }) {
   const refWebView = useRef<WebView>(null);
@@ -327,10 +377,18 @@ export default function CarteLeaflet({
     executer(`window.majPopup && window.majPopup(${JSON.stringify(popup)})`);
   }, [executer, popup]);
 
+  const majTrajet = useCallback(() => {
+    executer(`window.majTrajet && window.majTrajet(${JSON.stringify(trajet)})`);
+  }, [executer, trajet]);
+
   useEffect(() => {
     miseAJour();
     majPopup();
   }, [miseAJour, majPopup]);
+
+  useEffect(() => {
+    majTrajet();
+  }, [majTrajet]);
 
   useEffect(() => {
     commandes?.({
@@ -347,12 +405,13 @@ export default function CarteLeaflet({
       if (e.data?.pret) {
         miseAJour();
         majPopup();
+        majTrajet();
       }
       if (e.data?.marqueur && onMarqueur) onMarqueur(String(e.data.marqueur));
     };
     window.addEventListener('message', surMessage);
     return () => window.removeEventListener('message', surMessage);
-  }, [miseAJour, majPopup, onMarqueur]);
+  }, [miseAJour, majPopup, majTrajet, onMarqueur]);
 
   const surMessageNatif = (e: WebViewMessageEvent) => {
     if (onMarqueur) onMarqueur(e.nativeEvent.data);
@@ -378,6 +437,7 @@ export default function CarteLeaflet({
           onLoadEnd={() => {
             miseAJour();
             majPopup();
+            majTrajet();
           }}
           scrollEnabled={false}
           nestedScrollEnabled

@@ -11,6 +11,7 @@ import { chargerBoutiquesCarte, type BoutiqueCarte } from '@/lib/boutiquesCarte'
 import { chargerArticles, distanceLisible, prixLisible, type ArticleMarketplace, type Position } from '@/lib/marketplace';
 import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
 import { SvgXml } from 'react-native-svg';
+import { calculerItineraire, type Itineraire } from '@/lib/itineraire';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -44,7 +45,7 @@ export default function AutourDeMoiScreen() {
   const { etat, position, activer } = useLocalisation();
   const [boutiques, setBoutiques] = useState<BoutiqueCarte[] | null>(null);
   // Onglet de départ choisi par la ligne « Autour de moi » (Articles proches / Pleine carte).
-  const { onglet: ongletParam, boutique: boutiqueParam } = useLocalSearchParams<{ onglet?: string; boutique?: string }>();
+  const { onglet: ongletParam, boutique: boutiqueParam, route: routeParam } = useLocalSearchParams<{ onglet?: string; boutique?: string; route?: string }>();
   const [onglet, setOnglet] = useState<Onglet>(ongletParam === 'articles' ? 'articles' : 'boutiques');
   // Un nouvel appui sur « Articles proches » / « Pleine carte » change le paramètre : on suit.
   const [paramVu, setParamVu] = useState(ongletParam);
@@ -177,8 +178,20 @@ export default function AutourDeMoiScreen() {
     if (!boutiqueParam || !boutiques || !carte || boutiqueOuverte.current === boutiqueParam) return;
     if (!boutiques.some((b) => b.id === boutiqueParam)) return;
     boutiqueOuverte.current = boutiqueParam;
-    queueMicrotask(() => choisirBoutique(boutiqueParam, 16));
-  }, [boutiqueParam, boutiques, carte, choisirBoutique]);
+    // Avec « M'y rendre », la carte se cadre sur le trajet (voir plus bas) : pas de recentrage sur la boutique seule.
+    queueMicrotask(() => (routeParam ? setSelection(boutiqueParam) : choisirBoutique(boutiqueParam, 16)));
+  }, [boutiqueParam, routeParam, boutiques, carte, choisirBoutique]);
+
+  // Trajet de « M'y rendre » : ligne bleue de ma position à la boutique, avec distance et durée.
+  const [trajet, setTrajet] = useState<Itineraire | null>(null);
+  const trajetCalcule = useRef<string | null>(null);
+  useEffect(() => {
+    if (!routeParam || !boutiqueParam || !position || !boutiques || trajetCalcule.current === boutiqueParam) return;
+    const b = boutiques.find((x) => x.id === boutiqueParam);
+    if (!b) return;
+    trajetCalcule.current = boutiqueParam;
+    calculerItineraire(position, { latitude: b.latitude, longitude: b.longitude }).then(setTrajet);
+  }, [routeParam, boutiqueParam, position, boutiques]);
 
   // Un appui sélectionne la boutique et ouvre l'aperçu fixe ; un second appui
   // sur la même boutique dans les 320 ms (pastille de la carte, carrousel ou
@@ -248,6 +261,7 @@ export default function AutourDeMoiScreen() {
   const popup = useMemo<PopupBoutique | null>(() => {
     if (!boutiqueSel) return null;
     return {
+      cle: boutiqueSel.id,
       lat: boutiqueSel.latitude,
       lng: boutiqueSel.longitude,
       titre: boutiqueSel.nom,
@@ -271,6 +285,7 @@ export default function AutourDeMoiScreen() {
         ajuster={!selection}
         focus={selection}
         popup={popup}
+        trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
         onMarqueur={surMarqueur}
         commandes={setCarte}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -394,6 +409,19 @@ export default function AutourDeMoiScreen() {
 
       {/* Bas : onglets Boutiques / Articles, puis le carrousel */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
+        {/* Trajet « M'y rendre » : distance et durée réelles (ligne droite signalée comme approximative) */}
+        {trajet ? (
+          <View className="self-center flex-row items-center gap-2 rounded-full bg-white" style={{ paddingLeft: 14, paddingRight: 6, paddingVertical: 6 }}>
+            <Ionicons name={trajet.profil === 'pieton' ? 'walk' : 'car'} size={16} color="#0284C7" />
+            <Text className="text-[12.5px] font-extrabold text-[#1A1A1A]">
+              {trajet.approximatif ? 'À vol d’oiseau · ' : ''}
+              {trajet.distanceKm.toLocaleString('fr-FR')} km{trajet.dureeMin != null ? ` · ${trajet.dureeMin} min` : ''}
+            </Text>
+            <Pressable onPress={() => setTrajet(null)} accessibilityLabel="Effacer le trajet" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
+              <Ionicons name="close" size={15} color="#1A1A1A" />
+            </Pressable>
+          </View>
+        ) : null}
         {/* Pastille d'information (texte du site) */}
         <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
           <Ionicons name="storefront" size={13} color="#fff" />
