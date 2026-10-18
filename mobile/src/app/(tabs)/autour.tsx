@@ -173,6 +173,13 @@ export default function AutourFaciliteScreen() {
     };
   }, [courant, courantSp, lieuSel]);
 
+  // Recadrage de la carte : seulement quand la liste affichée change, jamais à la fermeture d'une bulle.
+  const cleListe = `${groupes.map((g) => g.ville).join(',')}|${resultat === null ? 'chargement' : 'pret'}`;
+  const [cleAjustee, setCleAjustee] = useState('');
+  useEffect(() => {
+    if (!selection && cleListe !== cleAjustee) queueMicrotask(() => setCleAjustee(cleListe));
+  }, [selection, cleListe, cleAjustee]);
+
   const origine = position ?? DAKAR;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
@@ -205,8 +212,9 @@ export default function AutourFaciliteScreen() {
         centre={{ lat: origine.latitude, lng: origine.longitude }}
         zoom={7}
         sombre
+        regions
         marqueurs={marqueurs}
-        ajuster={!selection}
+        ajuster={!selection && cleListe !== cleAjustee}
         focus={selection}
         popup={popup}
         commandes={setCarte}

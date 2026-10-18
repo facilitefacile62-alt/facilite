@@ -73,11 +73,13 @@ export type TrajetCarte = { points: [number, number][]; approximatif?: boolean }
 
 export type CentreCarte = { lat: number; lng: number };
 
+import { REGIONS_CARTE } from '@/lib/regionsCarte';
+
 const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
 const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean): string {
+function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8" />
@@ -90,6 +92,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .etiquette { background: rgba(0,0,0,.72); color: #fff; border: 0; border-radius: 10px; padding: 2px 7px; font: 700 11px system-ui, sans-serif; box-shadow: none; }
   .etiquette:before { display: none; }
   .bulle-regroupement { background: none; border: 0; }
+  .region-nom { background: none; border: 0; pointer-events: none; }
+  .region-nom span { display: block; width: 140px; text-align: center; font: 800 11px system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: ${sombre ? 'rgba(255,255,255,.68)' : 'rgba(30,41,59,.62)'}; text-shadow: ${sombre ? '0 1px 3px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.6)' : '0 1px 2px rgba(255,255,255,.9)'}; }
+  .zoom-proche .region-nom span { opacity: .4; }
   .marqueur-avatar { background: none; border: 0; }
   .marqueur-avatar.leaflet-interactive { pointer-events: none; }
   .marqueur-avatar .rond-cliquable { pointer-events: auto; }
@@ -119,6 +124,22 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     .setView([${centre.lat}, ${centre.lng}], ${zoom});
   L.tileLayer('${TUILES}', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(carte);
   var couche = L.layerGroup().addTo(carte);
+  // Limites et noms des 14 régions du Sénégal (OCHA / geoBoundaries) : contour coloré, léger voile, nom au centre.
+  var REGIONS = ${regions ? JSON.stringify(REGIONS_CARTE) : 'null'};
+  if (REGIONS) {
+    carte.createPane('regions');
+    carte.getPane('regions').style.zIndex = 250;
+    carte.attributionControl.addAttribution('Limites : OCHA / geoBoundaries');
+    var PALETTE = ['#38BDF8', '#F59E0B', '#34D399', '#F472B6', '#A78BFA', '#FB923C', '#2DD4BF', '#FACC15', '#60A5FA', '#F87171', '#4ADE80', '#C084FC', '#22D3EE', '#FDBA74'];
+    REGIONS.forEach(function (r, i) {
+      var c = PALETTE[i % PALETTE.length];
+      L.polygon(r.poly, { pane: 'regions', color: c, weight: 1.8, opacity: .9, dashArray: '6 5', fillColor: c, fillOpacity: ${sombre ? 0.07 : 0.12}, interactive: false }).addTo(carte);
+      L.marker(r.centre, { icon: L.divIcon({ className: 'region-nom', html: '<span>' + esc(r.nom) + '</span>', iconSize: [140, 16], iconAnchor: [70, 8] }), interactive: false, keyboard: false, zIndexOffset: -1000 }).addTo(carte);
+    });
+    var suivreZoomRegions = function () { carte.getContainer().classList.toggle('zoom-proche', carte.getZoom() >= 12); };
+    carte.on('zoomend', suivreZoomRegions);
+    suivreZoomRegions();
+  }
   function envoyer(id) {
     var msg = String(id);
     if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(msg);
@@ -322,6 +343,7 @@ export default function CarteLeaflet({
   sombre = false,
   interactive = true,
   regrouper = false,
+  regions = false,
   onMarqueur,
   commandes,
   focus = null,
@@ -338,6 +360,8 @@ export default function CarteLeaflet({
   interactive?: boolean;
   /** Regroupe en pastilles à compteur les marqueurs qui se recouvrent. */
   regrouper?: boolean;
+  /** Trace les limites et les noms des régions du Sénégal. */
+  regions?: boolean;
   onMarqueur?: (id: string) => void;
   /** Reçoit des commandes impératives (recentrer, zoom ±) pour des contrôles flottants. */
   commandes?: (c: CommandesCarte) => void;
@@ -356,9 +380,9 @@ export default function CarteLeaflet({
   // Le document ne dépend que de la configuration initiale : changer de
   // marqueurs ne le régénère pas (voir plus haut).
   const html = useMemo(
-    () => documentHtml(centre, zoom, sombre, interactive, regrouper),
+    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sombre, interactive, regrouper]
+    [sombre, interactive, regrouper, regions]
   );
 
   const executer = useCallback((script: string) => {
