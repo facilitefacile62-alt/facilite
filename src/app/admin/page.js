@@ -1604,6 +1604,21 @@ export default function AdminDashboardPage() {
             <>
               <SecurityAlertsWidget onVoirTout={() => handleTabChange("securite")} />
 
+              {/* Stories du fil d'actualité : accès direct pour en ajouter (modèle de CV ou offre avec « Postuler ») */}
+              <div className="mb-6 flex flex-wrap items-center gap-3 p-4 bg-white border border-gray-200 rounded-2xl">
+                <div className="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center text-xl">🖼️</div>
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-extrabold text-gray-900">Stories du fil d&apos;actualité</p>
+                  <p className="text-xs text-gray-500">Modèles de CV avec le WhatsApp de Facilité, ou offres d&apos;emploi avec leur bouton « Postuler ».</p>
+                </div>
+                <Link href="/admin/stories?nouvelle=1" className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black">
+                  + Ajouter une story
+                </Link>
+                <Link href="/admin/stories" className="px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-50">
+                  Gérer les stories
+                </Link>
+              </div>
+
               {/* Barre de filtres — mise en évidence dans son propre bandeau, au-dessus des métriques */}
               <div className="flex flex-wrap items-center gap-3 mb-6 p-3 bg-orange-50/60 border border-orange-100 rounded-2xl">
                 <span className="text-[11px] font-extrabold text-orange-800 uppercase tracking-wider pl-1 flex items-center gap-1.5">

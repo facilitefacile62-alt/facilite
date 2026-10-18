@@ -12,7 +12,10 @@ import { supabase } from "@/lib/supabase";
 
 const TYPES_ACCEPTES = ["image/jpeg", "image/png", "image/webp"];
 const TAILLE_MAX = 5 * 1024 * 1024;
-const VIDE = { id: null, titre: "", libelle_bouton: "Commander via WhatsApp", lien: "", bouton_visible: true, actif: true };
+// Type « cv » : modèle de CV, bouton « Commander via WhatsApp ». Type « offre » : offre d'emploi, bouton « Postuler » avec le lien
+// de l'offre (obligatoire) — une offre n'est jamais publiée sans ce bouton.
+const LIBELLE_PAR_TYPE = { cv: "Commander via WhatsApp", offre: "Postuler" };
+const VIDE = { id: null, type: "cv", titre: "", libelle_bouton: "Commander via WhatsApp", lien: "", bouton_visible: true, actif: true };
 
 export default function AdminStoriesPage() {
   const [session, setSession] = useState(null);
@@ -65,6 +68,8 @@ export default function AdminStoriesPage() {
         }
         setSession(s);
         setAutorise(true);
+        // ?nouvelle=1 (bouton « Ajouter une story » du tableau de bord) : ouvre directement le formulaire.
+        if (new URLSearchParams(window.location.search).get("nouvelle") === "1") setForm({ ...VIDE });
         const res = await fetch("/api/admin/stories", { headers: { Authorization: `Bearer ${s.access_token}` } });
         const json = await res.json();
         if (res.ok) setStories(json.stories || []);
@@ -84,7 +89,7 @@ export default function AdminStoriesPage() {
   function ouvrirFormulaire(story) {
     setMessage(null);
     choisirFichier(null);
-    setForm(story ? { id: story.id, titre: story.titre, libelle_bouton: story.libelle_bouton, lien: story.lien || "", bouton_visible: story.bouton_visible !== false, actif: story.actif, image_url: story.image_url } : { ...VIDE });
+    setForm(story ? { id: story.id, type: story.type || "cv", titre: story.titre, libelle_bouton: story.libelle_bouton, lien: story.lien || "", bouton_visible: story.bouton_visible !== false, actif: story.actif, image_url: story.image_url } : { ...VIDE });
   }
 
   async function enregistrer() {
@@ -103,7 +108,8 @@ export default function AdminStoriesPage() {
       if (!form.titre.trim()) throw new Error("Donnez un titre à la story.");
       if (!form.id && !path) throw new Error("Choisissez le visuel de la story.");
 
-      const corps = { titre: form.titre, libelle_bouton: form.libelle_bouton, lien: form.lien, bouton_visible: form.bouton_visible, actif: form.actif, ...(path ? { path } : {}) };
+      if (form.type === "offre" && !/^https?:\/\//i.test(form.lien.trim())) throw new Error("Une offre d'emploi doit avoir un bouton « Postuler » : indiquez le lien de l'offre (http:// ou https://).");
+      const corps = { type: form.type, titre: form.titre, libelle_bouton: form.libelle_bouton, lien: form.lien, bouton_visible: form.bouton_visible, actif: form.actif, ...(path ? { path } : {}) };
       if (form.id) await appeler("PATCH", { ...corps, id: form.id });
       else await appeler("POST", corps);
       await recharger();
@@ -237,6 +243,36 @@ export default function AdminStoriesPage() {
             </div>
           </div>
 
+          {/* Type : modèle de CV (WhatsApp) ou offre d'emploi (Postuler) */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-gray-700">Type de story</p>
+            <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Type de story">
+              {[
+                { id: "cv", titre: "Modèle de CV", detail: "Bouton « Commander via WhatsApp » (numéro de Facilité)" },
+                { id: "offre", titre: "Offre d'emploi", detail: "Bouton « Postuler » obligatoire, avec le lien de l'offre" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.type === t.id}
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      type: t.id,
+                      libelle_bouton: Object.values(LIBELLE_PAR_TYPE).includes(form.libelle_bouton) ? LIBELLE_PAR_TYPE[t.id] : form.libelle_bouton,
+                      bouton_visible: t.id === "offre" ? true : form.bouton_visible,
+                    })
+                  }
+                  className={`text-left rounded-xl border px-3.5 py-3 cursor-pointer ${form.type === t.id ? "border-emerald-600 bg-emerald-50" : "border-gray-200 hover:bg-gray-50"}`}
+                >
+                  <p className="text-sm font-extrabold text-gray-900">{t.titre}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{t.detail}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label htmlFor="story-titre" className="block text-xs font-bold text-gray-700">
               Titre (40 caractères maximum)
@@ -268,22 +304,26 @@ export default function AdminStoriesPage() {
             </div>
             <div className="space-y-2">
               <label htmlFor="story-lien" className="block text-xs font-bold text-gray-700">
-                Lien du bouton (ou numéro WhatsApp)
+                {form.type === "offre" ? "Lien de l'offre (obligatoire)" : "Lien du bouton (ou numéro WhatsApp)"}
               </label>
               <input
                 id="story-lien"
                 type="text"
                 value={form.lien}
                 onChange={(e) => setForm({ ...form, lien: e.target.value })}
-                placeholder="+221 77 140 08 32  ou  https://…"
+                placeholder={form.type === "offre" ? "https://ffacilite.com/offres/…" : "+221 77 140 08 32  ou  https://…"}
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm"
               />
             </div>
           </div>
-          <p className="text-[11px] text-gray-500 -mt-2">Un numéro de téléphone devient automatiquement un lien WhatsApp. Sans lien, le bouton n&apos;est pas affiché.</p>
+          <p className="text-[11px] text-gray-500 -mt-2">
+            {form.type === "offre"
+              ? "Une offre d'emploi est toujours accompagnée de son bouton « Postuler » : le lien de l'offre est obligatoire."
+              : "Un numéro de téléphone devient automatiquement un lien WhatsApp. Sans lien, l'application ouvre le WhatsApp de Facilité."}
+          </p>
 
-          {/* Interrupteur : bouton (et numéro / lien) visible ou caché dans la story */}
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-3">
+          {/* Interrupteur : bouton (et numéro / lien) visible ou caché dans la story — jamais caché pour une offre */}
+          <div className={`flex items-center justify-between gap-3 rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-3 ${form.type === "offre" ? "hidden" : ""}`}>
             <div>
               <p className="text-sm font-extrabold text-gray-900">Bouton et numéro visibles</p>
               <p className="text-[11px] text-gray-500">
@@ -367,7 +407,12 @@ export default function AdminStoriesPage() {
                 <img src={s.image_url} alt={s.titre} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-gray-900 truncate">{s.titre}</p>
+                <p className="text-sm font-extrabold text-gray-900 truncate">
+                  {s.titre}
+                  <span className={`ml-2 align-middle text-[10px] font-black px-1.5 py-0.5 rounded-full ${s.type === "offre" ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"}`}>
+                    {s.type === "offre" ? "Offre" : "Modèle de CV"}
+                  </span>
+                </p>
                 <p className="text-xs text-gray-500 truncate">
                   {s.bouton_visible === false ? "Bouton caché" : s.libelle_bouton}
                   {s.bouton_visible !== false ? (s.lien ? ` → ${s.lien}` : " · sans lien") : ""}
