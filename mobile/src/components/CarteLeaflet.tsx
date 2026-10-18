@@ -89,6 +89,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .etiquette:before { display: none; }
   .bulle-regroupement { background: none; border: 0; }
   .marqueur-avatar { background: none; border: 0; }
+  .marqueur-avatar.leaflet-interactive { pointer-events: none; }
+  .marqueur-avatar .rond-cliquable { pointer-events: auto; }
   .popup-boutique .leaflet-popup-content-wrapper { background: #fff; border-radius: 22px; padding: 0; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
   .popup-boutique .leaflet-popup-content { margin: 0; width: auto !important; }
   .popup-boutique .leaflet-popup-tip { background: #fff; }
@@ -140,7 +142,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var contenu = src
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
       : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
-    var rond = '<div style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+    var rond = '<div class="rond-cliquable" style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
     var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
     if (a.moi) {
       return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond
