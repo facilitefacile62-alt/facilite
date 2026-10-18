@@ -94,8 +94,10 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
     ? story.lien.includes('text=') ? story.lien : `${story.lien}${story.lien.includes('?') ? '&' : '?'}text=${encodeURIComponent(message)}`
     : null;
   // Un lien d'une autre nature défini par l'administrateur est respecté ; sinon : WhatsApp de Facilité, message pré-rempli.
-  const lienAction = story.lien && !lienWhatsapp ? story.lien : lienWhatsapp ?? `https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(message)}`;
-  const whatsapp = lienAction.includes('wa.me') || /whatsapp/i.test(lienAction);
+  // Une OFFRE D'EMPLOI a toujours un bouton « Postuler » vers le lien de l'offre (jamais WhatsApp de commande de CV).
+  const offre = story.type === 'offre';
+  const lienAction = offre && story.lien ? story.lien : story.lien && !lienWhatsapp ? story.lien : lienWhatsapp ?? `https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(message)}`;
+  const whatsapp = !offre && (lienAction.includes('wa.me') || /whatsapp/i.test(lienAction));
 
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={onFermer} statusBarTranslucent>
@@ -179,8 +181,8 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
               }}
               accessibilityRole="button"
               style={{ height: 54, borderRadius: 27, backgroundColor: whatsapp ? '#25D366' : '#059669', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <Ionicons name={whatsapp ? 'logo-whatsapp' : 'open-outline'} size={21} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 15.5, fontWeight: '900' }}>{story.libelleBouton || 'Commander via WhatsApp'}</Text>
+              <Ionicons name={whatsapp ? 'logo-whatsapp' : offre ? 'paper-plane' : 'open-outline'} size={21} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 15.5, fontWeight: '900' }}>{story.libelleBouton || (offre ? 'Postuler' : 'Commander via WhatsApp')}</Text>
             </Pressable>
           </View>
         ) : null}
