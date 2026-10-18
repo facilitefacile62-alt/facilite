@@ -127,14 +127,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var src = a.photo || a.uri;
     var contenu = src
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
-      : '<span style="font-size:24px;line-height:1">' + esc(a.emoji || '🏪') + '</span>';
-    var rond = '<div style="width:52px;height:52px;border-radius:9999px;padding:3px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+      : '<span style="font-size:19px;line-height:1">' + esc(a.emoji || '🏪') + '</span>';
+    var rond = '<div style="width:42px;height:42px;border-radius:9999px;padding:3px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
     var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
     if (a.moi) {
       return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond
         + '<div style="margin-top:5px;padding:3px 10px;background:#1877F2;color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;white-space:nowrap;border:1px solid rgba(255,255,255,.35);box-shadow:0 6px 16px rgba(0,0,0,.45)">Vous êtes ici</div></div>';
     }
-    var pastille = '<div style="margin-bottom:6px;padding:4px 12px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
+    var pastille = '<div style="margin-bottom:6px;padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
       + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
       + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
@@ -196,7 +196,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70, m.avatar.moi ? 38 : 90] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70, m.avatar.moi ? 32 : 80] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 640 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () { envoyer(m.id); });
         return;
@@ -241,7 +241,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
     });
-    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: [0, -88], minWidth: 250, maxWidth: 300 })
+    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: [0, -78], minWidth: 250, maxWidth: 300 })
       .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
