@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import CarteLeaflet, { type CommandesCarte, type MarqueurCarte } from '@/components/CarteLeaflet';
+import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
 import { chargerBoutiquesCarte, type BoutiqueCarte } from '@/lib/boutiquesCarte';
 import { chargerArticles, distanceLisible, prixLisible, type ArticleMarketplace, type Position } from '@/lib/marketplace';
 import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
@@ -166,7 +166,7 @@ export default function AutourDeMoiScreen() {
       setSelection(id);
       const b = boutiques?.find((x) => x.id === id);
       // Remonte la boutique à l'écran : l'aperçu de ses articles occupe le bas et la cacherait.
-      if (b) carte?.centrer(b.latitude, b.longitude, zoom, 0.1);
+      if (b) carte?.centrer(b.latitude, b.longitude, zoom, -0.07);
     },
     [boutiques, carte]
   );
@@ -195,6 +195,18 @@ export default function AutourDeMoiScreen() {
   // seulement pour des boutiques situées exactement au même endroit).
   const surMarqueur = useCallback(
     (id: string) => {
+      if (id === 'fermer') {
+        setSelection(null);
+        return;
+      }
+      if (id === 'boutique') {
+        if (selection) router.push(`/marketplace/boutique/${selection}` as Href);
+        return;
+      }
+      if (id.startsWith('article:')) {
+        router.push(`/marketplace/${id.slice(8)}` as Href);
+        return;
+      }
       if (id.startsWith('groupe:')) {
         const premier = id.slice(7).split(',')[0];
         if (premier) choisirBoutique(premier, 18);
@@ -202,7 +214,7 @@ export default function AutourDeMoiScreen() {
       }
       toucherBoutique(id);
     },
-    [choisirBoutique, toucherBoutique]
+    [choisirBoutique, toucherBoutique, router, selection]
   );
 
   // Articles de la boutique sélectionnée, pour l'aperçu fixe.
@@ -223,6 +235,21 @@ export default function AutourDeMoiScreen() {
   }, [selection]);
   const boutiqueSel = selection ? boutiques?.find((b) => b.id === selection) ?? null : null;
 
+  // Bulle d'aperçu posée au-dessus du rond de la boutique fixée (même présentation que sur le site).
+  const popup = useMemo<PopupBoutique | null>(() => {
+    if (!boutiqueSel) return null;
+    return {
+      lat: boutiqueSel.latitude,
+      lng: boutiqueSel.longitude,
+      titre: boutiqueSel.nom,
+      sous: boutiqueSel.quartier || boutiqueSel.ville || 'Sénégal',
+      articles:
+        articlesSel?.id === boutiqueSel.id
+          ? articlesSel.liste.map((a) => ({ id: a.id, titre: a.titre, prix: `${prixLisible(a.prixXof)} F`, photo: a.photos[0] }))
+          : null,
+    };
+  }, [boutiqueSel, articlesSel]);
+
   const lancerRecherche = () => setRecherche(saisie);
 
   return (
@@ -234,6 +261,7 @@ export default function AutourDeMoiScreen() {
         sombre={sombre}
         ajuster={!selection}
         focus={selection}
+        popup={popup}
         onMarqueur={surMarqueur}
         commandes={setCarte}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -357,56 +385,6 @@ export default function AutourDeMoiScreen() {
 
       {/* Bas : onglets Boutiques / Articles, puis le carrousel */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
-        {/* Aperçu fixe de la boutique sélectionnée : nom, ville, ✕ et ses articles */}
-        {boutiqueSel ? (
-          <View className="rounded-[20px] p-3" style={{ backgroundColor: '#fff' }}>
-            <View className="flex-row items-start justify-between">
-              <Pressable onPress={() => toucherBoutique(boutiqueSel.id)} className="flex-1 min-w-0" hitSlop={6}>
-                <Text className="text-[15px] font-black text-[#1A1A1A]" numberOfLines={1}>{boutiqueSel.nom}</Text>
-                <Text className="text-[12.5px] font-bold mt-0.5" style={{ color: BLEU }} numberOfLines={1}>
-                  📍 {boutiqueSel.quartier || boutiqueSel.ville || 'Sénégal'}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setSelection(null)}
-                accessibilityLabel="Fermer l'aperçu"
-                className="items-center justify-center rounded-full"
-                style={{ width: 44, height: 44, marginTop: -8, marginRight: -8 }}>
-                <View className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
-                  <Ionicons name="close" size={16} color="#1A1A1A" />
-                </View>
-              </Pressable>
-            </View>
-            {articlesSel?.id !== boutiqueSel.id ? (
-              <View className="py-6"><ActivityIndicator color={VERT} /></View>
-            ) : articlesSel.liste.length === 0 ? (
-              <Text className="text-[12.5px] py-5 text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>Cette boutique n&apos;a pas encore d&apos;article.</Text>
-            ) : (
-              <FlatList
-                horizontal
-                data={articlesSel.liste}
-                keyExtractor={(a) => a.id}
-                showsHorizontalScrollIndicator={false}
-                style={{ marginTop: 8 }}
-                contentContainerStyle={{ gap: 10 }}
-                renderItem={({ item }) => (
-                  <Pressable onPress={() => router.push(`/marketplace/${item.id}` as Href)} style={{ width: 104 }}>
-                    <View className="rounded-[12px] overflow-hidden items-center justify-center" style={{ width: 104, height: 70, backgroundColor: '#E4DED2' }}>
-                      {item.photos[0] ? (
-                        <Image source={{ uri: item.photos[0] }} alt={item.titre} style={{ width: 104, height: 70 }} contentFit="cover" />
-                      ) : (
-                        <Ionicons name="image-outline" size={20} color="rgba(0,0,0,0.3)" />
-                      )}
-                    </View>
-                    <Text className="text-[11.5px] font-bold text-[#1A1A1A] mt-1.5" numberOfLines={1}>{item.titre}</Text>
-                    <Text className="text-[11.5px] font-black" style={{ color: '#047857' }}>{prixLisible(item.prixXof)} FCFA</Text>
-                  </Pressable>
-                )}
-              />
-            )}
-            <Text className="text-center text-[10.5px] mt-2" style={{ color: 'rgba(0,0,0,0.4)' }}>Double appui pour ouvrir la boutique</Text>
-          </View>
-        ) : null}
         {/* Pastille d'information (texte du site) */}
         <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
           <Ionicons name="storefront" size={13} color="#fff" />

@@ -50,6 +50,16 @@ export type MarqueurCarte = {
   };
 };
 
+/** Bulle d'aperçu posée AU-DESSUS du rond d'une boutique (comme la carte Locaux du site). */
+export type PopupBoutique = {
+  lat: number;
+  lng: number;
+  titre: string;
+  sous?: string;
+  /** null = chargement des articles en cours. */
+  articles: { id: string; titre: string; prix: string; photo?: string }[] | null;
+};
+
 export type CentreCarte = { lat: number; lng: number };
 
 const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
@@ -70,6 +80,21 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .etiquette:before { display: none; }
   .bulle-regroupement { background: none; border: 0; }
   .marqueur-avatar { background: none; border: 0; }
+  .popup-boutique .leaflet-popup-content-wrapper { background: #fff; border-radius: 22px; padding: 0; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
+  .popup-boutique .leaflet-popup-content { margin: 0; width: auto !important; }
+  .popup-boutique .leaflet-popup-tip { background: #fff; }
+  .pb-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px 12px 6px 16px; }
+  .pb-nom { font: 900 15px system-ui, sans-serif; color: #111; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .pb-lieu { font: 700 12px system-ui, sans-serif; color: #2563EB; margin-top: 2px; }
+  .pb-x { width: 30px; height: 30px; border-radius: 9999px; background: #EFEDE7; color: #111; display: flex; align-items: center; justify-content: center; font: 700 15px system-ui, sans-serif; cursor: pointer; flex: none; }
+  .pb-liste { display: flex; gap: 10px; overflow-x: auto; padding: 4px 14px 14px; max-width: 280px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pb-liste::-webkit-scrollbar { display: none; }
+  .pb-art { flex: none; width: 118px; cursor: pointer; }
+  .pb-photo { position: relative; width: 118px; height: 118px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
+  .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pb-prix { position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
+  .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
 </head><body>
@@ -198,6 +223,27 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     carte.setView([lat, lng], z || carte.getZoom(), { animate: false });
     if (decalage) carte.panBy([0, Math.round(carte.getSize().y * decalage)], { animate: false });
   };
+  var popupCourant = null;
+  window.majPopup = function (d) {
+    if (popupCourant) { carte.closePopup(popupCourant); popupCourant = null; }
+    if (!d) return;
+    var corps = d.articles === null ? '<div class="pb-vide">Chargement…</div>'
+      : d.articles.length === 0 ? '<div class="pb-vide">Cette boutique n’a pas encore d’article.</div>'
+      : '<div class="pb-liste">' + d.articles.map(function (a) {
+          return '<div class="pb-art" data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
+            + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '')
+            + '<span class="pb-prix">' + esc(a.prix) + '</span></div><div class="pb-titre">' + esc(a.titre) + '</div></div>';
+        }).join('') + '</div>';
+    var el = document.createElement('div');
+    el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
+      + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps;
+    el.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-act]') : null;
+      if (t) envoyer(t.getAttribute('data-act'));
+    });
+    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: [0, -88], minWidth: 250, maxWidth: 300 })
+      .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
+  };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
 </script>
@@ -220,6 +266,7 @@ export default function CarteLeaflet({
   onMarqueur,
   commandes,
   focus = null,
+  popup = null,
   style,
 }: {
   centre: CentreCarte;
@@ -236,6 +283,8 @@ export default function CarteLeaflet({
   commandes?: (c: CommandesCarte) => void;
   /** Identifiant de la boutique fixée : les autres marqueurs disparaissent tant qu'il est défini. */
   focus?: string | null;
+  /** Bulle d'aperçu au-dessus du rond de la boutique fixée. */
+  popup?: PopupBoutique | null;
   style?: StyleProp<ViewStyle>;
 }) {
   const refWebView = useRef<WebView>(null);
@@ -268,9 +317,14 @@ export default function CarteLeaflet({
     executer(`window.majMarqueurs && window.majMarqueurs(${JSON.stringify(marqueurs)}, ${ajuster}, ${JSON.stringify(focus)})`);
   }, [executer, marqueurs, ajuster, focus]);
 
+  const majPopup = useCallback(() => {
+    executer(`window.majPopup && window.majPopup(${JSON.stringify(popup)})`);
+  }, [executer, popup]);
+
   useEffect(() => {
     miseAJour();
-  }, [miseAJour]);
+    majPopup();
+  }, [miseAJour, majPopup]);
 
   useEffect(() => {
     commandes?.({
@@ -284,12 +338,15 @@ export default function CarteLeaflet({
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     const surMessage = (e: MessageEvent) => {
-      if (e.data?.pret) miseAJour();
+      if (e.data?.pret) {
+        miseAJour();
+        majPopup();
+      }
       if (e.data?.marqueur && onMarqueur) onMarqueur(String(e.data.marqueur));
     };
     window.addEventListener('message', surMessage);
     return () => window.removeEventListener('message', surMessage);
-  }, [miseAJour, onMarqueur]);
+  }, [miseAJour, majPopup, onMarqueur]);
 
   const surMessageNatif = (e: WebViewMessageEvent) => {
     if (onMarqueur) onMarqueur(e.nativeEvent.data);
@@ -312,7 +369,10 @@ export default function CarteLeaflet({
           javaScriptEnabled
           domStorageEnabled
           onMessage={surMessageNatif}
-          onLoadEnd={miseAJour}
+          onLoadEnd={() => {
+            miseAJour();
+            majPopup();
+          }}
           scrollEnabled={false}
           nestedScrollEnabled
           style={{ flex: 1, backgroundColor: 'transparent' }}
