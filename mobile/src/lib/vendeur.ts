@@ -34,6 +34,8 @@ export type MaBoutique = {
   description_prestation: string | null;
   categorie_etablissement: string | null;
   disponible_manuel: boolean;
+  /** Chemin du logo dans le bucket marketplace-photos (voir definirLogoBoutique). */
+  logo_photo: string | null;
 };
 
 /** Une boutique vue par n'importe quel visiteur (page publique) : mêmes champs que MaBoutique + propriétaire et avatar. */
@@ -47,7 +49,7 @@ export async function chargerBoutiquePublique(id: string): Promise<BoutiquePubli
   const { data, error } = await supabase
     .from('marketplace_stores')
     .select(
-      'id, owner_id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, avatar_config'
+      'id, owner_id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, avatar_config'
     )
     .eq('id', id)
     .eq('actif', true)
@@ -88,7 +90,7 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
   const { data, error } = await supabase
     .from('marketplace_stores')
     .select(
-      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel'
+      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo'
     )
     .eq('owner_id', userId)
     .order('created_at', { ascending: true });
@@ -187,6 +189,12 @@ export async function modifierBoutique(
 }
 
 /** Boutique disponible maintenant, ou indisponible (Service / Établissement). */
+/** Enregistre (ou retire, avec null) le logo de la boutique : chemin renvoyé par envoyerPhotoArticle. */
+export async function definirLogoBoutique(storeId: string, chemin: string | null): Promise<void> {
+  const { error } = await supabase.rpc('definir_logo_ma_boutique', { p_store_id: storeId, p_logo: chemin });
+  if (error) throw new Error(error.message);
+}
+
 export async function definirDisponibiliteBoutique(storeId: string, disponible: boolean): Promise<void> {
   const { error } = await supabase.rpc('definir_disponibilite_boutique', { p_store_id: storeId, p_disponible: disponible });
   if (error) throw new Error(error.message);

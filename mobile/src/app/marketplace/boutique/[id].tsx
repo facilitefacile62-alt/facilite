@@ -10,14 +10,14 @@ import { useAuth } from '@/context/AuthContext';
 import { dataUriAvatarBoutique } from '@/lib/avatarBoutique';
 import { libelleCategorieEtablissement } from '@/lib/boutiqueCategories';
 import { NOM_JOUR, chargerHoraires, estAujourdhui, type HoraireJour } from '@/lib/horaires';
-import { chargerArticles, prixLisible, type ArticleMarketplace } from '@/lib/marketplace';
+import { chargerArticles, prixLisible, urlPhoto, type ArticleMarketplace } from '@/lib/marketplace';
 import { chargerBoutiquePublique, type BoutiquePublique } from '@/lib/vendeur';
 
-// Page d'une boutique vue par un visiteur — même présentation que « Ma boutique » du vendeur
-// (maquettes « Boutique » 35 Article, 36 Service, 37 Établissement) : en-tête, retour · NOM, bloc profil
-// (avatar, nom, badge BOUTIQUE, contact), onglets ARTICLE · SERVICE · ÉTABLISSEMENT. Lecture seule :
-// pas de crayon, pas d'interrupteur « Rendre … visible », pas de « Modifier ». Le propriétaire qui ouvre
-// sa propre boutique est renvoyé vers « Ma boutique » (avec ses commandes de gestion).
+// Page d'une boutique vue par un visiteur — même aspect que « Ma boutique » du vendeur, lui-même identique
+// à l'onglet Profil de Facilité : photo ronde, nom, lieu, bouton « Contacter » à la place de « Modifier
+// infos », onglets Article · Service · Établissement, cartes à vignette. Lecture seule : pas de « + » sur la
+// photo, pas d'interrupteur « Rendre … visible », pas de modification. Le propriétaire qui ouvre sa propre
+// boutique est renvoyé vers « Ma boutique » (avec ses commandes de gestion).
 //
 // Les données sont les vraies. Non affichés, faute de donnée : le compteur « 4 K ami(e)s » des maquettes
 // (aucun système d'amis). Une rubrique que la boutique n'a pas renseignée le dit au lieu d'inventer.
@@ -25,6 +25,10 @@ const VERT = '#10B981';
 const BLEU = '#2563EB';
 const VIOLET = '#7C3AED';
 const FOND = '#F2F0EA';
+// Mêmes valeurs que l'onglet Profil (src/app/(tabs)/profil.tsx).
+const CARTE = '#FFFFFF';
+const BORDURE = 'rgba(0,0,0,0.06)';
+const STYLE_CARTE = { borderRadius: 16, backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE } as const;
 
 type Onglet = 'article' | 'service' | 'etablissement';
 
@@ -110,7 +114,8 @@ export default function BoutiquePubliqueScreen() {
     );
   }
 
-  const lieu = [boutique.quartier, boutique.ville].filter(Boolean).join(' · ') || 'Sénégal';
+  const lieuVirgule = [boutique.quartier, boutique.ville].filter(Boolean).join(', ') || 'Boutique sur Facilité';
+  const logo = boutique.logo_photo ? urlPhoto(boutique.logo_photo) : null;
   const numero = (boutique.telephone_whatsapp ?? '').replace(/[^\d]/g, '');
   const contacter = () => {
     if (!numero) return;
@@ -118,7 +123,7 @@ export default function BoutiquePubliqueScreen() {
   };
 
   const statutDispo = (
-    <View className="bg-white p-3.5 gap-2.5" style={{ borderRadius: 18 }}>
+    <View className="p-3.5 gap-2.5" style={STYLE_CARTE}>
       <View className="flex-row items-center gap-2">
         <View style={{ width: 13, height: 13, borderRadius: 7, borderWidth: 2, borderColor: VERT }} />
         <Text className="text-[13px] font-black text-[#111]">Disponibilité</Text>
@@ -144,59 +149,71 @@ export default function BoutiquePubliqueScreen() {
       {entete}
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
-        {/* Retour · NOM */}
-        <View className="flex-row items-center justify-between px-4 py-3">
-          <Pressable onPress={retour} accessibilityLabel="Retour" className="items-center justify-center" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
-            <Ionicons name="arrow-back" size={19} color={BLEU} />
+        {/* Retour */}
+        <View className="px-4 pt-3">
+          <Pressable onPress={retour} accessibilityLabel="Retour" className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8E4DA' }}>
+            <Ionicons name="arrow-back" size={18} color={BLEU} />
           </Pressable>
-          <Text className="flex-1 text-center text-[13px] font-black" style={{ letterSpacing: 1.4 }} numberOfLines={1}>
-            {boutique.nom.toUpperCase()}
-          </Text>
-          <View style={{ width: 44, height: 44 }} />
         </View>
 
-        {/* Profil */}
-        <View className="flex-row gap-3 px-4">
-          <View className="items-center justify-center overflow-hidden" style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#D9D2C3' }}>
-            {avatar ? (
-              <Image source={{ uri: avatar }} alt={boutique.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-            ) : (
-              <Ionicons name="storefront" size={26} color="#0d3b34" />
-            )}
-          </View>
-          <View className="flex-1 min-w-0">
-            <View className="flex-row items-center gap-2">
-              <Ionicons name="storefront-outline" size={14} color="#D97706" />
-              <Text className="text-[15px] font-black text-[#111] shrink" numberOfLines={1}>{boutique.nom}</Text>
-              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: VIOLET }}>
-                <Text className="text-[9px] font-black text-white" style={{ letterSpacing: 0.5 }}>BOUTIQUE</Text>
-              </View>
-              {numero ? (
-                <Pressable onPress={contacter} className="flex-row items-center gap-1 bg-white rounded-full ml-auto" style={{ height: 30, paddingHorizontal: 10 }}>
-                  <Ionicons name="logo-whatsapp" size={12} color="#16A34A" />
-                  <Text className="text-[11px] font-black text-[#111]">Contacter</Text>
-                </Pressable>
-              ) : null}
+        {/* En-tête : photo ronde, nom, lieu, Contacter — comme l'onglet Profil */}
+        <View className="px-4 pt-3">
+          <View className="flex-row items-center gap-3">
+            <View className="w-[72px] h-[72px] rounded-full bg-[#E8E4DA] items-center justify-center overflow-hidden">
+              {logo ? (
+                <Image source={{ uri: logo }} alt={boutique.nom} style={{ width: 72, height: 72 }} contentFit="cover" />
+              ) : avatar ? (
+                <Image source={{ uri: avatar }} alt={boutique.nom} style={{ width: 72, height: 72 }} contentFit="cover" />
+              ) : (
+                <Ionicons name="storefront" size={28} color="rgba(0,0,0,0.3)" />
+              )}
             </View>
-            <Text className="text-[12px] mt-1.5" style={{ color: 'rgba(0,0,0,0.6)' }}>Boutique officielle partenaire sur Facilité Sénégal · Vente d&apos;articles &amp; livraison express</Text>
-            <Text className="text-[12px] font-black mt-0.5 text-[#111]">{lieu}</Text>
+
+            <View className="flex-1 min-w-0">
+              <View className="flex-row items-center gap-1.5">
+                <Ionicons name="storefront" size={15} color="#B45309" />
+                <Text className="text-[16px] font-black text-[#1A1A1A] flex-1" numberOfLines={1}>
+                  {boutique.nom}
+                </Text>
+              </View>
+              <Text className="text-[12px] text-black/50 mt-1" numberOfLines={2}>
+                {lieuVirgule}
+              </Text>
+            </View>
+
+            {numero ? (
+              <Pressable
+                onPress={contacter}
+                className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5"
+                style={{ borderWidth: 1, borderColor: BORDURE }}>
+                <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
+                <Text className="text-[12px] font-bold text-[#1A1A1A]">Contacter</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
-        {/* Onglets */}
-        <View className="flex-row bg-white mx-4 mt-4 p-1.5" style={{ borderRadius: 22 }}>
-          {(['article', 'service', 'etablissement'] as const).map((o) => {
-            const actif = onglet === o;
+        {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
+        <View className="flex-row gap-2.5 px-4 mt-4">
+          {(
+            [
+              { id: 'article' as const, label: 'Article', icone: 'pricetag-outline' as const },
+              { id: 'service' as const, label: 'Service', icone: 'construct-outline' as const },
+              { id: 'etablissement' as const, label: 'Établissement', icone: 'storefront-outline' as const },
+            ]
+          ).map((o) => {
+            const actif = onglet === o.id;
             return (
               <Pressable
-                key={o}
-                onPress={() => setOnglet(o)}
+                key={o.id}
+                onPress={() => setOnglet(o.id)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: actif }}
-                className="flex-1 items-center justify-center"
-                style={{ height: 44, borderRadius: 18, backgroundColor: actif ? '#111' : 'transparent' }}>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[11.5px] font-black" style={{ letterSpacing: 0.6, color: actif ? '#fff' : '#374151' }}>
-                  {o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT'}
+                className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-3"
+                style={{ backgroundColor: CARTE, borderWidth: actif ? 1.5 : 1, borderColor: actif ? '#1A1A1A' : BORDURE }}>
+                <Ionicons name={o.icone} size={14} color="#1A1A1A" />
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A] shrink`}>
+                  {o.label}
                 </Text>
               </Pressable>
             );
@@ -213,23 +230,23 @@ export default function BoutiquePubliqueScreen() {
                   <Pressable
                     key={a.id}
                     onPress={() => router.push(`/marketplace/${a.id}` as Href)}
-                    className="bg-white overflow-hidden"
-                    style={{ width: '47.5%', borderRadius: 16 }}>
-                    <View className="items-center justify-center" style={{ height: 110, backgroundColor: '#EDE9E1' }}>
+                    className="rounded-2xl overflow-hidden"
+                    style={{ width: '47.5%', backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
+                    <View className="w-full aspect-square bg-[#E8E4DA] items-center justify-center">
                       {a.photos[0] ? (
                         <Image source={{ uri: a.photos[0] }} alt={a.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
-                        <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.35)" />
+                        <Ionicons name="image-outline" size={30} color="rgba(0,0,0,0.3)" />
                       )}
                       {a.quantite > 0 ? (
-                        <View className="absolute rounded" style={{ top: 8, left: 8, backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text className="text-[9px] font-black text-white">LIVE</Text>
+                        <View className="absolute top-2 left-2 rounded px-1.5 py-0.5" style={{ backgroundColor: '#DC2626' }}>
+                          <Text className="text-white text-[9px] font-black">LIVE</Text>
                         </View>
                       ) : null}
                     </View>
                     <View className="p-2.5">
-                      <Text className="text-[12.5px] font-black text-[#111]" numberOfLines={1}>{a.titre}</Text>
-                      <Text className="text-[13px] font-black text-[#111] mt-1">{prixLisible(a.prixXof)} CFA</Text>
+                      <Text className="text-[12px] font-bold text-[#1A1A1A]" numberOfLines={1}>{a.titre}</Text>
+                      <Text className="text-[12px] font-black text-[#1A1A1A] mt-0.5">{prixLisible(a.prixXof)} CFA</Text>
                     </View>
                   </Pressable>
                 ))}
@@ -258,7 +275,7 @@ export default function BoutiquePubliqueScreen() {
           {onglet === 'etablissement' ? (
             boutique.categorie_etablissement ? (
               <>
-                <View className="bg-white p-3.5 gap-2.5" style={{ borderRadius: 18 }}>
+                <View className="p-3.5 gap-2.5" style={STYLE_CARTE}>
                   <Text className="text-[13px] font-black text-[#111]">Catégorie de l&apos;établissement :</Text>
                   <View className="self-start rounded-full px-2.5 py-1" style={{ backgroundColor: '#D1FAE5' }}>
                     <Text className="text-[10.5px] font-black" style={{ color: '#047857', letterSpacing: 0.4 }}>
@@ -267,7 +284,7 @@ export default function BoutiquePubliqueScreen() {
                   </View>
                 </View>
                 {statutDispo}
-                <View className="bg-white p-3.5 gap-2.5" style={{ borderRadius: 18 }}>
+                <View className="p-3.5 gap-2.5" style={STYLE_CARTE}>
                   <View className="flex-row items-center gap-2">
                     <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: VIOLET }} />
                     <Text className="text-[13px] font-black text-[#111]">Horaires d&apos;ouverture</Text>

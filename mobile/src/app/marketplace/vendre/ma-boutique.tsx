@@ -1,6 +1,7 @@
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
@@ -16,27 +17,33 @@ import {
   chargerMesArticles,
   chargerMesBoutiques,
   definirDisponibiliteBoutique,
+  definirLogoBoutique,
   definirVisibiliteBoutique,
+  envoyerPhotoArticle,
   modifierBoutique,
+  retirerArticle,
   type MaBoutique,
   type MonArticle,
 } from '@/lib/vendeur';
 
-// « Ma boutique » du vendeur — maquettes « Boutique » (35 Article, 36 Service,
-// 37 Établissement) : en-tête Marketplace, ligne retour · NOM DE LA BOUTIQUE ·
-// crayon, bloc profil (logo, nom, badge BOUTIQUE, « Modifier infos »), onglets
-// ARTICLE · SERVICE · ÉTABLISSEMENT et, en tête de chaque onglet,
-// l'interrupteur « Rendre … visible ». « Devenir livreur » est dans SERVICE.
+// « Ma boutique » du vendeur. Depuis le 18/10/2026 elle a EXACTEMENT l'aspect de l'onglet Profil
+// de Facilité (src/app/(tabs)/profil.tsx), à la demande du propriétaire : même bloc d'en-tête (photo
+// ronde avec son « + », nom, lieu, « Modifier infos »), mêmes onglets à bordure, même bouton
+// « + Ajouter … » et mêmes cartes à vignette et petites actions. Le contenu reste celui des maquettes
+// « Boutique » (Article, Service, Établissement, interrupteur « Rendre … visible »). « Devenir
+// livreur » est dans SERVICE.
 //
-// Les données sont les vraies (boutique, articles, horaires du vendeur). Ce que
-// les maquettes montrent sans source en base n'est pas inventé : le compteur
-// « 4 K ami(e)s » (aucun système d'amis) et la photo du logo (aucun champ logo
-// sur la boutique) ne sont pas affichés ; le « + » du logo annonce que
-// l'envoi arrive plus tard.
+// Les données sont les vraies (boutique, articles, horaires du vendeur). Le logo est une vraie photo
+// choisie par le vendeur (colonne logo_photo, fonction definir_logo_ma_boutique). Le compteur
+// « 4 K ami(e)s » des maquettes n'est pas affiché : aucun système d'amis.
 const VERT = '#10B981';
 const BLEU = '#2563EB';
 const VIOLET = '#7C3AED';
 const FOND = '#F2F0EA';
+// Mêmes valeurs que l'onglet Profil (src/app/(tabs)/profil.tsx) : la boutique et le profil ont le même aspect.
+const CARTE = '#FFFFFF';
+const BORDURE = 'rgba(0,0,0,0.06)';
+const STYLE_CARTE = { borderRadius: 16, backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE } as const;
 
 type Onglet = 'article' | 'service' | 'etablissement';
 
@@ -50,6 +57,7 @@ export default function MaBoutiqueScreen() {
   const [horaires, setHoraires] = useState<HoraireJour[]>([]);
   const [onglet, setOnglet] = useState<Onglet>('article');
   const [basculeEnCours, setBasculeEnCours] = useState(false);
+  const [envoiLogo, setEnvoiLogo] = useState(false);
 
   const [editionMetier, setEditionMetier] = useState(false);
   const [metierSaisi, setMetierSaisi] = useState('');
@@ -127,6 +135,58 @@ export default function MaBoutiqueScreen() {
     }
   }
 
+  // Logo de la boutique : photo choisie dans la galerie, recadrée en carré, envoyée dans le bucket des photos.
+  async function changerLogo() {
+    if (!boutique || !userId || envoiLogo) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Autorisation requise', 'Facilité a besoin d’accéder à vos photos pour choisir le logo de la boutique.');
+      return;
+    }
+    const resultat = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [1, 1] });
+    if (resultat.canceled) return;
+    const a = resultat.assets[0];
+    setEnvoiLogo(true);
+    try {
+      const chemin = await envoyerPhotoArticle(a.uri, { width: a.width, height: a.height }, userId);
+      await definirLogoBoutique(boutique.id, chemin);
+      setBoutique({ ...boutique, logo_photo: chemin });
+    } catch (e) {
+      Alert.alert('Logo impossible', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    } finally {
+      setEnvoiLogo(false);
+    }
+  }
+
+  function ouvrirModification(a: MonArticle) {
+    router.push(
+      `/marketplace/vendre/modifier-article?${new URLSearchParams({
+        id: a.id,
+        titre: a.titre,
+        categorie: a.categorie,
+        prix: String(a.prix_xof),
+        quantite: String(a.quantite),
+        description: a.description || '',
+        photos: JSON.stringify(a.photos),
+      }).toString()}` as Href
+    );
+  }
+
+  function confirmerRetrait(a: MonArticle) {
+    Alert.alert('Retirer cet article ?', `« ${a.titre} » ne sera plus visible par les acheteurs.`, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Retirer',
+        style: 'destructive',
+        onPress: () => {
+          retirerArticle(a.id)
+            .then(() => setArticles((liste) => liste.filter((x) => x.id !== a.id)))
+            .catch((e: Error) => Alert.alert('Retrait impossible', e.message));
+        },
+      },
+    ]);
+  }
+
   const retour = () => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'));
 
   if (boutique === undefined) {
@@ -156,10 +216,10 @@ export default function MaBoutiqueScreen() {
     );
   }
 
-  const lieu = [boutique.quartier, boutique.ville].filter(Boolean).join(' · ') || 'Sénégal';
+  const lieuVirgule = [boutique.quartier, boutique.ville].filter(Boolean).join(', ') || 'Boutique sur Facilité';
 
   const blocDisponibilite = (
-    <View className="bg-white p-3.5 gap-2.5" style={{ borderRadius: 18 }}>
+    <View className="p-3.5 gap-2.5" style={STYLE_CARTE}>
       <View className="flex-row items-center gap-2">
         <View style={{ width: 13, height: 13, borderRadius: 7, borderWidth: 2, borderColor: VERT }} />
         <Text className="text-[13px] font-black text-[#111]">Disponibilité</Text>
@@ -187,7 +247,7 @@ export default function MaBoutiqueScreen() {
   );
 
   const interrupteur = (libelle: string) => (
-    <View className="flex-row items-center justify-between bg-white px-4 py-3.5" style={{ borderRadius: 18 }}>
+    <View className="flex-row items-center justify-between px-4 py-3.5" style={STYLE_CARTE}>
       <View className="flex-1 pr-3">
         <Text className="text-[13.5px] font-black text-[#111]">{libelle}</Text>
         <Text className="text-[11.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>
@@ -205,69 +265,71 @@ export default function MaBoutiqueScreen() {
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Retour · NOM · crayon */}
-        <View className="flex-row items-center justify-between px-4 py-3">
-          <Pressable onPress={retour} accessibilityLabel="Retour" className="items-center justify-center" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
-            <Ionicons name="arrow-back" size={19} color={BLEU} />
-          </Pressable>
-          <Text className="flex-1 text-center text-[13px] font-black" style={{ letterSpacing: 1.4 }} numberOfLines={1}>
-            {boutique.nom.toUpperCase()}
-          </Text>
-          <Pressable onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)} accessibilityLabel="Modifier la boutique" className="items-center justify-center" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
-            <Ionicons name="pencil" size={16} color="#1A1A1A" />
-          </Pressable>
-        </View>
-
-        {/* Profil */}
-        <View className="flex-row gap-3 px-4">
-          <Pressable
-            onPress={() => Alert.alert('Logo de la boutique', "L'envoi du logo arrive dans une prochaine mise à jour.")}
-            accessibilityLabel="Changer le logo"
-            style={{ width: 72, height: 72 }}>
-            <View
-              className="items-center justify-center"
-              style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#EDE9E1', borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.3)' }}>
-              <Text className="text-[12px] font-black" style={{ color: 'rgba(0,0,0,0.55)' }}>Logo</Text>
-              <Text className="text-[9px] underline" style={{ color: 'rgba(0,0,0,0.45)' }}>parcourir</Text>
-            </View>
-            <View className="absolute items-center justify-center" style={{ right: -2, bottom: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: BLEU, borderWidth: 2, borderColor: FOND }}>
-              <Ionicons name="add" size={15} color="#fff" />
-            </View>
-          </Pressable>
-          <View className="flex-1 min-w-0">
-            <View className="flex-row items-center gap-2">
-              <Ionicons name="storefront-outline" size={14} color="#D97706" />
-              <Text className="text-[15px] font-black text-[#111] shrink" numberOfLines={1}>{boutique.nom}</Text>
-              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: VIOLET }}>
-                <Text className="text-[9px] font-black text-white" style={{ letterSpacing: 0.5 }}>BOUTIQUE</Text>
+        {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
+        <View className="px-4 pt-4">
+          <View className="flex-row items-center gap-3">
+            <Pressable
+              onPress={changerLogo}
+              disabled={envoiLogo}
+              accessibilityLabel="Changer le logo de la boutique"
+              className="w-[72px] h-[72px] rounded-full bg-[#E8E4DA] items-center justify-center">
+              {envoiLogo ? (
+                <ActivityIndicator color={VERT} />
+              ) : boutique.logo_photo ? (
+                <Image source={{ uri: urlPhoto(boutique.logo_photo) ?? undefined }} alt="Logo de la boutique" style={{ width: 72, height: 72, borderRadius: 36 }} contentFit="cover" />
+              ) : (
+                <Ionicons name="storefront" size={28} color="rgba(0,0,0,0.3)" />
+              )}
+              <View
+                className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full items-center justify-center border-2 border-[#F2F0EA]"
+                style={{ backgroundColor: VERT }}>
+                <Ionicons name="add" size={14} color="#fff" />
               </View>
-              <Pressable
-                onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)}
-                className="flex-row items-center gap-1 bg-white rounded-full ml-auto"
-                style={{ height: 30, paddingHorizontal: 10 }}>
-                <Ionicons name="pencil" size={11} color="#1A1A1A" />
-                <Text className="text-[11px] font-black text-[#111]">Modifier infos</Text>
-              </Pressable>
+            </Pressable>
+
+            <View className="flex-1 min-w-0">
+              <View className="flex-row items-center gap-1.5">
+                <Ionicons name="storefront" size={15} color="#B45309" />
+                <Text className="text-[16px] font-black text-[#1A1A1A] flex-1" numberOfLines={1}>
+                  {boutique.nom}
+                </Text>
+              </View>
+              <Text className="text-[12px] text-black/50 mt-1" numberOfLines={2}>
+                {lieuVirgule}
+              </Text>
             </View>
-            <Text className="text-[12px] mt-1.5" style={{ color: 'rgba(0,0,0,0.6)' }}>Boutique officielle partenaire sur Facilité Sénégal · Vente d&apos;articles &amp; livraison express</Text>
-            <Text className="text-[12px] font-black mt-0.5 text-[#111]">{lieu}</Text>
+
+            <Pressable
+              onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)}
+              className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5"
+              style={{ borderWidth: 1, borderColor: BORDURE }}>
+              <Ionicons name="pencil" size={13} color="#1A1A1A" />
+              <Text className="text-[12px] font-bold text-[#1A1A1A]">Modifier infos</Text>
+            </Pressable>
           </View>
         </View>
 
-        {/* Onglets */}
-        <View className="flex-row bg-white mx-4 mt-4 p-1.5" style={{ borderRadius: 22 }}>
-          {(['article', 'service', 'etablissement'] as const).map((o) => {
-            const actif = onglet === o;
+        {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
+        <View className="flex-row gap-2.5 px-4 mt-4">
+          {(
+            [
+              { id: 'article' as const, label: 'Article', icone: 'pricetag-outline' as const },
+              { id: 'service' as const, label: 'Service', icone: 'construct-outline' as const },
+              { id: 'etablissement' as const, label: 'Établissement', icone: 'storefront-outline' as const },
+            ]
+          ).map((o) => {
+            const actif = onglet === o.id;
             return (
               <Pressable
-                key={o}
-                onPress={() => setOnglet(o)}
+                key={o.id}
+                onPress={() => setOnglet(o.id)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: actif }}
-                className="flex-1 items-center justify-center"
-                style={{ height: 44, borderRadius: 18, backgroundColor: actif ? '#111' : 'transparent' }}>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[11.5px] font-black" style={{ letterSpacing: 0.6, color: actif ? '#fff' : '#374151' }}>
-                  {o === 'article' ? 'ARTICLE' : o === 'service' ? 'SERVICE' : 'ÉTABLISSEMENT'}
+                className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-3"
+                style={{ backgroundColor: CARTE, borderWidth: actif ? 1.5 : 1, borderColor: actif ? '#1A1A1A' : BORDURE }}>
+                <Ionicons name={o.icone} size={14} color="#1A1A1A" />
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A] shrink`}>
+                  {o.label}
                 </Text>
               </Pressable>
             );
@@ -278,55 +340,31 @@ export default function MaBoutiqueScreen() {
           {onglet === 'article' ? (
             <>
               {interrupteur('Rendre mes articles visibles')}
+
+              <Pressable
+                onPress={() => router.push('/marketplace/vendre/publier' as Href)}
+                className="rounded-2xl py-3.5 items-center justify-center flex-row gap-2"
+                style={{ backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
+                <Ionicons name="add" size={16} color={BLEU} />
+                <Text className="text-[13.5px] font-bold" style={{ color: BLEU }}>Ajouter un article</Text>
+              </Pressable>
+
               {articles.length === 0 ? (
-                <View className="items-center py-10 gap-2">
-                  <Ionicons name="pricetags-outline" size={34} color="#9CA3AF" />
-                  <Text className="text-[13px] text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>Aucun article publié pour l&apos;instant.</Text>
+                <View className="py-10 px-6 items-center">
+                  <Ionicons name="pricetags-outline" size={32} color="rgba(0,0,0,0.25)" />
+                  <Text className="text-[13px] text-black/50 text-center mt-2">Aucun article publié pour l&apos;instant.</Text>
                 </View>
               ) : (
                 <View className="flex-row flex-wrap" style={{ gap: 12 }}>
-                  {articles.map((a) => {
-                    const photo = a.photos[0] ? urlPhoto(a.photos[0]) : null;
-                    return (
-                      <Pressable
-                        key={a.id}
-                        onPress={() =>
-                          router.push(
-                            `/marketplace/vendre/modifier-article?${new URLSearchParams({
-                              id: a.id,
-                              titre: a.titre,
-                              categorie: a.categorie,
-                              prix: String(a.prix_xof),
-                              quantite: String(a.quantite),
-                              description: a.description || '',
-                              photos: JSON.stringify(a.photos),
-                            }).toString()}` as Href
-                          )
-                        }
-                        className="bg-white overflow-hidden"
-                        style={{ width: '47.5%', borderRadius: 16 }}>
-                        <View
-                          className="items-center justify-center"
-                          style={photo ? { height: 110, backgroundColor: '#EDE9E1' } : { height: 110, backgroundColor: '#EDE9E1', borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.25)', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-                          {photo ? (
-                            <Image source={{ uri: photo }} alt={a.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                          ) : (
-                            <>
-                              <Ionicons name="image-outline" size={24} color="rgba(0,0,0,0.4)" />
-                              <Text className="text-[11px] font-bold mt-1" style={{ color: 'rgba(0,0,0,0.5)' }}>Photo produit</Text>
-                            </>
-                          )}
-                          <View className="absolute rounded" style={{ top: 8, left: 8, backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2 }}>
-                            <Text className="text-[9px] font-black text-white">LIVE</Text>
-                          </View>
-                        </View>
-                        <View className="p-2.5">
-                          <Text className="text-[12.5px] font-black text-[#111]" numberOfLines={1}>{a.titre}</Text>
-                          <Text className="text-[13px] font-black text-[#111] mt-1">{prixLisible(a.prix_xof)} CFA</Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
+                  {articles.map((a) => (
+                    <CarteArticle
+                      key={a.id}
+                      article={a}
+                      onVoir={() => router.push(`/marketplace/${a.id}` as Href)}
+                      onModifier={() => ouvrirModification(a)}
+                      onRetirer={() => confirmerRetrait(a)}
+                    />
+                  ))}
                 </View>
               )}
             </>
@@ -423,7 +461,7 @@ export default function MaBoutiqueScreen() {
             <>
               {interrupteur('Rendre mon établissement visible')}
 
-              <View className="bg-white p-3.5 gap-2.5" style={{ borderRadius: 18 }}>
+              <View className="p-3.5 gap-2.5" style={STYLE_CARTE}>
                 <Text className="text-[13px] font-black text-[#111]">Catégorie de l&apos;établissement :</Text>
                 {editionEtablissement ? (
                   <View className="gap-2.5">
@@ -471,7 +509,7 @@ export default function MaBoutiqueScreen() {
 
               {blocDisponibilite}
 
-              <View className="bg-white p-3.5 gap-2.5" style={{ borderRadius: 18 }}>
+              <View className="p-3.5 gap-2.5" style={STYLE_CARTE}>
                 <View className="flex-row items-center gap-2">
                   <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: VIOLET }} />
                   <Text className="text-[13px] font-black text-[#111]">Horaires d&apos;ouverture</Text>
@@ -512,6 +550,57 @@ export default function MaBoutiqueScreen() {
           ) : null}
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+/** Carte d'un article : même cadre que les cartes de documents du Profil (vignette, nom, détail, trois actions). */
+function CarteArticle({
+  article,
+  onVoir,
+  onModifier,
+  onRetirer,
+}: {
+  article: MonArticle;
+  onVoir: () => void;
+  onModifier: () => void;
+  onRetirer: () => void;
+}) {
+  const photo = article.photos[0] ? urlPhoto(article.photos[0]) : null;
+  return (
+    <View className="rounded-2xl overflow-hidden" style={{ width: '47.5%', backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
+      <Pressable onPress={onModifier} className="w-full aspect-square bg-[#E8E4DA] items-center justify-center">
+        {photo ? (
+          <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        ) : (
+          <>
+            <Ionicons name="image-outline" size={30} color="rgba(0,0,0,0.3)" />
+            <Text className="text-[11px] font-bold mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Photo produit</Text>
+          </>
+        )}
+        {article.quantite > 0 ? (
+          <View className="absolute top-2 left-2 rounded px-1.5 py-0.5" style={{ backgroundColor: '#DC2626' }}>
+            <Text className="text-white text-[9px] font-black">LIVE</Text>
+          </View>
+        ) : null}
+      </Pressable>
+      <View className="p-2.5">
+        <Text className="text-[12px] font-bold text-[#1A1A1A]" numberOfLines={1}>
+          {article.titre}
+        </Text>
+        <Text className="text-[12px] font-black text-[#1A1A1A] mt-0.5">{prixLisible(article.prix_xof)} CFA</Text>
+        <View className="flex-row gap-2 mt-2">
+          <Pressable onPress={onVoir} accessibilityLabel="Voir" className="w-8 h-8 rounded-lg bg-[#F2F0EA] items-center justify-center">
+            <Ionicons name="eye-outline" size={14} color="#1A1A1A" />
+          </Pressable>
+          <Pressable onPress={onModifier} accessibilityLabel="Modifier" className="w-8 h-8 rounded-lg bg-[#F2F0EA] items-center justify-center">
+            <Ionicons name="pencil-outline" size={14} color="#1A1A1A" />
+          </Pressable>
+          <Pressable onPress={onRetirer} accessibilityLabel="Retirer" className="w-8 h-8 rounded-lg bg-red-50 items-center justify-center">
+            <Ionicons name="trash-outline" size={14} color="#dc2626" />
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }
