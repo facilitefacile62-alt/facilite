@@ -1720,6 +1720,14 @@ export default function GlobeExplorateurBoutiques({
         }, 300);
       };
 
+      // La bulle s'ouvre : si la boutique est fixée, les autres se masquent. Elle se ferme (croix, nouveau
+      // tap, fond de carte, autre boutique) : la boutique n'est plus fixée et tout revient.
+      popup.on("add", appliquerFocusBoutique);
+      popup.on("remove", () => {
+        if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
+        appliquerFocusBoutique();
+      });
+
       popupsBoutiquesRef.current.set(b.id, {
         ouvrir: ouvrirBulle,
         fermer: fermerBulle,
@@ -1780,16 +1788,10 @@ export default function GlobeExplorateurBoutiques({
         // Une seule boutique épinglée à la fois : ferme la précédente avant
         // d'épingler celle-ci.
         carte.closePopup();
-        // Boutiques proches : sa bulle d'info recouvrirait les voisines, qui
-        // deviendraient impossibles à toucher. Le 1er tap sélectionne et
-        // centre seulement ; un 2e tap sur la boutique déjà sélectionnée
-        // ouvre la bulle.
-        if (idSelectionRef.current !== b.id && aDesVoisinsRef.current(b.id)) {
-          boutiqueEpingleeIdRef.current = null;
-          setBoutiqueSelectionnee(b);
-          carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.4 });
-          return;
-        }
+        // Boutiques proches : un tap fixe directement la boutique et ouvre le carrousel de ses
+        // articles ; les autres boutiques DISPARAISSENT tant qu'il est ouvert (voir
+        // appliquerFocusBoutique), elles reviennent à sa fermeture. Avant, le 1er tap ne faisait que
+        // sélectionner quand des voisines étaient proches, et la bulle recouvrait les autres.
         boutiqueEpingleeIdRef.current = b.id;
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
@@ -1797,6 +1799,30 @@ export default function GlobeExplorateurBoutiques({
         carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.4 });
       });
     });
+
+    // Mode « focus » : tant qu'une boutique est fixée (bulle d'articles ouverte), seules elle et « Vous êtes
+    // ici » restent visibles ; les autres boutiques, leurs bulles de regroupement et leurs traits sont
+    // masqués par CSS (globals.css, .carte-focus-boutique). Sert aux boutiques proches dont les avatars
+    // et les bulles se recouvraient au point d'être intouchables.
+    function appliquerFocusBoutique() {
+      if (carteRef.current !== carte) return;
+      const id = boutiqueEpingleeIdRef.current;
+      carte.getContainer().classList.toggle("carte-focus-boutique", Boolean(id));
+      marqueursCreesParId.forEach((entree, cle) => {
+        entree.marqueur?.getElement?.()?.classList.toggle("marqueur-focus", Boolean(id) && cle === id);
+      });
+    }
+    // Toucher le fond de la carte referme la boutique fixée (et fait revenir les autres).
+    if (carte.__surClicFond) carte.off("click", carte.__surClicFond);
+    carte.__surClicFond = () => {
+      if (boutiqueEpingleeIdRef.current) {
+        boutiqueEpingleeIdRef.current = null;
+        carte.closePopup();
+        appliquerFocusBoutique();
+      }
+    };
+    carte.on("click", carte.__surClicFond);
+    appliquerFocusBoutique();
 
     // Enregistre "Vous êtes ici" dans le même registre que les boutiques
     // (clé dédiée "__ici__") pour que recalculerDissociations puisse aussi
