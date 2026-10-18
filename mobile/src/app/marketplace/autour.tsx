@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import ModalTrouverLivreur from '@/components/ModalTrouverLivreur';
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
 import { chargerBoutiquesCarte, type BoutiqueCarte } from '@/lib/boutiquesCarte';
 import { chargerArticles, distanceLisible, prixLisible, type ArticleMarketplace, type Position } from '@/lib/marketplace';
@@ -158,6 +159,15 @@ export default function AutourDeMoiScreen() {
     return liste;
   }, [visibles, position, selection, avatars, photosRecherche]);
 
+  // Recadrage de la carte : seulement quand la liste affichée change, jamais à la fermeture d'un aperçu.
+  const cleListe = visibles.map((b) => b.id).join(',');
+  const [cleAjustee, setCleAjustee] = useState('');
+  useEffect(() => {
+    if (!selection && cleListe !== cleAjustee) queueMicrotask(() => setCleAjustee(cleListe));
+  }, [selection, cleListe, cleAjustee]);
+
+  const [livreursOuverts, setLivreursOuverts] = useState(false);
+
   const origine = position ?? DAKAR;
   const centre = { lat: origine.latitude, lng: origine.longitude };
 
@@ -282,7 +292,7 @@ export default function AutourDeMoiScreen() {
         zoom={13}
         marqueurs={marqueurs}
         sombre={sombre}
-        ajuster={!selection}
+        ajuster={!selection && cleListe !== cleAjustee}
         focus={selection}
         popup={popup}
         trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
@@ -378,6 +388,14 @@ export default function AutourDeMoiScreen() {
             style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
             <Ionicons name="locate" size={14} color="#34D399" />
             <Text className="text-[12.5px] font-black text-white">Autour de moi</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setLivreursOuverts(true)}
+            accessibilityRole="button"
+            className="flex-row items-center gap-1.5 rounded-full"
+            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
+            <Ionicons name="bicycle" size={15} color="#FBBF24" />
+            <Text className="text-[12.5px] font-black text-white">Trouver un livreur</Text>
           </Pressable>
         </ScrollView>
 
@@ -516,6 +534,7 @@ export default function AutourDeMoiScreen() {
           )}
         </View>
       </View>
+      <ModalTrouverLivreur visible={livreursOuverts} onFermer={() => setLivreursOuverts(false)} />
     </View>
   );
 }
