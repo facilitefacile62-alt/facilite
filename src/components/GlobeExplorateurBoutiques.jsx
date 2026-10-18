@@ -1059,6 +1059,34 @@ export default function GlobeExplorateurBoutiques({
         coucheTuilesRef.current = couche;
         groupeMarqueursRef.current = L.layerGroup().addTo(carte);
 
+        // Limites et noms des 14 régions du Sénégal (OCHA / geoBoundaries, CC BY 3.0 IGO) : contour coloré en
+        // pointillés, léger voile, nom au centre de chaque région. Chargées à part (fichier de 27 Ko).
+        import("@/lib/regionsCarte.json").then((m) => {
+          if (!carte || carte._regionsAjoutees || !carte.getContainer()?.isConnected) return;
+          carte._regionsAjoutees = true;
+          if (!carte.getPane("regions")) {
+            carte.createPane("regions");
+            carte.getPane("regions").style.zIndex = 250;
+          }
+          carte.attributionControl?.addAttribution("Limites : OCHA / geoBoundaries");
+          const PALETTE = ["#38BDF8", "#F59E0B", "#34D399", "#F472B6", "#A78BFA", "#FB923C", "#2DD4BF", "#FACC15", "#60A5FA", "#F87171", "#4ADE80", "#C084FC", "#22D3EE", "#FDBA74"];
+          (m.default || m).forEach((r, i) => {
+            const c = PALETTE[i % PALETTE.length];
+            L.polygon(r.poly, { pane: "regions", color: c, weight: 1.8, opacity: 0.9, dashArray: "6 5", fillColor: c, fillOpacity: 0.07, interactive: false }).addTo(carte);
+            L.marker(r.centre, {
+              icon: L.divIcon({
+                className: "",
+                html: `<span style="display:block;width:140px;text-align:center;font:800 11px system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.7);text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.6);pointer-events:none">${echapperHtml(r.nom)}</span>`,
+                iconSize: [140, 16],
+                iconAnchor: [70, 8],
+              }),
+              interactive: false,
+              keyboard: false,
+              zIndexOffset: -1000,
+            }).addTo(carte);
+          });
+        });
+
         // Repères réels de transport public (BRT, TER) — couche de référence
         // statique, jamais issue de marketplace_stores (pas des boutiques,
         // personne n'en est "propriétaire" sur Facilité). Voir
