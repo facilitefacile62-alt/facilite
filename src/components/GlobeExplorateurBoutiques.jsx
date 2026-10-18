@@ -14,6 +14,7 @@ import {
 } from "@/lib/marketplaceData";
 import { supabase } from "@/lib/supabase";
 import ModalTrouverLivreur from "@/components/ModalTrouverLivreur";
+import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
@@ -907,6 +908,8 @@ export default function GlobeExplorateurBoutiques({
   // Cadre de sélection : état + déplacement/redimensionnement par pointeur.
   const [modeSelectionActif, setModeSelectionActif] = useState(false);
   const [livreursOuverts, setLivreursOuverts] = useState(false);
+  // « Trouver un livreur » : en pause pour le public (interrupteur nav_marketplace_livreur).
+  const livreurAutorise = useFonctionAutorisee("nav_marketplace_livreur");
   const [cadre, setCadre] = useState({ x: 90, y: 90, largeur: 180, hauteur: 180 });
 
   const gererPointerDownDeplacer = (e) => {
@@ -2416,6 +2419,7 @@ export default function GlobeExplorateurBoutiques({
           </button>
 
           {/* « Trouver un livreur » : livreurs accrédités de la zone (compte connecté requis pour les contacter). */}
+{livreurAutorise && (
           <button
             type="button"
             onClick={() => setLivreursOuverts(true)}
@@ -2424,10 +2428,11 @@ export default function GlobeExplorateurBoutiques({
             <i className="fa-solid fa-motorcycle text-xs text-amber-400"></i>
             <span>Trouver un livreur</span>
           </button>
+)}
         </div>
       </header>
 
-      {livreursOuverts && <ModalTrouverLivreur onFermer={() => setLivreursOuverts(false)} />}
+      {livreursOuverts && livreurAutorise && <ModalTrouverLivreur onFermer={() => setLivreursOuverts(false)} />}
 
       {/* 2. CONTENEUR CARTE LEAFLET */}
       <div className="relative flex-1 w-full h-full min-h-0 bg-[#0B0F17]">

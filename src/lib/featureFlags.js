@@ -48,10 +48,10 @@ export const DEFAULT_FEATURE_TREE = [
         // Interrupteur de rollout du circuit livreur (migration
         // 20261005120000) — coupe le bouton "Devenir livreur" et l'onglet
         // correspondant sans déploiement, le temps de valider la fonctionnalité.
-        enabled: true,
-        // Ouvert à TOUS, visiteurs compris (18/10/2026) : c'est le seul bouton « transport » laissé visible au
-        // public. Plus il y a de livreurs inscrits, plus les acheteurs en trouvent dans leur zone. Le visiteur
-        // est renvoyé vers la connexion, puis vers le formulaire (migration 20261018160000).
+        enabled: false,
+        // EN PAUSE pour le public (migration 20261018200000, 18/10/2026) : « Devenir livreur », « Trouver un
+        // livreur » et les écrans de livraison sont gardés pour la mise à jour suivante. L'administrateur garde
+        // l'accès ; réactivation : Administration → Fonctionnalités.
         roles: { user: true, recruiter: true, visitor: true },
         description: "Formulaire d'accréditation livreur et accès à l'onglet « Livrer » du Marketplace",
       },
@@ -354,6 +354,18 @@ export const DEFAULT_FEATURE_TREE = [
         enabled: false,
         roles: { user: true, recruiter: true, visitor: true },
         description: "Recherche par photo (en-tête et carte), « Scanner le produit avec l'IA » et « Optimiser texte SEO » de la Marketplace",
+      },
+      {
+        id: "feat_marketplace_commandes",
+        name: "Marketplace — Commandes et livraisons",
+        path: null,
+        icon: "📦",
+        // EN PAUSE (migration 20261018200000) : « Commander » et « Mes commandes » sont gardés pour la mise à
+        // jour suivante ; le public ne garde que la discussion. Coupé par défaut, y compris si Supabase est
+        // injoignable. L'administrateur garde l'accès ; réactivation : Administration → Fonctionnalités.
+        enabled: false,
+        roles: { user: true, recruiter: true, visitor: true },
+        description: "Boutons « Commander » et « Mes commandes » (acheteur et vendeur) de la Marketplace",
       },
     ],
   },
