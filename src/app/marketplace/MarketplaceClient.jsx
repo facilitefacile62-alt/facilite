@@ -712,6 +712,15 @@ export default function MarketplaceClient() {
                     >
                       Se connecter / Créer un compte
                     </Link>
+                    {isLivreurAllowed && (
+                      <Link
+                        href="/login?redirect=%2Fmarketplace%3Fonglet%3Dlivrer"
+                        className="block w-full py-2 border border-gray-600 hover:bg-gray-700 text-white font-extrabold text-xs text-center rounded-xl transition"
+                      >
+                        <i className="fa-solid fa-motorcycle text-[10px] mr-1.5"></i>
+                        Devenir livreur
+                      </Link>
+                    )}
                   </div>
 
                   {/* Menu Toutes les catégories aussi disponible pour les visiteurs */}
@@ -793,6 +802,15 @@ export default function MarketplaceClient() {
                   className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#10E688] text-gray-950 font-extrabold text-[11px]"
                 >
                   Se connecter pour vendre
+                </Link>
+              )}
+              {!(userId || profile) && isLivreurAllowed && (
+                <Link
+                  href="/login?redirect=%2Fmarketplace%3Fonglet%3Dlivrer"
+                  className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-bold text-[11px]"
+                >
+                  <i className="fa-solid fa-motorcycle text-[10px] text-gray-500"></i>
+                  Devenir livreur
                 </Link>
               )}
             </div>

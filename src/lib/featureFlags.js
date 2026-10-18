@@ -49,7 +49,10 @@ export const DEFAULT_FEATURE_TREE = [
         // 20261005120000) — coupe le bouton "Devenir livreur" et l'onglet
         // correspondant sans déploiement, le temps de valider la fonctionnalité.
         enabled: true,
-        roles: { user: true, recruiter: true, visitor: false },
+        // Ouvert à TOUS, visiteurs compris (18/10/2026) : c'est le seul bouton « transport » laissé visible au
+        // public. Plus il y a de livreurs inscrits, plus les acheteurs en trouvent dans leur zone. Le visiteur
+        // est renvoyé vers la connexion, puis vers le formulaire (migration 20261018160000).
+        roles: { user: true, recruiter: true, visitor: true },
         description: "Formulaire d'accréditation livreur et accès à l'onglet « Livrer » du Marketplace",
       },
       {
