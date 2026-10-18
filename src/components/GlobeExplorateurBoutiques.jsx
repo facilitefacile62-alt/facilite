@@ -1543,7 +1543,7 @@ export default function GlobeExplorateurBoutiques({
           ${
             articlesApercu.length > 0
               ? `
-                <div style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch;">
+                <div class="bulle-defilement" style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">
                   ${articlesApercu
                     .map((art) => {
                       const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
@@ -1624,9 +1624,55 @@ export default function GlobeExplorateurBoutiques({
             };
           });
 
+          // Défilement des articles à la souris (glisser, molette) ; au doigt, le défilement natif fait le travail
+          // (touch-action: pan-x). Un glissement ne doit pas ouvrir l'article sur lequel il se termine.
+          const bande = el.querySelector(".bulle-defilement");
+          if (bande && !bande.__defilementPret) {
+            bande.__defilementPret = true;
+            let appuye = false;
+            let departX = 0;
+            let departScroll = 0;
+            bande.__aGlisse = false;
+            bande.addEventListener("pointerdown", (e) => {
+              if (e.pointerType === "touch") return;
+              appuye = true;
+              bande.__aGlisse = false;
+              departX = e.clientX;
+              departScroll = bande.scrollLeft;
+              bande.style.cursor = "grabbing";
+            });
+            window.addEventListener("pointermove", (e) => {
+              if (!appuye) return;
+              const dx = e.clientX - departX;
+              if (Math.abs(dx) > 4) bande.__aGlisse = true;
+              bande.scrollLeft = departScroll - dx;
+            });
+            window.addEventListener("pointerup", () => {
+              if (!appuye) return;
+              appuye = false;
+              bande.style.cursor = "grab";
+              setTimeout(() => {
+                bande.__aGlisse = false;
+              }, 0);
+            });
+            bande.addEventListener(
+              "wheel",
+              (e) => {
+                const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+                if (delta) {
+                  bande.scrollLeft += delta;
+                  e.preventDefault();
+                }
+                e.stopPropagation();
+              },
+              { passive: false }
+            );
+          }
+
           el.querySelectorAll("[data-article-id]").forEach((card) => {
             card.onclick = (e) => {
               e.stopPropagation();
+              if (bande?.__aGlisse) return; // fin d'un glissement, pas un vrai tap
               if (boutiqueEpingleeIdRef.current === b.id) boutiqueEpingleeIdRef.current = null;
               carte.closePopup(popup);
               const artId = card.getAttribute("data-article-id");
@@ -1648,65 +1694,71 @@ export default function GlobeExplorateurBoutiques({
       // que par-dessus l'autre boutique juste au-dessus, sinon elle la
       // recouvre entièrement. Signalé par l'utilisateur avec une capture
       // réelle des deux avatars empilés.
+      // La fenêtre est TOUJOURS centrée juste au-dessus de la pastille « ● Nom · Quartier » de la boutique,
+      // sa pointe posée à 8 px au-dessus d'elle. Le décalage est MESURÉ sur la pastille réellement affichée
+      // (l'avatar grandit avec le zoom et à la sélection) : avec un décalage fixe, la pastille passait
+      // par-dessus la fenêtre. Elle ne se déplace jamais pour esquiver la barre du haut : c'est la CARTE
+      // qui bouge au besoin (voir ajusterBulle).
       const offsetPopup = () => {
         const entree = marqueursCreesParId.get(b.id);
         const d = entree?.decalage || { dx: 0, dy: 0 };
-        return entree?.decalageBas ? [116 + d.dx, -46 + d.dy] : [d.dx, -88 + d.dy];
+        const pastille = marqueur.getElement()?.querySelector(".marqueur-etiquette");
+        if (pastille) {
+          const c = carte.getContainer().getBoundingClientRect();
+          const r = pastille.getBoundingClientRect();
+          const pt = carte.latLngToContainerPoint(marqueur.getLatLng());
+          return [d.dx, Math.round(r.top - c.top - pt.y - 8)];
+        }
+        return [d.dx, -88 + d.dy];
+      };
+
+      // Repositionne la fenêtre sans toucher à son contenu : popup.update() de Leaflet RÉÉCRIT le contenu (innerHTML)
+      // et efface alors les gestionnaires (croix, articles, glissement du carrousel).
+      const repositionnerBulle = () => {
+        if (typeof popup._updatePosition === "function") popup._updatePosition();
+        else popup.update();
+      };
+
+      // Fait entrer TOUTE la fenêtre dans la zone visible (sous l'en-tête, dans la largeur de l'écran) en
+      // déplaçant la carte, jamais la fenêtre : elle reste collée à sa boutique et ne touche pas la barre du haut.
+      const ajusterBulle = () => {
+        const el = popup.getElement();
+        const boite = el?.querySelector(".leaflet-popup-content-wrapper");
+        if (!boite || !popup.isOpen() || carteRef.current !== carte) return;
+        const MARGE = 8;
+        const MARGE_DROITE = 66;
+        const c = carte.getContainer().getBoundingClientRect();
+        const r = boite.getBoundingClientRect();
+        const limiteHaut = headerRef.current ? headerRef.current.getBoundingClientRect().bottom - c.top + MARGE : MARGE;
+        let dx = 0;
+        let dy = 0;
+        if (r.top - c.top < limiteHaut) dy = r.top - c.top - limiteHaut; // négatif : le contenu descend
+        if (r.left - c.left < MARGE) dx = r.left - c.left - MARGE;
+        // À droite, on laisse la place de la colonne de boutons ronds (position, thème, zoom) : sinon la croix
+        // de la fenêtre passait dessous.
+        else if (r.right - c.left > c.width - MARGE_DROITE) dx = r.right - c.left - (c.width - MARGE_DROITE);
+        if (dx || dy) carte.panBy([dx, dy], { animate: true, duration: 0.35 });
       };
 
       const ouvrirBulle = () => {
         if (timerSurvol) clearTimeout(timerSurvol);
-        popup.getElement()?.classList.remove("carte-bulle-bas");
         popup.options.offset = offsetPopup();
         popup.setLatLng(marqueur.getLatLng()).openOn(carte);
         attacherEcouteursPopup();
-
-        // Par défaut la bulle s'ouvre au-dessus du marqueur à un offset fixe
-        // (voir offsetPopup) : si l'en-tête (recherche + filtres, hauteur
-        // variable selon les catégories affichées) ou le dock du bas la
-        // recouvrent, on la glisse dans la zone visible — mesuré sur la
-        // vraie taille rendue, jamais une marge devinée (même principe que
-        // CarteBoutiques.jsx). Le cas "decalageBas" (marqueurs dissociés
-        // empilés) ouvre déjà sur le côté pour une autre raison, non
-        // concerné ici. Ne rejoue pas ce calcul au fil d'un zoom (voir
-        // rafraichirPopup ci-dessous) : cas plus rare, laissé tel quel.
-        const entreeActuelle = marqueursCreesParId.get(b.id);
-        if (entreeActuelle?.decalageBas) return;
+        // Repositionnée une fois affichée (taille réelle connue) puis après tout déplacement de la carte.
         setTimeout(() => {
-          const el = popup.getElement();
-          const boiteBulle = el?.querySelector(".leaflet-popup-content-wrapper");
-          const conteneurCarte = carte.getContainer();
-          if (!boiteBulle || !conteneurCarte || !popup.isOpen()) return;
-          const MARGE = 6;
-          const c = conteneurCarte.getBoundingClientRect();
-          const r = boiteBulle.getBoundingClientRect();
-          const haut = r.top - c.top;
-          const limiteHaut = headerRef.current
-            ? headerRef.current.getBoundingClientRect().bottom - c.top + MARGE
-            : 48;
-          const limiteBas = dockRef.current
-            ? dockRef.current.getBoundingClientRect().top - c.top - MARGE
-            : c.height - MARGE;
-          if (haut >= limiteHaut && haut + r.height <= limiteBas) return;
-          let [dx, dy] = popup.options.offset;
-          const pt = carte.latLngToContainerPoint(marqueur.getLatLng());
-          const hautDessous = pt.y + 16;
-          if (hautDessous >= limiteHaut && hautDessous + r.height <= limiteBas) {
-            el.classList.add("carte-bulle-bas");
-            dy += hautDessous - haut;
-          } else {
-            const cible = Math.min(Math.max(haut, limiteHaut), Math.max(limiteHaut, limiteBas - r.height));
-            dy += cible - haut;
-          }
-          popup.options.offset = [dx, dy];
-          popup.update();
-        }, 20);
+          if (!popup.isOpen()) return;
+          popup.options.offset = offsetPopup();
+          repositionnerBulle();
+          ajusterBulle();
+        }, 40);
+        carte.once("moveend", () => setTimeout(ajusterBulle, 30));
       };
       // Le zoom change le décalage : une bulle déjà ouverte le suit.
       marqueursCreesParId.get(b.id).rafraichirPopup = () => {
         if (popup.isOpen()) {
           popup.options.offset = offsetPopup();
-          popup.update();
+          repositionnerBulle();
         }
       };
 
@@ -1795,8 +1847,8 @@ export default function GlobeExplorateurBoutiques({
         boutiqueEpingleeIdRef.current = b.id;
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
-        // panTo court (pas de flyTo à zoom fixe) : seulement recentrer.
-        carte.panTo(marqueur.getLatLng(), { animate: true, duration: 0.4 });
+        // Pas de recentrage ici : ajusterBulle déplace la carte juste ce qu'il faut pour que toute la
+        // fenêtre soit visible, sans éloigner la boutique de l'endroit touché.
       });
     });
 
