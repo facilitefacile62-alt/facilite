@@ -424,3 +424,11 @@ html.dark .bg-whatsapp-chat {
   display: none !important;
 }
 
+
+
+/* Carte « Locaux » : boutique fixée => les autres boutiques, leurs regroupements et leurs traits disparaissent
+   (voir appliquerFocusBoutique dans GlobeExplorateurBoutiques.jsx). Ils reviennent quand la bulle se ferme. */
+.carte-focus-boutique .snap-custom-icon:not(.marqueur-focus),
+.carte-focus-boutique .bulle-regroupement {
+  display: none !important;
+}
