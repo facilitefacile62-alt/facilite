@@ -34,10 +34,11 @@ function classer(erreur: { message?: string; code?: string; status?: number } | 
   if (/already (been )?registered|already exists|email_exists/i.test(msg) || erreur?.code === 'email_exists') {
     return { type: 'email_pris', message: 'Cette adresse est déjà utilisée par un autre compte.' };
   }
-  if (/expired/i.test(msg) || erreur?.code === 'otp_expired') {
-    return { type: 'expire', message: 'Ce code a expiré, demandez-en un nouveau.' };
+  // Supabase répond « Token has expired or is invalid » (code otp_expired) pour un code faux ET pour un code
+  // périmé, sans les distinguer : on affiche « incorrect », et le bouton « Renvoyer le code » règle les deux cas.
+  if (/expired|invalid/i.test(msg) || erreur?.code === 'otp_expired') {
+    return { type: 'incorrect', message: 'Code incorrect, réessayez.' };
   }
-  if (/invalid/i.test(msg)) return { type: 'incorrect', message: 'Code incorrect, réessayez.' };
   return { type: 'autre', message: msg || parDefaut };
 }
 
