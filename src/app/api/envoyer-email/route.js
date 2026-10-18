@@ -13,12 +13,24 @@ export const runtime = "nodejs";
 //  - 10 envois par utilisateur et par 24 h (table emails_envoyes, service_role) ;
 //  - UN destinataire par message, adresse validée ;
 //  - 3 pièces jointes maximum, 10 Mo au total, formats contrôlés par signature ;
+//  - « Joindre : Mon CV · Lettre » : l'application envoie les identifiants (resume_ids) des documents DE
+//    L'UTILISATEUR ; le serveur les relit lui-même dans le stockage privé après avoir vérifié qu'ils lui
+//    appartiennent (jamais de chemin de fichier pris dans la requête) ;
 //  - l'e-mail part du domaine de Facilité, avec « Répondre à » = l'adresse de
 //    l'expéditeur, et un pied de message qui dit d'où il vient.
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
 const MAX_PAR_JOUR = 10;
 const MAX_PIECES = 3;
+const REGEX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TYPES_PAR_EXTENSION = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+};
 const REGEX_EMAIL = /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]{2,}$/;
 
 function echapper(texte) {
@@ -43,6 +55,7 @@ export async function POST(req) {
   const subject = String(formData.get("subject") || "").trim();
   const message = String(formData.get("message") || "").trim();
   const fichiers = formData.getAll("pieces").filter((f) => f && typeof f === "object" && "arrayBuffer" in f);
+  const idsDocuments = [...new Set(formData.getAll("resume_ids").map((v) => String(v)).filter((v) => REGEX_UUID.test(v)))];
 
   if (!to || to.length > 254 || !REGEX_EMAIL.test(to)) {
     return NextResponse.json({ error: "Adresse du destinataire invalide." }, { status: 400 });
@@ -53,10 +66,10 @@ export async function POST(req) {
   if (message.length > 5000) {
     return NextResponse.json({ error: "Le message est trop long (5 000 caractères maximum)." }, { status: 400 });
   }
-  if (!message && fichiers.length === 0) {
+  if (!message && fichiers.length === 0 && idsDocuments.length === 0) {
     return NextResponse.json({ error: "Écrivez un message ou ajoutez une pièce jointe." }, { status: 400 });
   }
-  if (fichiers.length > MAX_PIECES) {
+  if (fichiers.length + idsDocuments.length > MAX_PIECES) {
     return NextResponse.json({ error: `${MAX_PIECES} pièces jointes au maximum.` }, { status: 400 });
   }
 
@@ -74,8 +87,37 @@ export async function POST(req) {
     attachments.push({ filename: String(f.name || "piece-jointe").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120), content: buffer });
   }
 
-  // Plafond quotidien.
   const admin = getSupabaseAdmin();
+
+  // Documents du profil (Mon CV, Lettre) : relus côté serveur, uniquement s'ils appartiennent à l'utilisateur.
+  if (idsDocuments.length > 0) {
+    const { data: docs } = await admin.from("resumes").select("id, title, file_url").eq("user_id", user.id).in("id", idsDocuments);
+    if (!docs || docs.length !== idsDocuments.length) {
+      return NextResponse.json({ error: "Un des documents à joindre est introuvable." }, { status: 400 });
+    }
+    for (const d of docs) {
+      const chemin = d.file_url;
+      if (!chemin || /^(https?:|data:)/.test(chemin)) {
+        return NextResponse.json({ error: `Le document « ${d.title || "document"} » ne peut pas être joint.` }, { status: 400 });
+      }
+      const { data: blob, error: erreurTelechargement } = await admin.storage.from("resumes").download(chemin);
+      if (erreurTelechargement || !blob) {
+        return NextResponse.json({ error: `Le document « ${d.title || "document"} » est illisible.` }, { status: 400 });
+      }
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      total += buffer.length;
+      if (total > MAX_FILE_SIZE_BYTES) {
+        return NextResponse.json({ error: "Les pièces jointes dépassent 10 Mo au total." }, { status: 413 });
+      }
+      const extension = String(chemin).split(".").pop().toLowerCase();
+      const verdict = validateUploadedFile(buffer, TYPES_PAR_EXTENSION[extension] || blob.type || "application/pdf", buffer.length);
+      if (!verdict.valid) return NextResponse.json({ error: verdict.error }, { status: verdict.status || 400 });
+      const nom = String(d.title || "document").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 110);
+      attachments.push({ filename: /\.[a-z0-9]{2,5}$/i.test(nom) ? nom : `${nom}.${extension}`, content: buffer });
+    }
+  }
+
+  // Plafond quotidien.
   const depuis = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { count } = await admin
     .from("emails_envoyes")
