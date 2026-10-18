@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import CarteOffre from '@/components/CarteOffre';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import StoryViewer from '@/components/StoryViewer';
 import { useAuth } from '@/context/AuthContext';
+import { surRemontee } from '@/lib/remonterFil';
 import { chargerStories, type Story } from '@/lib/stories';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles } from '@/lib/useOffresReelles';
@@ -52,6 +53,9 @@ export default function AccueilScreen() {
   const [rafraichissement, setRafraichissement] = useState(false);
   const candidateMatchScores = useCandidateMatchScores(user?.id);
   const router = useRouter();
+  const listeRef = useRef<FlatList>(null);
+  // Flèche rouge du bouton « + » : remonte en haut du fil par un défilement doux.
+  useEffect(() => surRemontee(() => listeRef.current?.scrollToOffset({ offset: 0, animated: true })), []);
 
   // Stories gérées depuis l'admin du site (table stories). Tant qu'il n'y en a
   // aucune, le carrousel des modèles de CV reste affiché.
@@ -113,6 +117,7 @@ export default function AccueilScreen() {
           </View>
         ) : (
           <FlatList
+            ref={listeRef}
             data={offres}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 40 }}
