@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 const BUCKET = "stories-media";
 const TAILLE_MAX = 5 * 1024 * 1024;
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-const COLONNES = "id, titre, image_url, libelle_bouton, lien, bouton_visible, type, ordre, actif, created_at, updated_at";
+const COLONNES = "id, titre, image_url, libelle_bouton, lien, bouton_visible, type, date_debut, date_fin, message_whatsapp, ordre, actif, created_at, updated_at";
 
 // Type de story : « cv » = modèle de CV (bouton « Commander via WhatsApp ») ; « offre » = offre d'emploi, qui doit toujours
 // avoir un bouton « Postuler » avec le lien de l'offre (jamais d'offre sans bouton).
@@ -75,7 +75,20 @@ function lireChamps(body) {
   if (libelle !== undefined && (libelle.length < 1 || libelle.length > 40)) return { erreur: "Le texte du bouton doit faire entre 1 et 40 caractères." };
   const type = typeof body?.type === "string" ? body.type : undefined;
   if (type !== undefined && !TYPES_STORY.includes(type)) return { erreur: "Type de story invalide." };
-  return { titre, libelle, type };
+  // Période d'affichage (vide = pas de borne) et message WhatsApp pré-rempli ({nom} = titre de la story).
+  const dateOuNull = (v) => {
+    if (v === undefined) return undefined;
+    if (v === null || v === "") return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? false : d.toISOString();
+  };
+  const debut = dateOuNull(body?.date_debut);
+  const fin = dateOuNull(body?.date_fin);
+  if (debut === false || fin === false) return { erreur: "Date invalide." };
+  if (debut && fin && fin < debut) return { erreur: "La date de fin doit être après la date de début." };
+  const message = typeof body?.message_whatsapp === "string" ? body.message_whatsapp.trim() : undefined;
+  if (message !== undefined && message.length > 300) return { erreur: "Le message WhatsApp doit faire 300 caractères au maximum." };
+  return { titre, libelle, type, debut, fin, message };
 }
 
 export async function GET(req) {
@@ -206,6 +219,9 @@ export async function POST(req) {
       libelle_bouton: champs.libelle || LIBELLE_PAR_TYPE[type],
       lien: lien.lien,
       type,
+      date_debut: champs.debut ?? null,
+      date_fin: champs.fin ?? null,
+      message_whatsapp: champs.message || null,
       bouton_visible: type === "offre" ? true : body?.bouton_visible !== false,
       ordre,
       actif: body?.actif !== false,
@@ -233,6 +249,9 @@ export async function PATCH(req) {
 
   const patch = { updated_at: new Date().toISOString() };
   if (champs.type !== undefined) patch.type = champs.type;
+  if (champs.debut !== undefined) patch.date_debut = champs.debut;
+  if (champs.fin !== undefined) patch.date_fin = champs.fin;
+  if (champs.message !== undefined) patch.message_whatsapp = champs.message || null;
   if (champs.titre !== undefined) patch.titre = champs.titre;
   if (champs.libelle !== undefined) patch.libelle_bouton = champs.libelle;
   if (body.lien !== undefined) {
