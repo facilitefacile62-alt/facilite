@@ -16,6 +16,7 @@ export default function ProfilMarketplaceScreen() {
   const router = useRouter();
   // Interrupteurs du site (Administration → Fonctionnalités).
   const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
   const voyagesOuverts = useFonctionnalite('nav_marketplace_voyages');
   const { user, profile } = useAuth();
   const userId = user?.id;
@@ -99,11 +100,13 @@ export default function ProfilMarketplaceScreen() {
               {estVendeur ? (
                 <>
                   <LigneMenu emoji="📊" titre="Tableau de bord" onPress={() => router.push('/marketplace/vendre/tableau-de-bord')} />
-                  <LigneMenu
-                    emoji="📦"
-                    titre="Commandes reçues"
-                    onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
-                  />
+                  {commandesOuvertes ? (
+                    <LigneMenu
+                      emoji="📦"
+                      titre="Commandes reçues"
+                      onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
+                    />
+                  ) : null}
                   {livreurOuvert ? <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} /> : null}
                   {voyagesOuverts ? (
                     <>
@@ -115,7 +118,7 @@ export default function ProfilMarketplaceScreen() {
               ) : (
                 <>
                   <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
-                  <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
+                  {commandesOuvertes ? <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} /> : null}
                   {/* Seul bouton « transport » ouvert à tous : plus il y a de livreurs, plus on en trouve dans sa zone. */}
                   {livreurOuvert ? <LigneMenu emoji="🛵" titre="Devenir livreur" onPress={() => router.push('/marketplace/vendre/livreur')} /> : null}
                   {voyagesOuverts ? (

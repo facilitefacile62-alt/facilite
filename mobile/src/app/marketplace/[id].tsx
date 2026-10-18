@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -54,6 +55,7 @@ const BORDURE_CARTE = 'rgba(0,0,0,0.06)';
 type Onglet = 'article' | 'commentaires' | 'recommander';
 
 export default function ArticleScreen() {
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -483,13 +485,15 @@ export default function ArticleScreen() {
             <Text className="text-[14px] font-black text-[#1A1A1A]">WhatsApp</Text>
           </Pressable>
 
-          <Pressable
-            onPress={commanderDirect}
-            accessibilityLabel="Commander"
-            className="items-center justify-center rounded-[14px]"
-            style={{ width: 52, height: 52, backgroundColor: '#111' }}>
-            <Ionicons name="cart-outline" size={21} color="#fff" />
-          </Pressable>
+          {commandesOuvertes ? (
+            <Pressable
+              onPress={commanderDirect}
+              accessibilityLabel="Commander"
+              className="items-center justify-center rounded-[14px]"
+              style={{ width: 52, height: 52, backgroundColor: '#111' }}>
+              <Ionicons name="cart-outline" size={21} color="#fff" />
+            </Pressable>
+          ) : null}
         </View>
       </View>
 

@@ -23,7 +23,9 @@ const PAR_DEFAUT: Record<string, Interrupteur> = {
   nav_extracteur: actif(),
   nav_messagerie: actif(),
   nav_marketplace: actif(),
-  nav_marketplace_livreur: actif(TOUS),
+  // En pause pour le public (18/10/2026) : livraison et commandes sont gardées pour la mise à jour suivante.
+  nav_marketplace_livreur: coupe(),
+  feat_marketplace_commandes: coupe(),
   nav_marketplace_voyages: coupe(CONNECTES),
   nav_plus_fonctionnalites: actif(),
   nav_plus_recrutement_spontane: actif(),

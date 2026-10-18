@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, View } from 'react-native';
@@ -22,6 +23,7 @@ type Ligne = {
 };
 
 export default function TableauDeBordScreen() {
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
   const router = useRouter();
   const { user } = useAuth();
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
@@ -62,7 +64,7 @@ export default function TableauDeBordScreen() {
   const storeId = boutique.id;
   const lignes: Ligne[] = [
     { emoji: '📋', titre: 'Mes annonces', badge: nbArticles, onPress: () => router.push(`/marketplace/vendre/annonces?storeId=${storeId}` as Href) },
-    { emoji: '📦', titre: 'Mes commandes', badge: nbCommandes, onPress: () => router.push(`/marketplace/vendre/commandes-recues?storeId=${storeId}` as Href) },
+    ...(commandesOuvertes ? [{ emoji: '📦', titre: 'Mes commandes', badge: nbCommandes, onPress: () => router.push(`/marketplace/vendre/commandes-recues?storeId=${storeId}` as Href) }] : []),
     { emoji: '🛠️', titre: 'Service / métier', onPress: () => router.push('/marketplace/vendre') },
     { emoji: '🏢', titre: 'Établissement', onPress: () => router.push('/marketplace/vendre') },
     { emoji: '🚀', titre: 'Faire profit & Boost', onPress: () => BIENTOT('Faire profit & Boost') },

@@ -12,7 +12,8 @@ import { chargerBoutiquesCarte, type BoutiqueCarte } from '@/lib/boutiquesCarte'
 import { chargerArticles, distanceLisible, prixLisible, type ArticleMarketplace, type Position } from '@/lib/marketplace';
 import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
 import { SvgXml } from 'react-native-svg';
-import { calculerItineraire, type Itineraire } from '@/lib/itineraire';
+import { useFonctionnalite } from '@/lib/featureFlags';
+import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -167,6 +168,8 @@ export default function AutourDeMoiScreen() {
   }, [selection, cleListe, cleAjustee]);
 
   const [livreursOuverts, setLivreursOuverts] = useState(false);
+  // « Trouver un livreur » : en pause pour le public (interrupteur nav_marketplace_livreur).
+  const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
 
   const origine = position ?? DAKAR;
   const centre = { lat: origine.latitude, lng: origine.longitude };
@@ -185,22 +188,28 @@ export default function AutourDeMoiScreen() {
   // Arrivée depuis « M'y rendre » d'un article : la boutique est sélectionnée dès que les boutiques sont chargées.
   const boutiqueOuverte = useRef<string | null>(null);
   useEffect(() => {
-    if (!boutiqueParam || !boutiques || !carte || boutiqueOuverte.current === boutiqueParam) return;
+    // « M'y rendre » (route=1) : aucune boutique n'est ouverte, la carte montre directement le trajet.
+    if (routeParam || !boutiqueParam || !boutiques || !carte || boutiqueOuverte.current === boutiqueParam) return;
     if (!boutiques.some((b) => b.id === boutiqueParam)) return;
     boutiqueOuverte.current = boutiqueParam;
     // Avec « M'y rendre », la carte se cadre sur le trajet (voir plus bas) : pas de recentrage sur la boutique seule.
-    queueMicrotask(() => (routeParam ? setSelection(boutiqueParam) : choisirBoutique(boutiqueParam, 16)));
+    queueMicrotask(() => choisirBoutique(boutiqueParam, 16));
   }, [boutiqueParam, routeParam, boutiques, carte, choisirBoutique]);
 
   // Trajet de « M'y rendre » : ligne bleue de ma position à la boutique, avec distance et durée.
   const [trajet, setTrajet] = useState<Itineraire | null>(null);
+  const [routeFermee, setRouteFermee] = useState<string | null>(null);
+  const routeActive = Boolean(routeParam && boutiqueParam && routeFermee !== boutiqueParam);
   const trajetCalcule = useRef<string | null>(null);
   useEffect(() => {
     if (!routeParam || !boutiqueParam || !position || !boutiques || trajetCalcule.current === boutiqueParam) return;
     const b = boutiques.find((x) => x.id === boutiqueParam);
     if (!b) return;
     trajetCalcule.current = boutiqueParam;
-    calculerItineraire(position, { latitude: b.latitude, longitude: b.longitude }).then(setTrajet);
+    const arrivee = { latitude: b.latitude, longitude: b.longitude };
+    // La ligne droite apparaît tout de suite ; l'itinéraire routier la remplace dès qu'il est calculé.
+    queueMicrotask(() => setTrajet(ligneDroite(position, arrivee)));
+    calculerItineraire(position, arrivee).then(setTrajet);
   }, [routeParam, boutiqueParam, position, boutiques]);
 
   // Un appui sélectionne la boutique et ouvre l'aperçu fixe ; un second appui
@@ -292,8 +301,8 @@ export default function AutourDeMoiScreen() {
         zoom={13}
         marqueurs={marqueurs}
         sombre={sombre}
-        ajuster={!selection && cleListe !== cleAjustee}
-        focus={selection}
+        ajuster={!selection && !routeActive && cleListe !== cleAjustee}
+        focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={popup}
         trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
         onMarqueur={surMarqueur}
@@ -389,14 +398,16 @@ export default function AutourDeMoiScreen() {
             <Ionicons name="locate" size={14} color="#34D399" />
             <Text className="text-[12.5px] font-black text-white">Autour de moi</Text>
           </Pressable>
-          <Pressable
-            onPress={() => setLivreursOuverts(true)}
-            accessibilityRole="button"
-            className="flex-row items-center gap-1.5 rounded-full"
-            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
-            <Ionicons name="bicycle" size={15} color="#FBBF24" />
-            <Text className="text-[12.5px] font-black text-white">Trouver un livreur</Text>
-          </Pressable>
+          {livreurOuvert ? (
+            <Pressable
+              onPress={() => setLivreursOuverts(true)}
+              accessibilityRole="button"
+              className="flex-row items-center gap-1.5 rounded-full"
+              style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
+              <Ionicons name="bicycle" size={15} color="#FBBF24" />
+              <Text className="text-[12.5px] font-black text-white">Trouver un livreur</Text>
+            </Pressable>
+          ) : null}
         </ScrollView>
 
         {etat === 'refusee' || etat === 'erreur' ? (
@@ -435,7 +446,7 @@ export default function AutourDeMoiScreen() {
               {trajet.approximatif ? 'À vol d’oiseau · ' : ''}
               {trajet.distanceKm.toLocaleString('fr-FR')} km{trajet.dureeMin != null ? ` · ${trajet.dureeMin} min` : ''}
             </Text>
-            <Pressable onPress={() => setTrajet(null)} accessibilityLabel="Effacer le trajet" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
+            <Pressable onPress={() => { setTrajet(null); setRouteFermee(boutiqueParam ?? null); }} accessibilityLabel="Effacer le trajet" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
               <Ionicons name="close" size={15} color="#1A1A1A" />
             </Pressable>
           </View>

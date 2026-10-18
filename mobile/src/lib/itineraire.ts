@@ -22,10 +22,11 @@ function distanceVolOiseauKm(a: Position, b: Position): number {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export async function calculerItineraire(depart: Position, arrivee: Position): Promise<Itineraire> {
+/** Ligne droite en pointillés, immédiate (sans réseau) : affichée en attendant l'itinéraire routier. */
+export function ligneDroite(depart: Position, arrivee: Position): Itineraire {
   const volOiseau = distanceVolOiseauKm(depart, arrivee);
   const profil: 'pieton' | 'voiture' = volOiseau < 2 ? 'pieton' : 'voiture';
-  const repli: Itineraire = {
+  return {
     points: [
       [depart.latitude, depart.longitude],
       [arrivee.latitude, arrivee.longitude],
@@ -35,6 +36,11 @@ export async function calculerItineraire(depart: Position, arrivee: Position): P
     approximatif: true,
     profil,
   };
+}
+
+export async function calculerItineraire(depart: Position, arrivee: Position): Promise<Itineraire> {
+  const repli = ligneDroite(depart, arrivee);
+  const profil = repli.profil;
   try {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;

@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -28,6 +29,7 @@ function avecCaseVide(articles: ArticleMarketplace[]): LigneGrille[] {
 }
 
 export default function MarketplaceScreen() {
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
   const router = useRouter();
   const [categorie, setCategorie] = useState<string | null>(null);
   // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...) ; « Articles proches » (?proches=1)
@@ -108,12 +110,14 @@ export default function MarketplaceScreen() {
             <Ionicons name="storefront-outline" size={15} color="#047857" />
             <Text className="text-[12.5px] font-bold text-[#047857]">{aBoutique ? 'Ma boutique' : 'Devenir actif'}</Text>
           </Pressable>
-          <Pressable
-            onPress={() => router.push('/marketplace/commandes')}
-            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-white border border-gray-200">
-            <Ionicons name="receipt-outline" size={15} color="#1A1A1A" />
-            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Mes commandes</Text>
-          </Pressable>
+          {commandesOuvertes ? (
+            <Pressable
+              onPress={() => router.push('/marketplace/commandes')}
+              className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-white border border-gray-200">
+              <Ionicons name="receipt-outline" size={15} color="#1A1A1A" />
+              <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Mes commandes</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {articles === null && !erreur ? (
