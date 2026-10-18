@@ -705,7 +705,7 @@ export const SPONTANEOUS_COMPANIES: EntrepriseSpontanee[] = [
     contactType: "url",
     externalLink: "https://sociumjob.com",
     documentsRequired: "Profil candidat / CV en ligne",
-    image_url: null,
+    image_url: "https://ffacilite.com/auchan-logo.png",
     poles: ["Caisse", "Libre-service", "Sécurité"],
   },
   {

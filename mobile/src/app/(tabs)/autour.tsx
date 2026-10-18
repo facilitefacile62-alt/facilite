@@ -130,7 +130,7 @@ export default function AutourFaciliteScreen() {
         lng: e.lng as number,
         couleur: VIOLET,
         libelle: e.company,
-        avatar: { emoji: '🏬', bordure: VIOLET, sous: 'Candidature spontanée', selectionne: selection === `lieu:${e.slug}`, actif: true },
+        avatar: { emoji: '🏬', photo: e.image_url ?? undefined, bordure: VIOLET, sous: 'Candidature spontanée', selectionne: selection === `lieu:${e.slug}`, actif: true },
       })
     );
     if (position) {
