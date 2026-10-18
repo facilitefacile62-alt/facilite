@@ -24,6 +24,10 @@ const VERT = '#10B981';
 const VIOLET = '#8B5CF6';
 const DAKAR: Position = { latitude: 14.7167, longitude: -17.4677 };
 
+// Une couleur par ville (offres), pour les distinguer d'un coup d'œil ; le violet est réservé aux candidatures spontanées.
+const COULEURS_VILLES = ['#2563EB', '#F97316', '#14B8A6', '#EF4444', '#EAB308', '#EC4899', '#22C55E', '#0EA5E9'];
+const couleurVille = (rang: number) => COULEURS_VILLES[rang % COULEURS_VILLES.length];
+
 const libelleOffres = (n: number) => `${n} offre${n > 1 ? 's' : ''}`;
 const libelleSpontanees = (n: number) => `${n} dépôt${n > 1 ? 's' : ''}`;
 
@@ -81,22 +85,20 @@ export default function AutourFaciliteScreen() {
   const groupes = useMemo(() => resultat?.groupes ?? [], [resultat]);
   const courant: GroupeVille | null = groupes.find((g) => g.ville === selection) ?? null;
   const courantSp: GroupeSpontane | null = selection?.startsWith('sp:') ? groupesSpontanes.find((g) => `sp:${g.ville}` === selection) ?? null : null;
-  const villesAvecLesDeux = useMemo(() => new Set(groupes.filter((g) => groupesSpontanes.some((x) => x.ville === g.ville)).map((g) => g.ville)), [groupes]);
 
   const marqueurs = useMemo<MarqueurCarte[]>(() => {
-    const liste: MarqueurCarte[] = groupes.map((g) => ({
+    const liste: MarqueurCarte[] = groupes.map((g, rang) => ({
       id: g.ville,
       lat: g.lat,
       lng: g.lng,
-      couleur: BLEU,
+      couleur: couleurVille(rang),
       libelle: g.ville,
       avatar: {
         emoji: String(g.offres.length),
-        bordure: selection === g.ville ? '#F59E0B' : BLEU,
+        bordure: couleurVille(rang),
         sous: libelleOffres(g.offres.length),
         selectionne: selection === g.ville,
         actif: true,
-        dx: villesAvecLesDeux.has(g.ville) ? -30 : 0,
       },
     }));
     groupesSpontanes.forEach((g) =>
@@ -112,7 +114,6 @@ export default function AutourFaciliteScreen() {
           sous: libelleSpontanees(g.entreprises.length),
           selectionne: selection === `sp:${g.ville}`,
           actif: true,
-          dx: villesAvecLesDeux.has(g.ville) ? 30 : 0,
         },
       })
     );
@@ -120,15 +121,15 @@ export default function AutourFaciliteScreen() {
       liste.push({ id: 'moi', lat: position.latitude, lng: position.longitude, couleur: BLEU, halo: true, libelle: 'Vous êtes ici', avatar: { emoji: '🧑🏾', bordure: '#1877F2', moi: true } });
     }
     return liste;
-  }, [groupes, selection, position, villesAvecLesDeux]);
+  }, [groupes, selection, position]);
 
   // Bulle d'aperçu au-dessus du rond de la ville : ses offres (poste + entreprise), comme celle des boutiques.
   const popup = useMemo<PopupBoutique | null>(() => {
     if (courantSp) {
       return {
+        cle: `sp:${courantSp.ville}`,
         lat: courantSp.lat,
         lng: courantSp.lng,
-        dx: villesAvecLesDeux.has(courantSp.ville) ? 30 : 0,
         titre: courantSp.ville,
         sous: `${libelleSpontanees(courantSp.entreprises.length)} de candidature spontanée`,
         articles: courantSp.entreprises.map((e) => ({ id: `sp-${e.slug}`, titre: e.domains, prix: e.company, photo: e.image_url ?? undefined, icone: '✉️' })),
@@ -136,14 +137,14 @@ export default function AutourFaciliteScreen() {
     }
     if (!courant) return null;
     return {
+      cle: courant.ville,
       lat: courant.lat,
       lng: courant.lng,
-      dx: villesAvecLesDeux.has(courant.ville) ? -30 : 0,
       titre: courant.ville,
       sous: `${libelleOffres(courant.offres.length)} · ${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''}`,
       articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, photo: o.affiche && !o.affiche.startsWith('data:') ? o.affiche : undefined, icone: '🏢' })),
     };
-  }, [courant, courantSp, villesAvecLesDeux]);
+  }, [courant, courantSp]);
 
   const origine = position ?? DAKAR;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
@@ -259,7 +260,7 @@ export default function AutourFaciliteScreen() {
           ) : (
             <FlatList
               horizontal
-              data={vue === 'offres' ? groupes.map((g) => ({ cle: g.ville, ville: g.ville, n: g.offres.length, texte: libelleOffres(g.offres.length) })) : groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, texte: libelleSpontanees(g.entreprises.length) }))}
+              data={vue === 'offres' ? groupes.map((g, rang) => ({ cle: g.ville, ville: g.ville, n: g.offres.length, couleur: couleurVille(rang), texte: libelleOffres(g.offres.length) })) : groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, couleur: VIOLET, texte: libelleSpontanees(g.entreprises.length) }))}
               keyExtractor={(g) => g.cle}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
@@ -269,7 +270,7 @@ export default function AutourFaciliteScreen() {
                   <Pressable onPress={() => choisirVille(item.cle)} className="items-center" style={{ width: 76 }}>
                     <View
                       className="items-center justify-center rounded-full"
-                      style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: vue === 'offres' ? BLEU : VIOLET, borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                      style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: item.couleur, borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
                       <Text className="text-[20px] font-black text-white">{item.n}</Text>
                     </View>
                     <Text className="text-[11.5px] font-bold text-white mt-1.5 text-center" numberOfLines={1}>{item.ville}</Text>
