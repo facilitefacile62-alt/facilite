@@ -224,8 +224,11 @@ export default function MaBoutiqueScreen() {
             onPress={() => Alert.alert('Logo de la boutique', "L'envoi du logo arrive dans une prochaine mise à jour.")}
             accessibilityLabel="Changer le logo"
             style={{ width: 72, height: 72 }}>
-            <View className="items-center justify-center" style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#D9D2C3' }}>
-              <Ionicons name="storefront" size={26} color="#0d3b34" />
+            <View
+              className="items-center justify-center"
+              style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#EDE9E1', borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.3)' }}>
+              <Text className="text-[12px] font-black" style={{ color: 'rgba(0,0,0,0.55)' }}>Logo</Text>
+              <Text className="text-[9px] underline" style={{ color: 'rgba(0,0,0,0.45)' }}>parcourir</Text>
             </View>
             <View className="absolute items-center justify-center" style={{ right: -2, bottom: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: BLEU, borderWidth: 2, borderColor: FOND }}>
               <Ionicons name="add" size={15} color="#fff" />
@@ -246,7 +249,7 @@ export default function MaBoutiqueScreen() {
                 <Text className="text-[11px] font-black text-[#111]">Modifier infos</Text>
               </Pressable>
             </View>
-            <Text className="text-[12px] mt-1.5" style={{ color: 'rgba(0,0,0,0.6)' }}>Boutique officielle partenaire sur Facilité Sénégal</Text>
+            <Text className="text-[12px] mt-1.5" style={{ color: 'rgba(0,0,0,0.6)' }}>Boutique officielle partenaire sur Facilité Sénégal · Vente d&apos;articles &amp; livraison express</Text>
             <Text className="text-[12px] font-black mt-0.5 text-[#111]">{lieu}</Text>
           </View>
         </View>
@@ -302,11 +305,16 @@ export default function MaBoutiqueScreen() {
                         }
                         className="bg-white overflow-hidden"
                         style={{ width: '47.5%', borderRadius: 16 }}>
-                        <View className="items-center justify-center" style={{ height: 110, backgroundColor: '#EDE9E1' }}>
+                        <View
+                          className="items-center justify-center"
+                          style={photo ? { height: 110, backgroundColor: '#EDE9E1' } : { height: 110, backgroundColor: '#EDE9E1', borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.25)', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
                           {photo ? (
                             <Image source={{ uri: photo }} alt={a.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                           ) : (
-                            <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.35)" />
+                            <>
+                              <Ionicons name="image-outline" size={24} color="rgba(0,0,0,0.4)" />
+                              <Text className="text-[11px] font-bold mt-1" style={{ color: 'rgba(0,0,0,0.5)' }}>Photo produit</Text>
+                            </>
                           )}
                           <View className="absolute rounded" style={{ top: 8, left: 8, backgroundColor: '#DC2626', paddingHorizontal: 6, paddingVertical: 2 }}>
                             <Text className="text-[9px] font-black text-white">LIVE</Text>
@@ -399,8 +407,8 @@ export default function MaBoutiqueScreen() {
 
               <Pressable
                 onPress={() => router.push('/marketplace/vendre/horaires' as Href)}
-                className="flex-row items-center justify-center gap-2 bg-white"
-                style={{ height: 48, borderRadius: 14 }}>
+                className="flex-row items-center justify-center gap-2"
+                style={{ height: 48, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.25)', backgroundColor: 'rgba(255,255,255,0.6)' }}>
                 <Ionicons name="calendar-outline" size={16} color={BLEU} />
                 <Text className="text-[13px] font-black text-[#111]">Programmer des horaires</Text>
               </Pressable>

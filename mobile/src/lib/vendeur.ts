@@ -36,6 +36,26 @@ export type MaBoutique = {
   disponible_manuel: boolean;
 };
 
+/** Une boutique vue par n'importe quel visiteur (page publique) : mêmes champs que MaBoutique + propriétaire et avatar. */
+export type BoutiquePublique = MaBoutique & {
+  owner_id: string;
+  avatar_config: Record<string, unknown> | null;
+};
+
+/** Boutique ACTIVE lisible de tous (policy « actifs visibles de tous »). Null si introuvable ou masquée. */
+export async function chargerBoutiquePublique(id: string): Promise<BoutiquePublique | null> {
+  const { data, error } = await supabase
+    .from('marketplace_stores')
+    .select(
+      'id, owner_id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, avatar_config'
+    )
+    .eq('id', id)
+    .eq('actif', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as BoutiquePublique | null) ?? null;
+}
+
 export type MonArticle = {
   id: string;
   titre: string;
