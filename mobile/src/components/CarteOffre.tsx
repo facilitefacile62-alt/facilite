@@ -197,7 +197,8 @@ export default function CarteOffre({
         </Pressable>
 
         {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
-        <BoutonAudioOffre url={offre.audioUrl} />
+        {/* L'audio ne concerne que les offres d'emploi (pas les concours, formations…). */}
+        <BoutonAudioOffre url={!offre.listingType || offre.listingType === 'offre_emploi' ? offre.audioUrl : undefined} />
 
         <Pressable
           onPress={partager}
