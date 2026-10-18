@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { REGIONS_SENEGAL, zoneDansRegion } from "@/lib/regionsSenegal";
+import { contientTousLesMots } from "@/lib/texte";
 
 const VEHICULES = { pied: "À pied", velo: "Vélo", moto: "Moto", voiture: "Voiture" };
 const ICONES = { pied: "fa-person-walking", velo: "fa-bicycle", moto: "fa-motorcycle", voiture: "fa-car" };
@@ -14,6 +16,7 @@ const ICONES = { pied: "fa-person-walking", velo: "fa-bicycle", moto: "fa-motorc
 export default function ModalTrouverLivreur({ onFermer }) {
   const [connecte, setConnecte] = useState(null);
   const [zone, setZone] = useState("");
+  const [region, setRegion] = useState(null);
   const [livreurs, setLivreurs] = useState(null);
   const [erreur, setErreur] = useState("");
 
@@ -21,11 +24,11 @@ export default function ModalTrouverLivreur({ onFermer }) {
     supabase.auth.getSession().then(({ data }) => setConnecte(Boolean(data?.session)));
   }, []);
 
+  // Tous les livreurs actifs sont chargés une fois ; la région et la zone saisie filtrent ensuite sur place.
   useEffect(() => {
     if (!connecte) return;
     let annule = false;
-    const delai = setTimeout(async () => {
-      const { data, error } = await supabase.rpc("lister_livreurs_actifs", { p_zone: zone.trim() || null, p_limite: 30 });
+    supabase.rpc("lister_livreurs_actifs", { p_zone: null, p_limite: 100 }).then(({ data, error }) => {
       if (annule) return;
       if (error) {
         setErreur("Impossible de charger les livreurs pour le moment.");
@@ -34,12 +37,16 @@ export default function ModalTrouverLivreur({ onFermer }) {
         setErreur("");
         setLivreurs(data || []);
       }
-    }, zone ? 350 : 0);
+    });
     return () => {
       annule = true;
-      clearTimeout(delai);
     };
-  }, [connecte, zone]);
+  }, [connecte]);
+
+  const comptes = REGIONS_SENEGAL.map((r) => (livreurs || []).filter((l) => zoneDansRegion(l.zone, r)).length);
+  const affiches = (livreurs || []).filter(
+    (l) => (!region || zoneDansRegion(l.zone, region)) && (!zone.trim() || contientTousLesMots(l.zone || "", zone))
+  );
 
   const numero = (t) => String(t || "").replace(/[^\d+]/g, "");
 
@@ -83,17 +90,38 @@ export default function ModalTrouverLivreur({ onFermer }) {
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-emerald-500"
               />
             </div>
+            <div className="flex gap-1.5 overflow-x-auto px-5 pb-2" role="tablist" aria-label="Régions">
+              {REGIONS_SENEGAL.map((r, i) => {
+                const actif = region?.nom === r.nom;
+                return (
+                  <button
+                    key={r.nom}
+                    type="button"
+                    onClick={() => setRegion(actif ? null : r)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-extrabold cursor-pointer border transition ${
+                      actif
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : comptes[i] > 0
+                          ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700"
+                    }`}
+                  >
+                    {r.nom} · {comptes[i]}
+                  </button>
+                );
+              })}
+            </div>
             <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-2">
               {livreurs === null ? (
                 <p className="py-8 text-center text-xs text-gray-500">Chargement…</p>
               ) : erreur ? (
                 <p className="py-8 text-center text-xs text-red-600">{erreur}</p>
-              ) : livreurs.length === 0 ? (
+              ) : affiches.length === 0 ? (
                 <p className="py-8 text-center text-xs text-gray-500">
-                  {zone.trim() ? "Aucun livreur inscrit dans cette zone pour le moment." : "Aucun livreur inscrit pour le moment."}
+                  {region || zone.trim() ? "Aucun livreur inscrit dans cette zone pour le moment." : "Aucun livreur inscrit pour le moment."}
                 </p>
               ) : (
-                livreurs.map((l, i) => (
+                affiches.map((l, i) => (
                   <div key={`${l.prenom}-${l.telephone}-${i}`} className="flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 p-3">
                     <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <i className={`fa-solid ${ICONES[l.type_vehicule] || "fa-motorcycle"}`}></i>
