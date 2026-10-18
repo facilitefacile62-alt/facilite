@@ -1,6 +1,7 @@
 import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,15 +26,18 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import ActionsMessage, { type ActionMessage } from '@/components/ActionsMessage';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useFavori } from '@/lib/favoris';
+import { useMarquesMessages } from '@/lib/marquesMessages';
 import { normaliserWhatsapp } from '@/lib/marketplace';
 import { supabase } from '@/lib/supabase';
 import { envoyerPieceJointeChat, urlPieceJointeSignee, type TypePieceJointe } from '@/lib/chatAttachments';
@@ -157,10 +161,78 @@ export default function ChatDetailScreen() {
     setConversationFavorite(suivant);
     AsyncStorage.setItem(cleFavori, suivant ? '1' : '0').catch(() => {});
   }
+  // Marques locales (réactions, épinglés, importants, supprimés « pour moi ») et menu d'actions d'un message (appui long).
+  const { marques, basculer: basculerMarque, reagir } = useMarquesMessages(id);
+  const [actions, setActions] = useState<{ message: ChatMessage; y: number } | null>(null);
+  const [selection, setSelection] = useState<string[] | null>(null);
   const messagesAffiches =
-    messages && termeRecherche.trim()
+    (messages && termeRecherche.trim()
       ? messages.filter((m) => contientSansAccent(m.text, termeRecherche.trim()))
-      : messages;
+      : messages
+    )?.filter((m) => !marques.masques.includes(m.id)) ?? null;
+
+  async function lienPieceJointe(m: ChatMessage): Promise<string | null> {
+    return m.attachmentUrl ? urlPieceJointeSignee(m.attachmentUrl) : null;
+  }
+
+  async function agirSurMessage(a: ActionMessage) {
+    const cible = actions?.message;
+    if (!cible) return;
+    setActions(null);
+    const texte = cible.text || cible.fileName || '';
+    switch (a) {
+      case 'repondre':
+        setBrouillon(`↪ « ${texte.slice(0, 80)}${texte.length > 80 ? '…' : ''} »\n`);
+        break;
+      case 'copier':
+        await Clipboard.setStringAsync(texte);
+        break;
+      case 'transferer':
+      case 'partager': {
+        const lien = await lienPieceJointe(cible);
+        Share.share({ message: lien ?? texte }).catch(() => {});
+        break;
+      }
+      case 'epingler':
+        basculerMarque('epingles', cible.id);
+        break;
+      case 'important':
+        basculerMarque('importants', cible.id);
+        break;
+      case 'selectionner':
+        setSelection([cible.id]);
+        break;
+      case 'enregistrer':
+      case 'ouvrir': {
+        const lien = await lienPieceJointe(cible);
+        if (lien) Linking.openURL(lien).catch(() => Alert.alert('Ouverture impossible', "Aucune application n'a pu ouvrir ce fichier."));
+        else Alert.alert('Fichier indisponible', "Cette pièce jointe n'a pas pu être récupérée.");
+        break;
+      }
+      case 'signaler':
+        Alert.alert('Signaler ce message ?', "L'équipe Facilité examinera ce message.", [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Signaler',
+            style: 'destructive',
+            onPress: () => {
+              supabase
+                .rpc('signaler_message', { p_message_id: cible.id, p_motif: 'autre' })
+                .then(({ error }) => Alert.alert(error ? 'Signalement impossible' : 'Message signalé', error ? error.message : 'Merci, l’équipe Facilité va l’examiner.'));
+            },
+          },
+        ]);
+        break;
+      case 'supprimer':
+        Alert.alert('Supprimer ce message ?', 'Il disparaît de votre écran. Il reste visible pour l’autre personne.', [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Supprimer', style: 'destructive', onPress: () => basculerMarque('masques', cible.id) },
+        ]);
+        break;
+    }
+  }
+
+  const textesSelectionnes = () => (messages ?? []).filter((m) => selection?.includes(m.id)).map((m) => m.text || m.fileName || '').join('\n');
 
   useEffect(() => {
     const ouvre = Keyboard.addListener('keyboardDidShow', () => setClavierOuvert(true));
@@ -294,6 +366,15 @@ export default function ChatDetailScreen() {
                   style={{ width: 32, height: 36, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name={conversationFavorite ? 'heart' : 'heart-outline'} size={21} color={conversationFavorite ? '#DC2626' : '#1A1A1A'} />
                 </Pressable>
+                {autreParticipant?.estAdmin ? (
+                  <Pressable
+                    onPress={() => Linking.openURL('tel:+221771400832').catch(() => Alert.alert('Appel', "Impossible de lancer l'appel."))}
+                    accessibilityLabel="Appeler le support Facilité"
+                    hitSlop={8}
+                    style={{ width: 32, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="call-outline" size={20} color="#1A1A1A" />
+                  </Pressable>
+                ) : null}
                 <Pressable
                   onPress={() => {
                     setRechercheOuverte((v) => !v);
@@ -380,7 +461,23 @@ export default function ChatDetailScreen() {
                 contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 12, gap: 6, flexGrow: 1, justifyContent: 'flex-end' }}
                 keyboardShouldPersistTaps="handled"
                 onContentSizeChange={() => listeRef.current?.scrollToEnd({ animated: false })}
-                renderItem={({ item }) => <BulleMessage message={item} marketplace={marketplace} />}
+                extraData={[marques, selection]}
+                renderItem={({ item }) => (
+                  <BulleMessage
+                    message={item}
+                    marketplace={marketplace}
+                    epingle={marques.epingles.includes(item.id)}
+                    important={marques.importants.includes(item.id)}
+                    reaction={marques.reactions[item.id]}
+                    selectionne={Boolean(selection?.includes(item.id))}
+                    onLongPress={marketplace ? undefined : (y) => !selection && setActions({ message: item, y })}
+                    onPress={
+                      selection
+                        ? () => setSelection((l) => (l ?? []).includes(item.id) ? (l ?? []).filter((x) => x !== item.id) : [...(l ?? []), item.id])
+                        : undefined
+                    }
+                  />
+                )}
                 ListEmptyComponent={
                   <Text style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.4)', fontWeight: '500', textAlign: 'center', marginBottom: 24 }}>
                     {termeRecherche.trim() ? 'Aucun message ne correspond à cette recherche.' : 'Aucun message pour l&apos;instant — dites bonjour 👋'}
@@ -519,6 +616,37 @@ export default function ChatDetailScreen() {
               </Pressable>
             </Pressable>
           </Modal>
+
+          {selection ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#1A1A1A' }}>{selection.length} sélectionné{selection.length > 1 ? 's' : ''}</Text>
+              <Pressable onPress={() => Clipboard.setStringAsync(textesSelectionnes()).then(() => setSelection(null))} hitSlop={8}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2563EB' }}>Copier</Text>
+              </Pressable>
+              <Pressable onPress={() => Share.share({ message: textesSelectionnes() }).then(() => setSelection(null)).catch(() => {})} hitSlop={8}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2563EB' }}>Partager</Text>
+              </Pressable>
+              <Pressable onPress={() => setSelection(null)} hitSlop={8}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#6B7280' }}>Annuler</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <ActionsMessage
+            visible={Boolean(actions)}
+            moi={actions?.message.sender === 'me'}
+            y={actions?.y ?? 200}
+            aUnePieceJointe={Boolean(actions?.message.attachmentUrl)}
+            epingle={Boolean(actions && marques.epingles.includes(actions.message.id))}
+            important={Boolean(actions && marques.importants.includes(actions.message.id))}
+            reactionActuelle={actions ? marques.reactions[actions.message.id] : undefined}
+            onReaction={(e) => {
+              if (actions) reagir(actions.message.id, e);
+              setActions(null);
+            }}
+            onAction={agirSurMessage}
+            onFermer={() => setActions(null)}
+          />
 
           <ZoneSaisie
             brouillon={brouillon}
@@ -886,13 +1014,34 @@ function ZoneSaisie({
   );
 }
 
-function BulleMessage({ message, marketplace }: { message: ChatMessage; marketplace: boolean }) {
+function BulleMessage({
+  message,
+  marketplace,
+  epingle = false,
+  important = false,
+  reaction,
+  selectionne = false,
+  onLongPress,
+  onPress,
+}: {
+  message: ChatMessage;
+  marketplace: boolean;
+  epingle?: boolean;
+  important?: boolean;
+  reaction?: string;
+  selectionne?: boolean;
+  onLongPress?: (y: number) => void;
+  onPress?: () => void;
+}) {
   const moi = message.sender === 'me';
   const aUnePieceJointe = !!message.attachmentUrl && !!message.attachmentType;
 
   return (
     <View style={{ flexDirection: 'row', justifyContent: moi ? 'flex-end' : 'flex-start' }}>
-      <View
+      <Pressable
+        onLongPress={onLongPress ? (e) => onLongPress(e.nativeEvent.pageY) : undefined}
+        onPress={onPress}
+        delayLongPress={250}
         style={{
           maxWidth: marketplace ? '80%' : '86%',
           padding: aUnePieceJointe && message.attachmentType === 'image' ? 4 : undefined,
@@ -906,6 +1055,7 @@ function BulleMessage({ message, marketplace }: { message: ChatMessage; marketpl
           borderWidth: marketplace ? 1 : 0,
           borderColor: moi ? 'rgba(16,185,129,0.25)' : 'rgba(0,0,0,0.06)',
           gap: 4,
+          ...(selectionne ? { borderWidth: 2, borderColor: '#10B981' } : null),
         }}>
         {aUnePieceJointe && message.attachmentType === 'image' && (
           <ImagePieceJointe chemin={message.attachmentUrl as string} />
@@ -936,6 +1086,9 @@ function BulleMessage({ message, marketplace }: { message: ChatMessage; marketpl
             marginRight: aUnePieceJointe && message.attachmentType === 'image' ? 6 : 0,
             marginBottom: aUnePieceJointe && message.attachmentType === 'image' ? 4 : 0,
           }}>
+          {reaction ? <Text style={{ fontSize: 13 }}>{reaction}</Text> : null}
+          {important ? <Ionicons name="star" size={11} color="#F59E0B" /> : null}
+          {epingle ? <Ionicons name="pin" size={11} color="#6B7280" /> : null}
           <Text style={{ fontSize: 10.5, color: 'rgba(0,0,0,0.45)' }}>{message.time}</Text>
           {/* Accusé de lecture, comme WhatsApp : coche grise simple tant que non lu, double coche colorée une
               fois lu. Snapshot pris à l'ouverture du fil — ne se met pas à jour toute seule si l'autre
@@ -948,7 +1101,7 @@ function BulleMessage({ message, marketplace }: { message: ChatMessage; marketpl
             />
           )}
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }
