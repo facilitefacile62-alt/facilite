@@ -13,13 +13,15 @@ export type Story = {
   boutonVisible: boolean;
   /** « cv » : modèle de CV (WhatsApp) ; « offre » : offre d'emploi, toujours avec un bouton « Postuler ». */
   type: 'cv' | 'offre';
+  /** Message pré-rempli de « Commander via WhatsApp » ({nom} = titre de la story) ; null = message par défaut. */
+  messageWhatsapp: string | null;
   creeLe: string;
 };
 
 export async function chargerStories(): Promise<Story[]> {
   const { data, error } = await supabase
     .from('stories')
-    .select('id, titre, image_url, libelle_bouton, lien, bouton_visible, type, created_at')
+    .select('id, titre, image_url, libelle_bouton, lien, bouton_visible, type, message_whatsapp, created_at')
     .eq('actif', true)
     .order('ordre', { ascending: true })
     .order('created_at', { ascending: false });
@@ -32,6 +34,7 @@ export async function chargerStories(): Promise<Story[]> {
     lien: (s.lien as string | null) ?? null,
     boutonVisible: s.bouton_visible !== false || s.type === 'offre',
     type: s.type === 'offre' ? 'offre' : 'cv',
+    messageWhatsapp: (s.message_whatsapp as string | null) || null,
     creeLe: s.created_at as string,
   }));
 }

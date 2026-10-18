@@ -89,7 +89,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
   );
 
   if (!story) return null;
-  const message = `Bonjour, je souhaite commander : ${story.titre}.`;
+  const message = story.messageWhatsapp ? story.messageWhatsapp.replace(/\{nom\}/g, story.titre) : `Bonjour, je souhaite commander : ${story.titre}.`;
   const lienWhatsapp = story.lien && /wa\.me|whatsapp/i.test(story.lien)
     ? story.lien.includes('text=') ? story.lien : `${story.lien}${story.lien.includes('?') ? '&' : '?'}text=${encodeURIComponent(message)}`
     : null;

@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
+import { supabase } from '@/lib/supabase';
+
 // Stories déjà vues, mémorisées sur l'appareil (aucune colonne en base : c'est une préférence locale).
 // Non vue = anneau vert ; vue = anneau gris. Le magasin est partagé entre la rangée du fil et l'en-tête
 // (petits cercles près du logo) pour qu'ils restent d'accord, sans doublon.
@@ -22,6 +24,16 @@ async function charger() {
   } catch {
     // Stockage illisible : on repart d'une liste vide, sans gravité.
   }
+  // Connecté : on y ajoute les stories vues enregistrées sur le compte (autre appareil, nouvelle installation).
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      const { data: lignes } = await supabase.from('stories_vues').select('story_id');
+      if (lignes?.length) vues = new Set([...vues, ...lignes.map((l) => l.story_id as string)]);
+    }
+  } catch {
+    // Hors connexion : la mémoire locale suffit.
+  }
   charge = true;
   diffuser();
 }
@@ -32,6 +44,11 @@ export function marquerStoryVue(id: string): void {
   vues = new Set(vues).add(id);
   diffuser();
   AsyncStorage.setItem(CLE, JSON.stringify([...vues])).catch(() => {});
+  // Et sur le compte, si l'utilisateur est connecté (sans bloquer ni échouer si le réseau manque).
+  supabase.auth
+    .getSession()
+    .then(({ data }) => (data.session ? supabase.rpc('marquer_story_vue', { p_story_id: id }) : null))
+    .catch(() => {});
 }
 
 /** Les identifiants des stories vues ; se met à jour dès qu'une story est marquée vue. */

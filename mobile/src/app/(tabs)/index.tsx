@@ -65,10 +65,9 @@ export default function AccueilScreen() {
     const ordonnee = [...stories.filter((s) => !vues.has(s.id)), ...stories.filter((s) => vues.has(s.id))];
     queueMicrotask(() => setRangee(ordonnee));
   }, [stories, vues, storyOuverte]);
-  // Près du logo : les non vues d'abord (anneau vert), puis les vues (anneau gris) — il y a toujours quelque chose à toucher
-  // en haut dès que des stories existent. Un appui ouvre la première story non vue (ou la première si tout est vu).
-  const toutes = rangee.map((s, index) => ({ id: s.id, imageUrl: s.imageUrl, titre: s.titre, index, vue: vues.has(s.id) }));
-  const nonVues = toutes.filter((s) => !s.vue);
+  // Près du logo (prompt § 2 et 4) : UNIQUEMENT les stories non vues, anneau vert ; aucun cercle quand tout est vu.
+  // Un appui ouvre la première story non vue.
+  const nonVues = rangee.map((s, index) => ({ id: s.id, imageUrl: s.imageUrl, titre: s.titre, index })).filter((s) => !vues.has(s.id));
   useEffect(() => {
     let annule = false;
     chargerStories().then((liste) => {
@@ -102,7 +101,7 @@ export default function AccueilScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: FOND_PAGE }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <FaciliteHeader petitesStories={rangeeHors ? toutes : []} onStory={() => setStoryOuverte(nonVues[0]?.index ?? 0)} />
+        <FaciliteHeader petitesStories={rangeeHors ? nonVues : []} onStory={() => setStoryOuverte(nonVues[0]?.index ?? 0)} />
 
         {offres === null && !erreur ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
