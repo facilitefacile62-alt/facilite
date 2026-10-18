@@ -5,7 +5,8 @@ import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
-import { chargerOffresParVille, type GroupeVille, type ResultatAutour } from '@/lib/offresParVille';
+import { chargerOffresParVille, trouverVille, type GroupeVille, type ResultatAutour } from '@/lib/offresParVille';
+import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import type { Position } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
 
@@ -19,9 +20,33 @@ import { useLocalisation } from '@/lib/useLocalisation';
 // pastille, carrousel de villes en bas), sans regroupement.
 const BLEU = '#2563EB';
 const VERT = '#10B981';
+// Dépôts de candidature spontanée : une autre couleur que les offres, jamais mélangés avec elles.
+const VIOLET = '#8B5CF6';
 const DAKAR: Position = { latitude: 14.7167, longitude: -17.4677 };
 
 const libelleOffres = (n: number) => `${n} offre${n > 1 ? 's' : ''}`;
+const libelleSpontanees = (n: number) => `${n} dépôt${n > 1 ? 's' : ''}`;
+
+type Vue = 'offres' | 'spontanees';
+type GroupeSpontane = { ville: string; lat: number; lng: number; entreprises: typeof SPONTANEOUS_COMPANIES };
+
+// Entreprises qui acceptent les candidatures spontanées, rangées par ville citée dans leur localisation
+// (même règle que les offres) ; celles qui ne citent aucune ville sont comptées à part.
+const { groupesSpontanes, spontanesSansVille } = (() => {
+  const parVille = new Map<string, GroupeSpontane>();
+  let sansVille = 0;
+  for (const e of SPONTANEOUS_COMPANIES) {
+    const v = trouverVille(e.location);
+    if (!v) {
+      sansVille += 1;
+      continue;
+    }
+    const g = parVille.get(v.nom) ?? { ville: v.nom, lat: v.lat, lng: v.lng, entreprises: [] };
+    g.entreprises.push(e);
+    parVille.set(v.nom, g);
+  }
+  return { groupesSpontanes: [...parVille.values()].sort((a, b) => b.entreprises.length - a.entreprises.length), spontanesSansVille: sansVille };
+})();
 
 export default function AutourFaciliteScreen() {
   const router = useRouter();
@@ -29,7 +54,9 @@ export default function AutourFaciliteScreen() {
   const { position, activer } = useLocalisation();
   const [resultat, setResultat] = useState<ResultatAutour | null>(null);
   const [erreur, setErreur] = useState(false);
+  // Sélection : « Dakar » (offres de la ville) ou « sp:Dakar » (dépôts de candidature spontanée de la ville).
   const [selection, setSelection] = useState<string | null>(null);
+  const [vue, setVue] = useState<Vue>('offres');
   const [carte, setCarte] = useState<CommandesCarte | null>(null);
 
   useEffect(() => {
@@ -53,6 +80,8 @@ export default function AutourFaciliteScreen() {
 
   const groupes = useMemo(() => resultat?.groupes ?? [], [resultat]);
   const courant: GroupeVille | null = groupes.find((g) => g.ville === selection) ?? null;
+  const courantSp: GroupeSpontane | null = selection?.startsWith('sp:') ? groupesSpontanes.find((g) => `sp:${g.ville}` === selection) ?? null : null;
+  const villesAvecLesDeux = useMemo(() => new Set(groupes.filter((g) => groupesSpontanes.some((x) => x.ville === g.ville)).map((g) => g.ville)), [groupes]);
 
   const marqueurs = useMemo<MarqueurCarte[]>(() => {
     const liste: MarqueurCarte[] = groupes.map((g) => ({
@@ -67,33 +96,64 @@ export default function AutourFaciliteScreen() {
         sous: libelleOffres(g.offres.length),
         selectionne: selection === g.ville,
         actif: true,
+        dx: villesAvecLesDeux.has(g.ville) ? -30 : 0,
       },
     }));
+    groupesSpontanes.forEach((g) =>
+      liste.push({
+        id: `sp:${g.ville}`,
+        lat: g.lat,
+        lng: g.lng,
+        couleur: VIOLET,
+        libelle: g.ville,
+        avatar: {
+          emoji: String(g.entreprises.length),
+          bordure: VIOLET,
+          sous: libelleSpontanees(g.entreprises.length),
+          selectionne: selection === `sp:${g.ville}`,
+          actif: true,
+          dx: villesAvecLesDeux.has(g.ville) ? 30 : 0,
+        },
+      })
+    );
     if (position) {
       liste.push({ id: 'moi', lat: position.latitude, lng: position.longitude, couleur: BLEU, halo: true, libelle: 'Vous êtes ici', avatar: { emoji: '🧑🏾', bordure: '#1877F2', moi: true } });
     }
     return liste;
-  }, [groupes, selection, position]);
+  }, [groupes, selection, position, villesAvecLesDeux]);
 
   // Bulle d'aperçu au-dessus du rond de la ville : ses offres (poste + entreprise), comme celle des boutiques.
   const popup = useMemo<PopupBoutique | null>(() => {
+    if (courantSp) {
+      return {
+        lat: courantSp.lat,
+        lng: courantSp.lng,
+        dx: villesAvecLesDeux.has(courantSp.ville) ? 30 : 0,
+        titre: courantSp.ville,
+        sous: `${libelleSpontanees(courantSp.entreprises.length)} de candidature spontanée`,
+        articles: courantSp.entreprises.map((e) => ({ id: `sp-${e.slug}`, titre: e.domains, prix: e.company, photo: e.image_url ?? undefined, icone: '✉️' })),
+      };
+    }
     if (!courant) return null;
     return {
       lat: courant.lat,
       lng: courant.lng,
+      dx: villesAvecLesDeux.has(courant.ville) ? -30 : 0,
       titre: courant.ville,
       sous: `${libelleOffres(courant.offres.length)} · ${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''}`,
       articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, photo: o.affiche && !o.affiche.startsWith('data:') ? o.affiche : undefined, icone: '🏢' })),
     };
-  }, [courant]);
+  }, [courant, courantSp, villesAvecLesDeux]);
 
   const origine = position ?? DAKAR;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
 
-  const choisirVille = (ville: string) => {
-    setSelection(ville);
-    const g = groupes.find((x) => x.ville === ville);
+  const choisirVille = (cle: string) => {
+    setSelection(cle);
+    const sp = cle.startsWith('sp:');
+    setVue(sp ? 'spontanees' : 'offres');
+    const g = sp ? groupesSpontanes.find((x) => `sp:${x.ville}` === cle) : groupes.find((x) => x.ville === cle);
     if (g) carte?.centrer(g.lat, g.lng, 10, -0.07);
   };
 
@@ -111,6 +171,7 @@ export default function AutourFaciliteScreen() {
         onMarqueur={(id) => {
           if (id === 'moi' || id === 'boutique') return;
           if (id === 'fermer') setSelection(null);
+          else if (id.startsWith('article:sp-')) router.push(`/entreprise/${id.slice(11)}` as Href);
           else if (id.startsWith('article:')) router.push(`/offre/${id.slice(8)}` as Href);
           else choisirVille(id);
         }}
@@ -135,6 +196,13 @@ export default function AutourFaciliteScreen() {
               </Text>
             </View>
           </View>
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            accessibilityLabel="Fermer"
+            className="items-center justify-center rounded-full"
+            style={{ width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.14)' }}>
+            <Ionicons name="close" size={20} color="#fff" />
+          </Pressable>
         </View>
       </View>
 
@@ -145,40 +213,67 @@ export default function AutourFaciliteScreen() {
       ) : null}
 
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
-        <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
-          <Ionicons name="briefcase" size={13} color="#fff" />
+        <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: courantSp || vue === 'spontanees' ? 'rgba(124,58,237,0.96)' : 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
+          <Ionicons name={vue === 'spontanees' ? 'mail' : 'briefcase'} size={13} color="#fff" />
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
-            {courant
-              ? `${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''} recrute${courant.entreprises > 1 ? 'nt' : ''} à ${courant.ville}`
-              : resultat && resultat.sansVille > 0
-                ? `${libelleOffres(resultat.sansVille)} ouverte${resultat.sansVille > 1 ? 's' : ''} sur tout le Sénégal`
-                : 'Position approximative : le centre de chaque ville'}
+            {courantSp
+              ? `${libelleSpontanees(courantSp.entreprises.length)} de candidature spontanée à ${courantSp.ville}`
+              : courant
+                ? `${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''} recrute${courant.entreprises > 1 ? 'nt' : ''} à ${courant.ville}`
+                : vue === 'spontanees'
+                  ? `${spontanesSansVille} dépôt${spontanesSansVille > 1 ? 's' : ''} ouvert${spontanesSansVille > 1 ? 's' : ''} sur tout le Sénégal`
+                  : resultat && resultat.sansVille > 0
+                    ? `${libelleOffres(resultat.sansVille)} ouverte${resultat.sansVille > 1 ? 's' : ''} sur tout le Sénégal`
+                    : 'Position approximative : le centre de chaque ville'}
           </Text>
         </View>
 
+        <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>
+          {([
+            { id: 'offres' as const, libelle: 'Offres' },
+            { id: 'spontanees' as const, libelle: 'Candidatures spontanées' },
+          ]).map((o) => {
+            const actif = vue === o.id;
+            return (
+              <Pressable
+                key={o.id}
+                onPress={() => {
+                  setVue(o.id);
+                  setSelection(null);
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: actif }}
+                className="rounded-full items-center justify-center"
+                style={{ height: 38, paddingHorizontal: 18, backgroundColor: actif ? '#fff' : 'transparent' }}>
+                <Text className="text-[13px] font-black" style={{ color: actif ? '#1A1A1A' : 'rgba(255,255,255,0.75)' }}>{o.libelle}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         <View className="rounded-[22px] py-3" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 108 }}>
-          {groupes.length === 0 ? (
+          {(vue === 'offres' ? groupes.length === 0 : groupesSpontanes.length === 0) ? (
             <Text className="text-center text-[12.5px] py-8" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {resultat === null ? 'Chargement…' : 'Aucune offre à afficher.'}
+              {resultat === null ? 'Chargement…' : vue === 'offres' ? 'Aucune offre à afficher.' : 'Aucun dépôt à afficher.'}
             </Text>
           ) : (
             <FlatList
               horizontal
-              data={groupes}
-              keyExtractor={(g) => g.ville}
+              data={vue === 'offres' ? groupes.map((g) => ({ cle: g.ville, ville: g.ville, n: g.offres.length, texte: libelleOffres(g.offres.length) })) : groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, texte: libelleSpontanees(g.entreprises.length) }))}
+              keyExtractor={(g) => g.cle}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
               renderItem={({ item }) => {
-                const actif = selection === item.ville;
+                const actif = selection === item.cle;
                 return (
-                  <Pressable onPress={() => choisirVille(item.ville)} className="items-center" style={{ width: 76 }}>
+                  <Pressable onPress={() => choisirVille(item.cle)} className="items-center" style={{ width: 76 }}>
                     <View
                       className="items-center justify-center rounded-full"
-                      style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: BLEU, borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
-                      <Text className="text-[20px] font-black text-white">{item.offres.length}</Text>
+                      style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: vue === 'offres' ? BLEU : VIOLET, borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                      <Text className="text-[20px] font-black text-white">{item.n}</Text>
                     </View>
                     <Text className="text-[11.5px] font-bold text-white mt-1.5 text-center" numberOfLines={1}>{item.ville}</Text>
-                    <Text className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.55)' }} numberOfLines={1}>{libelleOffres(item.offres.length)}</Text>
+                    <Text className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.55)' }} numberOfLines={1}>{item.texte}</Text>
                   </Pressable>
                 );
               }}

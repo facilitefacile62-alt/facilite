@@ -47,6 +47,8 @@ export type MarqueurCarte = {
     /** Pastille de statut verte (boutique active) ou grise. */
     actif?: boolean;
     moi?: boolean;
+    /** Décalage horizontal en pixels (deux marqueurs posés au même endroit, ex. offres et candidatures). */
+    dx?: number;
   };
 };
 
@@ -54,6 +56,8 @@ export type MarqueurCarte = {
 export type PopupBoutique = {
   lat: number;
   lng: number;
+  /** Même décalage que le marqueur de la bulle. */
+  dx?: number;
   titre: string;
   sous?: string;
   /** null = chargement des articles en cours. */
@@ -196,7 +200,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70, m.avatar.moi ? 32 : 80] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0), m.avatar.moi ? 32 : 80] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 640 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () { envoyer(m.id); });
         return;
@@ -241,7 +245,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
     });
-    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: [0, -78], minWidth: 250, maxWidth: 300 })
+    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: [d.dx || 0, -78], minWidth: 250, maxWidth: 300 })
       .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
