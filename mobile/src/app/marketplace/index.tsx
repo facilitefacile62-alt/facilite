@@ -9,6 +9,7 @@ import MarketplaceHeader from '@/components/MarketplaceHeader';
 import MiniCarteBoutiques from '@/components/MiniCarteBoutiques';
 import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES_MARKETPLACE, type ArticleMarketplace } from '@/lib/marketplace';
+import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 import { chargerMesBoutiques } from '@/lib/vendeur';
 
@@ -29,10 +30,15 @@ function avecCaseVide(articles: ArticleMarketplace[]): LigneGrille[] {
 export default function MarketplaceScreen() {
   const router = useRouter();
   const [categorie, setCategorie] = useState<string | null>(null);
-  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, '');
-
-  // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...).
-  const { categorie: categorieParam, mini } = useLocalSearchParams<{ categorie?: string; mini?: string }>();
+  // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...) ; « Articles proches » (?proches=1)
+  // reste sur cette page et trie les articles par distance.
+  const { categorie: categorieParam, mini, proches } = useLocalSearchParams<{ categorie?: string; mini?: string; proches?: string }>();
+  const { position, activer } = useLocalisation();
+  useEffect(() => {
+    if (proches) activer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proches]);
+  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, '', proches ? position : null);
   useEffect(() => {
     if (!categorieParam) return;
     queueMicrotask(() => setCategorie(categorieParam));

@@ -44,7 +44,7 @@ export default function AutourDeMoiScreen() {
   const { etat, position, activer } = useLocalisation();
   const [boutiques, setBoutiques] = useState<BoutiqueCarte[] | null>(null);
   // Onglet de départ choisi par la ligne « Autour de moi » (Articles proches / Pleine carte).
-  const { onglet: ongletParam } = useLocalSearchParams<{ onglet?: string }>();
+  const { onglet: ongletParam, boutique: boutiqueParam } = useLocalSearchParams<{ onglet?: string; boutique?: string }>();
   const [onglet, setOnglet] = useState<Onglet>(ongletParam === 'articles' ? 'articles' : 'boutiques');
   // Un nouvel appui sur « Articles proches » / « Pleine carte » change le paramètre : on suit.
   const [paramVu, setParamVu] = useState(ongletParam);
@@ -170,6 +170,15 @@ export default function AutourDeMoiScreen() {
     },
     [boutiques, carte]
   );
+
+  // Arrivée depuis « M'y rendre » d'un article : la boutique est sélectionnée dès que les boutiques sont chargées.
+  const boutiqueOuverte = useRef<string | null>(null);
+  useEffect(() => {
+    if (!boutiqueParam || !boutiques || !carte || boutiqueOuverte.current === boutiqueParam) return;
+    if (!boutiques.some((b) => b.id === boutiqueParam)) return;
+    boutiqueOuverte.current = boutiqueParam;
+    queueMicrotask(() => choisirBoutique(boutiqueParam, 16));
+  }, [boutiqueParam, boutiques, carte, choisirBoutique]);
 
   // Un appui sélectionne la boutique et ouvre l'aperçu fixe ; un second appui
   // sur la même boutique dans les 320 ms (pastille de la carte, carrousel ou
