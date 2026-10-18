@@ -207,6 +207,10 @@ function depuis(dateIso) {
   return `il y a ${Math.round(secondes / 86400)} j`;
 }
 
+// « Établissement » est masqué pour le moment (décision du 18/10/2026). Remettre à true pour le rouvrir : les
+// rubriques et leur code sont conservés.
+const ETABLISSEMENT_VISIBLE = false;
+
 export default function MarketplaceClient() {
   const { session, profile, isAdmin, isRecruiter, signOut } = useAuth();
   const [featureFlagsTree, setFeatureFlagsTree] = useState(DEFAULT_FEATURE_TREE);
@@ -4512,7 +4516,7 @@ function VueVendeur({
                   </button>
 
                   {/* 1.2 Établissement */}
-                  <button
+                  {ETABLISSEMENT_VISIBLE && (<button
                     type="button"
                     onClick={() => setOngletVendeur("etablissement")}
                     className={`w-full px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition cursor-pointer ${
@@ -4523,7 +4527,7 @@ function VueVendeur({
                   >
                     <i className="fa-solid fa-building text-sm text-gray-700 dark:text-gray-300"></i>
                     <span className="flex-1">Établissement</span>
-                  </button>
+                  </button>)}
 
                   {/* 2. Faire profit */}
                   <button
@@ -4858,171 +4862,29 @@ function VueVendeur({
             )}
 
             {/* VUE SERVICE / MÉTIER */}
+            {/* Rubrique « Service / métier » : pour le moment, seul « Devenir livreur » est proposé (18/10/2026). */}
             {ongletVendeur === "service" && (
-              <div className="space-y-4">
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800/60 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shadow-sm">
-                      <i className="fa-solid fa-screwdriver-wrench"></i>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-gray-900 dark:text-white">
-                        Services, Métiers &amp; Prestations
-                      </h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-300">
-                        Proposez vos compétences artisanales, techniques ou professionnelles aux clients.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
-                  {editionMetierOuverte ? (
-                    <div className="space-y-2.5">
-                      <select
-                        value={metierEditionEstAutre ? "autre" : metierEdition}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === "autre") {
-                            setMetierEditionEstAutre(true);
-                            setMetierEdition("");
-                          } else {
-                            setMetierEditionEstAutre(false);
-                            setMetierEdition(v);
-                          }
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
-                      >
-                        <option value="" disabled>Choisissez votre métier</option>
-                        {METIERS_SERVICE.map((m) => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                        <option value="autre">Autre (précisez)</option>
-                      </select>
-                      {metierEditionEstAutre && (
-                        <input
-                          type="text"
-                          value={metierEdition}
-                          onChange={(e) => setMetierEdition(e.target.value)}
-                          placeholder="Précisez votre métier"
-                          className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                        />
-                      )}
-                      {!metierEditionEstAutre && METIERS_REGLEMENTES.includes(metierEdition) && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
-                          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-                          <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
-                        </p>
-                      )}
-                      <textarea
-                        rows={2}
-                        value={descriptionPrestationEdition}
-                        onChange={(e) => setDescriptionPrestationEdition(e.target.value)}
-                        placeholder="Spécialités, expérience, zone d'intervention..."
-                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                      />
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={enregistrementMetierEnCours}
-                          onClick={handleEnregistrerMetierInline}
-                          className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
-                        >
-                          {enregistrementMetierEnCours ? "Enregistrement..." : "Enregistrer"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditionMetierOuverte(false)}
-                          className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Métier / Domaine d&apos;activité :</span>
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-bold">
-                          {boutiqueActive?.metier || "Commerce & Prestation"}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Description de la prestation :</span>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                          {boutiqueActive?.description_prestation || boutiqueActive?.description || "Prestation de service sur mesure avec déplacement rapide à Dakar et banlieue."}
-                        </p>
-                      </div>
-                      <div className="pt-2 border-t border-gray-200/60 dark:border-zinc-700/60 flex items-center justify-between flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMetierEdition(boutiqueActive?.metier || "");
-                            setMetierEditionEstAutre(Boolean(boutiqueActive?.metier) && !METIERS_SERVICE.includes(boutiqueActive.metier));
-                            setDescriptionPrestationEdition(boutiqueActive?.description_prestation || "");
-                            setEditionMetierOuverte(true);
-                          }}
-                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
-                        >
-                          <i className="fa-solid fa-pen mr-1.5"></i>
-                          Modifier mes prestations
-                        </button>
-                        {telephoneVendeur && (
-                          <a
-                            href={`https://wa.me/221${telephoneVendeur.replace(/\D/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
-                          >
-                            <i className="fa-brands fa-whatsapp text-sm"></i>
-                            <span>WhatsApp direct</span>
-                          </a>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Disponibilité : bascule instantanée ou horaires
-                    programmés — même fonctionnalité que sur mobile. */}
-                <div className="p-4 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
-                      Disponibilité
-                    </span>
-                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={dispoEnCours}
-                      onClick={() => basculerDisponibilite(true)}
-                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer disabled:opacity-50 ${
-                        boutiqueActive?.mode_horaires === "manuel" && boutiqueActive?.disponible_manuel !== false
-                          ? "bg-emerald-600 text-white shadow-sm"
-                          : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
-                      }`}
-                    >
-                      <i className="fa-solid fa-bolt mr-1"></i>
-                      Disponible maintenant
-                    </button>
-                    <button
-                      type="button"
-                      disabled={dispoEnCours}
-                      onClick={() => basculerDisponibilite(false)}
-                      className={`py-2 rounded-xl text-xs font-black transition cursor-pointer disabled:opacity-50 ${
-                        boutiqueActive?.mode_horaires === "manuel" && boutiqueActive?.disponible_manuel === false
-                          ? "bg-rose-600 text-white shadow-sm"
-                          : "bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300"
-                      }`}
-                    >
-                      <i className="fa-solid fa-pause mr-1"></i>
-                      Indisponible
-                    </button>
-                  </div>
-                </div>
-              </div>
+<div className="space-y-3">
+  <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 space-y-3">
+    <div className="flex items-center gap-2.5">
+      <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm">
+        <i className="fa-solid fa-motorcycle"></i>
+      </div>
+      <div>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white">Devenir livreur</h3>
+        <p className="text-xs text-gray-600 dark:text-gray-300">
+          Livrez les commandes autour de vous : les acheteurs de votre zone trouvent ainsi un livreur près d&apos;eux.
+        </p>
+      </div>
+    </div>
+    <Link
+      href="/marketplace?onglet=livrer"
+      className="block w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black text-center transition"
+    >
+      Devenir livreur
+    </Link>
+  </div>
+</div>
             )}
 
             {/* VUE ÉTABLISSEMENT */}
@@ -8631,7 +8493,7 @@ function ModalFicheBoutique({
             Service
           </button>
 
-          <button
+          {ETABLISSEMENT_VISIBLE && (<button
             ref={pilleDomaineRef}
             type="button"
             onClick={() => {
@@ -8645,7 +8507,7 @@ function ModalFicheBoutique({
             }`}
           >
             Établissement
-          </button>
+          </button>)}
         </div>
 
         {/* Contenu de l'onglet Mobile */}
@@ -8702,162 +8564,32 @@ function ModalFicheBoutique({
 
           {/* Contenu Service / Métier Mobile (anciennement "Activité") */}
           {ongletMobile === "activite" && ongletActif !== "publier" && ongletActif !== "parametres" && (
-            <div className="p-4 space-y-4">
-              {/* Métier / Prestations proposées — même info que le panneau
-                  desktop "Service / Métier" (VueVendeur), pour que la personne
-                  puisse définir ce qu'elle propose (livreur, électricien...). */}
-              <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 space-y-2.5">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <i className="fa-solid fa-screwdriver-wrench text-blue-600"></i>
-                    Métier / Prestation
-                  </span>
-                  {estProprietaire && !editionMetierOuverte && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMetierEdition(boutique?.metier || "");
-                        setMetierEditionEstAutre(Boolean(boutique?.metier) && !METIERS_SERVICE.includes(boutique.metier));
-                        setDescriptionPrestationEdition(boutique?.description_prestation || "");
-                        setEditionMetierOuverte(true);
-                      }}
-                      className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] font-black hover:bg-blue-200 dark:hover:bg-blue-800/60 transition cursor-pointer"
-                    >
-                      <i className="fa-solid fa-pen-to-square mr-1"></i>
-                      Modifier
-                    </button>
-                  )}
-                </div>
-
-                {editionMetierOuverte ? (
-                  <div className="space-y-2.5">
-                    <select
-                      value={metierEditionEstAutre ? "autre" : metierEdition}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v === "autre") {
-                          setMetierEditionEstAutre(true);
-                          setMetierEdition("");
-                        } else {
-                          setMetierEditionEstAutre(false);
-                          setMetierEdition(v);
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
-                    >
-                      <option value="" disabled>Choisissez votre métier</option>
-                      {METIERS_SERVICE.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                      <option value="autre">Autre (précisez)</option>
-                    </select>
-                    {metierEditionEstAutre && (
-                      <input
-                        type="text"
-                        value={metierEdition}
-                        onChange={(e) => setMetierEdition(e.target.value)}
-                        placeholder="Précisez votre métier"
-                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                      />
-                    )}
-                    {!metierEditionEstAutre && METIERS_REGLEMENTES.includes(metierEdition) && (
-                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-start gap-1.5">
-                        <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-                        <span>Métier réglementé : votre fiche restera masquée du public jusqu&apos;à sa vérification par un administrateur.</span>
-                      </p>
-                    )}
-                    <textarea
-                      rows={2}
-                      value={descriptionPrestationEdition}
-                      onChange={(e) => setDescriptionPrestationEdition(e.target.value)}
-                      placeholder="Spécialités, expérience, zone d'intervention..."
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                    />
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={enregistrementMetierEnCours}
-                        onClick={handleEnregistrerMetierInline}
-                        className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition cursor-pointer disabled:opacity-50"
-                      >
-                        {enregistrementMetierEnCours ? "Enregistrement..." : "Enregistrer"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditionMetierOuverte(false)}
-                        className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 text-xs font-bold transition cursor-pointer"
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm font-black text-blue-700 dark:text-blue-300">
-                      {boutique?.metier || "Non renseigné"}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {boutique?.description_prestation || "Prestation de service sur mesure."}
-                    </p>
-                  </>
-                )}
-              </div>
-
-              {/* Disponibilité : bascule instantanée "Disponible maintenant"
-                  ou grille horaire programmée — deux façons distinctes de
-                  montrer sa disponibilité, au choix du prestataire. */}
-              {estProprietaire && (
-                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-2.5 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <i className="fa-solid fa-circle-dot text-emerald-500"></i>
-                      Disponibilité
-                    </span>
-                    <BadgeStatutOuverture statut={statutOuverture} taille="petit" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={dispoEnCours}
-                      onClick={() => basculerDisponibilite(true)}
-                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
-                        modeHorairesActuel === "manuel" && disponibleManuel
-                          ? "bg-emerald-600 text-white shadow-sm"
-                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
-                      }`}
-                    >
-                      <i className="fa-solid fa-bolt mr-1"></i>
-                      Disponible maintenant
-                    </button>
-                    <button
-                      type="button"
-                      disabled={dispoEnCours}
-                      onClick={() => basculerDisponibilite(false)}
-                      className={`py-2 rounded-xl text-[11px] font-black transition cursor-pointer disabled:opacity-50 ${
-                        modeHorairesActuel === "manuel" && !disponibleManuel
-                          ? "bg-rose-600 text-white shadow-sm"
-                          : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
-                      }`}
-                    >
-                      <i className="fa-solid fa-pause mr-1"></i>
-                      Indisponible
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setModalHorairesOuverte(true)}
-                    className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <i className="fa-solid fa-calendar-days text-violet-500"></i>
-                    Programmer des horaires
-                  </button>
-                </div>
-              )}
-
+            <div className="p-4">
+{/* Rubrique « Service / métier » : pour le moment, seul « Devenir livreur » est proposé (18/10/2026). */}
+<div className="space-y-3">
+  <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 space-y-3">
+    <div className="flex items-center gap-2.5">
+      <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm">
+        <i className="fa-solid fa-motorcycle"></i>
+      </div>
+      <div>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white">Devenir livreur</h3>
+        <p className="text-xs text-gray-600 dark:text-gray-300">
+          Livrez les commandes autour de vous : les acheteurs de votre zone trouvent ainsi un livreur près d&apos;eux.
+        </p>
+      </div>
+    </div>
+    <Link
+      href="/marketplace?onglet=livrer"
+      className="block w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black text-center transition"
+    >
+      Devenir livreur
+    </Link>
+  </div>
+</div>
             </div>
           )}
 
-          {/* Contenu Domaine / Infos Mobile */}
           {ongletMobile === "domaine" && ongletActif !== "publier" && ongletActif !== "parametres" && (
             <div className="p-4 space-y-4 text-xs">
               <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 space-y-3 shadow-2xs">
@@ -9377,7 +9109,7 @@ function ModalFicheBoutique({
               <span className="flex-1">Service / métier</span>
             </button>
 
-            <button
+            {ETABLISSEMENT_VISIBLE && (<button
               type="button"
               onClick={() => setOngletActif("etablissement")}
               className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2.5 transition cursor-pointer text-left ${
@@ -9388,7 +9120,7 @@ function ModalFicheBoutique({
             >
               <i className="fa-solid fa-building text-sm"></i>
               <span className="flex-1">Établissement</span>
-            </button>
+            </button>)}
 
             <button
               type="button"
