@@ -432,3 +432,11 @@ html.dark .bg-whatsapp-chat {
 .carte-focus-boutique .bulle-regroupement {
   display: none !important;
 }
+
+/* Boutique fixée : sa fenêtre d'articles passe AU-DESSUS de tous les calques de la carte. Sans cela, le calque
+   canvas des repères de transport (BRT, TER), plein écran dans le panneau des marqueurs, interceptait la souris
+   et le toucher : les articles ne pouvaient pas défiler. Les autres boutiques sont masquées à ce moment-là
+   (.carte-focus-boutique), donc la fenêtre ne recouvre plus rien d'utile. */
+.carte-focus-boutique .leaflet-popup-pane {
+  z-index: 700 !important;
+}
