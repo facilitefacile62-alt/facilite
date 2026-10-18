@@ -28,6 +28,24 @@ export type MarqueurCarte = {
   halo?: boolean;
   /** Pastille à compteur (ex. nombre d'offres d'une ville) à la place du point. */
   compteur?: number;
+  /**
+   * Marqueur « boutique » façon site (Locaux) : avatar rond dans un anneau coloré, avec au-dessus la
+   * pastille sombre « ● Nom · Quartier ». `moi` = « Vous êtes ici » (anneau bleu, pastille bleue dessous).
+   */
+  avatar?: {
+    /** Image de l'avatar (data URI SVG de l'avatar Bitmoji de la boutique). */
+    uri?: string;
+    /** Repli sans avatar : emoji (comme le site). */
+    emoji?: string;
+    /** Couleur de l'anneau. */
+    bordure: string;
+    /** Texte gris après le nom (quartier). */
+    sous?: string;
+    selectionne?: boolean;
+    /** Pastille de statut verte (boutique active) ou grise. */
+    actif?: boolean;
+    moi?: boolean;
+  };
 };
 
 export type CentreCarte = { lat: number; lng: number };
@@ -49,6 +67,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .etiquette { background: rgba(0,0,0,.72); color: #fff; border: 0; border-radius: 10px; padding: 2px 7px; font: 700 11px system-ui, sans-serif; box-shadow: none; }
   .etiquette:before { display: none; }
   .bulle-regroupement { background: none; border: 0; }
+  .marqueur-avatar { background: none; border: 0; }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
 </head><body>
@@ -72,10 +91,36 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var REGROUPER = ${regrouper};
   var SEUIL = 34;
   var dernier = [];
+  // Boutique fixée (mode « focus ») : seules elle et « Vous êtes ici » restent affichées ; les autres
+  // boutiques et leurs regroupements disparaissent jusqu'à ce que la fixation soit levée.
+  var focusId = null;
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function htmlAvatar(m) {
+    var a = m.avatar, ring = a.bordure;
+    var contenu = a.uri
+      ? '<img src="' + a.uri + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
+      : '<span style="font-size:24px;line-height:1">' + esc(a.emoji || '🏪') + '</span>';
+    var rond = '<div style="width:52px;height:52px;border-radius:9999px;padding:3px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
+    if (a.moi) {
+      return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond
+        + '<div style="margin-top:5px;padding:3px 10px;background:#1877F2;color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;white-space:nowrap;border:1px solid rgba(255,255,255,.35);box-shadow:0 6px 16px rgba(0,0,0,.45)">Vous êtes ici</div></div>';
+    }
+    var pastille = '<div style="margin-bottom:6px;padding:4px 12px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
+      + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
+      + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
+      + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
+      + '</div>';
+    var ombre = '<div style="width:32px;height:8px;border-radius:9999px;background:rgba(0,0,0,.6);filter:blur(1.5px);margin-top:4px"></div>';
+    return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + pastille + rond + ombre + '</div>';
+  }
   function dessiner() {
     couche.clearLayers();
     var libres = [], aGrouper = [];
-    dernier.forEach(function (m) { (m.halo || !REGROUPER ? libres : aGrouper).push(m); });
+    var affiches = focusId ? dernier.filter(function (m) { return m.id === focusId || m.halo || (m.avatar && m.avatar.moi); }) : dernier;
+    var avatars = affiches.some(function (m) { return m.avatar && !m.avatar.moi; });
+    SEUIL = avatars ? 58 : 34;
+    affiches.forEach(function (m) { (m.halo || (m.avatar && m.avatar.moi) || !REGROUPER || focusId ? libres : aGrouper).push(m); });
     var pts = aGrouper.map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
     var pris = [], groupes = [];
     pts.forEach(function (a, i) {
@@ -119,6 +164,15 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         mk.on('click', function () { envoyer(m.id); });
         return;
       }
+      if (m.avatar) {
+        if (m.avatar.moi) {
+          L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
+        }
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70, m.avatar.moi ? 38 : 90] });
+        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 640 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
+        ma.on('click', function () { envoyer(m.id); });
+        return;
+      }
       if (m.halo) {
         L.circleMarker([m.lat, m.lng], { radius: (m.rayon || 9) + 9, color: m.couleur, weight: 0, fillColor: m.couleur, fillOpacity: .22, interactive: false }).addTo(couche);
       }
@@ -128,14 +182,19 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     });
   }
   carte.on('zoomend', dessiner);
-  window.majMarqueurs = function (liste, ajuster) {
+  window.majMarqueurs = function (liste, ajuster, focus) {
     dernier = liste;
+    focusId = focus || null;
     dessiner();
-    var points = liste.map(function (m) { return [m.lat, m.lng]; });
+    var points = (focusId ? liste.filter(function (m) { return m.id === focusId; }) : liste).map(function (m) { return [m.lat, m.lng]; });
     if (ajuster && points.length > 1) carte.fitBounds(points, { padding: [36, 36], maxZoom: 16 });
     else if (ajuster && points.length === 1) carte.setView(points[0], Math.max(carte.getZoom(), 14));
   };
-  window.centrer = function (lat, lng, z) { carte.setView([lat, lng], z || carte.getZoom()); };
+  // decalage : fraction de la hauteur dont le point est remonté à l'écran (laisse la place d'un aperçu en bas).
+  window.centrer = function (lat, lng, z, decalage) {
+    carte.setView([lat, lng], z || carte.getZoom(), { animate: false });
+    if (decalage) carte.panBy([0, Math.round(carte.getSize().y * decalage)], { animate: false });
+  };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
 </script>
@@ -143,7 +202,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 }
 
 export type CommandesCarte = {
-  centrer: (lat: number, lng: number, zoom?: number) => void;
+  centrer: (lat: number, lng: number, zoom?: number, decalage?: number) => void;
   zoomer: (delta: number) => void;
 };
 
@@ -157,6 +216,7 @@ export default function CarteLeaflet({
   regrouper = false,
   onMarqueur,
   commandes,
+  focus = null,
   style,
 }: {
   centre: CentreCarte;
@@ -171,6 +231,8 @@ export default function CarteLeaflet({
   onMarqueur?: (id: string) => void;
   /** Reçoit des commandes impératives (recentrer, zoom ±) pour des contrôles flottants. */
   commandes?: (c: CommandesCarte) => void;
+  /** Identifiant de la boutique fixée : les autres marqueurs disparaissent tant qu'il est défini. */
+  focus?: string | null;
   style?: StyleProp<ViewStyle>;
 }) {
   const refWebView = useRef<WebView>(null);
@@ -200,8 +262,8 @@ export default function CarteLeaflet({
   }, [idIframe]);
 
   const miseAJour = useCallback(() => {
-    executer(`window.majMarqueurs && window.majMarqueurs(${JSON.stringify(marqueurs)}, ${ajuster})`);
-  }, [executer, marqueurs, ajuster]);
+    executer(`window.majMarqueurs && window.majMarqueurs(${JSON.stringify(marqueurs)}, ${ajuster}, ${JSON.stringify(focus)})`);
+  }, [executer, marqueurs, ajuster, focus]);
 
   useEffect(() => {
     miseAJour();
@@ -209,7 +271,7 @@ export default function CarteLeaflet({
 
   useEffect(() => {
     commandes?.({
-      centrer: (lat, lng, z) => executer(`window.centrer && window.centrer(${lat}, ${lng}, ${z ?? 'null'})`),
+      centrer: (lat, lng, z, decalage) => executer(`window.centrer && window.centrer(${lat}, ${lng}, ${z ?? 'null'}, ${decalage ?? 'null'})`),
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
     });
   }, [commandes, executer]);
