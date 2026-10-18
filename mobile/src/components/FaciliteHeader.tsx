@@ -52,13 +52,13 @@ export default function FaciliteHeader({ petitesStories = [], onStory }: { petit
 
         {petitesStories.length > 0 ? (
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
-            {petitesStories.slice(0, 5).map((s, i) => (
+            {petitesStories.slice(0, 3).map((s, i) => (
               <Pressable
                 key={s.id}
                 onPress={() => onStory?.(s.index)}
                 accessibilityLabel={`Story : ${s.titre}`}
                 hitSlop={4}
-                style={{ marginLeft: i === 0 ? 0 : -8, width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: '#10E688', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
+                style={{ marginLeft: i === 0 ? 0 : -7, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#10E688', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
                 <Image source={{ uri: s.imageUrl }} alt="" style={{ width: '100%', height: '100%' }} contentFit="cover" />
               </Pressable>
             ))}
