@@ -1,12 +1,13 @@
 import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EcrireEmailPage from '@/components/EcrireEmailPage';
 import FaciliteHeader from '@/components/FaciliteHeader';
-import { IconCrayon, IconPoints, IconRecherche } from '@/components/facilite-icons';
+import { IconPoints, IconRecherche } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { useConversationsReelles, type ConversationReelle } from '@/lib/useConversationsReelles';
@@ -36,6 +37,19 @@ export default function MessagesScreen() {
   const [recherche, setRecherche] = useState('');
   const [puceActive, setPuceActive] = useState<FiltrePuce>('toutes');
   const [ouvertureSupportEnCours, setOuvertureSupportEnCours] = useState(false);
+  // « Écrire » ouvre la page e-mail À L'INTÉRIEUR de la messagerie (la barre du bas reste visible) ; le bouton
+  // « + » de Facilité l'ouvre aussi, par ?ecrire=1. Un nouvel appui sur ce bouton change le paramètre : on suit.
+  const { ecrire } = useLocalSearchParams<{ ecrire?: string }>();
+  const [ecrireOuvert, setEcrireOuvert] = useState(ecrire === '1');
+  const [ecrireVu, setEcrireVu] = useState(ecrire);
+  if (ecrire !== ecrireVu) {
+    setEcrireVu(ecrire);
+    if (ecrire === '1') setEcrireOuvert(true);
+  }
+  const fermerEcrire = () => {
+    setEcrireOuvert(false);
+    if (ecrire) router.setParams({ ecrire: undefined });
+  };
 
   const conversationsFiltrees = useMemo(() => {
     if (!conversations) return null;
@@ -71,6 +85,8 @@ export default function MessagesScreen() {
     router.push(`/chat/${conversation.id}`);
   }
 
+  if (ecrireOuvert) return <EcrireEmailPage onFermer={fermerEcrire} />;
+
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -85,11 +101,18 @@ export default function MessagesScreen() {
               </Text>
             </View>
           </View>
-          <View className="flex-row items-center gap-3.5">
-            <Pressable onPress={() => Alert.alert('Nouvelle discussion', 'Bientôt disponible.')}>
-              <IconCrayon />
+          <View className="flex-row items-center gap-3">
+            {/* « Écrire » : pilule bleu clair, à la place de l'ancien petit crayon (maquette 17) */}
+            <Pressable
+              onPress={() => setEcrireOuvert(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Écrire un e-mail"
+              className="flex-row items-center gap-2"
+              style={{ height: 44, paddingHorizontal: 20, borderRadius: 14, backgroundColor: '#C2E7FF', boxShadow: '0 3px 8px rgba(0,29,53,0.12)' }}>
+              <Ionicons name="create-outline" size={17} color="#001D35" />
+              <Text className="text-[15px] font-black" style={{ color: '#001D35' }}>Écrire</Text>
             </Pressable>
-            <Pressable onPress={() => Alert.alert('Options', 'Bientôt disponible.')}>
+            <Pressable onPress={() => Alert.alert('Options', 'Bientôt disponible.')} hitSlop={10}>
               <IconPoints />
             </Pressable>
           </View>
