@@ -1411,7 +1411,12 @@ export default function GlobeExplorateurBoutiques({
       // Avatar façon Bitmoji en priorité, quel que soit le type_boutique :
       // seule la couleur de bordure reste liée au type. SVG DiceBear généré
       // en local et inliné directement — aucune URL externe.
-      const avatarBitmoji = b.avatar_config ? svgAvatarBoutique(b.avatar_config, 52) : null;
+      // Le LOGO (photo) de la boutique passe avant l'avatar Bitmoji.
+      const avatarBitmoji = b.logo_url
+        ? `<img src="${echapperHtml(b.logo_url)}" alt="" class="w-full h-full object-cover" />`
+        : b.avatar_config
+        ? svgAvatarBoutique(b.avatar_config, 52)
+        : null;
       if (typeBoutique === "service") {
         bordureCouleur = COULEUR_SERVICE;
         contenuAvatar = avatarBitmoji || `<span class="text-2xl">🔧</span>`;
@@ -2623,9 +2628,9 @@ export default function GlobeExplorateurBoutiques({
                         }`}
                       >
                         <div className="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-black">
-                          {b.avatar_config ? (
+                          {b.logo_url || b.avatar_config ? (
                             <img
-                              src={dataUriAvatarBoutique(b.avatar_config, 64)}
+                              src={b.logo_url || dataUriAvatarBoutique(b.avatar_config, 64)}
                               alt={b.nom}
                               className="w-full h-full object-cover pointer-events-none"
                             />
@@ -2756,9 +2761,9 @@ export default function GlobeExplorateurBoutiques({
               <div className="p-4 sm:p-5 border-b border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black flex items-center justify-center text-lg shadow-md shrink-0 overflow-hidden">
-                    {boutiqueSelectionnee.avatar_config ? (
+                    {boutiqueSelectionnee.logo_url || boutiqueSelectionnee.avatar_config ? (
                       <img
-                        src={dataUriAvatarBoutique(boutiqueSelectionnee.avatar_config, 48)}
+                        src={boutiqueSelectionnee.logo_url || dataUriAvatarBoutique(boutiqueSelectionnee.avatar_config, 48)}
                         alt={boutiqueSelectionnee.nom}
                         className="w-full h-full object-cover"
                       />
