@@ -1,5 +1,6 @@
 "use client";
 
+import { audioAutorise } from "@/lib/listingTypes";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -416,7 +417,7 @@ export default function SocialShareButtons({
           </Link>
 
           {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
-          <LecteurAudioOffre url={offer?.audio_url || offer?.audioUrl || null} />
+          <LecteurAudioOffre url={audioAutorise(offer?.listing_type) ? offer?.audio_url || offer?.audioUrl || null : null} />
 
           {/* Bouton 2 : Partager */}
           <button
@@ -713,7 +714,7 @@ export default function SocialShareButtons({
           </Link>
 
           {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
-          <LecteurAudioOffre url={offer?.audio_url || offer?.audioUrl || null} />
+          <LecteurAudioOffre url={audioAutorise(offer?.listing_type) ? offer?.audio_url || offer?.audioUrl || null : null} />
 
           {/* Action 2 : Partager */}
           <button
