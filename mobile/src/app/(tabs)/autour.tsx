@@ -81,10 +81,11 @@ export default function AutourFaciliteScreen() {
           </Text>
         </View>
 
-        <View className="mx-4 overflow-hidden" style={{ height: courant ? 250 : 380, borderRadius: 20, backgroundColor: '#E8E4DA' }}>
+        <View className="mx-4 overflow-hidden" style={{ height: courant ? 250 : 380, borderRadius: 20, backgroundColor: '#1b2330' }}>
           <CarteLeaflet
             centre={{ lat: origine.latitude, lng: origine.longitude }}
             zoom={7}
+            sombre
             marqueurs={marqueurs}
             ajuster={!selection}
             onMarqueur={(id) => {

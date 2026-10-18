@@ -35,6 +35,8 @@ export type MarqueurCarte = {
   avatar?: {
     /** Image de l'avatar (data URI SVG de l'avatar Bitmoji de la boutique). */
     uri?: string;
+    /** Photo de l'article cherché, affichée à la place de l'avatar. */
+    photo?: string;
     /** Repli sans avatar : emoji (comme le site). */
     emoji?: string;
     /** Couleur de l'anneau. */
@@ -63,7 +65,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 <style>
   html, body, #carte { margin: 0; padding: 0; height: 100%; width: 100%; background: ${sombre ? '#1b2330' : '#e8e4da'}; }
   .leaflet-control-attribution { font-size: 9px; opacity: .7; }
-  ${sombre ? '.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92); }' : ''}
+  ${sombre ? '.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }' : ''}
   .etiquette { background: rgba(0,0,0,.72); color: #fff; border: 0; border-radius: 10px; padding: 2px 7px; font: 700 11px system-ui, sans-serif; box-shadow: none; }
   .etiquette:before { display: none; }
   .bulle-regroupement { background: none; border: 0; }
@@ -97,8 +99,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function htmlAvatar(m) {
     var a = m.avatar, ring = a.bordure;
-    var contenu = a.uri
-      ? '<img src="' + a.uri + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
+    var src = a.photo || a.uri;
+    var contenu = src
+      ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
       : '<span style="font-size:24px;line-height:1">' + esc(a.emoji || '🏪') + '</span>';
     var rond = '<div style="width:52px;height:52px;border-radius:9999px;padding:3px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
     var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';

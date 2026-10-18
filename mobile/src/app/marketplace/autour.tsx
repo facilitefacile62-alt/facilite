@@ -9,7 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte } from '@/components/CarteLeaflet';
 import { chargerBoutiquesCarte, type BoutiqueCarte } from '@/lib/boutiquesCarte';
 import { chargerArticles, distanceLisible, prixLisible, type ArticleMarketplace, type Position } from '@/lib/marketplace';
-import { dataUriAvatarBoutique } from '@/lib/avatarBoutique';
+import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
+import { SvgXml } from 'react-native-svg';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -83,6 +84,16 @@ export default function AutourDeMoiScreen() {
     };
   }, [position]);
 
+  // Recherche d'un produit : photo du premier article trouvé de chaque boutique (affichée sur son rond).
+  const photosRecherche = useMemo(() => {
+    const m = new Map<string, string>();
+    if (!recherche.trim()) return m;
+    (articles ?? []).forEach((a) => {
+      if (a.boutiqueId && !m.has(a.boutiqueId)) m.set(a.boutiqueId, a.photos[0] ?? '');
+    });
+    return m;
+  }, [articles, recherche]);
+
   const visibles = useMemo(() => {
     const q = recherche.trim();
     if (!boutiques) return [];
@@ -92,22 +103,25 @@ export default function AutourDeMoiScreen() {
     if (filtre === 'live') base = boutiques.filter((b) => b.enStock);
     else if (filtre === 'populaires') base = boutiques.slice(0, Math.max(3, Math.ceil(boutiques.length / 2)));
     if (!q) return base;
-    return base.filter((b) => contientTousLesMots(`${b.nom} ${b.quartier ?? ''} ${b.ville ?? ''}`, q));
-  }, [boutiques, recherche, filtre]);
+    // Une boutique reste visible si son nom OU l'un de ses articles correspond à la recherche.
+    return base.filter((b) => contientTousLesMots(`${b.nom} ${b.quartier ?? ''} ${b.ville ?? ''}`, q) || photosRecherche.has(b.id));
+  }, [boutiques, recherche, filtre, photosRecherche]);
 
   // Avatar de chaque boutique : son Bitmoji (DiceBear, calculé sur l'appareil) ou, à défaut, un emoji.
   const avatars = useMemo(() => {
-    const m = new Map<string, { uri?: string; emoji: string }>();
+    const m = new Map<string, { uri?: string; xml?: string; emoji: string }>();
     (boutiques ?? []).forEach((b, i) => {
       let uri: string | undefined;
+      let xml: string | undefined;
       if (b.avatarConfig) {
         try {
           uri = dataUriAvatarBoutique(b.avatarConfig, 104);
+          xml = svgAvatarBoutique(b.avatarConfig, 104);
         } catch {
           uri = undefined;
         }
       }
-      m.set(b.id, { uri, emoji: EMOJIS_REPLI[i % EMOJIS_REPLI.length] });
+      m.set(b.id, { uri, xml, emoji: EMOJIS_REPLI[i % EMOJIS_REPLI.length] });
     });
     return m;
   }, [boutiques]);
@@ -121,6 +135,7 @@ export default function AutourDeMoiScreen() {
       libelle: b.nom,
       avatar: {
         uri: avatars.get(b.id)?.uri,
+        photo: photosRecherche.get(b.id) || undefined,
         emoji: avatars.get(b.id)?.emoji,
         bordure: b.verifie ? BLEU : VERT,
         sous: b.quartier || b.ville || 'Dakar',
@@ -140,7 +155,7 @@ export default function AutourDeMoiScreen() {
       });
     }
     return liste;
-  }, [visibles, position, selection, avatars]);
+  }, [visibles, position, selection, avatars, photosRecherche]);
 
   const origine = position ?? DAKAR;
   const centre = { lat: origine.latitude, lng: origine.longitude };
@@ -218,7 +233,6 @@ export default function AutourDeMoiScreen() {
         marqueurs={marqueurs}
         sombre={sombre}
         ajuster={!selection}
-        regrouper
         focus={selection}
         onMarqueur={surMarqueur}
         commandes={setCarte}
@@ -438,14 +452,16 @@ export default function AutourDeMoiScreen() {
                   const actif = selection === item.id;
                   const distance = distanceLisible(item.distanceKm);
                   return (
-                    <Pressable onPress={() => toucherBoutique(item.id)} className="items-center" style={{ width: 84 }}>
+                    <Pressable onPress={() => toucherBoutique(item.id)} className="items-center" style={{ width: 76 }}>
                       <View
                         className="items-center justify-center rounded-full overflow-hidden"
-                        style={{ width: actif ? 70 : 62, height: actif ? 70 : 62, backgroundColor: '#111827', borderWidth: actif ? 4 : 2.5, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
-                        {avatars.get(item.id)?.uri ? (
-                          <Image source={{ uri: avatars.get(item.id)?.uri }} alt={item.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                        style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: '#111827', borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                        {photosRecherche.get(item.id) ? (
+                          <Image source={{ uri: photosRecherche.get(item.id) }} alt={item.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                        ) : avatars.get(item.id)?.xml ? (
+                          <SvgXml xml={avatars.get(item.id)!.xml!} width="100%" height="100%" />
                         ) : (
-                          <Text className="text-[26px]">{avatars.get(item.id)?.emoji ?? '🏪'}</Text>
+                          <Text className="text-[24px]">{avatars.get(item.id)?.emoji ?? '🏪'}</Text>
                         )}
                       </View>
                       <Text className="text-[11.5px] font-bold text-white mt-1.5 text-center" numberOfLines={1}>{item.nom}</Text>
