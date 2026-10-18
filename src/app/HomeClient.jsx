@@ -377,6 +377,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
             tags: [offer.location, offer.contract_type].filter(Boolean),
             image: offer.image_url || null,
             image_url: offer.image_url || null,
+            audio_url: offer.audio_url || null,
             recruiterEmail: offer.contact_email || null,
             contact_email: offer.contact_email || null,
             recruiterPhone: offer.contact_phone || null,
@@ -1818,6 +1819,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                         external_link: job.external_link || job.externalLink,
                         image: job.image || job.image_url,
                         image_url: job.image_url || job.image,
+                        audio_url: job.audio_url || null,
                       }}
                       variant="feed"
                       onApply={() => handleApplyClick(job)}

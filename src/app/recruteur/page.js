@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,8 @@ const EMPTY_OFFER = {
   min_education_level: "Aucun",
   description: "",
   image_url: "",
+  // Audio facultatif de l'offre (URL publique après envoi) — voir SelecteurAudioOffre.
+  audio_url: "",
   deadline: "",
   contact_email: "",
   contact_phone: "",
@@ -139,6 +142,8 @@ export default function RecruteurDashboardPage() {
   const [examenPasse, setExamenPasse] = useState(false);
   const [scanMessage, setScanMessage] = useState("");
   const [offerImageFiles, setOfferImageFiles] = useState([]);
+  // Audio facultatif choisi pour l'offre (envoyé seulement à la publication).
+  const [offerAudioFile, setOfferAudioFile] = useState(null);
   const [offerImagePreviews, setOfferImagePreviews] = useState([]);
   const [accompanyingText, setAccompanyingText] = useState("");
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
@@ -964,6 +969,8 @@ export default function RecruteurDashboardPage() {
       }
 
       const finalImageUrl = await uploadAllOfferPhotos();
+      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
+      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.");
 
       let externalLink = currentOfferData.external_link || "";
       const phoneDigits = detectWhatsAppNumber({
@@ -991,6 +998,7 @@ export default function RecruteurDashboardPage() {
         min_education_level: currentOfferData.min_education_level || "Aucun",
         description: currentOfferData.description || "",
         image_url: finalImageUrl || null,
+        audio_url: finalAudioUrl || null,
         deadline: currentOfferData.deadline || null,
         contact_email: finalEmail || null,
         application_email: (currentOfferData.application_email || finalEmail || "").trim() || null,
@@ -1017,6 +1025,7 @@ export default function RecruteurDashboardPage() {
         generateOfferEmbedding(insertedOffer.id, payload.title, payload.description);
         triggerToast("🎉 Offre publiée avec succès sur le fil d'actualité !");
         setOfferForm(EMPTY_OFFER);
+        setOfferAudioFile(null);
         setOfferImageFiles([]);
         setOfferImagePreviews([]);
         setAccompanyingText("");
@@ -1038,6 +1047,8 @@ export default function RecruteurDashboardPage() {
 
     try {
       const finalImageUrl = await uploadAllOfferPhotos();
+      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
+      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.");
 
       let externalLink = offerForm.external_link || "";
       const phoneDigits = detectWhatsAppNumber({
@@ -1065,6 +1076,7 @@ export default function RecruteurDashboardPage() {
         min_education_level: offerForm.min_education_level || "Aucun",
         description: offerForm.description || "",
         image_url: finalImageUrl || null,
+        audio_url: finalAudioUrl || null,
         deadline: offerForm.deadline || null,
         contact_email: finalEmail || null,
         application_email: (offerForm.application_email || finalEmail || "").trim() || null,
@@ -1128,6 +1140,7 @@ export default function RecruteurDashboardPage() {
       min_education_level: offer.min_education_level || "Aucun",
       description: offer.description || "",
       image_url: offer.image_url || "",
+      audio_url: offer.audio_url || "",
       deadline: offer.deadline || "",
       contact_email: offer.contact_email || "",
       contact_phone: offer.contact_phone || "",
@@ -1137,6 +1150,7 @@ export default function RecruteurDashboardPage() {
       additional_info: offer.additional_info || "",
       requires_cover_letter: !!offer.requires_cover_letter,
     });
+    setOfferAudioFile(null);
     setOfferImageFiles([]);
     setOfferImagePreviews(parseOfferImages(offer.image_url));
     setExamenPasse(true);
@@ -1146,6 +1160,7 @@ export default function RecruteurDashboardPage() {
   const handleCancelEditOffer = () => {
     setEditingOfferId(null);
     setOfferForm(EMPTY_OFFER);
+    setOfferAudioFile(null);
     setOfferImageFiles([]);
     setOfferImagePreviews([]);
     setAccompanyingText("");
@@ -1820,6 +1835,17 @@ export default function RecruteurDashboardPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Audio de l'offre : facultatif, jamais bloquant pour la publication */}
+                  <SelecteurAudioOffre
+                    file={offerAudioFile}
+                    urlExistante={offerForm.audio_url}
+                    onChange={(f) => {
+                      setOfferAudioFile(f);
+                      if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" }));
+                    }}
+                    onErreur={(m) => triggerToast(m)}
+                  />
 
                   {/* 3. GALERIE DE PHOTOS ATTACHÉES */}
                   {offerImagePreviews.length > 0 && (

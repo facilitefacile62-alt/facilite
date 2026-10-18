@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,6 +29,8 @@ const EMPTY_OFFER = {
   min_education_level: "Aucun",
   description: "",
   image_url: "",
+  // Audio facultatif de l'offre (URL publique après envoi) — voir SelecteurAudioOffre.
+  audio_url: "",
   deadline: "",
   contact_email: "",
   contact_phone: "",
@@ -57,6 +60,8 @@ export default function AdminOffresPage() {
 
   // Formulaire de l'offre
   const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
+  // Audio facultatif choisi pour l'offre (envoyé seulement à la publication).
+  const [offerAudioFile, setOfferAudioFile] = useState(null);
   // Support Multi-Photos pour une publication
   const [offerImageFiles, setOfferImageFiles] = useState([]);
   const [offerImagePreviews, setOfferImagePreviews] = useState([]);
@@ -481,6 +486,8 @@ export default function AdminOffresPage() {
 
       // Upload de toutes les photos attachées
       const finalImageUrl = await uploadAllOfferPhotos();
+      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
+      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.", "fa-triangle-exclamation");
 
       // Détection WhatsApp automatique
       let externalLink = currentOfferData.external_link || "";
@@ -509,6 +516,7 @@ export default function AdminOffresPage() {
         min_education_level: currentOfferData.min_education_level || "Aucun",
         description: currentOfferData.description || "",
         image_url: finalImageUrl || null,
+        audio_url: finalAudioUrl || null,
         deadline: currentOfferData.deadline || null,
         contact_email: finalEmail || null,
         application_email: (currentOfferData.application_email || finalEmail || "").trim() || null,
@@ -555,6 +563,7 @@ export default function AdminOffresPage() {
         setAllOffers((prev) => [resData.offer, ...prev]);
         triggerToast("🎉 Publication multi-photos mise en ligne avec succès sur le Fil !", "fa-bullhorn");
         setOfferForm(EMPTY_OFFER);
+        setOfferAudioFile(null);
         setOfferImageFiles([]);
         setOfferImagePreviews([]);
         setAccompanyingText("");
@@ -589,6 +598,8 @@ export default function AdminOffresPage() {
     try {
       // Upload de toutes les photos sélectionnées
       const finalImageUrl = await uploadAllOfferPhotos();
+      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
+      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.", "fa-triangle-exclamation");
 
       // Détection WhatsApp automatique
       let externalLink = offerForm.external_link || "";
@@ -617,6 +628,7 @@ export default function AdminOffresPage() {
         min_education_level: offerForm.min_education_level || "Aucun",
         description: offerForm.description || "",
         image_url: finalImageUrl || null,
+        audio_url: finalAudioUrl || null,
         deadline: offerForm.deadline || null,
         contact_email: formEmail || null,
         application_email: (offerForm.application_email || formEmail || "").trim() || null,
@@ -660,6 +672,7 @@ export default function AdminOffresPage() {
         
         // Reset
         setOfferForm(EMPTY_OFFER);
+        setOfferAudioFile(null);
         setOfferImageFiles([]);
         setOfferImagePreviews([]);
         setAccompanyingText("");
@@ -1039,6 +1052,11 @@ export default function AdminOffresPage() {
                 </div>
               )}
 
+              {/* Audio de l'offre : facultatif, jamais bloquant pour la publication */}
+              <div className="mb-3">
+                <SelecteurAudioOffre file={offerAudioFile} urlExistante={offerForm.audio_url} onChange={(f) => { setOfferAudioFile(f); if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" })); }} onErreur={(m) => triggerToast(m, "fa-triangle-exclamation")} />
+              </div>
+
               {/* Mode Upload / Drag & Drop Multi-Photos */}
               {imageTab === "upload" && offerImagePreviews.length === 0 && (
                 <div
@@ -1331,6 +1349,8 @@ export default function AdminOffresPage() {
                   <span className="text-[11px] font-bold text-gray-600">Photo de l&apos;offre (facultatif) — cliquez ou glissez</span>
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileInputChange} />
                 </label>
+
+                <SelecteurAudioOffre file={offerAudioFile} urlExistante={offerForm.audio_url} onChange={(f) => { setOfferAudioFile(f); if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" })); }} onErreur={(m) => triggerToast(m, "fa-triangle-exclamation")} />
 
                 {offerImagePreviews.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2.5">
