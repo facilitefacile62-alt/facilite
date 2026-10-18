@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BoutonPlusLocaux from '@/components/BoutonPlusLocaux';
 import CarteArticleMarketplace from '@/components/CarteArticleMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import MiniCarteBoutiques from '@/components/MiniCarteBoutiques';
@@ -162,6 +163,9 @@ export default function MarketplaceScreen() {
           />
         )}
       </SafeAreaView>
+
+      {/* « + » : seulement sur le fil Marketplace (maquettes 05 et 06) */}
+      <BoutonPlusLocaux />
     </View>
   );
 }
