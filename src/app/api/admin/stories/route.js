@@ -14,7 +14,12 @@ export const runtime = "nodejs";
 const BUCKET = "stories-media";
 const TAILLE_MAX = 5 * 1024 * 1024;
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-const COLONNES = "id, titre, image_url, libelle_bouton, lien, bouton_visible, ordre, actif, created_at, updated_at";
+const COLONNES = "id, titre, image_url, libelle_bouton, lien, bouton_visible, type, ordre, actif, created_at, updated_at";
+
+// Type de story : « cv » = modèle de CV (bouton « Commander via WhatsApp ») ; « offre » = offre d'emploi, qui doit toujours
+// avoir un bouton « Postuler » avec le lien de l'offre (jamais d'offre sans bouton).
+const TYPES_STORY = ["cv", "offre"];
+const LIBELLE_PAR_TYPE = { cv: "Commander via WhatsApp", offre: "Postuler" };
 
 async function autoriserAdmin(req) {
   const { user, identifier, error: authError } = await requireUser(req, { logDenials: true });
@@ -68,7 +73,9 @@ function lireChamps(body) {
   const libelle = typeof body?.libelle_bouton === "string" ? body.libelle_bouton.trim() : undefined;
   if (titre !== undefined && (titre.length < 1 || titre.length > 40)) return { erreur: "Le titre doit faire entre 1 et 40 caractères." };
   if (libelle !== undefined && (libelle.length < 1 || libelle.length > 40)) return { erreur: "Le texte du bouton doit faire entre 1 et 40 caractères." };
-  return { titre, libelle };
+  const type = typeof body?.type === "string" ? body.type : undefined;
+  if (type !== undefined && !TYPES_STORY.includes(type)) return { erreur: "Type de story invalide." };
+  return { titre, libelle, type };
 }
 
 export async function GET(req) {
@@ -169,10 +176,20 @@ export async function POST(req) {
     await retirerDepot(admin, body?.path);
     return NextResponse.json({ error: "Le titre est obligatoire." }, { status: 400 });
   }
+  const type = champs.type || "cv";
   const lien = normaliserLien(body?.lien);
   if (lien.erreur) {
     await retirerDepot(admin, body?.path);
     return NextResponse.json({ error: lien.erreur }, { status: 400 });
+  }
+  // Une offre d'emploi n'a de sens qu'avec son bouton « Postuler » : le lien de l'offre est obligatoire.
+  if (type === "offre" && (!lien.lien || !/^https?:\/\//i.test(lien.lien) || /wa\.me/i.test(lien.lien))) {
+    await retirerDepot(admin, body?.path);
+    return NextResponse.json({ error: "Une offre d'emploi doit avoir un bouton « Postuler » : indiquez le lien de l'offre (http:// ou https://)." }, { status: 400 });
+  }
+  if (type === "offre" && body?.bouton_visible === false) {
+    await retirerDepot(admin, body?.path);
+    return NextResponse.json({ error: "Le bouton « Postuler » d'une offre d'emploi ne peut pas être caché." }, { status: 400 });
   }
   const visuel = await urlPubliqueDuFichier(admin, body?.path);
   if (visuel.erreur) return NextResponse.json({ error: visuel.erreur }, { status: 400 });
@@ -186,9 +203,10 @@ export async function POST(req) {
     .insert({
       titre: champs.titre,
       image_url: visuel.url,
-      libelle_bouton: champs.libelle || "Commander via WhatsApp",
+      libelle_bouton: champs.libelle || LIBELLE_PAR_TYPE[type],
       lien: lien.lien,
-      bouton_visible: body?.bouton_visible !== false,
+      type,
+      bouton_visible: type === "offre" ? true : body?.bouton_visible !== false,
       ordre,
       actif: body?.actif !== false,
       created_by: user.id,
@@ -214,6 +232,7 @@ export async function PATCH(req) {
   if (champs.erreur) return NextResponse.json({ error: champs.erreur }, { status: 400 });
 
   const patch = { updated_at: new Date().toISOString() };
+  if (champs.type !== undefined) patch.type = champs.type;
   if (champs.titre !== undefined) patch.titre = champs.titre;
   if (champs.libelle !== undefined) patch.libelle_bouton = champs.libelle;
   if (body.lien !== undefined) {
@@ -223,6 +242,20 @@ export async function PATCH(req) {
   }
   if (typeof body.actif === "boolean") patch.actif = body.actif;
   if (typeof body.bouton_visible === "boolean") patch.bouton_visible = body.bouton_visible;
+
+  // Règle « offre = bouton Postuler » vérifiée sur l'état FINAL de la story (type, lien et bouton après modification).
+  {
+    const { data: avant } = await admin.from("stories").select("type, lien, bouton_visible").eq("id", id).single();
+    const typeFinal = patch.type ?? avant?.type ?? "cv";
+    const lienFinal = patch.lien !== undefined ? patch.lien : avant?.lien;
+    const boutonFinal = patch.bouton_visible !== undefined ? patch.bouton_visible : avant?.bouton_visible !== false;
+    if (typeFinal === "offre") {
+      if (!lienFinal || !/^https?:\/\//i.test(lienFinal) || /wa\.me/i.test(lienFinal)) {
+        return NextResponse.json({ error: "Une offre d'emploi doit avoir un bouton « Postuler » : indiquez le lien de l'offre (http:// ou https://)." }, { status: 400 });
+      }
+      if (!boutonFinal) return NextResponse.json({ error: "Le bouton « Postuler » d'une offre d'emploi ne peut pas être caché." }, { status: 400 });
+    }
+  }
   if (Number.isInteger(body.ordre)) patch.ordre = body.ordre;
 
   let ancienChemin = null;
