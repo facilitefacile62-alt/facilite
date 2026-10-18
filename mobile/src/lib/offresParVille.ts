@@ -1,3 +1,4 @@
+import { getPrimaryOfferImage } from '@/lib/offerMedia';
 import { supabase } from '@/lib/supabase';
 
 // « Autour de moi » de Facilité : où recrutent les entreprises ? Les offres
@@ -43,7 +44,7 @@ export const VILLES: Ville[] = [
   { nom: 'Oussouye', lat: 12.485, lng: -16.5469, alias: ['oussouye', 'cap skirring'] },
 ];
 
-export type OffreVille = { id: string; titre: string; entreprise: string };
+export type OffreVille = { id: string; titre: string; entreprise: string; affiche?: string };
 
 export type GroupeVille = {
   ville: string;
@@ -76,7 +77,7 @@ export function trouverVille(localisation: string | null | undefined): Ville | n
   return meilleure?.ville ?? null;
 }
 
-type LigneOffre = { id: string; title: string | null; company: string | null; location: string | null; deadline: string | null };
+type LigneOffre = { id: string; title: string | null; company: string | null; location: string | null; deadline: string | null; image_url?: unknown };
 
 export function regrouperParVille(lignes: LigneOffre[]): ResultatAutour {
   const parVille = new Map<string, GroupeVille>();
@@ -88,7 +89,7 @@ export function regrouperParVille(lignes: LigneOffre[]): ResultatAutour {
       continue;
     }
     const g = parVille.get(v.nom) ?? { ville: v.nom, lat: v.lat, lng: v.lng, offres: [], entreprises: 0 };
-    g.offres.push({ id: l.id, titre: l.title || 'Offre', entreprise: l.company || 'Entreprise' });
+    g.offres.push({ id: l.id, titre: l.title || 'Offre', entreprise: l.company || 'Entreprise', affiche: getPrimaryOfferImage(l.image_url) });
     parVille.set(v.nom, g);
   }
   const groupes = [...parVille.values()].map((g) => ({ ...g, entreprises: new Set(g.offres.map((o) => o.entreprise.toLowerCase())).size }));
@@ -100,7 +101,7 @@ export function regrouperParVille(lignes: LigneOffre[]): ResultatAutour {
 export async function chargerOffresParVille(): Promise<ResultatAutour> {
   const { data, error } = await supabase
     .from('job_offers')
-    .select('id, title, company, location, deadline')
+    .select('id, title, company, location, deadline, image_url')
     .eq('status', 'approved')
     .eq('is_active', true)
     .order('created_at', { ascending: false })

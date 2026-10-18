@@ -83,7 +83,7 @@ export default function AutourFaciliteScreen() {
       lng: courant.lng,
       titre: courant.ville,
       sous: `${libelleOffres(courant.offres.length)} · ${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''}`,
-      articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, icone: '🏢' })),
+      articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, photo: o.affiche && !o.affiche.startsWith('data:') ? o.affiche : undefined, icone: '🏢' })),
     };
   }, [courant]);
 
