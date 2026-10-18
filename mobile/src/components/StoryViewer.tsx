@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Linking, Modal, Pressable, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ilYA, type Story } from '@/lib/stories';
+import { marquerStoryVue } from '@/lib/storiesVues';
 
 // Lecteur plein écran des stories (maquettes « Story ») : barres de
 // progression en haut, vignette + titre + « il y a X h », croix, flèches
 // précédent/suivant, bouton d'action en bas (« Commander via WhatsApp »…).
 // Un appui sur le tiers gauche / droit de l'écran change de story ; l'avance
-// est automatique (6 s). Les stories viennent de l'admin du site.
-const DUREE_MS = 6000;
+// est automatique (5 s). Les stories viennent de l'admin du site.
+const DUREE_MS = 5000;
+// WhatsApp de Facilité pour la confection de CV (même numéro que le site, src/lib/whatsappHelp.js).
+const WHATSAPP_FACILITE = '221771400832';
 
 export default function StoryViewer({ stories, debut, onFermer }: { stories: Story[]; debut: number; onFermer: () => void }) {
   const insets = useSafeAreaInsets();
@@ -50,8 +53,21 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, stories.length]);
 
+  // Une story affichée est une story vue (mémorisé sur l'appareil : anneau gris dans la rangée).
+  const idStory = story?.id;
+  useEffect(() => {
+    if (idStory) marquerStoryVue(idStory);
+  }, [idStory]);
+
   if (!story) return null;
-  const whatsapp = Boolean(story.lien && /wa\.me|whatsapp/i.test(story.lien));
+  const message = `Bonjour Facilité, je souhaite commander : ${story.titre}`;
+  const lienWhatsapp = story.lien && /wa\.me|whatsapp/i.test(story.lien)
+    ? story.lien.includes('text=') ? story.lien : `${story.lien}${story.lien.includes('?') ? '&' : '?'}text=${encodeURIComponent(message)}`
+    : null;
+  // Pas de lien d'une autre nature défini par l'administrateur : le bouton ouvre la page WhatsApp de Facilité
+  // (confection de CV), message pré-rempli avec le nom de la story.
+  const lienAction = story.lien && !lienWhatsapp ? story.lien : lienWhatsapp ?? `https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(message)}`;
+  const whatsapp = lienAction.includes('wa.me') || /whatsapp/i.test(lienAction);
 
   return (
     <Modal visible transparent={false} animationType="fade" onRequestClose={onFermer} statusBarTranslucent>
@@ -83,6 +99,13 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
               <Text numberOfLines={1} style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>{story.titre}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700' }}>{ilYA(story.creeLe)}</Text>
             </View>
+            <Pressable
+              onPress={() => Share.share({ message: `${story.titre} — ${story.imageUrl}` }).catch(() => {})}
+              accessibilityLabel="Partager la story"
+              hitSlop={8}
+              style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
+            </Pressable>
             <Pressable onPress={onFermer} accessibilityLabel="Fermer la story" hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="close" size={24} color="#fff" />
             </Pressable>
@@ -106,14 +129,14 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
         </Pressable>
 
         {/* Bouton d'action */}
-        {story.lien && story.boutonVisible ? (
+        {story.boutonVisible ? (
           <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: Math.max(insets.bottom, 12) + 4 }}>
             <Pressable
-              onPress={() => Linking.openURL(story.lien as string).catch(() => {})}
+              onPress={() => Linking.openURL(lienAction).catch(() => {})}
               accessibilityRole="button"
               style={{ height: 52, borderRadius: 26, backgroundColor: whatsapp ? '#25D366' : '#059669', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Ionicons name={whatsapp ? 'logo-whatsapp' : 'open-outline'} size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>{story.libelleBouton}</Text>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>{story.libelleBouton || 'Commander via WhatsApp'}</Text>
             </Pressable>
           </View>
         ) : null}

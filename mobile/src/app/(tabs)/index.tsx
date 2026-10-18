@@ -11,6 +11,7 @@ import FaciliteHeader from '@/components/FaciliteHeader';
 import StoryViewer from '@/components/StoryViewer';
 import { useAuth } from '@/context/AuthContext';
 import { surRemontee } from '@/lib/remonterFil';
+import { useStoriesVues } from '@/lib/storiesVues';
 import { chargerStories, type Story } from '@/lib/stories';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles } from '@/lib/useOffresReelles';
@@ -61,6 +62,10 @@ export default function AccueilScreen() {
   // aucune, le carrousel des modèles de CV reste affiché.
   const [stories, setStories] = useState<Story[]>([]);
   const [storyOuverte, setStoryOuverte] = useState<number | null>(null);
+  const vues = useStoriesVues();
+  // Quand le fil a défilé au-delà de la rangée, les stories NON VUES passent en petits cercles près du logo.
+  const [rangeeHors, setRangeeHors] = useState(false);
+  const nonVues = stories.map((s, index) => ({ id: s.id, imageUrl: s.imageUrl, titre: s.titre, index })).filter((s) => !vues.has(s.id));
   useEffect(() => {
     let annule = false;
     chargerStories().then((liste) => {
@@ -94,7 +99,7 @@ export default function AccueilScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: FOND_PAGE }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <FaciliteHeader />
+        <FaciliteHeader petitesStories={rangeeHors ? nonVues : []} onStory={setStoryOuverte} />
 
         {offres === null && !erreur ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -124,36 +129,33 @@ export default function AccueilScreen() {
             showsVerticalScrollIndicator={false}
             refreshing={rafraichissement}
             onRefresh={rechargerFlux}
+            onScroll={(e) => {
+              const dehors = e.nativeEvent.contentOffset.y > 120;
+              setRangeeHors((v) => (v === dehors ? v : dehors));
+            }}
+            scrollEventThrottle={32}
             onEndReached={chargerPlus}
             onEndReachedThreshold={0.6}
             removeClippedSubviews={false}
             ListHeaderComponent={
-              // Modèles de CV, en tête de fil comme sur la maquette : carte
-              // blanche, pastilles rondes à anneau coloré, libellés bleus.
-              <View
-                style={{
-                  backgroundColor: CARTE,
-                  marginHorizontal: 12,
-                  marginTop: 10,
-                  marginBottom: 12,
-                  borderRadius: 18,
-                  padding: 12,
-                  borderWidth: 1,
-                  borderColor: BORDURE,
-                }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
-                  {stories.map((st, i) => (
-                    <Pressable key={st.id} onPress={() => setStoryOuverte(i)} accessibilityLabel={`Story : ${st.titre}`} style={{ alignItems: 'center', gap: 6, width: 66 }}>
-                      <LinearGradient
-                        colors={['#10E688', '#2563EB']}
-                        style={{ width: 62, height: 62, borderRadius: 31, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}>
-                        <View style={{ width: '100%', height: '100%', borderRadius: 30, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
-                          <Image source={{ uri: st.imageUrl }} alt={st.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              // Rangée des stories (maquette 08) : cercles avec photo, anneau VERT tant que la story n'est pas vue,
+              // GRIS une fois vue ; pas de « Ma story » ni d'« Ajouter une story ». Elle disparaît au défilement
+              // (les non vues passent près du logo, voir l'en-tête).
+              <View style={{ marginHorizontal: 0, marginTop: 6, marginBottom: 6, paddingVertical: 6 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 14 }}>
+                  {stories.map((st, i) => {
+                    const vue = vues.has(st.id);
+                    return (
+                      <Pressable key={st.id} onPress={() => setStoryOuverte(i)} accessibilityLabel={`Story : ${st.titre}`} style={{ alignItems: 'center', gap: 6, width: 70 }}>
+                        <View style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 3, borderColor: vue ? '#C4C4C4' : '#10E688', padding: 2, backgroundColor: 'transparent' }}>
+                          <View style={{ flex: 1, borderRadius: 30, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
+                            <Image source={{ uri: st.imageUrl }} alt={st.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                          </View>
                         </View>
-                      </LinearGradient>
-                      <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '700', color: BLEU }}>{st.titre}</Text>
-                    </Pressable>
-                  ))}
+                        <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: '600', color: '#374151' }}>{st.titre}</Text>
+                      </Pressable>
+                    );
+                  })}
                   {stories.length === 0 && STORIES_CV.map((s) => (
                     <Pressable
                       key={s.id}
@@ -171,7 +173,7 @@ export default function AccueilScreen() {
                           />
                         </View>
                       </LinearGradient>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: BLEU }}>{s.label}</Text>
+                      <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#374151' }}>{s.label}</Text>
                     </Pressable>
                   ))}
                 </ScrollView>

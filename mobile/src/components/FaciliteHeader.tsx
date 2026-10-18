@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
 import { CleVectorielle } from '@/components/EcranConnexion';
@@ -22,7 +23,11 @@ const FOND = '#e3dbcc';
 const VERT_FONCE = '#0B3D2A';
 const ICONE = '#1A1A1A';
 
-export default function FaciliteHeader() {
+export type PetiteStory = { id: string; imageUrl: string; titre: string; index: number };
+
+// `petitesStories` : stories non vues, en petits cercles à côté du logo quand la rangée a disparu au défilement
+// (maquette 09) ; vide = rien à afficher (aucun doublon quand tout est vu, maquette 16).
+export default function FaciliteHeader({ petitesStories = [], onStory }: { petitesStories?: PetiteStory[]; onStory?: (index: number) => void } = {}) {
   const router = useRouter();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const compteurs = useCompteursNonLus();
@@ -44,6 +49,21 @@ export default function FaciliteHeader() {
           </View>
           <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
         </Pressable>
+
+        {petitesStories.length > 0 ? (
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
+            {petitesStories.slice(0, 5).map((s, i) => (
+              <Pressable
+                key={s.id}
+                onPress={() => onStory?.(s.index)}
+                accessibilityLabel={`Story : ${s.titre}`}
+                hitSlop={4}
+                style={{ marginLeft: i === 0 ? 0 : -8, width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: '#10E688', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
+                <Image source={{ uri: s.imageUrl }} alt="" style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
           <Pressable
