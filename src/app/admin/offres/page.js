@@ -16,7 +16,7 @@ import { FORMAT_AFFICHE_PAR_DEFAUT } from "@/lib/formatsAffiche";
 import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink, resolveOfferAction } from "@/lib/offerContact";
 import { isOfferActivelySponsored } from "@/lib/sponsoredFeed";
-import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { LISTING_TYPE_LABELS, audioAutorise } from "@/lib/listingTypes";
 import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { TexteAvecLiens } from "@/lib/liens";
 
@@ -486,8 +486,8 @@ export default function AdminOffresPage() {
 
       // Upload de toutes les photos attachées
       const finalImageUrl = await uploadAllOfferPhotos();
-      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
-      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.", "fa-triangle-exclamation");
+      const finalAudioUrl = audioAutorise(currentOfferData.listing_type) ? (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "" : "";
+      if (offerAudioFile && !finalAudioUrl && audioAutorise(offerForm.listing_type)) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.", "fa-triangle-exclamation");
 
       // Détection WhatsApp automatique
       let externalLink = currentOfferData.external_link || "";
@@ -598,8 +598,8 @@ export default function AdminOffresPage() {
     try {
       // Upload de toutes les photos sélectionnées
       const finalImageUrl = await uploadAllOfferPhotos();
-      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
-      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.", "fa-triangle-exclamation");
+      const finalAudioUrl = audioAutorise(offerForm.listing_type) ? (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "" : "";
+      if (offerAudioFile && !finalAudioUrl && audioAutorise(offerForm.listing_type)) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.", "fa-triangle-exclamation");
 
       // Détection WhatsApp automatique
       let externalLink = offerForm.external_link || "";
@@ -1054,7 +1054,7 @@ export default function AdminOffresPage() {
 
               {/* Audio de l'offre : facultatif, jamais bloquant pour la publication */}
               <div className="mb-3">
-                <SelecteurAudioOffre file={offerAudioFile} urlExistante={offerForm.audio_url} onChange={(f) => { setOfferAudioFile(f); if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" })); }} onErreur={(m) => triggerToast(m, "fa-triangle-exclamation")} />
+                {audioAutorise(offerForm.listing_type) ? <SelecteurAudioOffre file={offerAudioFile} urlExistante={offerForm.audio_url} onChange={(f) => { setOfferAudioFile(f); if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" })); }} onErreur={(m) => triggerToast(m, "fa-triangle-exclamation")} /> : null}
               </div>
 
               {/* Mode Upload / Drag & Drop Multi-Photos */}
@@ -1350,7 +1350,7 @@ export default function AdminOffresPage() {
                   <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileInputChange} />
                 </label>
 
-                <SelecteurAudioOffre file={offerAudioFile} urlExistante={offerForm.audio_url} onChange={(f) => { setOfferAudioFile(f); if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" })); }} onErreur={(m) => triggerToast(m, "fa-triangle-exclamation")} />
+                {audioAutorise(offerForm.listing_type) ? <SelecteurAudioOffre file={offerAudioFile} urlExistante={offerForm.audio_url} onChange={(f) => { setOfferAudioFile(f); if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" })); }} onErreur={(m) => triggerToast(m, "fa-triangle-exclamation")} /> : null}
 
                 {offerImagePreviews.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2.5">

@@ -1820,6 +1820,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                         image: job.image || job.image_url,
                         image_url: job.image_url || job.image,
                         audio_url: job.audio_url || null,
+                        listing_type: job.listing_type || "offre_emploi",
                       }}
                       variant="feed"
                       onApply={() => handleApplyClick(job)}

@@ -52,3 +52,13 @@ export const LISTING_TYPE_HERO = {
     icon: "fa-list",
   },
 };
+
+/**
+ * L'audio facultatif d'une annonce n'existe, pour le moment, que pour les OFFRES D'EMPLOI (pas pour les
+ * concours, formations, recrutements spontanés, travail sur place ni « autre »). Une annonce sans type
+ * connu est une offre d'emploi (valeur par défaut de listing_type). Imposé aussi par la base : contrainte
+ * job_offers_audio_emploi_seulement (migration 20261018120000).
+ */
+export function audioAutorise(listingType) {
+  return (listingType || "offre_emploi") === "offre_emploi";
+}

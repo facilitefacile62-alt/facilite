@@ -18,7 +18,7 @@ import SelecteurFormatAffiche from "@/components/SelecteurFormatAffiche";
 import { FORMAT_AFFICHE_PAR_DEFAUT } from "@/lib/formatsAffiche";
 import { parseOfferImages, serializeOfferImages } from "@/lib/offerMedia";
 import { detectWhatsAppNumber, buildWhatsAppLink } from "@/lib/offerContact";
-import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { LISTING_TYPE_LABELS, audioAutorise } from "@/lib/listingTypes";
 import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import CandidatsPotentielsOffre from "@/components/CandidatsPotentielsOffre";
@@ -969,8 +969,8 @@ export default function RecruteurDashboardPage() {
       }
 
       const finalImageUrl = await uploadAllOfferPhotos();
-      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
-      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.");
+      const finalAudioUrl = audioAutorise(currentOfferData.listing_type) ? (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "" : "";
+      if (offerAudioFile && !finalAudioUrl && audioAutorise(offerForm.listing_type)) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.");
 
       let externalLink = currentOfferData.external_link || "";
       const phoneDigits = detectWhatsAppNumber({
@@ -1047,8 +1047,8 @@ export default function RecruteurDashboardPage() {
 
     try {
       const finalImageUrl = await uploadAllOfferPhotos();
-      const finalAudioUrl = (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "";
-      if (offerAudioFile && !finalAudioUrl) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.");
+      const finalAudioUrl = audioAutorise(offerForm.listing_type) ? (await televerserAudioOffre(supabase, userSession.user.id, offerAudioFile)) || offerForm.audio_url || "" : "";
+      if (offerAudioFile && !finalAudioUrl && audioAutorise(offerForm.listing_type)) triggerToast("L'audio n'a pas pu être envoyé : l'offre est publiée sans audio.");
 
       let externalLink = offerForm.external_link || "";
       const phoneDigits = detectWhatsAppNumber({
@@ -1837,7 +1837,7 @@ export default function RecruteurDashboardPage() {
                   )}
 
                   {/* Audio de l'offre : facultatif, jamais bloquant pour la publication */}
-                  <SelecteurAudioOffre
+                  {audioAutorise(offerForm.listing_type) ? <SelecteurAudioOffre
                     file={offerAudioFile}
                     urlExistante={offerForm.audio_url}
                     onChange={(f) => {
@@ -1845,7 +1845,7 @@ export default function RecruteurDashboardPage() {
                       if (!f) setOfferForm((prev) => ({ ...prev, audio_url: "" }));
                     }}
                     onErreur={(m) => triggerToast(m)}
-                  />
+                  /> : null}
 
                   {/* 3. GALERIE DE PHOTOS ATTACHÉES */}
                   {offerImagePreviews.length > 0 && (
