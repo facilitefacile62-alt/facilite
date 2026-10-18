@@ -13,7 +13,7 @@ import {
   JOURS_SEMAINE,
 } from "@/lib/marketplaceData";
 import { supabase } from "@/lib/supabase";
-import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
+import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
@@ -680,6 +680,17 @@ export default function GlobeExplorateurBoutiques({
     }
   }, [rechercheActiveAvecResultats, rechercheNormalisee]);
 
+  // Recherche d'un produit : photo du premier article trouvé de chaque boutique, affichée sur son rond.
+  const photosArticlesRecherche = useMemo(() => {
+    const m = new Map();
+    if (!rechercheNormalisee) return m;
+    articlesFiltres.forEach((a) => {
+      const chemin = a.photos?.[0];
+      if (a.boutique_id && chemin && !m.has(a.boutique_id)) m.set(a.boutique_id, urlPhoto(chemin));
+    });
+    return m;
+  }, [articlesFiltres, rechercheNormalisee]);
+
   const idsBoutiquesArticlesFiltres = useMemo(
     () => new Set(articlesFiltres.map((a) => a.boutique_id).filter(Boolean)),
     [articlesFiltres]
@@ -1230,6 +1241,7 @@ export default function GlobeExplorateurBoutiques({
     // vraiment au même endroit (même immeuble, même marché) : elles ne se
     // séparent jamais, quel que soit le zoom.
     const ZOOM_SEPARATION = 18;
+    const REGROUPER_EN_BULLES = false;
     let bullesActives = [];
     let signatureBulles = "";
     const groupeDeBoutique = new Map(); // id boutique -> ids du groupe (regroupé)
@@ -1270,7 +1282,8 @@ export default function GlobeExplorateurBoutiques({
 
     function recalculerDissociations(zoom = carte.getZoom()) {
       if (!Number.isFinite(zoom)) return;
-      const echelle = echelleAvatarPourZoom(zoom);
+      // Taille des avatars constante : ils ne grandissent plus au zoom ni au dézoom.
+      const echelle = 1;
 
       // 1) Boutiques seules : lesquelles se recouvrent, et sont-elles séparables par le zoom ?
       const pixelsBoutiques = boutiquesAffichees.map((b) => {
@@ -1283,7 +1296,8 @@ export default function GlobeExplorateurBoutiques({
       groupeDeBoutique.clear();
       groupes.forEach((ids) => {
         // Au zoom maximal, on ne regroupe plus : l'anneau relié prend le relais.
-        if (zoom < ZOOM_SEPARATION && majorationSeparable(ids)) {
+        // Regroupement en bulle désactivé (demande du 18/10/2026) : les boutiques restent telles quelles.
+        if (REGROUPER_EN_BULLES && zoom < ZOOM_SEPARATION && majorationSeparable(ids)) {
           groupesBulle.push(ids);
           ids.forEach((id) => {
             regroupes.add(id);
@@ -1404,6 +1418,7 @@ export default function GlobeExplorateurBoutiques({
       // Bleu Roi #2563EB si certifié) ; service/établissement ont leur
       // propre couleur fixe et une icône dédiée — "en stock" et "certifié"
       // n'ont pas de sens pour eux (zéro article par construction).
+      const photoArticleCherche = photosArticlesRecherche.get(b.id);
       let bordureCouleur;
       let contenuAvatar;
       let badgeLive = "";
@@ -1417,16 +1432,19 @@ export default function GlobeExplorateurBoutiques({
         : b.avatar_config
         ? svgAvatarBoutique(b.avatar_config, 52)
         : null;
+      const avatarOuArticle = photoArticleCherche
+        ? `<img src="${echapperHtml(photoArticleCherche)}" alt="" class="w-full h-full object-cover" />`
+        : avatarBitmoji;
       if (typeBoutique === "service") {
         bordureCouleur = COULEUR_SERVICE;
-        contenuAvatar = avatarBitmoji || `<span class="text-2xl">🔧</span>`;
+        contenuAvatar = avatarOuArticle || `<span class="text-2xl">🔧</span>`;
       } else if (typeBoutique === "etablissement") {
         bordureCouleur = COULEUR_ETABLISSEMENT;
         contenuAvatar = avatarBitmoji || `<span class="text-2xl">${EMOJI_CATEGORIE_ETABLISSEMENT[b.categorie_etablissement] || "🏢"}</span>`;
       } else {
         bordureCouleur = estCertifie ? "#2563EB" : "#10B981";
         contenuAvatar =
-          avatarBitmoji ||
+          avatarOuArticle ||
           (aPhoto
             ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
             : `<span class="text-2xl">${avatarInfo.emoji}</span>`);
@@ -1928,7 +1946,8 @@ export default function GlobeExplorateurBoutiques({
     if (echelleZoomCleanupRef.current) {
       echelleZoomCleanupRef.current();
     }
-    echelleZoomCleanupRef.current = brancherEchelleZoomAvatars(carte);
+    // Taille constante des avatars : plus de mise à l'échelle selon le zoom.
+    echelleZoomCleanupRef.current = null;
 
     if (dissociationCleanupRef.current) {
       dissociationCleanupRef.current();
@@ -1939,7 +1958,7 @@ export default function GlobeExplorateurBoutiques({
       carte.off("zoomend", gestionnaireDissociation);
       carte.off("moveend", gestionnaireDissociation);
     };
-  }, [boutiquesAffichees, boutiqueSelectionnee, gererClicPointCluster, obtenirMembresConnus]);
+  }, [boutiquesAffichees, boutiqueSelectionnee, gererClicPointCluster, obtenirMembresConnus, photosArticlesRecherche]);
   // Mise à jour hors rendu (règle react-hooks/refs) : un effet sans
   // dépendances s'exécute après chaque rendu, donc toujours à temps avant
   // que les timers de forcerTaille (au plus tôt 50 ms plus tard) ne lisent
