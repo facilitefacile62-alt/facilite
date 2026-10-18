@@ -19,6 +19,7 @@
 // La logique d'accès aux données vit dans src/lib/marketplaceData.js : ce
 // fichier ne fait que de l'interface.
 
+import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import LogoBoutiqueEditeur from "@/components/LogoBoutiqueEditeur";
 import { sansAccent } from "@/lib/texte";
 import { useIaAutorisee, MESSAGE_IA_EN_PAUSE } from "@/lib/useIaAutorisee";
@@ -244,6 +245,8 @@ export default function MarketplaceClient() {
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isMarketplaceAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace", userRole);
   const isLivreurAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace_livreur", userRole);
+  // Commandes et livraisons : en pause pour le public (le public garde la discussion), l'administrateur garde l'accès.
+  const isCommandesAllowed = isFeatureAllowed(featureFlagsTree, "feat_marketplace_commandes", userRole);
   // Voyages (transport de passagers) : en pause, réactivable depuis Administration → Fonctionnalités ; l'administrateur garde l'accès.
   const isVoyagesAllowed = isFeatureAllowed(featureFlagsTree, "nav_marketplace_voyages", userRole);
 
@@ -656,6 +659,7 @@ export default function MarketplaceClient() {
                             <span>{estVraieBoutique ? "Publier un article" : "Devenir actif"}</span>
                           </button>
 
+{isCommandesAllowed && (
                           <button
                             type="button"
                             onClick={() => setCommandesAcheteurOuvert(true)}
@@ -664,6 +668,7 @@ export default function MarketplaceClient() {
                             <i className="fa-solid fa-box text-[8px] text-gray-500"></i>
                             <span>Mes commandes</span>
                           </button>
+)}
 
                           {isVoyagesAllowed && (
                             <button
@@ -769,6 +774,7 @@ export default function MarketplaceClient() {
                     {maBoutiqueActive ? "Publier" : "Devenir actif"}
                   </button>
 
+{isCommandesAllowed && (
                   <button
                     type="button"
                     onClick={() => setCommandesAcheteurOuvert(true)}
@@ -777,6 +783,7 @@ export default function MarketplaceClient() {
                     <i className="fa-solid fa-box text-[10px] text-gray-500"></i>
                     Mes commandes
                   </button>
+)}
 
                   {isVoyagesAllowed && (
                     <button
@@ -895,7 +902,7 @@ export default function MarketplaceClient() {
         {/* Mes commandes (acheteur) : historique + suivi en direct */}
         {voyagesOuverts && isVoyagesAllowed && <VoyagesPassager userId={userId} onFermer={() => setVoyagesOuverts(false)} />}
 
-        {commandesAcheteurOuvert && (
+        {commandesAcheteurOuvert && isCommandesAllowed && (
           <ModalMesCommandesAcheteur userId={userId} onFermer={() => setCommandesAcheteurOuvert(false)} />
         )}
 
@@ -3925,6 +3932,7 @@ function VueVendeur({
   sectionReglagesInitial = null,
   onRetourCatalogue,
 }) {
+  const commandesOuvertes = useFonctionAutorisee("feat_marketplace_commandes");
   const { profile } = useAuth();
   const [boutiques, setBoutiques] = useState(boutiquesProp || []);
   const [choisie, setChoisie] = useState(null);
@@ -4482,6 +4490,7 @@ function VueVendeur({
                     )}
                   </button>
 
+{commandesOuvertes && (<>
                   {/* 1.0bis Mes commandes */}
                   <button
                     type="button"
@@ -4500,6 +4509,7 @@ function VueVendeur({
                       </span>
                     )}
                   </button>
+</>)}
 
                   {/* 1.1 Service / métier */}
                   <button
@@ -6491,6 +6501,7 @@ function ModalMesCommandesAcheteur({ userId, onFermer }) {
  * la protection des commandes et les boutons de discussion WhatsApp et Plateforme Facilité.
  */
 function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile, onArticleModifie, onArticleSupprime }) {
+  const commandesOuvertes = useFonctionAutorisee("feat_marketplace_commandes");
   const [photoIndex, setPhotoIndex] = useState(0);
   const [quantite, setQuantite] = useState(1);
   const [formatChoisi, setFormatChoisi] = useState(article.categorie || "Format Standard");
@@ -7132,6 +7143,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
 
                     {/* Actions de commande Desktop */}
                     <div className="hidden lg:flex lg:flex-col gap-2.5">
+{commandesOuvertes && (<>
                       {/* Bouton 1 : Commander (Orange vif style Alibaba "Envoyer demande") */}
                       <button
                         type="button"
@@ -7141,6 +7153,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                         <i className="fa-solid fa-bag-shopping text-base"></i>
                         <span>Commander</span>
                       </button>
+</>)}
 
                       {/* Bouton 2 : Discuter ici (Pill outline style Alibaba) */}
                       {etatDiscussion === "pret" ? (
@@ -7526,7 +7539,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                 <i className="fa-brands fa-whatsapp text-base sm:text-lg"></i>
                 <span className="truncate">WhatsApp</span>
               </a>
-            ) : (
+            ) : commandesOuvertes ? (
               <button
                 type="button"
                 onClick={() => setModalCommandeOuverte(true)}
@@ -7535,8 +7548,9 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                 <i className="fa-solid fa-bag-shopping text-sm sm:text-base"></i>
                 <span className="truncate">Commander</span>
               </button>
-            )}
+            ) : null}
 
+{commandesOuvertes && (<>
             {/* Bouton 3 : Commander Express / Panier */}
             <button
               type="button"
@@ -7546,6 +7560,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
             >
               <i className="fa-solid fa-cart-shopping text-sm sm:text-base"></i>
             </button>
+</>)}
           </div>
         </div>
 
