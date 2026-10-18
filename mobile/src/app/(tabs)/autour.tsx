@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import CarteLeaflet, { type CommandesCarte, type MarqueurCarte } from '@/components/CarteLeaflet';
+import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
 import { chargerOffresParVille, type GroupeVille, type ResultatAutour } from '@/lib/offresParVille';
 import type { Position } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
@@ -75,6 +75,18 @@ export default function AutourFaciliteScreen() {
     return liste;
   }, [groupes, selection, position]);
 
+  // Bulle d'aperçu au-dessus du rond de la ville : ses offres (poste + entreprise), comme celle des boutiques.
+  const popup = useMemo<PopupBoutique | null>(() => {
+    if (!courant) return null;
+    return {
+      lat: courant.lat,
+      lng: courant.lng,
+      titre: courant.ville,
+      sous: `${libelleOffres(courant.offres.length)} · ${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''}`,
+      articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, icone: '🏢' })),
+    };
+  }, [courant]);
+
   const origine = position ?? DAKAR;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
@@ -82,7 +94,7 @@ export default function AutourFaciliteScreen() {
   const choisirVille = (ville: string) => {
     setSelection(ville);
     const g = groupes.find((x) => x.ville === ville);
-    if (g) carte?.centrer(g.lat, g.lng, 10, 0.1);
+    if (g) carte?.centrer(g.lat, g.lng, 10, -0.07);
   };
 
   return (
@@ -93,10 +105,14 @@ export default function AutourFaciliteScreen() {
         sombre
         marqueurs={marqueurs}
         ajuster={!selection}
+        focus={selection}
+        popup={popup}
         commandes={setCarte}
         onMarqueur={(id) => {
-          if (id === 'moi') return;
-          choisirVille(id);
+          if (id === 'moi' || id === 'boutique') return;
+          if (id === 'fermer') setSelection(null);
+          else if (id.startsWith('article:')) router.push(`/offre/${id.slice(8)}` as Href);
+          else choisirVille(id);
         }}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
@@ -129,45 +145,6 @@ export default function AutourFaciliteScreen() {
       ) : null}
 
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
-        {courant ? (
-          <View className="rounded-[20px]" style={{ backgroundColor: '#fff', maxHeight: 250 }}>
-            <View className="flex-row items-center justify-between px-4 pt-3 pb-1">
-              <View className="flex-1 min-w-0">
-                <Text className="text-[15px] font-black text-[#1A1A1A]" numberOfLines={1}>{courant.ville}</Text>
-                <Text className="text-[12.5px] font-bold" style={{ color: BLEU }}>
-                  {libelleOffres(courant.offres.length)} · {courant.entreprises} entreprise{courant.entreprises > 1 ? 's' : ''}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => setSelection(null)}
-                accessibilityLabel="Fermer la liste"
-                hitSlop={8}
-                className="items-center justify-center rounded-full"
-                style={{ width: 30, height: 30, backgroundColor: '#EFEDE7' }}>
-                <Ionicons name="close" size={16} color="#1A1A1A" />
-              </Pressable>
-            </View>
-            <ScrollView nestedScrollEnabled contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 12, paddingTop: 4, gap: 6 }}>
-              {courant.offres.map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => router.push(`/offre/${item.id}` as Href)}
-                  className="flex-row items-center gap-3 px-3 py-2.5"
-                  style={{ borderRadius: 14, backgroundColor: '#F4F2EC' }}>
-                  <View className="items-center justify-center" style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: '#E6EEFD' }}>
-                    <Ionicons name="business-outline" size={17} color={BLEU} />
-                  </View>
-                  <View className="flex-1 min-w-0">
-                    <Text className="text-[12.5px] font-extrabold" style={{ color: BLEU }} numberOfLines={1}>{item.entreprise}</Text>
-                    <Text className="text-[13px] font-bold text-[#1A1A1A]" numberOfLines={1}>{item.titre}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
         <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
           <Ionicons name="briefcase" size={13} color="#fff" />
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>

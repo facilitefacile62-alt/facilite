@@ -57,7 +57,7 @@ export type PopupBoutique = {
   titre: string;
   sous?: string;
   /** null = chargement des articles en cours. */
-  articles: { id: string; titre: string; prix: string; photo?: string }[] | null;
+  articles: { id: string; titre: string; prix: string; photo?: string; icone?: string }[] | null;
 };
 
 export type CentreCarte = { lat: number; lng: number };
@@ -92,7 +92,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-art { flex: none; width: 118px; cursor: pointer; }
   .pb-photo { position: relative; width: 118px; height: 118px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
   .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pb-prix { position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
+  .pb-prix { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
@@ -231,7 +231,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       : d.articles.length === 0 ? '<div class="pb-vide">Cette boutique n’a pas encore d’article.</div>'
       : '<div class="pb-liste">' + d.articles.map(function (a) {
           return '<div class="pb-art" data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
-            + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '')
+            + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:38px">' + esc(a.icone || '') + '</div>')
             + '<span class="pb-prix">' + esc(a.prix) + '</span></div><div class="pb-titre">' + esc(a.titre) + '</div></div>';
         }).join('') + '</div>';
     var el = document.createElement('div');
