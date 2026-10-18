@@ -1723,3 +1723,54 @@ export async function chargerLitigesOuverts() {
   if (error) throw new Error(error.message);
   return (data || []).map((l) => l.commande_id);
 }
+
+// ---------------------------------------------------------------------------
+// Logo (photo) d'une boutique — migration 20261018140000_boutique_logo.sql
+// ---------------------------------------------------------------------------
+
+/** Associe l'id de chaque boutique qui a un logo à l'URL publique de ce logo (une seule requête légère). */
+export async function chargerLogosBoutiques() {
+  const { data, error } = await supabase.from("marketplace_stores").select("id, logo_photo").not("logo_photo", "is", null);
+  if (error) throw new Error(error.message);
+  return new Map((data || []).map((r) => [r.id, urlPhoto(r.logo_photo)]));
+}
+
+/** Enregistre (ou retire, avec null) le logo de la boutique : seul son propriétaire le peut (fonction SQL). */
+export async function definirLogoMaBoutique(storeId, chemin) {
+  const { error } = await supabase.rpc("definir_logo_ma_boutique", { p_store_id: storeId, p_logo: chemin });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Réduit la photo (800 px au plus, JPEG) puis l'envoie dans le bucket des photos, dans le dossier du vendeur
+ * (exigé par la règle de stockage). Renvoie le chemin à enregistrer avec definirLogoMaBoutique.
+ */
+export async function televerserLogoBoutique(userId, fichier) {
+  if (!userId) throw new Error("Connexion requise.");
+  if (!fichier || !fichier.type?.startsWith("image/")) throw new Error("Choisissez une image (JPG, PNG ou WebP).");
+  const image = await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(fichier);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Cette image ne peut pas être lue."));
+    };
+    img.src = url;
+  });
+  const taille = Math.min(800, Math.max(image.width, image.height));
+  const ratio = taille / Math.max(image.width, image.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.width * ratio);
+  canvas.height = Math.round(image.height * ratio);
+  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  if (!blob) throw new Error("Compression de l'image impossible.");
+  const chemin = `${userId}/logo-${Date.now()}.jpg`;
+  const { error } = await supabase.storage.from(BUCKET).upload(chemin, blob, { contentType: "image/jpeg" });
+  if (error) throw new Error(`Envoi du logo impossible : ${error.message}`);
+  return chemin;
+}

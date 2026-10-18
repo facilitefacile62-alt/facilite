@@ -19,6 +19,7 @@
 // La logique d'accès aux données vit dans src/lib/marketplaceData.js : ce
 // fichier ne fait que de l'interface.
 
+import LogoBoutiqueEditeur from "@/components/LogoBoutiqueEditeur";
 import { sansAccent } from "@/lib/texte";
 import { useIaAutorisee, MESSAGE_IA_EN_PAUSE } from "@/lib/useIaAutorisee";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -100,6 +101,7 @@ import {
   chargerMesCommandesAcheteur,
   supprimerPhoto,
   urlPhoto,
+  chargerLogosBoutiques,
   chargerGroupagesParIds,
   detacherCommandeDeGroupage,
   signalerLivraisonBloquee,
@@ -958,6 +960,19 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   // par estPremium (boutiquesPourGlobe) et l'affichage restent corrects
   // même avant que cette requête ne réponde.
   const [storeIdsPremium, setStoreIdsPremium] = useState(() => new Set());
+  // Logos (photos) des boutiques : id -> URL publique. Une seule requête, fusionnée dans les boutiques de la carte.
+  const [logosBoutiques, setLogosBoutiques] = useState(() => new Map());
+  useEffect(() => {
+    let annule = false;
+    chargerLogosBoutiques()
+      .then((m) => {
+        if (!annule) setLogosBoutiques(m);
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, []);
   useEffect(() => {
     let annule = false;
     obtenirBoutiquesPremiumActives()
@@ -1291,6 +1306,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         articles: articlesDeBoutique,
         type_boutique: "produit",
         avatar_config: a.boutique_avatar_config || null,
+        logo_url: logosBoutiques.get(a.boutique_id) || null,
         owner_id: a.boutique_owner_id || null,
         estPremium: storeIdsPremium.has(a.boutique_id),
       });
@@ -1326,6 +1342,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
         description_prestation: s.description_prestation,
         categorie_etablissement: s.categorie_etablissement,
         avatar_config: s.avatar_config || null,
+        logo_url: logosBoutiques.get(s.id) || null,
         owner_id: s.owner_id || null,
         // Manquait ici jusqu'à ce point (Premium Marketplace) : Globe
         // lisait déjà b.mode_horaires pour son badge "Ouvert/24h/24/RDV"
@@ -1346,7 +1363,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
     // clé de tri) — celle-ci est donc nouvelle.
     liste.sort((a, b) => (b.estPremium ? 1 : 0) - (a.estPremium ? 1 : 0));
     return liste;
-  }, [articlesPourCarte, resultatsServices, storeIdsPremium]);
+  }, [articlesPourCarte, resultatsServices, storeIdsPremium, logosBoutiques]);
 
   // Liste complète des catégories affichées dans la barre horizontale mobile (1:1 Identique à la capture et au menu)
   const CATEGORIES_DEFILEMENT_MOBILE = [
@@ -3374,6 +3391,17 @@ function VueReglages({
                 <i className="fa-solid fa-xmark text-xs sm:text-sm"></i>
               </button>
             </div>
+            {boutique?.id && boutique.id !== "facilite_shop" ? (
+              <LogoBoutiqueEditeur
+                storeId={boutique.id}
+                userId={userId}
+                logoPath={boutique.logo_photo}
+                onChange={() => {
+                  showToast("✓ Logo mis à jour.");
+                  onEnregistre?.();
+                }}
+              />
+            ) : null}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <EditeurAvatarBoutique
                 configInitial={boutique?.avatar_config || profile?.avatar_config}
@@ -4118,7 +4146,8 @@ function VueVendeur({
   const nomVendeur = boutiqueActive?.nom || profile?.full_name || "Facilite Facile";
   const telephoneVendeur = boutiqueActive?.telephone_whatsapp || profile?.phone || "";
   const initiales = nomVendeur.substring(0, 2).toUpperCase();
-  const avatarBitmojiUri = boutiqueActive?.avatar_config ? dataUriAvatarBoutique(boutiqueActive.avatar_config, 160) : null;
+  // Logo (photo) en priorité sur l'avatar Bitmoji.
+  const avatarBitmojiUri = urlPhoto(boutiqueActive?.logo_photo) || (boutiqueActive?.avatar_config ? dataUriAvatarBoutique(boutiqueActive.avatar_config, 160) : null);
   const statutOuverture = useMemo(() => {
     return calculerStatutOuverture(boutiqueActive, []);
   }, [boutiqueActive]);
@@ -7985,7 +8014,7 @@ function ModalFicheBoutique({
   // Avatar façon Bitmoji en priorité sur la vraie photo si le vendeur en a
   // configuré un (SVG DiceBear généré en local — génération synchrone bon
   // marché, pas besoin de mémoïsation).
-  const avatarBitmojiUri = boutique?.avatar_config ? dataUriAvatarBoutique(boutique.avatar_config, 160) : null;
+  const avatarBitmojiUri = urlPhoto(boutique?.logo_photo) || (boutique?.avatar_config ? dataUriAvatarBoutique(boutique.avatar_config, 160) : null);
   const [horairesEtablissement, setHorairesEtablissement] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
   const [modalHorairesOuverte, setModalHorairesOuverte] = useState(false);
