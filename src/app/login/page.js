@@ -360,7 +360,16 @@ export default function LoginPage() {
       setRecoveryLoading(false);
 
       if (error) {
-        setRecoveryError(error.message || "Impossible de mettre à jour le mot de passe.");
+        // Sans session de récupération (lien expiré, déjà utilisé ou ouvert sur un autre appareil), Supabase répond
+        // « Auth session missing! » : on l'explique en français au lieu d'afficher le texte brut.
+        const m = (error.message || "").toLowerCase();
+        setRecoveryError(
+          m.includes("session missing") || m.includes("session_not_found") || m.includes("jwt")
+            ? "Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau lien depuis « Mot de passe oublié »."
+            : m.includes("different from the old") || m.includes("same as the old")
+              ? "Choisissez un mot de passe différent de l'ancien."
+              : error.message || "Impossible de mettre à jour le mot de passe."
+        );
         return;
       }
 
