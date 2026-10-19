@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { verifierSignatureWebhook, jetonCallbackValide, hasherJetonCallback, obtenirStatutTransaction, evaluerConfirmationOrange } from "@/lib/orangeMoney";
+import { verifierSignatureWebhook, jetonCallbackValide, secretCallbackGlobalValide, hasherJetonCallback, rechercherTransactionOrange, evaluerConfirmationOrange } from "@/lib/orangeMoney";
+import { appliquerConfirmationAchat } from "@/lib/jetonsPaiement";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 export const runtime = "nodejs";
@@ -88,10 +89,16 @@ export async function POST(req) {
     .eq("type", "achat")
     .maybeSingle();
 
-  // Première barrière : un jeton propre à la commande dans l'URL de callback (ou une signature valide). Réponse 404 sans
-  // aucun détail, et jamais d'appel à Orange : sinon n'importe qui pourrait nous faire interroger Orange à volonté.
-  const jetonUrl = new URL(req.url).searchParams.get("t");
-  if (transactionError || !transaction || !(signee || jetonCallbackValide(jetonUrl, transaction.callback_token_hash))) {
+  // Première barrière : une signature valide, OU le jeton propre à la commande (?t=) dans l'URL de callback, OU — version
+  // de secours si Orange n'honore qu'une URL fixe enregistrée sur le portail — le secret global (?s=,
+  // ORANGE_MONEY_CALLBACK_SECRET). Réponse 404 sans aucun détail, et jamais d'appel à Orange : sinon n'importe qui
+  // pourrait nous faire interroger Orange à volonté. La vraie garantie reste la confirmation auprès d'Orange plus bas.
+  const parametres = new URL(req.url).searchParams;
+  const filtreOk =
+    signee ||
+    jetonCallbackValide(parametres.get("t"), transaction?.callback_token_hash) ||
+    secretCallbackGlobalValide(parametres.get("s"), process.env.ORANGE_MONEY_CALLBACK_SECRET);
+  if (transactionError || !transaction || !filtreOk) {
     console.error("[Webhook Jetons] Notification refusée (commande inconnue ou jeton de callback invalide).");
     return NextResponse.json({ error: "Introuvable." }, { status: 404 });
   }
@@ -130,7 +137,7 @@ export async function POST(req) {
   }
   let confirmation;
   try {
-    const reponseOrange = await obtenirStatutTransaction(orangeTransactionId);
+    const reponseOrange = await rechercherTransactionOrange({ transactionId: orangeTransactionId, reference: transaction.id });
     confirmation = evaluerConfirmationOrange(reponseOrange, { reference: transaction.id, montantXof: transaction.montant_xof });
   } catch (err) {
     // Orange injoignable : 5xx pour qu'il relance, journal retiré pour que la relance ne soit pas prise pour un doublon.
@@ -150,82 +157,15 @@ export async function POST(req) {
     return new NextResponse(null, { status: 202 });
   }
 
-  try {
-    if (confirmation.etat === "echec") {
-      // Échec final confirmé par Orange (FAILED, EXPIRED…) : reflète l'état réel plutôt que de laisser la
-      // transaction bloquée en "pending" indéfiniment.
-      await supabaseAdmin
-        .from("jetons_transactions")
-        .update({ status: "failed" })
-        .eq("id", transaction.id)
-        .eq("status", "pending");
-
-      await supabaseAdmin
-        .from("jetons_webhook_events")
-        .update({ jetons_transaction_id: transaction.id })
-        .eq("idempotency_key", idempotencyKey);
-
-      return NextResponse.json({ received: true });
-    }
-
-    const { data: updatedTransactions, error: updateError } = await supabaseAdmin
-      .from("jetons_transactions")
-      .update({
-        status: "success",
-        provider_reference: orangeTransactionId || transaction.provider_reference,
-      })
-      .eq("id", transaction.id)
-      .eq("status", "pending")
-      .select();
-
-    if (updateError) {
-      console.error("[Webhook Jetons] Échec mise à jour de la transaction :", updateError.message);
-      captureCriticalPaymentError("[Webhook Jetons] Échec mise à jour de la transaction", { message: updateError.message, transactionId: transaction.id });
-      await retirerJournal(supabaseAdmin, idempotencyKey);
-      return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
-    }
-
-    await supabaseAdmin
-      .from("jetons_webhook_events")
-      .update({ jetons_transaction_id: transaction.id })
-      .eq("idempotency_key", idempotencyKey);
-
-    if (!updatedTransactions || updatedTransactions.length === 0) {
-      // Déjà passée à "success" par un événement précédent (idempotence de
-      // la transition elle-même, en plus de la déduplication ci-dessus).
-      return deja_traite();
-    }
-
-    const updatedTransaction = updatedTransactions[0];
-
-    // Crédit du solde via fonction SECURITY DEFINER dédiée (jamais un
-    // UPDATE direct depuis le webhook) : upsert atomique store_id ->
-    // solde_jetons, respecte la contrainte solde_jetons >= 0 sans course
-    // possible entre deux webhooks concurrents pour la même boutique.
-    const { error: creditError } = await supabaseAdmin.rpc("crediter_jetons_boutique", {
-      p_store_id: updatedTransaction.store_id,
-      p_montant: updatedTransaction.montant,
-    });
-
-    if (creditError) {
-      console.error("[Webhook Jetons] Échec crédit du solde :", creditError.message);
-      captureCriticalPaymentError("[Webhook Jetons] Échec crédit du solde", { message: creditError.message, storeId: updatedTransaction.store_id, transactionId: transaction.id });
-      // Le crédit a échoué alors que la transaction vient de passer à
-      // "success" : on la remet à "pending" et on retire l'événement du
-      // journal pour que la relance d'Orange (5xx, même clé d'idempotence)
-      // refasse tout. Sans cela la relance trouvait l'événement « déjà
-      // traité » et l'achat restait payé mais jamais crédité. L'alerte
-      // critique reste remontée pour suivi.
-      await supabaseAdmin.from("jetons_transactions").update({ status: "pending" }).eq("id", transaction.id).eq("status", "success");
-      await retirerJournal(supabaseAdmin, idempotencyKey);
-      return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("[Webhook Jetons] Erreur interne :", error);
-    captureCriticalPaymentError("[Webhook Jetons] Erreur interne", { message: error?.message, reference, orangeTransactionId });
+  // Même logique d'application que le rattrapage (src/lib/jetonsPaiement.js) : transition atomique pending → success.
+  const { resultat } = await appliquerConfirmationAchat(supabaseAdmin, transaction, confirmation, orangeTransactionId);
+  if (resultat === "erreur") {
+    // Orange relance sur 5xx avec la même clé : on retire l'événement du journal pour que la relance ne soit pas prise
+    // pour un doublon (sinon l'achat resterait payé mais jamais crédité).
     await retirerJournal(supabaseAdmin, idempotencyKey);
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
   }
+  await supabaseAdmin.from("jetons_webhook_events").update({ jetons_transaction_id: transaction.id }).eq("idempotency_key", idempotencyKey);
+  if (resultat === "deja_traite") return deja_traite();
+  return NextResponse.json({ received: true });
 }

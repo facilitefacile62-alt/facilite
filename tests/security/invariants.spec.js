@@ -460,6 +460,16 @@ test.describe("Invariants de sécurité", () => {
       // elle appelle une fonction SQL réservée à service_role qui traite TOUTES les commandes
       // concernées et prévient leurs acheteurs et vendeurs. Aucun utilisateur précis à filtrer.
       "src/app/api/cron/expirer-commandes-sans-livreur/route.js",
+      // Rattrapage planifié (cron, CRON_SECRET) des achats de jetons restés « pending » — 19/10/2026. Opération système
+      // par nature : elle reprend TOUS les achats en attente de 20 min à 24 h, aucun utilisateur précis à filtrer. Rien
+      // n'est crédité sur la foi d'une donnée locale : chaque achat n'est crédité que si Orange confirme statut,
+      // référence et montant (evaluerConfirmationOrange), via la même transition atomique que le webhook.
+      "src/app/api/cron/rattrapage-achats-jetons/route.js",
+      // Webhook d'achat de jetons — 19/10/2026. Le crédit du solde (qui portait le marqueur store_id) est passé dans
+      // src/lib/jetonsPaiement.js, partagé avec le rattrapage. Le webhook agit sur UNE seule commande, identifiée par la
+      // référence de la notification et authentifiée par signature, jeton propre à la commande ou secret de callback ;
+      // rien n'est crédité sans la confirmation d'Orange.
+      "src/app/api/pay/jetons-webhook/route.js",
     ]);
 
     const unscoped = files.filter((f) => {
