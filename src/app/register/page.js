@@ -172,10 +172,10 @@ function RegisterForm() {
           {/* Titre & Sous-titre */}
           <div className="text-center mb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1">
-              Sign Up
+              Inscription
             </h1>
             <p className="text-xs sm:text-sm font-medium text-gray-500">
-              Create your account to get started.
+              Créez votre compte pour commencer.
             </p>
           </div>
 
@@ -285,14 +285,14 @@ function RegisterForm() {
               {/* Champ Email */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Email
+                  Adresse e-mail
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="Enter your Email"
+                  placeholder="nom@exemple.com"
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                 />
               </div>
@@ -300,7 +300,7 @@ function RegisterForm() {
               {/* Champ Mot de Passe */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Password
+                  Mot de passe
                 </label>
                 <div className="relative">
                   <input
@@ -308,7 +308,7 @@ function RegisterForm() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Create a password"
+                    placeholder="Créez un mot de passe"
                     className="w-full pl-4 pr-10 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                   />
                   <button
@@ -324,14 +324,14 @@ function RegisterForm() {
               {/* Champ Confirmation Mot de Passe */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Confirm Password
+                  Confirmer le mot de passe
                 </label>
                 <input
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  placeholder="Confirm your password"
+                  placeholder="Confirmez votre mot de passe"
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                 />
               </div>
@@ -351,7 +351,7 @@ function RegisterForm() {
                 {isLoading ? (
                   <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
                 ) : (
-                  <span>Create Account</span>
+                  <span>Créer mon compte</span>
                 )}
               </button>
 
@@ -359,7 +359,7 @@ function RegisterForm() {
               <div className="relative flex items-center justify-center my-6">
                 <div className="border-t border-gray-200 w-full"></div>
                 <span className="bg-white px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider relative z-10">
-                  OR
+                  OU
                 </span>
               </div>
 
@@ -388,18 +388,18 @@ function RegisterForm() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>{oauthLoading ? "Redirection..." : "Continue with Google"}</span>
+                <span>{oauthLoading ? "Redirection..." : "Continuer avec Google"}</span>
               </button>
 
               {/* Redirection Log in */}
               <div className="text-center pt-2">
                 <p className="text-xs text-gray-500 font-medium">
-                  Already have an account?{" "}
+                  Vous avez déjà un compte ?{" "}
                   <Link
                     href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                     className="font-extrabold text-gray-900 hover:underline cursor-pointer"
                   >
-                    Log In
+                    Se connecter
                   </Link>
                 </p>
               </div>
@@ -410,7 +410,7 @@ function RegisterForm() {
 
       {/* Footer minimaliste */}
       <footer className="w-full text-center py-4 text-xs font-semibold text-gray-400 z-10">
-        © 2026 Facilité. All rights reserved.
+        © 2026 Facilité. Tous droits réservés.
       </footer>
     </div>
   );
