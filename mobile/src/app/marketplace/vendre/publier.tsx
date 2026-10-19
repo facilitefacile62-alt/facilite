@@ -8,7 +8,6 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View 
 import EnteteEtapes from '@/components/EnteteEtapes';
 import SelecteurListe from '@/components/SelecteurListe';
 import { useAuth } from '@/context/AuthContext';
-import { useFonctionnalite } from '@/lib/featureFlags';
 import { ratioAffichage } from '@/lib/formatImage';
 import { enfantsDe, racinesDe, trouver, useCategories } from '@/lib/categories';
 import { prixLisible } from '@/lib/marketplace';
@@ -23,10 +22,8 @@ import { envoyerPhotoArticle, envoyerVideoArticle, publierArticle } from '@/lib/
 // et 2 ; 3 et 4 reprennent les champs réels de l'article (prix, quantité,
 // vidéo) dans le même habillage.
 //
-// Non repris, faute de colonne en base : « État », « Marque » et « Taille »
-// de la maquette 20 (marketplace_items n'a pas ces champs). « Zéro Saisie IA »
-// et le remplissage automatique par scan n'existent pas non plus côté
-// serveur : l'option est affichée désactivée, comme sur la maquette.
+// « Publication rapide » (ex-« Scanner avec l'IA ») : plusieurs images importées, la fiche est remplie à la main.
+// Le remplissage automatique par IA est repris à la mise à jour suivante.
 const VERT = '#10B981';
 const FONCE = '#0B3D2A';
 const MAX_PHOTOS_MANUEL = 5;
@@ -76,7 +73,6 @@ export default function PublierArticleScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const iaOuverte = useFonctionnalite('feat_marketplace_ia');
 
   const [ecran, setEcran] = useState<Ecran>('methode');
   // Arbre des catégories (en base) : `chemin` = identifiants choisis, de la catégorie au type ; `choixFait` = l'écran
@@ -258,10 +254,9 @@ export default function PublierArticleScreen() {
         <View className="px-4 pt-7 gap-3.5">
           <Text className="text-[20px] font-black text-[#1A1A1A] text-center mb-1">Comment voulez-vous vendre ?</Text>
 
-          {/* « Scanner avec l'IA » (maquette) : une photo suffit. Tant que l'interrupteur IA est coupé (administration),
-              la carte reste affichée mais annonce que la fonction arrive bientôt. */}
+          {/* « Publication rapide » : import de plusieurs images puis fiche à remplir soi-même. */}
           <Pressable
-            onPress={() => (iaOuverte ? setEcran('scan') : Alert.alert("Scanner avec l'IA", 'Fonction IA bientôt disponible.'))}
+            onPress={() => setEcran('scan')}
             accessibilityRole="button"
             className="flex-row items-center gap-3.5 rounded-[22px] bg-white"
             style={{ borderWidth: 1.5, borderColor: '#34D399', padding: 14 }}>
@@ -270,13 +265,9 @@ export default function PublierArticleScreen() {
             </View>
             <View className="flex-1">
               <View className="flex-row items-center gap-2">
-                <Text className="text-[17px] font-black text-[#1A1A1A]">Scanner avec l&apos;IA</Text>
-                <View className="flex-row items-center gap-1 rounded-full px-2 py-0.5" style={{ backgroundColor: '#FEF3C7' }}>
-                  <Text style={{ fontSize: 10 }}>👑</Text>
-                  <Text className="text-[10px] font-black" style={{ color: '#B45309' }}>PRO</Text>
-                </View>
+                <Text className="text-[17px] font-black text-[#1A1A1A]">Publication rapide</Text>
               </View>
-              <Text className="text-[13px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>Une photo suffit, vous mettez le prix</Text>
+              <Text className="text-[13px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>Plusieurs photos, vous remplissez la fiche vous-même</Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color="rgba(0,0,0,0.3)" />
           </Pressable>
@@ -401,35 +392,16 @@ export default function PublierArticleScreen() {
                 className="flex-1 items-center justify-center gap-1.5"
                 style={{ height: 80, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#93C5FD', backgroundColor: '#F4F8FF' }}>
                 <Ionicons name="images-outline" size={22} color="#2563EB" />
-                <Text className="text-[13.5px] font-black text-[#1A1A1A]">Galerie &amp; Scan</Text>
+                <Text className="text-[13.5px] font-black text-[#1A1A1A]">Importer des images</Text>
               </Pressable>
               <Pressable
                 onPress={prendrePhoto}
                 className="flex-1 items-center justify-center gap-1.5"
                 style={{ height: 80, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#6EE7B7', backgroundColor: '#F2FCF7' }}>
                 <Ionicons name="camera-outline" size={22} color="#047857" />
-                <Text className="text-[13.5px] font-black text-[#1A1A1A]">Caméra &amp; Scan</Text>
+                <Text className="text-[13.5px] font-black text-[#1A1A1A]">Prendre une photo</Text>
               </Pressable>
             </View>
-            <Pressable
-              onPress={() => {
-                if (photos.length === 0) return;
-                Alert.alert('Zéro Saisie IA', iaOuverte ? "Le remplissage automatique n'est pas encore branché." : 'Fonction IA bientôt disponible.');
-              }}
-              disabled={photos.length === 0}
-              className="items-center justify-center gap-1"
-              style={photos.length > 0
-                ? { height: 86, borderRadius: 16, borderWidth: 1, borderColor: '#cfc6b3', backgroundColor: '#e3dbcc' }
-                : { height: 86, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8D4F0', backgroundColor: '#FAFAFF', opacity: 0.75 }}>
-              <View className="flex-row items-center gap-2">
-                <Text style={{ fontSize: 16 }}>✨</Text>
-                <Text className="text-[14px] font-black" style={{ color: 'rgba(0,0,0,0.5)' }}>Zéro Saisie IA</Text>
-                <View style={{ borderWidth: 1, borderColor: '#F59E0B', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 }}>
-                  <Text className="text-[10px] font-black text-[#B45309]">PRO</Text>
-                </View>
-              </View>
-              <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.45)' }}>{photos.length > 0 ? "Facultatif : l'IA remplit la fiche pour vous" : "Importez une photo pour l'activer"}</Text>
-            </Pressable>
             <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 18 }}>
               🛡 Photos compressées automatiquement avant l&apos;envoi pour économiser vos données mobiles.
             </Text>
