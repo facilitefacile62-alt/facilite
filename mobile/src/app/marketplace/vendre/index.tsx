@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -212,6 +212,7 @@ function FormulaireCreationBoutique({
 
 export default function MaBoutiqueScreen() {
   const router = useRouter();
+  const { publier } = useLocalSearchParams<{ publier?: string }>();
   const { user } = useAuth();
   const [chargement, setChargement] = useState(true);
   const [aBoutique, setABoutique] = useState<boolean | undefined>(undefined); // undefined = chargement
@@ -224,7 +225,9 @@ export default function MaBoutiqueScreen() {
       const active = liste[0] ?? null;
       setABoutique(Boolean(active));
       // Une boutique existe : on ouvre « Ma boutique » (ARTICLE · SERVICE · ÉTABLISSEMENT).
-      if (active) router.replace("/marketplace/vendre/ma-boutique" as Href);
+      // Bouton « Publier » de la barre du bas (?publier=1) : directement « Comment voulez-vous vendre ? » (étape 1 de la
+      // publication). Sans boutique, on reste sur « Devenir actif » ; les autres entrées ouvrent « Ma boutique ».
+      if (active) router.replace((publier ? `/marketplace/vendre/publier?storeId=${active.id}` : '/marketplace/vendre/ma-boutique') as Href);
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Chargement impossible.');
     } finally {
@@ -236,7 +239,7 @@ export default function MaBoutiqueScreen() {
     useCallback(() => {
       recharger();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id])
+    }, [user?.id, publier])
   );
 
   function retour() {

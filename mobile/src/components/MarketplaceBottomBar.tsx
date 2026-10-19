@@ -30,7 +30,7 @@ type Entree = {
 const ENTREES: Entree[] = [
   { id: 'accueil', libelle: 'Accueil', icone: 'home-outline', iconeActive: 'home', cible: '/marketplace' },
   { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/marketplace/autour' },
-  { id: 'publier', libelle: 'Publier', icone: 'add-circle-outline', iconeActive: 'add-circle', cible: '/marketplace/vendre' },
+  { id: 'publier', libelle: 'Publier', icone: 'add-circle-outline', iconeActive: 'add-circle', cible: '/marketplace/vendre?publier=1' },
   { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/marketplace/messages' },
   { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/marketplace/profil' },
 ];

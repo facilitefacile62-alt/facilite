@@ -8,6 +8,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View 
 import EnteteEtapes from '@/components/EnteteEtapes';
 import SelecteurListe from '@/components/SelecteurListe';
 import { useAuth } from '@/context/AuthContext';
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { ratioAffichage } from '@/lib/formatImage';
 import { CATEGORIES_MARKETPLACE, libelleCategorie, prixLisible } from '@/lib/marketplace';
 import { envoyerPhotoArticle, envoyerVideoArticle, publierArticle } from '@/lib/vendeur';
@@ -74,6 +75,7 @@ export default function PublierArticleScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const iaOuverte = useFonctionnalite('feat_marketplace_ia');
 
   const [ecran, setEcran] = useState<Ecran>('methode');
   const [categorie, setCategorie] = useState<string | null>(null);
@@ -233,7 +235,28 @@ export default function PublierArticleScreen() {
         <View className="px-4 pt-7 gap-3.5">
           <Text className="text-[20px] font-black text-[#1A1A1A] text-center mb-1">Comment voulez-vous vendre ?</Text>
 
-          {/* « Scanner avec l'IA » : retiré de l'application pour le moment (fonctions IA en pause). */}
+          {/* « Scanner avec l'IA » (maquette) : une photo suffit. Tant que l'interrupteur IA est coupé (administration),
+              la carte reste affichée mais annonce que la fonction arrive bientôt. */}
+          <Pressable
+            onPress={() => (iaOuverte ? setEcran('scan') : Alert.alert("Scanner avec l'IA", 'Fonction IA bientôt disponible.'))}
+            accessibilityRole="button"
+            className="flex-row items-center gap-3.5 rounded-[22px] bg-white"
+            style={{ borderWidth: 1.5, borderColor: '#34D399', padding: 14 }}>
+            <View className="items-center justify-center" style={{ width: 50, height: 50, borderRadius: 14, backgroundColor: '#D7F2EA' }}>
+              <Ionicons name="camera-outline" size={22} color="#0B3D2A" />
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-[17px] font-black text-[#1A1A1A]">Scanner avec l&apos;IA</Text>
+                <View className="flex-row items-center gap-1 rounded-full px-2 py-0.5" style={{ backgroundColor: '#FEF3C7' }}>
+                  <Text style={{ fontSize: 10 }}>👑</Text>
+                  <Text className="text-[10px] font-black" style={{ color: '#B45309' }}>PRO</Text>
+                </View>
+              </View>
+              <Text className="text-[13px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>Une photo suffit, vous mettez le prix</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color="rgba(0,0,0,0.3)" />
+          </Pressable>
 
           <Pressable
             onPress={() => {
