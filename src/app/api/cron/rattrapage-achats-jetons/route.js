@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { rechercherTransactionOrange, evaluerConfirmationOrange } from "@/lib/orangeMoney";
 import { appliquerConfirmationAchat } from "@/lib/jetonsPaiement";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
+import { bearerValide } from "@/lib/cronAuth";
 
 export const runtime = "nodejs";
 
@@ -19,15 +20,17 @@ const LOT_MAX = 50;
  * idempotence : une commande déjà créditée par le webhook n'est jamais créditée une seconde fois.
  *
  * Prévu pour tourner toutes les 10 minutes. Le planificateur n'est PAS branché : le plan Vercel (Hobby) n'autorise
- * qu'un cron quotidien. Protégée par CRON_SECRET comme les autres routes /api/cron.
+ * qu'un cron quotidien. Protégée par CRON_SECRET ou RATTRAPAGE_CRON_SECRET (Bearer).
  */
 export async function GET(req) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    console.error("[Cron Rattrapage Jetons] CRON_SECRET manquant côté serveur.");
+  // Deux secrets acceptés : CRON_SECRET (celui des autres routes cron) et RATTRAPAGE_CRON_SECRET, dédié au planificateur
+  // GitHub Actions de cette route (révocable sans toucher aux autres crons). Comparaison en temps constant.
+  const secrets = [process.env.CRON_SECRET, process.env.RATTRAPAGE_CRON_SECRET];
+  if (!secrets.some(Boolean)) {
+    console.error("[Cron Rattrapage Jetons] Aucun secret (CRON_SECRET / RATTRAPAGE_CRON_SECRET) côté serveur.");
     return NextResponse.json({ error: "Cron non configuré." }, { status: 503 });
   }
-  if ((req.headers.get("authorization") || "") !== `Bearer ${cronSecret}`) {
+  if (!bearerValide(req.headers.get("authorization"), secrets)) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
 

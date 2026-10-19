@@ -8,7 +8,8 @@
 # n'est pas sur main, le déclencheur planifié ne tourne pas : c'est voulu. « workflow_dispatch » permet un essai à la
 # main depuis l'onglet Actions, mais seulement une fois le fichier sur la branche par défaut lui aussi.
 #
-# Secret requis (Settings > Secrets and variables > Actions) : CRON_SECRET, la MÊME valeur que sur Vercel. Le dépôt est
+# Secret requis (Settings > Secrets and variables > Actions) : RATTRAPAGE_CRON_SECRET, la MÊME valeur que la variable
+# Vercel de même nom (distincte de CRON_SECRET, qui reste réservé aux autres crons). Le dépôt est
 # public : aucune valeur secrète n'est écrite dans ce fichier.
 name: Rattrapage achats jetons
 
@@ -32,14 +33,14 @@ jobs:
     steps:
       - name: Appeler /api/cron/rattrapage-achats-jetons
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          RATTRAPAGE_CRON_SECRET: ${{ secrets.RATTRAPAGE_CRON_SECRET }}
         run: |
-          if [ -z "$CRON_SECRET" ]; then
-            echo "Secret CRON_SECRET absent côté GitHub." >&2
+          if [ -z "$RATTRAPAGE_CRON_SECRET" ]; then
+            echo "Secret RATTRAPAGE_CRON_SECRET absent côté GitHub." >&2
             exit 1
           fi
           # La route répond au GET. -f : tout statut hors 2xx fait échouer l'étape (échec visible dans Actions).
           curl -fsS --max-time 60 \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Authorization: Bearer ${RATTRAPAGE_CRON_SECRET}" \
             "https://ffacilite.com/api/cron/rattrapage-achats-jetons"
           echo
