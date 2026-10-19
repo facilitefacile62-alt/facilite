@@ -56,6 +56,7 @@ const PILULES: { id: string; libelle: string; icone: keyof typeof Ionicons.glyph
 ];
 
 export default function MarketplaceBottomBar() {
+  const t = useT();
   const router = useRouter();
   const chemin = usePathname();
   const insets = useSafeAreaInsets();
@@ -93,13 +94,13 @@ export default function MarketplaceBottomBar() {
                 router.navigate(pl.cible as Href);
               }}
               accessibilityRole="button"
-              accessibilityLabel={pl.libelle}
+              accessibilityLabel={t(pl.libelle)}
               className="flex-1 flex-row items-center justify-center gap-1.5 bg-white"
               style={{ height: 44, borderRadius: 22, paddingHorizontal: 6 }}>
               <View className="items-center justify-center" style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#D1FAE5' }}>
                 <Ionicons name={pl.icone} size={14} color={VERT} />
               </View>
-              <Text className="text-[11.5px] font-black text-[#111]" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{pl.libelle}</Text>
+              <Text className="text-[11.5px] font-black text-[#111]" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t(pl.libelle)}</Text>
             </Pressable>
           ))}
         </View>
@@ -117,7 +118,7 @@ export default function MarketplaceBottomBar() {
               className="flex-1 items-center justify-center py-2 min-h-[52px]">
               <Ionicons name={estActif ? e.iconeActive : e.icone} size={22} color={couleur} />
               <Text className="text-[10.5px] font-bold mt-0.5" style={{ color: couleur }}>
-                {e.libelle}
+                {t(e.libelle)}
               </Text>
             </Pressable>
           );
@@ -126,3 +127,4 @@ export default function MarketplaceBottomBar() {
     </View>
   );
 }
+import { useT } from '@/lib/i18n';

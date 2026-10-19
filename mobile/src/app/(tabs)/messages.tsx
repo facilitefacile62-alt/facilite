@@ -11,6 +11,7 @@ import { IconPoints, IconRecherche } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { useConversationsReelles, type ConversationReelle } from '@/lib/useConversationsReelles';
+import { useT } from '@/lib/i18n';
 
 // Reproduction de design_handoff_facilite/pages/05-messages.html. La ligne
 // "Support RH Facilité" est fixe dans le design (pas un élément de
@@ -31,6 +32,7 @@ const PUCES: { id: FiltrePuce; label: string; cablee: boolean }[] = [
 ];
 
 export default function MessagesScreen() {
+  const t = useT();
   const { user } = useAuth();
   const router = useRouter();
   const conversations = useConversationsReelles(user?.id);
@@ -94,7 +96,7 @@ export default function MessagesScreen() {
 
         <View className="flex-row items-center justify-between px-4 pt-4 pb-1">
           <View className="flex-row items-center gap-2">
-            <Text className="text-[19px] font-extrabold text-[#1A1A1A]">Discussions</Text>
+            <Text className="text-[19px] font-extrabold text-[#1A1A1A]">{t('Discussions')}</Text>
             <View className="bg-emerald-500 rounded-full px-2 py-0.5">
               <Text className="text-white text-[11px] font-bold">
                 {conversations ? conversations.length + 1 : 1}
@@ -110,7 +112,7 @@ export default function MessagesScreen() {
               className="flex-row items-center gap-2"
               style={{ height: 44, paddingHorizontal: 20, borderRadius: 14, backgroundColor: '#C2E7FF', boxShadow: '0 3px 8px rgba(0,29,53,0.12)' }}>
               <Ionicons name="create-outline" size={17} color="#001D35" />
-              <Text className="text-[15px] font-black" style={{ color: '#001D35' }}>Écrire</Text>
+              <Text className="text-[15px] font-black" style={{ color: '#001D35' }}>{t('Écrire')}</Text>
             </Pressable>
             <Pressable onPress={() => Alert.alert('Options', 'Bientôt disponible.')} hitSlop={10}>
               <IconPoints />
@@ -124,7 +126,7 @@ export default function MessagesScreen() {
             <TextInput
               value={recherche}
               onChangeText={setRecherche}
-              placeholder="Rechercher ou démarrer une discussion..."
+              placeholder={t('Rechercher ou démarrer une discussion...')}
               placeholderTextColor="rgba(0,0,0,0.4)"
               className="flex-1 text-[13px] text-[#1A1A1A]"
             />
@@ -145,7 +147,7 @@ export default function MessagesScreen() {
               }`}>
               <Text
                 className={`text-[12.5px] ${puceActive === puce.id ? 'font-bold text-white' : 'font-semibold text-[#1A1A1A]'}`}>
-                {puce.label}
+                {t(puce.label)}
               </Text>
             </Pressable>
           ))}
@@ -175,13 +177,13 @@ export default function MessagesScreen() {
                       🔗 Disponible 24/7 pour vos CV et démarches
                     </Text>
                   </View>
-                  <Text className="text-[11.5px] font-semibold text-emerald-500">Disponible</Text>
+                  <Text className="text-[11.5px] font-semibold text-emerald-500">{t('Disponible')}</Text>
                 </Pressable>
               ) : null
             }
             ListEmptyComponent={
               <Text className="text-[12.5px] text-black/40 font-medium text-center mt-10">
-                Aucune discussion pour l&apos;instant.
+                {t("Aucune discussion pour l'instant.")}
               </Text>
             }
             renderItem={({ item }) => <LigneConversation conversation={item} onPress={() => ouvrirConversation(item)} />}

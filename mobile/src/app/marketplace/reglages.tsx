@@ -10,6 +10,7 @@ import { LigneBascule, LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
 import { libelleLangue, lireLangue, type CodeLangue } from '@/lib/preferencesConnexion';
 import { chargerMesBoutiques, definirVisibiliteBoutique, type MaBoutique } from '@/lib/vendeur';
+import { useT } from '@/lib/i18n';
 
 // Réglages Marketplace — maquettes 69 (visiteur) et 79 (vendeur). Liste
 // volontairement différente de celle de Facilité (mon-profil/parametres.tsx,
@@ -40,12 +41,13 @@ function Groupe({ titre, enfants }: { titre?: string; enfants: React.ReactNode }
 // Réglages vendeur (maquette 31) : lignes à plat sur fond blanc, groupes
 // séparés par une bande grise, pastilles « Actif » pour les réglages.
 function LigneReglage({ titre, onPress, chevron = true, pastille, rouge, icone }: { titre: string; onPress: () => void; chevron?: boolean; pastille?: { texte: string; actif: boolean }; rouge?: boolean; icone?: keyof typeof Ionicons.glyphMap }) {
+  const t = useT();
   return (
     <Pressable onPress={onPress} className="flex-row items-center justify-between px-5" style={{ height: 56, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
-      <Text className="text-[15.5px] font-black" style={{ color: rouge ? '#DC2626' : '#1A1A1A' }}>{titre}</Text>
+      <Text className="text-[15.5px] font-black" style={{ color: rouge ? '#DC2626' : '#1A1A1A' }}>{t(titre)}</Text>
       {pastille ? (
         <View className="rounded-full px-3 py-1" style={{ backgroundColor: pastille.actif ? '#D1FAE5' : '#E5E7EB' }}>
-          <Text className="text-[12.5px] font-black" style={{ color: pastille.actif ? '#047857' : '#4B5563' }}>{pastille.texte}</Text>
+          <Text className="text-[12.5px] font-black" style={{ color: pastille.actif ? '#047857' : '#4B5563' }}>{t(pastille.texte)}</Text>
         </View>
       ) : icone ? (
         <Ionicons name={icone} size={18} color="#2563EB" />
@@ -133,7 +135,6 @@ export default function ReglagesMarketplaceScreen() {
           <LigneReglage titre="Abonnés" onPress={() => BIENTOT('Abonnés')} />
           <LigneReglage titre="Avis clients" onPress={() => BIENTOT('Avis clients')} />
           <BandeGrise />
-          <LigneReglage titre="Informations personnelles" onPress={() => router.push('/mon-profil/infos-perso')} />
           <LigneReglage titre="Coordonnées" onPress={() => router.push('/mon-profil/coordonnees')} />
           <LigneReglage titre="Contact & Livraison" onPress={() => BIENTOT('Contact & Livraison')} />
           <LigneReglage titre="Foire aux questions" onPress={() => router.push('/web/faq')} />

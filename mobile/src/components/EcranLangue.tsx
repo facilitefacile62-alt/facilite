@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LANGUES, ecrireLangue, lireLangue, type CodeLangue } from '@/lib/preferencesConnexion';
+import { useLangue } from '@/lib/i18n';
+import { LANGUES, lireLangue, type CodeLangue } from '@/lib/preferencesConnexion';
 
 // Langue de l'application — écran 02, en page entière (partagé par la page d'accueil de connexion et par les Paramètres :
 // ce dernier ne peut PAS vivre dans le groupe (auth), dont le garde renvoie à l'accueil tout utilisateur déjà connecté) : croix à gauche, liste
@@ -18,6 +19,7 @@ import { LANGUES, ecrireLangue, lireLangue, type CodeLangue } from '@/lib/prefer
 export default function EcranLangue({ repli }: { repli: Href }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { changer, t } = useLangue();
   const [choisie, setChoisie] = useState<CodeLangue>('fr');
 
   useEffect(() => {
@@ -26,9 +28,12 @@ export default function EcranLangue({ repli }: { repli: Href }) {
 
   async function choisir(code: CodeLangue) {
     setChoisie(code);
-    await ecrireLangue(code);
+    await changer(code);
     if (code !== 'fr') {
-      Alert.alert('Langue enregistrée', "Cette langue sera appliquée dès que ses traductions seront disponibles. Pour l'instant, l'application reste en français.");
+      Alert.alert(
+        'Langue appliquée',
+        "Les menus, la messagerie et les réglages sont traduits. Les autres écrans restent en français et seront traduits progressivement."
+      );
     }
     if (router.canGoBack()) router.back();
     else router.replace(repli);
@@ -44,7 +49,7 @@ export default function EcranLangue({ repli }: { repli: Href }) {
           style={{ width: 44, height: 44 }}>
           <Ionicons name="close" size={26} color="#374151" />
         </Pressable>
-        <Text className="text-[20px] font-black text-[#111] ml-3">Langue de l&apos;application</Text>
+        <Text className="text-[20px] font-black text-[#111] ml-3">{t("Langue de l'application")}</Text>
       </View>
 
       {LANGUES.map((l) => {

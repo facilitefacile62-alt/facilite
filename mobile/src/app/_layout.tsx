@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { LangueProvider } from '@/lib/i18n';
 import { bienvenueDejaVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
@@ -98,6 +99,7 @@ function BarreFaciliteHorsOnglets() {
 
 export default function RootLayout() {
   return (
+    <LangueProvider>
     <AuthProvider>
       {/* DefaultTheme (jamais DarkTheme) : toute l'app est pensée en thème
           clair, aucun écran du design ne prévoit de mode sombre. Suivre
@@ -123,5 +125,6 @@ export default function RootLayout() {
         </AuthGate>
       </ThemeProvider>
     </AuthProvider>
+    </LangueProvider>
   );
 }

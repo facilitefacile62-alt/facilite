@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
 import { ecrireTheme, lireLangue, lireTheme, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
+import { useT } from '@/lib/i18n';
 
 // « Modifier infos » > Paramètres — maquette 48 (version du 12/10/2026) : le
 // titre « Paramètres », sa phrase d'explication, la carte APPARENCE (Thème) +
@@ -14,6 +15,7 @@ import { ecrireTheme, lireLangue, lireTheme, libelleLangue, type CodeLangue, typ
 // Sécurité & Connexion). Ces éléments reviennent avec la nouvelle maquette ;
 // les anciennes longues listes de liens restent retirées.
 export default function ParametresScreen() {
+  const t = useT();
   const router = useRouter();
   const [langue, setLangue] = useState<CodeLangue>('fr');
   const [theme, setTheme] = useState<ThemeChoisi>('clair');
@@ -36,23 +38,23 @@ export default function ParametresScreen() {
         <ScrollView contentContainerClassName="px-4 pt-5 pb-10 gap-5" showsVerticalScrollIndicator={false}>
           <View>
             <View className="flex-row items-center gap-2">
-              <Text className="text-[22px] font-black text-[#1A1A1A]">Paramètres</Text>
+              <Text className="text-[22px] font-black text-[#1A1A1A]">{t('Paramètres')}</Text>
               <Ionicons name="chevron-down" size={15} color="#1A1A1A" />
             </View>
             <Text className="text-[14px] mt-1.5" style={{ color: 'rgba(0,0,0,0.5)' }}>
-              Personnalisez votre expérience visuelle et vos préférences.
+              {t('Personnalisez votre expérience visuelle et vos préférences.')}
             </Text>
           </View>
 
           <View className="bg-white" style={{ borderRadius: 18, padding: 16 }}>
-            <Text className="text-[12px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>APPARENCE</Text>
+            <Text className="text-[12px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('APPARENCE')}</Text>
             <View className="flex-row items-center gap-3 mt-3">
               <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#F0EEE8' }}>
                 <Ionicons name="contrast-outline" size={20} color="#1A1A1A" />
               </View>
               <View className="flex-1">
-                <Text className="text-[16px] font-black text-[#1A1A1A]">Thème</Text>
-                <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Apparence de Facilité</Text>
+                <Text className="text-[16px] font-black text-[#1A1A1A]">{t('Thème')}</Text>
+                <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>{t('Apparence de Facilité')}</Text>
               </View>
               {/* Trois choix qui répondent : le choix est mémorisé et son bouton s'allume. Seul le rendu clair existe
                   aujourd'hui, ce que l'application dit quand on choisit Auto ou Sombre. */}
@@ -77,13 +79,13 @@ export default function ParametresScreen() {
             </View>
 
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.07)', marginTop: 14 }} />
-            <Text className="text-[12px] font-extrabold mt-3.5" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>LANGUE</Text>
+            <Text className="text-[12px] font-extrabold mt-3.5" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('LANGUE')}</Text>
             <Pressable onPress={() => router.push('/mon-profil/langue' as Href)} className="flex-row items-center gap-3 mt-3" accessibilityRole="button">
               <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#F0EEE8' }}>
                 <Ionicons name="globe-outline" size={20} color="#1A1A1A" />
               </View>
               <View className="flex-1">
-                <Text className="text-[16px] font-black text-[#1A1A1A]">Langue de l&apos;application</Text>
+                <Text className="text-[16px] font-black text-[#1A1A1A]">{t("Langue de l'application")}</Text>
                 <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>{libelleLangue(langue)}</Text>
               </View>
               <Ionicons name="chevron-down" size={16} color="rgba(0,0,0,0.4)" />
@@ -91,7 +93,7 @@ export default function ParametresScreen() {
           </View>
 
           <View>
-            <Text className="text-[12px] font-extrabold mb-2 px-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>CONFIDENTIALITÉ ET SÉCURITÉ</Text>
+            <Text className="text-[12px] font-extrabold mb-2 px-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('CONFIDENTIALITÉ ET SÉCURITÉ')}</Text>
             <View className="bg-white overflow-hidden" style={{ borderRadius: 18 }}>
               {[
                 { icone: 'shield-checkmark-outline' as const, titre: 'Confidentialité et informations juridiques', sous: 'Visibilité du profil, pages légales', route: '/mon-profil/confidentialite' },
@@ -106,8 +108,8 @@ export default function ParametresScreen() {
                     <Ionicons name={r.icone} size={19} color="rgba(0,0,0,0.6)" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-[15px] font-black text-[#1A1A1A]">{r.titre}</Text>
-                    <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>{r.sous}</Text>
+                    <Text className="text-[15px] font-black text-[#1A1A1A]">{t(r.titre)}</Text>
+                    <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>{t(r.sous)}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
                 </Pressable>

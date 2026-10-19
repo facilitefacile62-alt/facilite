@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
+import { useT } from '@/lib/i18n';
 
 // Barre du bas de la plateforme Facilité (Accueil · Offres · Autour de moi ·
 // Messages · Profil — « Autour de moi » a pris la place de l'Extracteur le
@@ -58,6 +59,7 @@ export function entreeActiveFacilite(chemin: string): IdEntree | null {
 }
 
 export default function FaciliteBottomBar() {
+  const t = useT();
   const router = useRouter();
   const chemin = usePathname();
   const insets = useSafeAreaInsets();
@@ -82,7 +84,7 @@ export default function FaciliteBottomBar() {
               key={e.id}
               onPress={() => router.navigate(e.cible as Href)}
               accessibilityRole="tab"
-              accessibilityLabel={e.libelle}
+              accessibilityLabel={t(e.libelle)}
               accessibilityState={{ selected: estActif }}
               className="flex-1 items-center justify-center py-2 min-h-[52px]">
               <View>
@@ -90,7 +92,7 @@ export default function FaciliteBottomBar() {
                 {e.id === 'messages' ? <PastilleCompteur valeur={compteurs.messages} /> : null}
               </View>
               <Text className="text-[10.5px] font-bold mt-0.5" style={{ color: couleur }}>
-                {e.libelle}
+                {t(e.libelle)}
               </Text>
             </Pressable>
           );
