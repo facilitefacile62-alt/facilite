@@ -1,4 +1,6 @@
 const { test, expect } = require("@playwright/test");
+const { createClient } = require("@supabase/supabase-js");
+const { loadTestEnv } = require("../helpers/testEnv");
 
 /**
  * Parcours de récupération de mot de passe (Priorité 1, SMTP Resend).
@@ -27,8 +29,10 @@ const CANDIDATE_EMAIL = process.env.E2E_CANDIDATE_EMAIL || "e2e-test-candidate@f
 const CANDIDATE_PASSWORD = process.env.E2E_CANDIDATE_PASSWORD || "FaciliteE2ETest2026!";
 
 test.describe("Parcours de récupération de mot de passe", () => {
-  test.skip(!!process.env.TEST_SUPABASE_URL, "Le SMTP n'est pas configuré sur le projet de test (facilite-e2e-test) — ce comportement est normal et attendu.");
   test("le message de confirmation est identique qu'un compte existe ou non (anti-énumération)", async ({ page }) => {
+    // Seul ce test envoie un vrai e-mail : le SMTP n'est pas configuré sur le projet de test (facilite-e2e-test).
+    // Les autres tests de ce fichier n'en ont pas besoin et s'exécutent.
+    test.skip(!!process.env.TEST_SUPABASE_URL, "Le SMTP n'est pas configuré sur le projet de test (facilite-e2e-test) — ce comportement est normal et attendu.");
     await page.goto("/forgot-password");
     await page.getByPlaceholder("Enter your registered email").fill(CANDIDATE_EMAIL);
     await page.getByRole("button", { name: "Send Reset Link" }).click();
@@ -58,8 +62,8 @@ test.describe("Parcours de récupération de mot de passe", () => {
     // proprement (message d'erreur affiché), jamais planter la page.
     await page.getByPlaceholder("Au moins 6 caractères").fill("NouveauMotDePasse2026!");
     await page.getByPlaceholder("Confirmez le mot de passe").fill("NouveauMotDePasse2026!");
-    await page.getByRole("button", { name: "Mettre à jour le mot de passe" }).click();
-    await expect(page.locator("text=⚠️")).toBeVisible({ timeout: 10000 });
+    await page.getByRole("button", { name: "Enregistrer le mot de passe" }).click();
+    await expect(page.getByText(/Ce lien a expiré ou a déjà été utilisé/)).toBeVisible({ timeout: 10000 });
   });
 
   test("un compte email/mot de passe normal ne voit jamais le message de connexion Google en mode récupération", async ({ page }) => {
@@ -72,10 +76,54 @@ test.describe("Parcours de récupération de mot de passe", () => {
     await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
     await page.getByPlaceholder("Saisissez votre mot de passe").fill(CANDIDATE_PASSWORD);
     await page.getByRole("button", { name: "Se connecter" }).click();
-    await page.waitForURL("**/messagerie", { timeout: 20000 });
+    // La page d'arrivée après connexion a changé au fil des refontes : on attend seulement d'avoir quitté /login.
+    await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20000 });
 
     await page.goto("/login?reset=true");
     await page.waitForLoadState("networkidle");
     await expect(page.getByText(/connexion Google/)).not.toBeVisible();
+  });
+
+  test("nouveau mot de passe enregistré : l'ancien est refusé, le nouveau accepté, les autres appareils sont déconnectés", async ({ page }) => {
+    // Limite assumée : le navigateur du site utilise le flux PKCE (lien reçu = ?code=… échangé contre une session), qu'un
+    // lien généré côté serveur ne peut pas reproduire sans boîte mail (le projet de test n'a pas de SMTP). On ouvre donc
+    // une session par connexion normale, puis on passe par le MÊME formulaire /login?reset=true et le même appel
+    // (updateUser + déconnexion globale). Le point propre au lien — l'échange du code — n'est pas couvert ici.
+    test.setTimeout(120_000);
+    const env = loadTestEnv();
+    const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const email = `e2e-recup-${Date.now()}@facilite-demo.local`;
+    const ancien = `Ancien-${Date.now()}-Aa1!`;
+    const nouveau = `Nouveau-${Date.now()}-Bb2!`;
+    const { data: cree, error } = await admin.auth.admin.createUser({ email, password: ancien, email_confirm: true });
+    expect(error).toBeNull();
+    try {
+      // « Autre appareil » : une seconde session du même compte, qui doit être fermée par le changement.
+      const autreAppareil = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+      const { data: sessionAutre } = await autreAppareil.auth.signInWithPassword({ email, password: ancien });
+      expect(sessionAutre.session).toBeTruthy();
+
+      await page.goto("/login");
+      await page.getByPlaceholder("nom@exemple.com").fill(email);
+      await page.getByRole("button", { name: "Continuer avec l'e-mail" }).click();
+      await page.getByPlaceholder("Saisissez votre mot de passe").fill(ancien);
+      await page.getByRole("button", { name: "Se connecter" }).click();
+      await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20_000 });
+
+      await page.goto("/login?reset=true");
+      await page.getByPlaceholder("Au moins 6 caractères").fill(nouveau);
+      await page.getByPlaceholder("Confirmez le mot de passe").fill(nouveau);
+      await page.getByRole("button", { name: "Enregistrer le mot de passe" }).click();
+      await page.waitForURL((url) => url.pathname === "/login" && !url.search.includes("reset"), { timeout: 30_000 });
+
+      const anon = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+      expect((await anon.auth.signInWithPassword({ email, password: nouveau })).error).toBeNull();
+      expect((await anon.auth.signInWithPassword({ email, password: ancien })).error).not.toBeNull();
+      const rafraichi = await createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } })
+        .auth.refreshSession({ refresh_token: sessionAutre.session.refresh_token });
+      expect(rafraichi.error, "l'autre appareil doit être déconnecté").not.toBeNull();
+    } finally {
+      await admin.auth.admin.deleteUser(cree.user.id);
+    }
   });
 });
