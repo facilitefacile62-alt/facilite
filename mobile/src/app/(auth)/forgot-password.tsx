@@ -8,10 +8,11 @@ import { BoiteErreur, ChampCreme, Etiquette, LienTexte } from '@/components/Cham
 import EcranConnexion from '@/components/EcranConnexion';
 import { supabase } from '@/lib/supabase';
 
-// Écran 16 — mot de passe oublié. Envoie le lien de réinitialisation (la suite
-// du parcours — ouverture du lien, nouveau mot de passe — n'est pas couverte
-// ici : elle entrerait en conflit avec AuthGate, qui renvoie vers les tabs dès
-// qu'une session existe, y compris une session de récupération).
+// Écran 16 — mot de passe oublié. Envoie le lien de réinitialisation ; le lien ouvre l'écran « nouveau mot de passe »
+// (src/app/nouveau-mot-de-passe.tsx), volontairement hors du groupe (auth) pour échapper à AuthGate, qui renvoie vers
+// les tabs dès qu'une session existe, y compris une session de récupération.
+// L'adresse de retour (facilite://nouveau-mot-de-passe, ou exp://… en développement) doit figurer dans les « Redirect URLs »
+// du projet Supabase, sinon Supabase renvoie vers l'adresse du site au lieu de l'app.
 // Mise à jour du 12/10/2026 : même gabarit que 03 (bandeau vert + logo clé),
 // bouton retour → écran 15, plus d'en-tête du site.
 
@@ -31,7 +32,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: Linking.createURL('login'),
+        redirectTo: Linking.createURL('nouveau-mot-de-passe'),
       });
       if (error) {
         setErrorMessage(error.message || "Erreur lors de l'envoi de l'e-mail de réinitialisation.");

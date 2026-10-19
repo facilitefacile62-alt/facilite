@@ -42,6 +42,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const dansGroupeAuth = segments[0] === '(auth)';
+    // Lien « mot de passe oublié » : accessible sans session, et jamais renvoyé ailleurs pendant la session de récupération.
+    if ((segments[0] as string) === 'nouveau-mot-de-passe') return;
     const surNomPrenom = dansGroupeAuth && (segments as string[])[1] === 'nom-prenom';
     if (!session) {
       onboardingExamine.current = null;
@@ -115,7 +117,7 @@ function BarreFaciliteHorsOnglets() {
   const segments = useSegments();
   const racine = segments[0];
   if (racine === undefined) return null;
-  if (racine === '(auth)' || racine === '(tabs)' || racine === 'marketplace' || racine === 'onboarding') return null;
+  if (racine === '(auth)' || racine === '(tabs)' || racine === 'marketplace' || racine === 'onboarding' || (racine as string) === 'nouveau-mot-de-passe') return null;
   return <FaciliteBottomBar />;
 }
 
