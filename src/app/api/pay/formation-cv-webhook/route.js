@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { verifierSignatureWebhook } from "@/lib/orangeMoney";
+import { verifierSignatureWebhook, jetonCallbackValide, secretCallbackGlobalValide, hasherJetonCallback, rechercherTransactionOrange, evaluerConfirmationOrange } from "@/lib/orangeMoney";
+import { appliquerConfirmationInscription, MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 export const runtime = "nodejs";
@@ -25,35 +26,28 @@ async function retirerJournal(supabaseAdmin, idempotencyKey) {
 // Confirmation de paiement de la formation "Rédaction de CV" via Orange
 // Money "Paiement Marchand" (QR code) — événement asynchrone, jamais une
 // réponse directe à l'appel d'initiation (voir formation-cv-checkout/route.js).
-// Même structure que jetons-webhook/route.js (le seul flux Orange Money
-// vivant, voir 20260925150000) : seule la table créditée change
-// (formation_redaction_cv_inscriptions.paye au lieu de jetons_boutique). Un
-// 4xx n'est jamais retenté par Orange, un timeout/5xx l'est en boucle :
-// toute anomalie récupérable doit donc répondre 5xx, jamais 4xx.
+// Même schéma de sécurité que jetons-webhook/route.js : la notification n'est qu'un DÉCLENCHEUR — filtre par jeton
+// d'URL / secret global / signature, puis confirmation de l'état réel auprès d'Orange (statut, référence ET montant)
+// avant tout passage à paye = true. Un 4xx n'est jamais retenté par Orange, un timeout/5xx l'est en boucle : toute
+// anomalie récupérable doit donc répondre 5xx, jamais 4xx.
 export async function POST(req) {
-  const secret = process.env.ORANGE_MONEY_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error("[Webhook Formation CV] ORANGE_MONEY_WEBHOOK_SECRET manquant côté serveur.");
-    return NextResponse.json({ error: "Webhook non configuré." }, { status: 503 });
-  }
-
   // Corps BRUT lu avant tout parsing JSON — la signature HMAC est calculée
   // sur les octets exacts reçus (voir verifierSignatureWebhook).
   const rawBody = await req.text();
   const signatureHeader = req.headers.get("x-sonatel-signature");
-  const idempotencyKey = req.headers.get("x-sonatel-idempotency-key");
+  const secret = process.env.ORANGE_MONEY_WEBHOOK_SECRET;
 
-  const verification = verifierSignatureWebhook(rawBody, signatureHeader, secret);
-  if (!verification.valide) {
-    console.error("[Webhook Formation CV] Signature invalide —", verification.motif);
-    captureCriticalPaymentError("[Webhook Formation CV] Signature invalide", { motif: verification.motif });
-    return NextResponse.json({ error: "Signature invalide." }, { status: 401 });
-  }
-
-  if (!idempotencyKey) {
-    console.error("[Webhook Formation CV] En-tête X-Sonatel-Idempotency-Key absent.");
-    captureCriticalPaymentError("[Webhook Formation CV] Idempotency-Key absente");
-    return NextResponse.json({ error: "En-tête d'idempotence requis." }, { status: 400 });
+  // Orange ne signe pas encore ses notifications (« évolution à venir ») : la signature est vérifiée QUAND l'en-tête est
+  // présent et qu'un secret est configuré — une signature fausse est refusée net.
+  let signee = false;
+  if (signatureHeader && secret) {
+    const verification = verifierSignatureWebhook(rawBody, signatureHeader, secret);
+    if (!verification.valide) {
+      console.error("[Webhook Formation CV] Signature invalide —", verification.motif);
+      captureCriticalPaymentError("[Webhook Formation CV] Signature invalide", { motif: verification.motif });
+      return NextResponse.json({ error: "Signature invalide." }, { status: 401 });
+    }
+    signee = true;
   }
 
   let event;
@@ -79,6 +73,39 @@ export async function POST(req) {
   const orangeTransactionId = event.transactionId;
   const status = event.status;
 
+  if (!reference || typeof reference !== "string") {
+    console.error("[Webhook Formation CV] Événement sans reference.");
+    captureCriticalPaymentError("[Webhook Formation CV] Événement sans reference", { orangeTransactionId, status });
+    return NextResponse.json({ received: true, warning: "missing_reference" });
+  }
+
+  // user_id sélectionné pour la traçabilité des erreurs (reference == inscription.id suffit à la mise à jour elle-même,
+  // user_id étant UNIQUE sur cette table : une ligne == un utilisateur).
+  const { data: inscription, error: inscriptionError } = await supabaseAdmin
+    .from("formation_redaction_cv_inscriptions")
+    .select("id, user_id, paye, callback_token_hash")
+    .eq("id", reference)
+    .maybeSingle();
+
+  // Première barrière : une signature valide, OU le jeton de la tentative (?t=) dans l'URL de callback, OU — version de
+  // secours si Orange n'honore qu'une URL fixe enregistrée sur le portail — le secret global (?s=,
+  // ORANGE_MONEY_CALLBACK_SECRET). Réponse 404 sans aucun détail, et jamais d'appel à Orange. La vraie garantie reste
+  // la confirmation auprès d'Orange plus bas.
+  const parametres = new URL(req.url).searchParams;
+  const filtreOk =
+    signee ||
+    jetonCallbackValide(parametres.get("t"), inscription?.callback_token_hash) ||
+    secretCallbackGlobalValide(parametres.get("s"), process.env.ORANGE_MONEY_CALLBACK_SECRET);
+  if (inscriptionError || !inscription || !filtreOk) {
+    console.error("[Webhook Formation CV] Notification refusée (inscription inconnue ou jeton de callback invalide).");
+    return NextResponse.json({ error: "Introuvable." }, { status: 404 });
+  }
+
+  // Clé d'idempotence : celle d'Orange, sinon dérivée de l'événement (Orange ne l'envoie peut-être pas sans signature).
+  const idempotencyKey =
+    req.headers.get("x-sonatel-idempotency-key") ||
+    `derivee:${hasherJetonCallback(`${reference}|${orangeTransactionId || ""}|${status || ""}`)}`;
+
   // Déduplication : un INSERT qui échoue sur la contrainte UNIQUE
   // (idempotency_key) signifie "déjà traité" — journalisé avant tout
   // traitement métier, la journalisation EST le mécanisme d'idempotence.
@@ -86,7 +113,8 @@ export async function POST(req) {
     idempotency_key: idempotencyKey,
     status: status || null,
     orange_transaction_id: orangeTransactionId || null,
-    reference: reference || null,
+    reference,
+    inscription_id: inscription.id,
     raw_payload: event,
   });
 
@@ -99,64 +127,42 @@ export async function POST(req) {
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
   }
 
-  if (!reference) {
-    console.error("[Webhook Formation CV] Événement sans reference.", event);
-    captureCriticalPaymentError("[Webhook Formation CV] Événement sans reference", { orangeTransactionId, status });
-    return NextResponse.json({ received: true, warning: "missing_reference" });
+  // La notification n'est qu'un déclencheur : l'état RÉEL du paiement est confirmé auprès d'Orange (jeton OAuth), jamais
+  // lu dans le corps reçu. Aucun passage à « payé » sans cette confirmation, même quand la signature est valide.
+  if (!orangeTransactionId) {
+    captureCriticalPaymentError("[Webhook Formation CV] Notification sans transactionId, confirmation impossible", { reference });
+    await retirerJournal(supabaseAdmin, idempotencyKey);
+    return new NextResponse(null, { status: 202 });
+  }
+  let confirmation;
+  try {
+    const reponseOrange = await rechercherTransactionOrange({ transactionId: orangeTransactionId, reference: inscription.id });
+    confirmation = evaluerConfirmationOrange(reponseOrange, { reference: inscription.id, montantXof: MONTANT_FORMATION_CV_XOF });
+  } catch (err) {
+    // Orange injoignable : 5xx pour qu'il relance, journal retiré pour que la relance ne soit pas prise pour un doublon.
+    console.error("[Webhook Formation CV] Confirmation auprès d'Orange impossible :", err.message);
+    await retirerJournal(supabaseAdmin, idempotencyKey);
+    return NextResponse.json({ error: "Confirmation indisponible." }, { status: 502 });
+  }
+  if (confirmation.etat === "incoherent") {
+    // Paiement « réussi » mais qui ne correspond pas à l'inscription (référence ou montant) : jamais de validation.
+    console.error("[Webhook Formation CV] Confirmation incohérente —", confirmation.raison);
+    captureCriticalPaymentError("[Webhook Formation CV] Confirmation incohérente avec l'inscription", { reference, motif: confirmation.raison });
+    return NextResponse.json({ received: true, warning: "mismatch" });
+  }
+  if (confirmation.etat === "attente") {
+    // Statut intermédiaire : rien ne change, Orange renverra une notification au statut final.
+    await retirerJournal(supabaseAdmin, idempotencyKey);
+    return new NextResponse(null, { status: 202 });
   }
 
-  try {
-    // user_id sélectionné pour la traçabilité des erreurs ci-dessous
-    // (reference == inscription.id suffit à la mise à jour elle-même,
-    // user_id étant UNIQUE sur cette table : une ligne == un utilisateur).
-    const { data: inscription, error: inscriptionError } = await supabaseAdmin
-      .from("formation_redaction_cv_inscriptions")
-      .select("id, user_id, paye")
-      .eq("id", reference)
-      .single();
-
-    if (inscriptionError || !inscription) {
-      console.error("[Webhook Formation CV] Inscription introuvable pour reference", reference);
-      captureCriticalPaymentError("[Webhook Formation CV] Inscription introuvable", { reference, orangeTransactionId });
-      return NextResponse.json({ received: true, warning: "not_found" });
-    }
-
-    await supabaseAdmin
-      .from("formation_redaction_cv_webhook_events")
-      .update({ inscription_id: inscription.id })
-      .eq("idempotency_key", idempotencyKey);
-
-    if (status !== "SUCCESS") {
-      // Tout statut non-SUCCESS (FAILED, EXPIRED...) : rien à créditer, on
-      // laisse simplement paye=false — l'utilisateur peut regénérer un QR
-      // depuis la page (même ligne d'inscription réutilisée).
-      return NextResponse.json({ received: true });
-    }
-
-    if (inscription.paye) {
-      // Déjà traité par un événement précédent (idempotence de la
-      // transition elle-même, en plus de la déduplication ci-dessus).
-      return deja_traite();
-    }
-
-    const { error: updateError } = await supabaseAdmin
-      .from("formation_redaction_cv_inscriptions")
-      .update({ paye: true, paye_le: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", inscription.id)
-      .eq("paye", false);
-
-    if (updateError) {
-      console.error("[Webhook Formation CV] Échec mise à jour de l'inscription :", updateError.message);
-      captureCriticalPaymentError("[Webhook Formation CV] Échec mise à jour de l'inscription", { message: updateError.message, inscriptionId: inscription.id, userId: inscription.user_id });
-      await retirerJournal(supabaseAdmin, idempotencyKey);
-      return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("[Webhook Formation CV] Erreur interne :", error);
-    captureCriticalPaymentError("[Webhook Formation CV] Erreur interne", { message: error?.message, reference, orangeTransactionId });
+  const { resultat } = await appliquerConfirmationInscription(supabaseAdmin, inscription, confirmation);
+  if (resultat === "erreur") {
+    // Orange relance sur 5xx avec la même clé : on retire l'événement du journal pour que la relance ne soit pas prise
+    // pour un doublon.
     await retirerJournal(supabaseAdmin, idempotencyKey);
     return NextResponse.json({ error: "Erreur interne du webhook." }, { status: 500 });
   }
+  if (resultat === "deja_traite") return deja_traite();
+  return NextResponse.json({ received: true });
 }
