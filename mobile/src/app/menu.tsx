@@ -96,9 +96,16 @@ export default function MenuScreen() {
     else router.replace('/');
   }
 
+  // Touche de bascule du haut : ne change que les raccourcis affichés, sans quitter la page.
   function choisirMode(m: 'facilite' | 'locaux') {
     setMode(m);
+  }
+
+  // Lignes de « Vos espaces » : y aller change d'univers (accueil Facilité ou fil Locaux).
+  function allerEspace(m: 'facilite' | 'locaux') {
+    setMode(m);
     definirUserMode(m === 'locaux' ? 'business' : 'facilite').catch(() => {});
+    router.replace((m === 'locaux' ? '/marketplace' : '/') as Href);
   }
 
   function confirmerDeconnexion() {
@@ -138,7 +145,7 @@ export default function MenuScreen() {
   // L'espace où l'on se trouve est toujours en haut, l'autre en dessous.
   const ligneFacilite = (
     <Pressable
-      onPress={() => choisirMode('facilite')}
+      onPress={() => allerEspace('facilite')}
       className="flex-row items-center gap-3"
       style={{ backgroundColor: mode === 'facilite' ? '#F7F5F0' : 'transparent', borderRadius: 14, padding: 10 }}>
       <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
@@ -153,7 +160,7 @@ export default function MenuScreen() {
   );
   const ligneLocaux = (
     <Pressable
-      onPress={() => choisirMode('locaux')}
+      onPress={() => allerEspace('locaux')}
       className="flex-row items-center gap-3"
       style={{ backgroundColor: mode === 'locaux' ? '#F7F5F0' : 'transparent', borderRadius: 14, padding: 10 }}>
       <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
