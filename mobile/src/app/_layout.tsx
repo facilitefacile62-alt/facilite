@@ -1,4 +1,4 @@
-import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -6,6 +6,8 @@ import { View } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { fondSombre } from '@/components/themeSombre';
+import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
 import { LangueProvider } from '@/lib/i18n';
 import { bienvenueDejaVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
@@ -97,33 +99,34 @@ function BarreFaciliteHorsOnglets() {
   return <FaciliteBottomBar />;
 }
 
-export default function RootLayout() {
+/** Contenu racine : navigation et écrans, aux couleurs du thème choisi (clair, sombre ou automatique). */
+function ContenuRacine() {
+  const { sombre } = useThemeApp();
+  const fond = sombre ? fondSombre('#F2F0EA') : '#F2F0EA';
   return (
-    <LangueProvider>
-    <AuthProvider>
-      {/* DefaultTheme (jamais DarkTheme) : toute l'app est pensée en thème
-          clair, aucun écran du design ne prévoit de mode sombre. Suivre
-          colorScheme rendait la navigation quasi noire par défaut sur un
-          téléphone en mode sombre système — trouvé le 13/09/2026. */}
-      <ThemeProvider value={DefaultTheme}>
-        <AnimatedSplashOverlay />
+    <ThemeProvider value={sombre ? DarkTheme : DefaultTheme}>
+      <AnimatedSplashOverlay />
+      <ThemeFrontiere>
         <AuthGate>
-          {/* Stack (pas Slot) requis à partir de ce point : les écrans
-              poussés hors des onglets (offre/[id], chat/[id]...) ont besoin
-              d'une navigation native (retour, geste de balayage, transition)
-              par-dessus (auth)/(tabs). headerShown:false partout — chaque
-              écran construit son propre en-tête, comme le reste de l'app.
-              contentStyle : couleur de fond de secours pendant les
-              transitions/le chargement d'un écran, avant que son propre
-              contenu ne s'affiche — évite un flash noir. */}
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }}>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F2F0EA' } }} />
+              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fond } }} />
             </View>
             <BarreFaciliteHorsOnglets />
           </View>
         </AuthGate>
-      </ThemeProvider>
+      </ThemeFrontiere>
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <LangueProvider>
+    <AuthProvider>
+      <ThemeAppProvider>
+        <ContenuRacine />
+      </ThemeAppProvider>
     </AuthProvider>
     </LangueProvider>
   );

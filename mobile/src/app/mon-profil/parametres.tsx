@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
-import { ecrireTheme, lireLangue, lireTheme, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
+import { useThemeApp } from '@/context/ThemeApp';
+import { lireLangue, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
 import { useT } from '@/lib/i18n';
 
 // « Modifier infos » > Paramètres — maquette 48 (version du 12/10/2026) : le
@@ -16,20 +17,17 @@ import { useT } from '@/lib/i18n';
 // les anciennes longues listes de liens restent retirées.
 export default function ParametresScreen() {
   const t = useT();
-  const tr = t; // « t » est aussi le nom du paramètre de choisirTheme : on garde l'accès à la traduction sous « tr »
   const router = useRouter();
   const [langue, setLangue] = useState<CodeLangue>('fr');
-  const [theme, setTheme] = useState<ThemeChoisi>('clair');
+  const { theme, appliquer } = useThemeApp();
   useFocusEffect(
     useCallback(() => {
       lireLangue().then(setLangue);
-      lireTheme().then(setTheme);
     }, [])
   );
-  const choisirTheme = (t: ThemeChoisi) => {
-    setTheme(t);
-    ecrireTheme(t);
-    if (t !== 'clair') Alert.alert(tr(t === 'sombre' ? 'Thème sombre enregistré' : 'Thème automatique enregistré'), tr("Votre choix est mémorisé. Le rendu sombre n'est pas encore disponible : l'application reste claire pour l'instant."));
+  // Le thème s'applique tout de suite à toute l'application (clair, sombre, ou automatique = celui du téléphone).
+  const choisirTheme = (choix: ThemeChoisi) => {
+    appliquer(choix);
   };
   return (
     <View className="flex-1 bg-[#F2F0EA]">
