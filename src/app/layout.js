@@ -228,6 +228,8 @@ export default async function RootLayout({ children }) {
         <div id="facilite-root" className="min-h-screen flex flex-col flex-1">
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AuthProvider>
+              {/* Ancre des bandeaux d'information (voir PhoneVerificationBanner) : dans le flux, au-dessus de l'en-tête. */}
+              <div id="bandeau-global"></div>
               {!dansAppMobile && <Header />}
               {children}
               {!dansAppMobile && <Footer />}
