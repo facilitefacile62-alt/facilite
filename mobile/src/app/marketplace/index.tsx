@@ -1,7 +1,7 @@
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,11 +9,9 @@ import BoutonPlusLocaux from '@/components/BoutonPlusLocaux';
 import CarteArticleMarketplace from '@/components/CarteArticleMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import MiniCarteBoutiques from '@/components/MiniCarteBoutiques';
-import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES_MARKETPLACE, type ArticleMarketplace } from '@/lib/marketplace';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
-import { chargerMesBoutiques } from '@/lib/vendeur';
 
 // Marketplace — Accueil (maquette « Marketplace », image 15). En-tête
 // compact (logo + recherche + menu, pas de barre de recherche en ligne : un
@@ -46,26 +44,6 @@ export default function MarketplaceScreen() {
     if (!categorieParam) return;
     queueMicrotask(() => setCategorie(categorieParam));
   }, [categorieParam]);
-
-  // Libellé des actions rapides : « Devenir Vendeur » sans boutique, « Ma boutique » avec une.
-  const { user } = useAuth();
-  const userId = user?.id;
-  const [aBoutique, setAboutique] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      let annule = false;
-      if (userId) {
-        chargerMesBoutiques(userId)
-          .then((liste) => {
-            if (!annule) setAboutique(liste.length > 0);
-          })
-          .catch(() => {});
-      }
-      return () => {
-        annule = true;
-      };
-    }, [userId])
-  );
 
   return (
     <View className="flex-1" style={{ backgroundColor: '#F2F0EA' }}>
@@ -103,14 +81,9 @@ export default function MarketplaceScreen() {
           </ScrollView>
         </View>
 
-        {/* Actions rapides (maquette « Visiteur — Marketplace, actions rapides ») */}
-        <View className="flex-row gap-2 px-4 mt-3">
-          <Pressable
-            onPress={() => router.push('/marketplace/vendre')}
-            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-[#D1FAE5]">
-            <Ionicons name="storefront-outline" size={15} color="#047857" />
-            <Text className="text-[12.5px] font-bold text-[#047857]">{aBoutique ? 'Ma boutique' : 'Devenir actif'}</Text>
-          </Pressable>
+        {/* Actions rapides : « Ma boutique » est dans le menu ☰ (Boutique), plus sur le fil. */}
+        {commandesOuvertes ? (
+          <View className="flex-row gap-2 px-4 mt-3">
           {commandesOuvertes ? (
             <Pressable
               onPress={() => router.push('/marketplace/commandes')}
@@ -119,7 +92,8 @@ export default function MarketplaceScreen() {
               <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Mes commandes</Text>
             </Pressable>
           ) : null}
-        </View>
+          </View>
+        ) : null}
 
         {articles === null && !erreur ? (
           <View className="flex-1 items-center justify-center">
