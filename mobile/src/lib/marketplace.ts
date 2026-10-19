@@ -28,6 +28,13 @@ export const CATEGORIES_MARKETPLACE: CategorieMarketplace[] = [
   { id: 'services', label: 'Services', icone: 'briefcase-outline' },
   { id: 'alimentation', label: 'Alimentation', icone: 'basket-outline' },
   { id: 'autre', label: 'Autre', icone: 'pricetag-outline' },
+  // Nouvelles catégories de « Publier un produit » (arbre en base, table categories) : les articles publiés avec elles
+  // s'affichent sous leur propre puce ; les anciens articles gardent leurs anciennes catégories.
+  { id: 'sport', label: 'Sport & Loisirs', icone: 'trophy-outline' },
+  { id: 'bebe', label: 'Bébé & Enfants', icone: 'happy-outline' },
+  { id: 'beaute', label: 'Beauté & Santé', icone: 'heart-outline' },
+  { id: 'livres', label: 'Livres & Éducation', icone: 'book-outline' },
+  { id: 'autres', label: 'Autres', icone: 'cube-outline' },
 ];
 
 export function libelleCategorie(id: string | null | undefined): string {
