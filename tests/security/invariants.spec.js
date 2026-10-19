@@ -215,6 +215,10 @@ test.describe("Invariants de sécurité", () => {
       // SECURITY DEFINER). Une policy de lecture « pour tous » serait tautologique (invariant 7).
       // Voir 20261016260000_tarif_livraison.sql.
       "livraison_tarif",
+      // Arbre des catégories de « Publier un produit » : table de référence sans aucun GRANT ni policy, lue
+      // uniquement par lister_categories() (SECURITY DEFINER). Une policy de lecture « pour tous » serait
+      // tautologique (invariant 7). Voir 20261019120000_categories_arbre.sql.
+      "categories",
       // Config + catalogue de l'onglet admin "Entraînement IA" (Agent IA
       // Facilité) : même principe que assistant_faq, lecture/écriture
       // exclusivement via service_role et une route API admin dédiée. Voir
