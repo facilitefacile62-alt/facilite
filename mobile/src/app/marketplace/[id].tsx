@@ -145,7 +145,7 @@ export default function ArticleScreen() {
         return;
       }
       router.push({
-        pathname: '/chat/[id]',
+        pathname: '/marketplace/chat/[id]',
         params: {
           id: conversationId,
           contexte: 'marketplace',
