@@ -1,3 +1,4 @@
+import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -34,6 +35,9 @@ function AuthGate({ children }: { children: ReactNode }) {
   const onboardingExamine = useRef<string | null>(null);
   // Session héritée d'un lancement précédent : vérifiée une seule fois.
   const sessionVerifiee = useRef(false);
+  // Dernier univers (Facilité / Locaux) : relu une seule fois par lancement, puis suivi à chaque changement d'univers.
+  const universRestaure = useRef(false);
+  const universPret = useRef(false);
 
   useEffect(() => {
     if (loading) return;
@@ -42,6 +46,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (!session) {
       onboardingExamine.current = null;
       sessionVerifiee.current = false;
+      universRestaure.current = false;
       if (!dansGroupeAuth) {
         // Écran « Bienvenue » au tout premier lancement, connexion ensuite.
         bienvenueDejaVue().then((vu) => router.replace((vu ? '/login' : '/bienvenue') as Href));
@@ -76,7 +81,22 @@ function AuthGate({ children }: { children: ReactNode }) {
       }
     }
     if (dansGroupeAuth && !surNomPrenom) router.replace('/');
+    if (!universRestaure.current && !surNomPrenom) {
+      universRestaure.current = true;
+      obtenirUserMode().then((m) => {
+        universPret.current = true;
+        // Application fermée sur Locaux : on y revient à la réouverture.
+        if (m === 'business') router.replace('/marketplace' as Href);
+      });
+    }
   }, [session, profile, profilChargePour, loading, segments, router, signOut]);
+
+  const racineActuelle = segments[0] as string | undefined;
+  useEffect(() => {
+    if (!universPret.current) return;
+    if (racineActuelle === 'marketplace') definirUserMode('business');
+    else if (racineActuelle === '(tabs)') definirUserMode('facilite');
+  }, [racineActuelle]);
 
   return children;
 }
