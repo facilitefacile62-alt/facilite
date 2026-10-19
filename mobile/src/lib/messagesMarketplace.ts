@@ -12,6 +12,8 @@ export type DiscussionMarketplace = {
   dernierMessage: string;
   date: string;
   nonLue: boolean;
+  /** L'interlocuteur est une boutique (sinon : un client). */
+  estBoutique: boolean;
   /** Le dernier message est le mien : les coches ✓✓ de la maquette 35 ne s'affichent que dans ce cas. */
   dernierEnvoyeParMoi: boolean;
   /** … et l'autre personne l'a lu (coches bleues) ou pas encore (coches grises). */
@@ -65,18 +67,17 @@ export async function chargerDiscussionsMarketplace(userId: string): Promise<Dis
     .in('id', ids);
   if (erreurConv) throw new Error(erreurConv.message);
 
-  const autresIds = Array.from(
-    new Set((conversations ?? []).map((c) => (c.user_1_id === userId ? c.user_2_id : c.user_1_id)).filter((x): x is string => Boolean(x)))
+  // Le nom de l'interlocuteur ne peut pas être lu dans profiles (privée) : la fonction ne renvoie que le nom de sa
+  // boutique, ou son prénom et l'initiale de son nom, et seulement pour les participants de la discussion.
+  const { data: noms } = await supabase.rpc('noms_interlocuteurs_marketplace', { p_conversation_ids: ids });
+  const interlocuteurParId = new Map(
+    ((noms ?? []) as { conversation_id: string; nom: string | null; est_boutique: boolean }[]).map((n) => [n.conversation_id, n])
   );
-  const { data: profils } = autresIds.length
-    ? await supabase.from('profiles').select('id, full_name').in('id', autresIds)
-    : { data: [] as { id: string; full_name: string | null }[] };
-  const nomParId = new Map((profils ?? []).map((p) => [p.id, p.full_name?.trim() || 'Acheteur / vendeur']));
 
   const lignes = (conversations ?? []).map((c) => {
-    const autre = c.user_1_id === userId ? c.user_2_id : c.user_1_id;
     const dernier = parConversation.get(c.id);
-    const nom = (autre && nomParId.get(autre)) || 'Acheteur / vendeur';
+    const interlocuteur = interlocuteurParId.get(c.id);
+    const nom = interlocuteur?.nom?.trim() || 'Acheteur / vendeur';
     return {
       discussion: {
         id: c.id,
@@ -85,6 +86,7 @@ export async function chargerDiscussionsMarketplace(userId: string): Promise<Dis
         dernierMessage: dernier?.content ?? '',
         date: dernier ? dateCourte(dernier.created_at) : '',
         nonLue: dernier?.nonLue ?? false,
+        estBoutique: interlocuteur?.est_boutique ?? false,
         dernierEnvoyeParMoi: dernier?.moi ?? false,
         dernierLu: dernier?.lu ?? false,
       } satisfies DiscussionMarketplace,

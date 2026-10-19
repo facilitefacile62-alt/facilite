@@ -169,7 +169,7 @@ export default function MessagesMarketplaceScreen() {
               <LigneDiscussion
                 discussion={item}
                 onPress={() =>
-                  router.push(`/marketplace/chat/${item.id}?contexte=marketplace&nom=${encodeURIComponent(item.nom)}` as Href)
+                  router.push(`/marketplace/chat/${item.id}?contexte=marketplace&nom=${encodeURIComponent(item.nom)}&type=${item.estBoutique ? 'boutique' : 'client'}` as Href)
                 }
               />
             )}

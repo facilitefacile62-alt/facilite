@@ -91,7 +91,8 @@ export default function ChatDetailScreen() {
     nom: nomParam,
     brouillon: brouillonParam,
     article: articleParam,
-  } = useLocalSearchParams<{ id: string; contexte?: string; nom?: string; brouillon?: string; article?: string }>();
+    type: typeParam,
+  } = useLocalSearchParams<{ id: string; contexte?: string; nom?: string; brouillon?: string; article?: string; type?: string }>();
   // Arrivée depuis la fiche d'un article (Marketplace) : les messages sont
   // étiquetés MARKETPLACE, le fil porte le nom de la boutique et le composeur
   // est prérempli avec un message qui nomme l'article.
@@ -354,7 +355,7 @@ export default function ChatDetailScreen() {
                 {nomAffiche ?? 'Discussion'}
               </Text>
               <Text style={{ fontSize: 11.5, color: '#059669' }} numberOfLines={1}>
-                {marketplace ? `Boutique${nomAffiche ? ` · ${nomAffiche}` : ''}` : autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
+                {marketplace ? (typeParam === 'client' ? 'Client' : `Boutique${nomAffiche ? ` · ${nomAffiche}` : ''}`) : autreParticipant?.estAdmin ? 'en ligne · Facilité' : 'Facilité'}
               </Text>
             </View>
             {!marketplace ? (
