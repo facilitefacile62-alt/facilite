@@ -5,7 +5,7 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
-import { lireLangue, libelleLangue, type CodeLangue } from '@/lib/preferencesConnexion';
+import { ecrireTheme, lireLangue, lireTheme, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
 
 // « Modifier infos » > Paramètres — maquette 48 (version du 12/10/2026) : le
 // titre « Paramètres », sa phrase d'explication, la carte APPARENCE (Thème) +
@@ -16,11 +16,18 @@ import { lireLangue, libelleLangue, type CodeLangue } from '@/lib/preferencesCon
 export default function ParametresScreen() {
   const router = useRouter();
   const [langue, setLangue] = useState<CodeLangue>('fr');
+  const [theme, setTheme] = useState<ThemeChoisi>('clair');
   useFocusEffect(
     useCallback(() => {
       lireLangue().then(setLangue);
+      lireTheme().then(setTheme);
     }, [])
   );
+  const choisirTheme = (t: ThemeChoisi) => {
+    setTheme(t);
+    ecrireTheme(t);
+    if (t !== 'clair') Alert.alert(t === 'sombre' ? 'Thème sombre enregistré' : 'Thème automatique enregistré', "Votre choix est mémorisé. Le rendu sombre n'est pas encore disponible : l'application reste claire pour l'instant.");
+  };
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -47,32 +54,31 @@ export default function ParametresScreen() {
                 <Text className="text-[16px] font-black text-[#1A1A1A]">Thème</Text>
                 <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Apparence de Facilité</Text>
               </View>
-              {/* Seul le thème clair existe dans l'app (aucun écran du design n'a de mode sombre) :
-                  Auto et Sombre annoncent honnêtement qu'ils arrivent plus tard. */}
+              {/* Trois choix qui répondent : le choix est mémorisé et son bouton s'allume. Seul le rendu clair existe
+                  aujourd'hui, ce que l'application dit quand on choisit Auto ou Sombre. */}
               <View className="flex-row items-center" style={{ backgroundColor: '#F0EEE8', borderRadius: 22, padding: 4, gap: 2 }}>
-                <View className="items-center justify-center bg-white" accessibilityLabel="Thème clair, actif" style={{ width: 38, height: 38, borderRadius: 19 }}>
-                  <Ionicons name="sunny-outline" size={18} color="#1A1A1A" />
-                </View>
-                <Pressable
-                  onPress={() => Alert.alert('Thème automatique', 'Disponible avec le mode sombre, dans une prochaine mise à jour.')}
-                  accessibilityLabel="Thème automatique"
-                  className="items-center justify-center"
-                  style={{ width: 38, height: 38, borderRadius: 19 }}>
-                  <Ionicons name="settings-outline" size={17} color="rgba(0,0,0,0.5)" />
-                </Pressable>
-                <Pressable
-                  onPress={() => Alert.alert('Thème sombre', 'Le mode sombre arrive dans une prochaine mise à jour.')}
-                  accessibilityLabel="Thème sombre"
-                  className="items-center justify-center"
-                  style={{ width: 38, height: 38, borderRadius: 19 }}>
-                  <Ionicons name="moon-outline" size={17} color="rgba(0,0,0,0.5)" />
-                </Pressable>
+                {([
+                  { id: 'clair' as const, icone: 'sunny-outline' as const, nom: 'Thème clair' },
+                  { id: 'auto' as const, icone: 'settings-outline' as const, nom: 'Thème automatique' },
+                  { id: 'sombre' as const, icone: 'moon-outline' as const, nom: 'Thème sombre' },
+                ]).map((t) => (
+                  <Pressable
+                    key={t.id}
+                    onPress={() => choisirTheme(t.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: theme === t.id }}
+                    accessibilityLabel={t.nom}
+                    className="items-center justify-center"
+                    style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: theme === t.id ? '#fff' : 'transparent' }}>
+                    <Ionicons name={t.icone} size={18} color={theme === t.id ? '#1A1A1A' : 'rgba(0,0,0,0.5)'} />
+                  </Pressable>
+                ))}
               </View>
             </View>
 
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.07)', marginTop: 14 }} />
             <Text className="text-[12px] font-extrabold mt-3.5" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>LANGUE</Text>
-            <Pressable onPress={() => router.push('/langue' as Href)} className="flex-row items-center gap-3 mt-3" accessibilityRole="button">
+            <Pressable onPress={() => router.push('/mon-profil/langue' as Href)} className="flex-row items-center gap-3 mt-3" accessibilityRole="button">
               <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#F0EEE8' }}>
                 <Ionicons name="globe-outline" size={20} color="#1A1A1A" />
               </View>

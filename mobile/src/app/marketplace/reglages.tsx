@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import EnteteMarketplace from '@/components/EnteteMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { LigneBascule, LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
+import { libelleLangue, lireLangue, type CodeLangue } from '@/lib/preferencesConnexion';
 import { chargerMesBoutiques, definirVisibiliteBoutique, type MaBoutique } from '@/lib/vendeur';
 
 // Réglages Marketplace — maquettes 69 (visiteur) et 79 (vendeur). Liste
@@ -65,6 +66,7 @@ export default function ReglagesMarketplaceScreen() {
   const [chargement, setChargement] = useState(true);
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
   const [visibiliteEnCours, setVisibiliteEnCours] = useState(false);
+  const [langue, setLangue] = useState<CodeLangue>('fr');
 
   const recharger = useCallback(async () => {
     if (!userId) return;
@@ -81,6 +83,7 @@ export default function ReglagesMarketplaceScreen() {
   useFocusEffect(
     useCallback(() => {
       recharger();
+      lireLangue().then(setLangue);
     }, [recharger])
   );
 
@@ -187,7 +190,7 @@ export default function ReglagesMarketplaceScreen() {
                       <LigneMenu emoji="🪪" titre="Coordonnées" onPress={() => router.push('/mon-profil/coordonnees')} />
                       <LigneMenu emoji="🚚" titre="Contact & Livraison" onPress={() => BIENTOT('Contact & Livraison')} />
                       <LigneMenu emoji="❔" titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
-                      <LigneMenu emoji="🌐" titre="Langue" sous="Français" derniere onPress={() => BIENTOT('Changer la langue')} />
+                      <LigneMenu emoji="🌐" titre="Langue" sous={libelleLangue(langue)} derniere onPress={() => router.push('/mon-profil/langue' as Href)} />
                     </>
                   }
                 />
@@ -227,7 +230,7 @@ export default function ReglagesMarketplaceScreen() {
                   enfants={
                     <>
                       <LigneMenu emoji="❔" titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
-                      <LigneMenu emoji="🌐" titre="Changer la langue" sous="Français" derniere onPress={() => BIENTOT('Changer la langue')} />
+                      <LigneMenu emoji="🌐" titre="Changer la langue" sous={libelleLangue(langue)} derniere onPress={() => router.push('/mon-profil/langue' as Href)} />
                     </>
                   }
                 />

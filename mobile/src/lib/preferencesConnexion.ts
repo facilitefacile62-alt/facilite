@@ -34,6 +34,25 @@ export function libelleLangue(code: CodeLangue): string {
   return LANGUES.find((l) => l.code === code)?.natif ?? 'Français';
 }
 
+// ---- Thème (Paramètres > Apparence) -----------------------------------
+// Le choix est mémorisé. Seul le rendu clair existe aujourd'hui : « Auto » et « Sombre » sont enregistrés et signalés
+// comme à venir, l'application reste claire.
+export type ThemeChoisi = 'clair' | 'auto' | 'sombre';
+const CLE_THEME = 'FACILITE_THEME';
+
+export async function lireTheme(): Promise<ThemeChoisi> {
+  try {
+    const v = await AsyncStorage.getItem(CLE_THEME);
+    return v === 'auto' || v === 'sombre' ? v : 'clair';
+  } catch {
+    return 'clair';
+  }
+}
+
+export async function ecrireTheme(theme: ThemeChoisi): Promise<void> {
+  await AsyncStorage.setItem(CLE_THEME, theme).catch(() => {});
+}
+
 // ---- Premier lancement (écran 01) -------------------------------------
 const CLE_BIENVENUE = 'FACILITE_BIENVENUE_VUE';
 
