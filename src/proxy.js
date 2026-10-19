@@ -27,6 +27,9 @@ const PUBLIC_ROUTES = [
   // AVANT qu'un cookie de session existe, par construction — doit rester
   // public pour ne pas se bloquer lui-même.
   "/auth/callback",
+  // Suite de /auth/callback quand le lien de confirmation porte les jetons dans le fragment (voir ce fichier) : atteint
+  // avant toute session, par construction — la page ouvre elle-même la session.
+  "/auth/confirmation",
   // Pont de session pour l'app mobile (voir src/app/auth/mobile-bridge/route.js) :
   // atteint AVANT qu'un cookie de session existe sur cette WebView, par
   // construction — même raisonnement que /auth/callback. La protection

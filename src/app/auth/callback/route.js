@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { destinationSure } from "@/lib/destinationSure";
 
 // nodejs (et plus edge) depuis le 2026-08-28.
 //
@@ -45,10 +46,19 @@ export async function GET(req) {
   const rawNext = searchParams.get("next") || "/";
   // Jamais une redirection ouverte : uniquement un chemin interne commençant
   // par "/" et pas "//" (qui serait interprété comme une URL externe par le navigateur).
-  const safeNext = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  const safeNext = destinationSure(rawNext, "/");
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login`);
+    // Lien de confirmation d'e-mail « implicite » (compte créé côté serveur par /api/auth/register) : les jetons sont dans
+    // le FRAGMENT de l'adresse, illisible ici. La redirection conserve ce fragment et /auth/confirmation, côté
+    // navigateur, ouvre la session puis envoie vers `next` (voir cette page). Les erreurs de Supabase suivent aussi.
+    const vers = new URL(`${origin}/auth/confirmation`);
+    vers.searchParams.set("next", safeNext);
+    for (const cle of ["error", "error_code", "error_description"]) {
+      const v = searchParams.get(cle);
+      if (v) vers.searchParams.set(cle, v);
+    }
+    return NextResponse.redirect(vers);
   }
 
   const res = NextResponse.redirect(`${origin}${safeNext}`);
