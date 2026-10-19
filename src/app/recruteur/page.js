@@ -3,6 +3,7 @@
 
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
+import { messagePublication } from "@/lib/messagePublication";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
@@ -1023,7 +1024,7 @@ export default function RecruteurDashboardPage() {
       } else {
         setMyOffers((prev) => [insertedOffer, ...prev]);
         generateOfferEmbedding(insertedOffer.id, payload.title, payload.description);
-        triggerToast("🎉 Offre publiée avec succès sur le fil d'actualité !");
+        triggerToast(messagePublication(insertedOffer, "🎉 Offre publiée avec succès sur le fil d'actualité !"));
         setOfferForm(EMPTY_OFFER);
         setOfferAudioFile(null);
         setOfferImageFiles([]);
@@ -1115,7 +1116,7 @@ export default function RecruteurDashboardPage() {
           triggerToast("Erreur lors de la publication de l'offre.");
         } else {
           setMyOffers((prev) => [data, ...prev]);
-          triggerToast("Offre publiée !");
+          triggerToast(messagePublication(data, "Offre publiée !"));
           generateOfferEmbedding(data.id, payload.title, payload.description);
           handleCancelEditOffer();
         }

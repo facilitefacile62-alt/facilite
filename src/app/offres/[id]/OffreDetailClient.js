@@ -629,6 +629,25 @@ export default function OffreDetailClient({ initialOffer }) {
                   </div>
                 )}
 
+                {/* Offre en attente de modération (ou refusée) : message clair, la candidature est refusée côté serveur. */}
+                {offer?.status && offer.status !== "approved" && (
+                  <div className="mb-6 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 flex items-start gap-3" role="status">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900 flex items-center justify-center shrink-0">
+                      <i className="fa-solid fa-hourglass-half"></i>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold">
+                        {offer.status === "rejected" ? "Cette offre n'est pas disponible" : "Cette offre est en cours de validation"}
+                      </h4>
+                      <p className="text-xs font-medium">
+                        {offer.status === "rejected"
+                          ? "Elle n'a pas été retenue par notre équipe de modération."
+                          : "Notre équipe la vérifie avant publication. Vous pourrez postuler dès qu'elle sera validée."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Barre d'Actions Alignée : [ 👍 J'aime ] [ 📤 Partager ] [ ✈️ Postuler via Facilité / Expirée ] [ 🔖 Enregistrer ] */}
                 <SocialShareButtons
                   offer={{

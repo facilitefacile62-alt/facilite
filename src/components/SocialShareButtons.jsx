@@ -34,6 +34,9 @@ export default function SocialShareButtons({
   const dropdownRef = useRef(null);
 
   const offerExpired = typeof isExpired === "boolean" ? isExpired : isOfferExpired(offer);
+  // Offre en attente de modération (ou refusée) : visible de son auteur, mais postuler est refusé côté serveur
+  // (/api/postuler répond 404 tant qu'elle n'est pas approuvée). Le bouton le dit au lieu de laisser échouer la candidature.
+  const offerEnAttente = !!offer?.status && offer.status !== "approved";
 
   const offerId = offer?.id || "";
   const title = offer?.title || offer?.titleFR || "Offre d'emploi";
@@ -434,7 +437,17 @@ export default function SocialShareButtons({
           </button>
 
           {/* Bouton 3 : Action de Candidature Principale & Fidèle */}
-          {offerExpired ? (
+          {offerEnAttente ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-900/60"
+              title="Cette offre sera ouverte aux candidatures après validation"
+            >
+              <i className="fa-solid fa-hourglass-half text-xs"></i>
+              <span className="truncate">En cours de validation</span>
+            </button>
+          ) : offerExpired ? (
             <button
               type="button"
               disabled
@@ -731,7 +744,17 @@ export default function SocialShareButtons({
           </button>
 
           {/* Action 3 : Action Externe ou Postuler si fourni */}
-          {offerExpired ? (
+          {offerEnAttente ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-900/60"
+              title="Cette offre sera ouverte aux candidatures après validation"
+            >
+              <i className="fa-solid fa-hourglass-half text-xs"></i>
+              <span className="truncate">En cours de validation</span>
+            </button>
+          ) : offerExpired ? (
             <button
               type="button"
               disabled
