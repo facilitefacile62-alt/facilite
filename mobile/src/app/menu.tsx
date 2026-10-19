@@ -135,6 +135,38 @@ export default function MenuScreen() {
         ].filter((tu) => !q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q))
       : [];
 
+  // L'espace où l'on se trouve est toujours en haut, l'autre en dessous.
+  const ligneFacilite = (
+    <Pressable
+      onPress={() => choisirMode('facilite')}
+      className="flex-row items-center gap-3"
+      style={{ backgroundColor: mode === 'facilite' ? '#F7F5F0' : 'transparent', borderRadius: 14, padding: 10 }}>
+      <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
+        <Text className="text-[14px] font-extrabold" style={{ color: 'rgba(0,0,0,0.35)' }}>{initiales}</Text>
+      </View>
+      <View className="flex-1 min-w-0">
+        <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{nom}</Text>
+        <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Candidat & CV')}</Text>
+      </View>
+      {mode === 'facilite' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('Basculer →')}</Text>}
+    </Pressable>
+  );
+  const ligneLocaux = (
+    <Pressable
+      onPress={() => choisirMode('locaux')}
+      className="flex-row items-center gap-3"
+      style={{ backgroundColor: mode === 'locaux' ? '#F7F5F0' : 'transparent', borderRadius: 14, padding: 10 }}>
+      <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
+        <Ionicons name="storefront-outline" size={19} color="rgba(0,0,0,0.35)" />
+      </View>
+      <View className="flex-1 min-w-0">
+        <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{t('Locaux')}</Text>
+        <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Vendeur & Locaux')}</Text>
+      </View>
+      {mode === 'locaux' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('↻ Basculer →')}</Text>}
+    </Pressable>
+  );
+
   const grille = (liste: Tuile[]) => (
     <View className="flex-row flex-wrap" style={{ gap: 12 }}>
       {liste.map((tu) => (
@@ -244,41 +276,14 @@ export default function MenuScreen() {
         {/* Vos espaces : comptes, Profil, Boutique */}
         {espacesDeplies ? (
           <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
-            <Pressable
-              onPress={() => choisirMode('facilite')}
-              className="flex-row items-center gap-3"
-              style={{ backgroundColor: mode === 'facilite' ? FOND : 'transparent', borderRadius: 14, padding: 10 }}>
-              <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
-                <Text className="text-[14px] font-extrabold" style={{ color: 'rgba(0,0,0,0.35)' }}>{initiales}</Text>
-              </View>
-              <View className="flex-1 min-w-0">
-                <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{nom}</Text>
-                <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Candidat & CV')}</Text>
-              </View>
-              {mode === 'facilite' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('Basculer →')}</Text>}
-            </Pressable>
-
-            <Pressable
-              onPress={() => choisirMode('locaux')}
-              className="flex-row items-center gap-3"
-              style={{ backgroundColor: mode === 'locaux' ? FOND : 'transparent', borderRadius: 14, padding: 10 }}>
-              <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
-                <Ionicons name="storefront-outline" size={19} color="rgba(0,0,0,0.35)" />
-              </View>
-              <View className="flex-1 min-w-0">
-                <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{t('Locaux')}</Text>
-                <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Vendeur & Locaux')}</Text>
-              </View>
-              {mode === 'locaux' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('↻ Basculer →')}</Text>}
-            </Pressable>
-
+            {mode === 'facilite' ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
             <View className="flex-row items-center justify-between px-2.5 py-1.5">
               <Pressable onPress={() => router.navigate('/profil')} className="flex-row items-center gap-2">
                 <Ionicons name="id-card-outline" size={18} color={VERT} />
                 <Text className="text-[15px] font-black" style={{ color: VERT }}>{t('Profil')}</Text>
               </Pressable>
-              <Pressable onPress={() => router.push('/marketplace')} className="flex-row items-center gap-2">
+              <Pressable onPress={() => router.push('/marketplace/vendre' as Href)} className="flex-row items-center gap-2">
                 <Ionicons name="storefront" size={18} color={BLEU} />
                 <Text className="text-[15px] font-black" style={{ color: BLEU }}>{t('Boutique')}</Text>
               </Pressable>
