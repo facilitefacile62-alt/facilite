@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
+import { genererJetonCallback, genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 // Paiement de la formation "Rédaction de CV" (15 000 FCFA, accès permanent)
@@ -19,7 +21,7 @@ import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 // contrairement aux jetons rechargeables) : elle EST la transaction, pas
 // besoin d'une table séparée. Réutilisée telle quelle en cas de nouvelle
 // tentative (QR expiré, paiement annulé) plutôt que d'en recréer une.
-const MONTANT_XOF = 15000;
+const MONTANT_XOF = MONTANT_FORMATION_CV_XOF;
 const QR_VALIDITY_SECONDS = 900;
 
 export const runtime = "nodejs";
@@ -82,6 +84,20 @@ export async function POST(req) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
 
+    // Jeton secret propre à CETTE tentative de paiement, placé dans l'URL de callback ; seule son empreinte est stockée
+    // (renouvelée à chaque nouveau QR). Écrite avec le rôle serveur : le client ne doit jamais pouvoir la choisir.
+    const { jeton: jetonCallback, empreinte: empreinteCallback } = genererJetonCallback();
+    const { error: jetonError } = await getSupabaseAdmin()
+      .from("formation_redaction_cv_inscriptions")
+      .update({ callback_token_hash: empreinteCallback })
+      .eq("id", inscriptionId)
+      .eq("user_id", user.id);
+    if (jetonError) {
+      console.error("[Formation CV Checkout] Échec enregistrement du jeton de callback :", jetonError.message);
+      captureCriticalPaymentError("[Formation CV Checkout] Échec enregistrement du jeton de callback", { inscriptionId, message: jetonError.message });
+      return NextResponse.json({ error: "Impossible de préparer le paiement." }, { status: 500 });
+    }
+
     let qrCode;
     try {
       qrCode = await genererQrCodePaiement({
@@ -91,7 +107,7 @@ export async function POST(req) {
         validiteSecondes: QR_VALIDITY_SECONDS,
         callbackSuccessUrl: `${appUrl}/formation-redaction-cv?statut=succes`,
         callbackCancelUrl: `${appUrl}/formation-redaction-cv?statut=annule`,
-        callbackUrl: `${appUrl}/api/pay/formation-cv-webhook`,
+        callbackUrl: `${appUrl}/api/pay/formation-cv-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {
       console.error("[Formation CV Checkout] Échec génération QR code :", orangeError.message);
