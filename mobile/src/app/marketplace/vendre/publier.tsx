@@ -10,7 +10,8 @@ import SelecteurListe from '@/components/SelecteurListe';
 import { useAuth } from '@/context/AuthContext';
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { ratioAffichage } from '@/lib/formatImage';
-import { CATEGORIES_MARKETPLACE, libelleCategorie, prixLisible } from '@/lib/marketplace';
+import { enfantsDe, racinesDe, trouver, useCategories } from '@/lib/categories';
+import { prixLisible } from '@/lib/marketplace';
 import { envoyerPhotoArticle, envoyerVideoArticle, publierArticle } from '@/lib/vendeur';
 
 // Publier un article — maquettes 18 (« Comment voulez-vous vendre ? »),
@@ -78,7 +79,17 @@ export default function PublierArticleScreen() {
   const iaOuverte = useFonctionnalite('feat_marketplace_ia');
 
   const [ecran, setEcran] = useState<Ecran>('methode');
-  const [categorie, setCategorie] = useState<string | null>(null);
+  // Arbre des catégories (en base) : `chemin` = identifiants choisis, de la catégorie au type ; `choixFait` = l'écran
+  // « Choix fait » (carte verte + Continuer) est affiché.
+  const arbre = useCategories();
+  const [chemin, setChemin] = useState<string[]>([]);
+  const [choixFait, setChoixFait] = useState(false);
+  const categorie = chemin[0] ?? null;
+  const sousCategorie = chemin[1] ?? null;
+  const typeArticle = chemin[2] ?? null;
+  const [etat, setEtat] = useState<string | null>(null);
+  const [marque, setMarque] = useState('');
+  const [taille, setTaille] = useState<string | null>(null);
   const [photos, setPhotos] = useState<PhotoLocale[]>([]);
   // Vidéo facultative de l'article (maquette 22). Une seule par article.
   const [video, setVideo] = useState<{ uri: string; extension: string } | null>(null);
@@ -94,7 +105,14 @@ export default function PublierArticleScreen() {
     if (ecran === 'details') setEcran('categorie');
     else if (ecran === 'prix') setEcran('details');
     else if (ecran === 'recap') setEcran('prix');
-    else if (ecran === 'categorie' || ecran === 'scan') setEcran('methode');
+    else if (ecran === 'categorie') {
+      // On remonte d'un niveau de l'arbre à la fois ; au sommet, retour au choix de la méthode.
+      if (choixFait) {
+        setChoixFait(false);
+        setChemin((c) => c.slice(0, -1));
+      } else if (chemin.length > 0) setChemin((c) => c.slice(0, -1));
+      else setEcran('methode');
+    } else if (ecran === 'scan') setEcran('methode');
     else router.back();
   }
 
@@ -190,6 +208,11 @@ export default function PublierArticleScreen() {
         description,
         photos: chemins,
         urlVideo: cheminVideo,
+        sousCategorie,
+        typeArticle,
+        etat,
+        marque,
+        taille,
       });
 
       Alert.alert('Article publié', 'Il est désormais visible sur Locaux.', [{ text: 'OK', onPress: () => router.back() }]);
@@ -282,39 +305,82 @@ export default function PublierArticleScreen() {
 
   // ------------------------------------------------------- catégorie (1/4)
   if (ecran === 'categorie') {
+    const noeud = trouver(arbre ?? [], chemin[chemin.length - 1]);
+    const enfants = chemin.length === 0 ? racinesDe(arbre ?? []) : enfantsDe(arbre ?? [], chemin[chemin.length - 1]);
+    const noms = chemin.map((id) => trouver(arbre ?? [], id)?.libelle ?? '');
+    const chemin_lisible = [...noms].reverse().join(' › ');
+
+    // Choisir un nœud : s'il a des enfants on descend, sinon (feuille) le choix est fait.
+    const choisir = (id: string) => {
+      const suite = enfantsDe(arbre ?? [], id);
+      setChemin((c) => [...c, id]);
+      if (suite.length === 0) setChoixFait(true);
+    };
+
     return (
       <View className="flex-1 bg-[#F2F0EA]">
         <EnteteEtapes etape={1} titre="Catégorie" onRetour={retour} />
         <ScrollView contentContainerClassName="px-4 pt-4 pb-10" showsVerticalScrollIndicator={false}>
-          <Pressable onPress={retour} className="flex-row items-center gap-1 self-start mb-3" hitSlop={8}>
-            <Ionicons name="chevron-back" size={15} color="#6B7280" />
-            <Text className="text-[12.5px] font-semibold text-gray-500">Changer</Text>
-          </Pressable>
-
-          <View className="flex-row flex-wrap gap-2">
-            {CATEGORIES_MARKETPLACE.map((c) => {
-              const actif = categorie === c.id;
-              return (
-                <Pressable
-                  key={c.id}
-                  onPress={() => setCategorie(c.id)}
-                  className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2.5 border ${actif ? 'border-transparent' : 'bg-white border-gray-200'}`}
-                  style={actif ? { backgroundColor: '#0d3b34' } : undefined}>
-                  <Ionicons name={c.icone as keyof typeof Ionicons.glyphMap} size={14} color={actif ? '#6ee7c9' : '#4B5563'} />
-                  <Text className={`text-[13px] font-semibold ${actif ? 'text-white' : 'text-gray-700'}`}>{c.label}</Text>
+          {arbre === null ? (
+            <View className="py-16"><ActivityIndicator color={VERT} /></View>
+          ) : arbre.length === 0 ? (
+            <Text className="text-center text-[13.5px] mt-12" style={{ color: 'rgba(0,0,0,0.55)' }}>
+              Impossible de charger les catégories. Vérifiez votre connexion puis réessayez.
+            </Text>
+          ) : choixFait && noeud ? (
+            <View>
+              <View className="items-center" style={{ backgroundColor: '#ECFDF5', borderRadius: 26, borderWidth: 1, borderColor: '#6EE7B7', paddingVertical: 34, paddingHorizontal: 16, marginTop: 8 }}>
+                <Text style={{ fontSize: 52 }}>{noeud.icone}</Text>
+                <Text className="text-[22px] font-black text-center mt-4" style={{ color: '#047857' }}>{noeud.libelle}</Text>
+                <Text className="text-[14px] text-center mt-1.5" style={{ color: 'rgba(0,0,0,0.5)' }}>{chemin_lisible.split(' › ').slice(1).join(' › ')}</Text>
+                <View className="items-center justify-center mt-5" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: VERT }}>
+                  <Ionicons name="checkmark" size={24} color="#fff" />
+                </View>
+              </View>
+              <Pressable onPress={retour} className="self-center mt-4 py-2 px-4" hitSlop={8}>
+                <Text className="text-[14px]" style={{ color: 'rgba(0,0,0,0.5)' }}>‹ Changer</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setEcran('details')}
+                accessibilityRole="button"
+                className="flex-row items-center gap-3 rounded-[18px] bg-[#F6FDFA] mt-3"
+                style={{ borderWidth: 1.5, borderColor: '#34D399', padding: 12 }}>
+                <View className="items-center justify-center" style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#D7F2EA' }}>
+                  <Ionicons name="arrow-forward" size={20} color="#0B3D2A" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[16px] font-black text-[#1A1A1A]">Continuer</Text>
+                  <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Étape suivante</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color="rgba(0,0,0,0.3)" />
+              </Pressable>
+            </View>
+          ) : (
+            <View>
+              {chemin.length > 0 ? (
+                <Pressable onPress={retour} className="flex-row items-center gap-2 mb-2" hitSlop={8}>
+                  <Ionicons name="chevron-back" size={15} color="#6B7280" />
+                  <Text className="text-[15px] font-black" style={{ color: VERT }}>{noms.join(' › ')}</Text>
                 </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Juste sous « ‹ Changer » et la grille, pas collé en bas de l'écran. */}
-          <Pressable
-            onPress={() => categorie && setEcran('details')}
-            disabled={!categorie}
-            className="rounded-2xl py-3.5 items-center mt-6"
-            style={{ backgroundColor: '#0d3b34', opacity: categorie ? 1 : 0.4 }}>
-            <Text className="text-white text-[14.5px] font-bold">Continuer</Text>
-          </Pressable>
+              ) : null}
+              <Text className="text-[21px] font-black text-[#1A1A1A] text-center mt-3 mb-4">
+                {chemin.length === 0 ? 'Que vendez-vous ?' : chemin.length === 1 ? 'Quelle sous-catégorie ?' : 'Précisez davantage'}
+              </Text>
+              <View className="flex-row flex-wrap" style={{ gap: 12 }}>
+                {enfants.map((c) => (
+                  <Pressable
+                    key={c.id}
+                    onPress={() => choisir(c.id)}
+                    accessibilityRole="button"
+                    className="items-center justify-center bg-white"
+                    style={{ width: chemin.length === 0 ? '30.6%' : '47.8%', minHeight: chemin.length === 0 ? 104 : 100, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 8, borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' }}>
+                    <Text style={{ fontSize: chemin.length === 0 ? 28 : 26 }}>{c.icone}</Text>
+                    <Text className="text-[13.5px] font-black text-[#1A1A1A] text-center mt-2.5">{c.libelle}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
     );
@@ -346,9 +412,15 @@ export default function PublierArticleScreen() {
               </Pressable>
             </View>
             <Pressable
-              onPress={() => Alert.alert('Zéro Saisie IA', "Le remplissage automatique par l'IA arrive dans une prochaine mise à jour.")}
+              onPress={() => {
+                if (photos.length === 0) return;
+                Alert.alert('Zéro Saisie IA', iaOuverte ? "Le remplissage automatique n'est pas encore branché." : 'Fonction IA bientôt disponible.');
+              }}
+              disabled={photos.length === 0}
               className="items-center justify-center gap-1"
-              style={{ height: 86, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8D4F0', backgroundColor: '#FAFAFF', opacity: 0.75 }}>
+              style={photos.length > 0
+                ? { height: 86, borderRadius: 16, borderWidth: 1, borderColor: '#cfc6b3', backgroundColor: '#e3dbcc' }
+                : { height: 86, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8D4F0', backgroundColor: '#FAFAFF', opacity: 0.75 }}>
               <View className="flex-row items-center gap-2">
                 <Text style={{ fontSize: 16 }}>✨</Text>
                 <Text className="text-[14px] font-black" style={{ color: 'rgba(0,0,0,0.5)' }}>Zéro Saisie IA</Text>
@@ -356,7 +428,7 @@ export default function PublierArticleScreen() {
                   <Text className="text-[10px] font-black text-[#B45309]">PRO</Text>
                 </View>
               </View>
-              <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.4)' }}>Importez une photo pour l&apos;activer</Text>
+              <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.45)' }}>{photos.length > 0 ? "Facultatif : l'IA remplit la fiche pour vous" : "Importez une photo pour l'activer"}</Text>
             </Pressable>
             <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 18 }}>
               🛡 Photos compressées automatiquement avant l&apos;envoi pour économiser vos données mobiles.
@@ -369,12 +441,34 @@ export default function PublierArticleScreen() {
             <Champ libelle="Catégorie" requis>
               <SelecteurListe
                 valeur={categorie}
-                options={CATEGORIES_MARKETPLACE.map((c) => ({ id: c.id, label: c.label }))}
+                options={racinesDe(arbre ?? []).map((c) => ({ id: c.id, label: c.libelle }))}
                 placeholder="— Choisir une catégorie —"
                 titre="Catégorie"
-                onChoisir={setCategorie}
+                onChoisir={(id) => setChemin([id])}
               />
             </Champ>
+            {categorie && enfantsDe(arbre ?? [], categorie).length > 0 ? (
+              <Champ libelle="Sous-catégorie" requis>
+                <SelecteurListe
+                  valeur={sousCategorie}
+                  options={enfantsDe(arbre ?? [], categorie).map((c) => ({ id: c.id, label: c.libelle }))}
+                  placeholder="— Choisir une sous-catégorie —"
+                  titre="Sous-catégorie"
+                  onChoisir={(id) => setChemin([categorie, id])}
+                />
+              </Champ>
+            ) : null}
+            {sousCategorie && enfantsDe(arbre ?? [], sousCategorie).length > 0 ? (
+              <Champ libelle="Type">
+                <SelecteurListe
+                  valeur={typeArticle}
+                  options={enfantsDe(arbre ?? [], sousCategorie).map((c) => ({ id: c.id, label: c.libelle }))}
+                  placeholder="— Choisir un type —"
+                  titre="Type"
+                  onChoisir={(id) => setChemin([categorie, sousCategorie, id])}
+                />
+              </Champ>
+            ) : null}
             <Champ libelle="Prix en FCFA" requis>
               <TextInput
                 value={prix}
@@ -443,10 +537,49 @@ export default function PublierArticleScreen() {
             </Champ>
           </View>
 
+          <View className="bg-white gap-4" style={{ borderRadius: 22, padding: 16 }}>
+            <Champ libelle="État" requis>
+              <SelecteurListe
+                valeur={etat}
+                options={[
+                  { id: 'neuf', label: 'Neuf' },
+                  { id: 'comme_neuf', label: 'Comme neuf' },
+                  { id: 'bon_etat', label: 'Bon état' },
+                  { id: 'a_reparer', label: 'À réparer' },
+                ]}
+                placeholder="— Sélectionner —"
+                titre="État"
+                onChoisir={setEtat}
+              />
+            </Champ>
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <Champ libelle="Marque">
+                  <TextInput value={marque} onChangeText={setMarque} placeholder="Ex : Feteko" placeholderTextColor="rgba(0,0,0,0.4)" maxLength={60} style={styleChamp} />
+                </Champ>
+              </View>
+              <View className="flex-1">
+                <Champ libelle="Taille">
+                  <SelecteurListe
+                    valeur={taille}
+                    options={['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Taille unique'].map((t) => ({ id: t, label: t }))}
+                    placeholder="— Choisir —"
+                    titre="Taille"
+                    onChoisir={setTaille}
+                  />
+                </Champ>
+              </View>
+            </View>
+          </View>
+
           <Pressable
             onPress={() => {
               if (photos.length === 0) {
                 Alert.alert('Photo manquante', 'Ajoutez au moins une photo de votre article.');
+                return;
+              }
+              if (!etat) {
+                Alert.alert('État manquant', "Indiquez l'état de votre article.");
                 return;
               }
               if (verifierTitre()) setEcran('prix');
@@ -525,7 +658,7 @@ export default function PublierArticleScreen() {
           <Text className="text-[17px] font-black text-[#1A1A1A]">{titre.trim()}</Text>
           <Text className="text-[16px] font-black" style={{ color: '#047857' }}>{prixLisible(Number(prix) || 0)} FCFA</Text>
           <Text className="text-[13px]" style={{ color: 'rgba(0,0,0,0.55)' }}>
-            {libelleCategorie(categorie)} · {Math.max(0, Math.round(Number(quantite) || 0))} en stock · {photos.length} photo{photos.length > 1 ? 's' : ''}
+            {[trouver(arbre ?? [], categorie)?.libelle, trouver(arbre ?? [], sousCategorie)?.libelle, trouver(arbre ?? [], typeArticle)?.libelle].filter(Boolean).join(' › ')} · {Math.max(0, Math.round(Number(quantite) || 0))} en stock · {photos.length} photo{photos.length > 1 ? 's' : ''}
             {video ? ' · 1 vidéo' : ''}
           </Text>
           {description.trim() ? <Text className="text-[13.5px]" style={{ color: '#374151', lineHeight: 20 }}>{description.trim()}</Text> : null}

@@ -217,6 +217,12 @@ export async function publierArticle(
     photos: string[];
     /** Chemin de la vidéo dans le bucket marketplace-videos, ou null. */
     urlVideo?: string | null;
+    /** Branche de l'arbre des catégories (identifiants de la table categories). */
+    sousCategorie?: string | null;
+    typeArticle?: string | null;
+    etat?: string | null;
+    marque?: string | null;
+    taille?: string | null;
   }
 ): Promise<string> {
   const titre = champs.titre.trim();
@@ -230,6 +236,11 @@ export async function publierArticle(
     p_description: champs.description?.trim() || null,
     p_photos: champs.photos.slice(0, 6),
     p_url_video: champs.urlVideo ?? null,
+    p_sous_categorie: champs.sousCategorie ?? null,
+    p_type_article: champs.typeArticle ?? null,
+    p_etat: champs.etat ?? null,
+    p_marque: champs.marque ?? null,
+    p_taille: champs.taille ?? null,
   });
   if (error) throw new Error(error.message);
   return data as string;
