@@ -233,3 +233,61 @@ export function verifierSignatureWebhook(corpsBrut, enTeteSignature, secret) {
 
   return { valide: true };
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Callback sécurisé sans signature (Orange annonce le secret de signature comme « une évolution à venir »).
+//
+// Une notification n'est jamais un crédit : c'est un DÉCLENCHEUR. Le webhook (1) filtre par un jeton secret propre à la
+// commande placé dans l'URL de callback, (2) vérifie la signature HMAC quand l'en-tête est présent, (3) confirme l'état
+// réel du paiement auprès d'Orange avec notre jeton OAuth, (4) ne crédite que si statut, référence et montant
+// correspondent à la commande.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Empreinte SHA-256 (hexa) d'un jeton de callback : seule cette empreinte est stockée en base. */
+export function hasherJetonCallback(jeton) {
+  return crypto.createHash("sha256").update(String(jeton)).digest("hex");
+}
+
+/** Jeton imprévisible (32 octets) pour l'URL de callback d'UNE commande, avec son empreinte à stocker. */
+export function genererJetonCallback() {
+  const jeton = crypto.randomBytes(32).toString("base64url");
+  return { jeton, empreinte: hasherJetonCallback(jeton) };
+}
+
+/** Compare le jeton reçu à l'empreinte stockée, en temps constant. Faux si l'un des deux manque. */
+export function jetonCallbackValide(jetonRecu, empreinteStockee) {
+  if (!jetonRecu || !empreinteStockee || !/^[0-9a-f]{64}$/i.test(empreinteStockee)) return false;
+  const attendu = Buffer.from(empreinteStockee.toLowerCase(), "utf8");
+  const recu = Buffer.from(hasherJetonCallback(jetonRecu), "utf8");
+  return attendu.length === recu.length && crypto.timingSafeEqual(attendu, recu);
+}
+
+// Statuts finaux d'échec côté Orange. Tout statut inconnu ou intermédiaire = « en attente » : on ne change rien.
+const STATUTS_ECHEC = new Set(["FAILED", "EXPIRED", "CANCELED", "CANCELLED", "REJECTED"]);
+
+/**
+ * Juge la réponse de recherche de transaction d'Orange face à la commande.
+ * Retourne { etat, raison } avec etat ∈ "succes" | "echec" | "attente" | "incoherent".
+ *  - "succes"     : statut SUCCESS, référence ET montant identiques à la commande (devise XOF si indiquée).
+ *  - "incoherent" : SUCCESS mais référence ou montant absents/différents — jamais de crédit, alerte.
+ *  - "echec"      : statut final d'échec.
+ *  - "attente"    : tout le reste.
+ * Un champ absent de la réponse n'est jamais présumé conforme : sans référence et sans montant lisibles, pas de crédit.
+ */
+export function evaluerConfirmationOrange(reponse, { reference, montantXof }) {
+  const statut = typeof reponse?.status === "string" ? reponse.status.toUpperCase() : "";
+  if (STATUTS_ECHEC.has(statut)) return { etat: "echec", raison: `statut ${statut}` };
+  if (statut !== "SUCCESS") return { etat: "attente", raison: `statut ${statut || "absent"}` };
+
+  if (!reference || String(reponse?.reference ?? "") !== String(reference)) {
+    return { etat: "incoherent", raison: "référence absente ou différente" };
+  }
+  const brut = reponse?.amount;
+  const valeur = Number(typeof brut === "object" && brut !== null ? brut.value : brut);
+  const unite = typeof brut === "object" && brut !== null ? brut.unit : null;
+  if (!Number.isFinite(valeur) || !Number.isInteger(montantXof) || valeur !== montantXof) {
+    return { etat: "incoherent", raison: "montant absent ou différent" };
+  }
+  if (unite && String(unite).toUpperCase() !== "XOF") return { etat: "incoherent", raison: "devise différente" };
+  return { etat: "succes", raison: "ok" };
+}
