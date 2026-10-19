@@ -67,7 +67,12 @@ module.exports = defineConfig({
     env: {
       NEXT_PUBLIC_SUPABASE_URL: process.env.TEST_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.TEST_SUPABASE_ANON_KEY,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.TEST_SUPABASE_SERVICE_ROLE_KEY
+      SUPABASE_SERVICE_ROLE_KEY: process.env.TEST_SUPABASE_SERVICE_ROLE_KEY,
+      // Routes qui lisent auth.users en connexion Postgres directe (ex. /api/auth/has-password) : sans ceci elles
+      // interrogeaient la base de .env.local (production) au lieu du projet de test, et l'onglet Sécurité restait
+      // bloqué sur « Vérification en cours… ».
+      POSTGRES_URL_NON_POOLING: process.env.TEST_SUPABASE_DB_URL,
+      POSTGRES_URL: process.env.TEST_SUPABASE_DB_URL
     },
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
