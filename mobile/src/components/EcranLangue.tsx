@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useLangue } from '@/lib/i18n';
+import { traduire, useLangue } from '@/lib/i18n';
 import { LANGUES, lireLangue, type CodeLangue } from '@/lib/preferencesConnexion';
 
 // Langue de l'application — écran 02, en page entière (partagé par la page d'accueil de connexion et par les Paramètres :
@@ -31,8 +31,8 @@ export default function EcranLangue({ repli }: { repli: Href }) {
     await changer(code);
     if (code !== 'fr') {
       Alert.alert(
-        'Langue appliquée',
-        "Les menus, la messagerie et les réglages sont traduits. Les autres écrans restent en français et seront traduits progressivement."
+        traduire(code, 'Langue appliquée'),
+        traduire(code, 'Les menus, la messagerie et les réglages sont traduits. Les autres écrans restent en français et seront traduits progressivement.')
       );
     }
     if (router.canGoBack()) router.back();

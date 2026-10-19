@@ -21,6 +21,7 @@ import {
 import { OUTILS } from '@/lib/outils';
 import { changerPhotoProfil } from '@/lib/photoProfil';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
+import { useT } from '@/lib/i18n';
 
 // Profil Facilité — maquettes « Profil — Documents » (37) et
 // « Profil — Fonctionnalités » (38).
@@ -40,6 +41,7 @@ const VERT = '#10B981';
 type Onglet = 'documents' | 'fonctionnalites';
 
 export default function ProfilScreen() {
+  const t = useT();
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
@@ -187,7 +189,7 @@ export default function ProfilScreen() {
                 className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5"
                 style={{ borderWidth: 1, borderColor: BORDURE }}>
                 <Ionicons name="pencil" size={13} color="#1A1A1A" />
-                <Text className="text-[12px] font-bold text-[#1A1A1A]">Modifier infos</Text>
+                <Text className="text-[12px] font-bold text-[#1A1A1A]">{t('Modifier infos')}</Text>
               </Pressable>
             </View>
           </View>
@@ -212,7 +214,7 @@ export default function ProfilScreen() {
                     borderColor: actif ? '#1A1A1A' : BORDURE,
                   }}>
                   <Ionicons name={o.icone} size={14} color="#1A1A1A" />
-                  <Text className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A]`}>{o.label}</Text>
+                  <Text className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A]`}>{t(o.label)}</Text>
                 </Pressable>
               );
             })}
@@ -231,7 +233,7 @@ export default function ProfilScreen() {
                   <Ionicons name="add" size={16} color={BLEU} />
                 )}
                 <Text className="text-[13.5px] font-bold" style={{ color: BLEU }}>
-                  {envoiEnCours ? 'Envoi en cours…' : 'Ajouter mes documents'}
+                  {envoiEnCours ? t('Envoi en cours…') : t('Ajouter mes documents')}
                 </Text>
               </Pressable>
 
@@ -240,7 +242,7 @@ export default function ProfilScreen() {
                   <View className="py-12 px-6 items-center">
                     <Ionicons name="cloud-offline-outline" size={32} color="rgba(0,0,0,0.25)" />
                     <Text className="text-[13px] text-black/50 text-center mt-2">
-                      Impossible de charger vos documents pour le moment.
+                      {t('Impossible de charger vos documents pour le moment.')}
                     </Text>
                   </View>
                 ) : (
@@ -252,7 +254,7 @@ export default function ProfilScreen() {
                 <View className="py-12 px-6 items-center">
                   <Ionicons name="document-outline" size={32} color="rgba(0,0,0,0.25)" />
                   <Text className="text-[13px] text-black/50 text-center mt-2">
-                    Aucun document pour l&apos;instant. Ajoutez votre CV ou votre lettre de motivation.
+                    {t("Aucun document pour l'instant. Ajoutez votre CV ou votre lettre de motivation.")}
                   </Text>
                 </View>
               ) : (

@@ -2,11 +2,13 @@ import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import type { Outil } from '@/lib/outils';
+import { useT } from '@/lib/i18n';
 
 // Ligne d'outil, identique sur l'écran Fonctionnalités (maquette 13) et
 // dans l'onglet Fonctionnalités du profil (maquette 38). `vedette` : le premier
 // outil, encadré de vert dans les maquettes.
 export default function LigneOutil({ outil, onPress, vedette }: { outil: Outil; onPress: () => void; vedette?: boolean }) {
+  const t = useT();
   return (
     <Pressable
       onPress={onPress}
@@ -16,8 +18,8 @@ export default function LigneOutil({ outil, onPress, vedette }: { outil: Outil; 
         <Text className="text-[18px]">{outil.icone}</Text>
       </View>
       <View className="flex-1 min-w-0">
-        <Text className="text-[14px] font-bold text-[#1A1A1A]">{outil.titre}</Text>
-        <Text className="text-[12px] text-black/45 mt-0.5">{outil.sous}</Text>
+        <Text className="text-[14px] font-bold text-[#1A1A1A]">{t(outil.titre)}</Text>
+        <Text className="text-[12px] text-black/45 mt-0.5">{t(outil.sous)}</Text>
       </View>
       <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
         <Path d="M9 5L16 12L9 19" stroke="rgba(0,0,0,0.3)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />

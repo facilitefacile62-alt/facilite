@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
+import { useT } from '@/lib/i18n';
 
 // Menu (maquettes 10 et 11) : une PAGE et non plus une fenêtre par-dessus
 // l'app, pour que la barre du bas de Facilité reste visible (charte §1.1) et
@@ -55,6 +56,7 @@ const RACCOURCIS: Raccourci[] = [
 ];
 
 export default function MenuScreen() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile, signOut } = useAuth();
@@ -134,14 +136,14 @@ export default function MenuScreen() {
                 setRechercheOuverte(false);
                 setTerme('');
               }}>
-              <Text className="text-[14px] font-extrabold" style={{ color: '#DC2626' }}>Annuler ×</Text>
+              <Text className="text-[14px] font-extrabold" style={{ color: '#DC2626' }}>{t('Annuler ×')}</Text>
             </Pressable>
           </View>
         ) : (
           <View className="flex-row items-center justify-between px-4 py-3">
             <Pressable onPress={retour} accessibilityLabel="Retour" className="flex-row items-center gap-2">
               <Ionicons name="chevron-back" size={20} color="#1A1A1A" />
-              <Text className="text-[20px] font-black text-[#1A1A1A]">Menu</Text>
+              <Text className="text-[20px] font-black text-[#1A1A1A]">{t('Menu')}</Text>
             </Pressable>
             <View className="flex-row items-center gap-3">
               <Pressable onPress={() => setRechercheOuverte(true)} accessibilityLabel="Rechercher" className="items-center justify-center bg-white" style={{ width: 40, height: 40, borderRadius: 20 }}>
@@ -159,7 +161,7 @@ export default function MenuScreen() {
         {/* Vos espaces */}
         <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
           <View className="flex-row items-center justify-between">
-            <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>VOS ESPACES</Text>
+            <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('VOS ESPACES')}</Text>
             <Text className="text-[13px] font-extrabold" style={{ color: VERT }}>Mode {espaceActif === 'candidat' ? 'Candidat' : 'Business'}</Text>
           </View>
 
@@ -172,9 +174,9 @@ export default function MenuScreen() {
             </View>
             <View className="flex-1 min-w-0">
               <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{nom}</Text>
-              <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>Espace Candidat & CV</Text>
+              <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Candidat & CV')}</Text>
             </View>
-            {espaceActif === 'candidat' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>Basculer →</Text>}
+            {espaceActif === 'candidat' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('Basculer →')}</Text>}
           </Pressable>
 
           <Pressable
@@ -185,13 +187,13 @@ export default function MenuScreen() {
               <Ionicons name="storefront-outline" size={19} color="rgba(0,0,0,0.35)" />
             </View>
             <View className="flex-1 min-w-0">
-              <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>Locaux</Text>
-              <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>Espace Vendeur & Locaux</Text>
+              <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{t('Locaux')}</Text>
+              <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Vendeur & Locaux')}</Text>
             </View>
             {espaceActif === 'business' ? (
               <Ionicons name="checkmark-circle-outline" size={22} color={VERT} />
             ) : (
-              <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>↻ Basculer →</Text>
+              <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('↻ Basculer →')}</Text>
             )}
           </Pressable>
 
@@ -199,26 +201,26 @@ export default function MenuScreen() {
           <View className="flex-row items-center justify-between px-2.5 py-1.5">
             <Pressable onPress={() => router.navigate('/profil')} className="flex-row items-center gap-2">
               <Ionicons name="id-card-outline" size={18} color={VERT} />
-              <Text className="text-[15px] font-black" style={{ color: VERT }}>Profil</Text>
+              <Text className="text-[15px] font-black" style={{ color: VERT }}>{t('Profil')}</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/marketplace')} className="flex-row items-center gap-2">
               <Ionicons name="storefront" size={18} color={BLEU} />
-              <Text className="text-[15px] font-black" style={{ color: BLEU }}>Boutique</Text>
+              <Text className="text-[15px] font-black" style={{ color: BLEU }}>{t('Boutique')}</Text>
             </Pressable>
           </View>
           <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
           <Pressable onPress={confirmerDeconnexion} className="flex-row items-center gap-2 px-2.5 py-1.5">
             <Ionicons name="log-out-outline" size={17} color="#DC2626" />
-            <Text className="text-[14px] font-black" style={{ color: '#DC2626' }}>Se déconnecter</Text>
+            <Text className="text-[14px] font-black" style={{ color: '#DC2626' }}>{t('Se déconnecter')}</Text>
           </Pressable>
         </View>
 
         {/* Diagnostic CV */}
         <View style={{ backgroundColor: '#161B3A', borderRadius: 20, padding: 18, marginTop: 14 }}>
           <View className="flex-row items-start justify-between">
-            <Text className="text-[17px] font-black text-white">Diagnostic CV Gratuit</Text>
+            <Text className="text-[17px] font-black text-white">{t('Diagnostic CV Gratuit')}</Text>
             <View style={{ backgroundColor: VERT, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 }}>
-              <Text className="text-[10.5px] font-black text-white">GRATUIT</Text>
+              <Text className="text-[10.5px] font-black text-white">{t('GRATUIT')}</Text>
             </View>
           </View>
           <Text className="text-[13.5px] mt-2" style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 20 }}>
@@ -228,11 +230,11 @@ export default function MenuScreen() {
             onPress={() => router.push('/web/importer-cv' as Href)}
             className="items-center justify-center mt-4"
             style={{ backgroundColor: '#F3FBF7', borderRadius: 14, borderWidth: 1.5, borderColor: '#34D399', height: 52 }}>
-            <Text className="text-[14.5px] font-black text-[#1A1A1A]">🔍 Diagnostiquer mon CV</Text>
+            <Text className="text-[14.5px] font-black text-[#1A1A1A]">{t('🔍 Diagnostiquer mon CV')}</Text>
           </Pressable>
         </View>
 
-        <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>TOUS LES RACCOURCIS</Text>
+        <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
         <View className="flex-row flex-wrap" style={{ gap: 12 }}>
           {RACCOURCIS.filter((r) => ouvert(r.interrupteur)).map((r) => (
             <Pressable
@@ -246,13 +248,13 @@ export default function MenuScreen() {
                 </View>
                 {r.tag ? (
                   <View style={{ backgroundColor: r.tag.fond, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                    <Text className="text-[10px] font-black" style={{ color: r.tag.couleur }}>{r.tag.texte}</Text>
+                    <Text className="text-[10px] font-black" style={{ color: r.tag.couleur }}>{t(r.tag.texte)}</Text>
                   </View>
                 ) : null}
               </View>
               <View style={{ marginTop: 18 }}>
-                <Text className="text-[14.5px] font-black text-[#1A1A1A]">{r.titre}</Text>
-                <Text className="text-[12px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>{r.sous}</Text>
+                <Text className="text-[14.5px] font-black text-[#1A1A1A]">{t(r.titre)}</Text>
+                <Text className="text-[12px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>{t(r.sous)}</Text>
               </View>
             </Pressable>
           ))}
@@ -260,11 +262,11 @@ export default function MenuScreen() {
 
         <View className="gap-2.5 mt-4">
           <Pressable onPress={() => router.push('/mon-profil/parametres')} className="bg-white flex-row items-center justify-between" style={{ borderRadius: 16, paddingHorizontal: 16, paddingVertical: 15 }}>
-            <Text className="text-[14.5px] font-black text-[#1A1A1A]">⚙ Paramètres et langue</Text>
+            <Text className="text-[14.5px] font-black text-[#1A1A1A]">{t('⚙ Paramètres et langue')}</Text>
             <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.4)" />
           </Pressable>
           <Pressable onPress={ouvrirSupport} className="bg-white flex-row items-center justify-between" style={{ borderRadius: 16, paddingHorizontal: 16, paddingVertical: 15 }}>
-            <Text className="text-[14.5px] font-black text-[#1A1A1A]">❓ Aide et assistance</Text>
+            <Text className="text-[14.5px] font-black text-[#1A1A1A]">{t('❓ Aide et assistance')}</Text>
             <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.4)" />
           </Pressable>
         </View>

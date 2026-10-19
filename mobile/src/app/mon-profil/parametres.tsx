@@ -16,6 +16,7 @@ import { useT } from '@/lib/i18n';
 // les anciennes longues listes de liens restent retirées.
 export default function ParametresScreen() {
   const t = useT();
+  const tr = t; // « t » est aussi le nom du paramètre de choisirTheme : on garde l'accès à la traduction sous « tr »
   const router = useRouter();
   const [langue, setLangue] = useState<CodeLangue>('fr');
   const [theme, setTheme] = useState<ThemeChoisi>('clair');
@@ -28,7 +29,7 @@ export default function ParametresScreen() {
   const choisirTheme = (t: ThemeChoisi) => {
     setTheme(t);
     ecrireTheme(t);
-    if (t !== 'clair') Alert.alert(t === 'sombre' ? 'Thème sombre enregistré' : 'Thème automatique enregistré', "Votre choix est mémorisé. Le rendu sombre n'est pas encore disponible : l'application reste claire pour l'instant.");
+    if (t !== 'clair') Alert.alert(tr(t === 'sombre' ? 'Thème sombre enregistré' : 'Thème automatique enregistré'), tr("Votre choix est mémorisé. Le rendu sombre n'est pas encore disponible : l'application reste claire pour l'instant."));
   };
   return (
     <View className="flex-1 bg-[#F2F0EA]">
