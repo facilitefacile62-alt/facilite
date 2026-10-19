@@ -1,0 +1,45 @@
+# Rattrapage des achats de jetons Marketplace restés « pending » (Orange Money).
+#
+# Interroge toutes les 10 minutes la route /api/cron/rattrapage-achats-jetons, qui reprend les achats en attente depuis
+# plus de 20 minutes (et moins de 24 h) et les confirme auprès d'Orange — mêmes conditions que le webhook : statut,
+# référence ET montant. Le plan Vercel (Hobby) n'autorise qu'un cron par jour, d'où ce planificateur.
+#
+# IMPORTANT — GitHub n'exécute les workflows « schedule » QUE depuis la branche par défaut (main). Tant que ce fichier
+# n'est pas sur main, le déclencheur planifié ne tourne pas : c'est voulu. « workflow_dispatch » permet un essai à la
+# main depuis l'onglet Actions, mais seulement une fois le fichier sur la branche par défaut lui aussi.
+#
+# Secret requis (Settings > Secrets and variables > Actions) : CRON_SECRET, la MÊME valeur que sur Vercel. Le dépôt est
+# public : aucune valeur secrète n'est écrite dans ce fichier.
+name: Rattrapage achats jetons
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+# Une exécution n'en chevauche jamais une autre : si la précédente tourne encore, la suivante attend.
+concurrency:
+  group: rattrapage-achats-jetons
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  rattrapage:
+    name: Appeler la route de rattrapage
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Appeler /api/cron/rattrapage-achats-jetons
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Secret CRON_SECRET absent côté GitHub." >&2
+            exit 1
+          fi
+          # La route répond au GET. -f : tout statut hors 2xx fait échouer l'étape (échec visible dans Actions).
+          curl -fsS --max-time 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "https://ffacilite.com/api/cron/rattrapage-achats-jetons"
+          echo
