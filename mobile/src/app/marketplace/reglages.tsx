@@ -39,7 +39,7 @@ function Groupe({ titre, enfants }: { titre?: string; enfants: React.ReactNode }
 
 // Réglages vendeur (maquette 31) : lignes à plat sur fond blanc, groupes
 // séparés par une bande grise, pastilles « Actif » pour les réglages.
-function LigneReglage({ titre, onPress, chevron = true, pastille, rouge }: { titre: string; onPress: () => void; chevron?: boolean; pastille?: { texte: string; actif: boolean }; rouge?: boolean }) {
+function LigneReglage({ titre, onPress, chevron = true, pastille, rouge, icone }: { titre: string; onPress: () => void; chevron?: boolean; pastille?: { texte: string; actif: boolean }; rouge?: boolean; icone?: keyof typeof Ionicons.glyphMap }) {
   return (
     <Pressable onPress={onPress} className="flex-row items-center justify-between px-5" style={{ height: 56, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
       <Text className="text-[15.5px] font-black" style={{ color: rouge ? '#DC2626' : '#1A1A1A' }}>{titre}</Text>
@@ -47,6 +47,8 @@ function LigneReglage({ titre, onPress, chevron = true, pastille, rouge }: { tit
         <View className="rounded-full px-3 py-1" style={{ backgroundColor: pastille.actif ? '#D1FAE5' : '#E5E7EB' }}>
           <Text className="text-[12.5px] font-black" style={{ color: pastille.actif ? '#047857' : '#4B5563' }}>{pastille.texte}</Text>
         </View>
+      ) : icone ? (
+        <Ionicons name={icone} size={18} color="#2563EB" />
       ) : chevron ? (
         <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.35)" />
       ) : null}
@@ -135,20 +137,16 @@ export default function ReglagesMarketplaceScreen() {
           <LigneReglage titre="Coordonnées" onPress={() => router.push('/mon-profil/coordonnees')} />
           <LigneReglage titre="Contact & Livraison" onPress={() => BIENTOT('Contact & Livraison')} />
           <LigneReglage titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
-          <LigneReglage titre="Changer la langue" chevron={false} onPress={() => BIENTOT('Changer la langue')} />
+          <LigneReglage titre="Changer la langue" chevron={false} onPress={() => router.push('/mon-profil/langue' as Href)} />
           <BandeGrise />
           <LigneReglage titre="Confidentialité" onPress={() => router.push('/mon-profil/confidentialite')} />
-          <LigneReglage
-            titre="Rendre ma boutique visible"
-            pastille={{ texte: boutique?.actif === true ? 'Actif' : 'Masquée', actif: boutique?.actif === true }}
-            onPress={() => basculerVisibilite(boutique?.actif !== true)}
-          />
           <LigneReglage titre="Désactiver le chat" pastille={{ texte: 'Actif', actif: true }} onPress={() => BIENTOT('Désactiver le chat')} />
           <LigneReglage titre="Désactiver les commentaires" pastille={{ texte: 'Actifs', actif: true }} onPress={() => BIENTOT('Désactiver les commentaires')} />
           <LigneReglage titre="Gérer les notifications" onPress={() => BIENTOT('Gérer les notifications')} />
           <BandeGrise />
           <LigneReglage titre="Sécurité & Connexion" onPress={() => router.push('/mon-profil/securite')} />
-          <LigneReglage titre="↪ Se déconnecter" chevron={false} rouge onPress={deconnexion} />
+          <LigneReglage titre="Se déconnecter" icone="log-out-outline" onPress={deconnexion} />
+          <LigneReglage titre="↩ Retour au Marketplace" chevron={false} rouge onPress={() => router.replace('/marketplace' as Href)} />
         </ScrollView>
       </View>
     );

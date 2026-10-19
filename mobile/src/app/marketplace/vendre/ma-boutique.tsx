@@ -264,6 +264,26 @@ export default function MaBoutiqueScreen() {
         <MarketplaceHeader />
       </SafeAreaView>
 
+      {/* Barre de la boutique (maquette) : retour · NOM DE LA BOUTIQUE · crayon, qui ouvre les Réglages de la boutique */}
+      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: FOND }}>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil' as Href))}
+          accessibilityLabel="Retour"
+          className="items-center justify-center"
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
+          <Ionicons name="arrow-back" size={19} color="#2563EB" />
+        </Pressable>
+        <Text className="flex-1 text-center text-[15px] font-black tracking-widest text-[#1A1A1A]" numberOfLines={1}>{boutique.nom.toUpperCase()}</Text>
+        <Pressable
+          onPress={() => router.push('/marketplace/reglages' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Réglages de la boutique"
+          className="items-center justify-center"
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
+          <Ionicons name="pencil" size={17} color="#1A1A1A" />
+        </Pressable>
+      </View>
+
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
         <View className="px-4 pt-4">
@@ -290,9 +310,12 @@ export default function MaBoutiqueScreen() {
             <View className="flex-1 min-w-0">
               <View className="flex-row items-center gap-1.5">
                 <Ionicons name="storefront" size={15} color="#B45309" />
-                <Text className="text-[16px] font-black text-[#1A1A1A] flex-1" numberOfLines={1}>
+                <Text className="text-[16px] font-black text-[#1A1A1A] shrink" numberOfLines={1}>
                   {boutique.nom}
                 </Text>
+                <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: '#7C3AED' }}>
+                  <Text className="text-[9.5px] font-black text-white tracking-wider">BOUTIQUE</Text>
+                </View>
               </View>
               <Text className="text-[12px] text-black/50 mt-1" numberOfLines={2}>
                 {lieuVirgule}
