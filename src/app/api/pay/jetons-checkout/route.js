@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { genererJetonCallback, genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 import { z } from "zod";
 
@@ -92,9 +93,15 @@ export async function POST(req) {
     const montantXof = quantiteJetons * config.cout_jeton_fcfa;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
 
-    const { data: transaction, error: transactionError } = await supabase
+    // Jeton secret propre à cette commande, placé dans l'URL de callback ; seule son empreinte est stockée. La ligne est
+    // écrite avec le rôle serveur (propriété de la boutique déjà vérifiée plus haut) : montant_xof et l'empreinte ne
+    // doivent jamais pouvoir être choisis par le client.
+    const { jeton: jetonCallback, empreinte: empreinteCallback } = genererJetonCallback();
+    const { data: transaction, error: transactionError } = await getSupabaseAdmin()
       .from("jetons_transactions")
       .insert({
+        montant_xof: montantXof,
+        callback_token_hash: empreinteCallback,
         store_id: storeId,
         montant: quantiteJetons,
         type: "achat",
@@ -118,7 +125,7 @@ export async function POST(req) {
         validiteSecondes: QR_VALIDITY_SECONDS,
         callbackSuccessUrl: `${appUrl}/premium?statut=succes`,
         callbackCancelUrl: `${appUrl}/premium?statut=annule`,
-        callbackUrl: `${appUrl}/api/pay/jetons-webhook`,
+        callbackUrl: `${appUrl}/api/pay/jetons-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {
       console.error("[Jetons Checkout] Échec génération QR code :", orangeError.message);
