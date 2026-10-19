@@ -68,7 +68,8 @@ export async function POST(req) {
 
     let inscriptionId = existante?.id;
     if (!inscriptionId) {
-      const { data: nouvelle, error: insertError } = await supabase
+      // Rôle serveur (utilisateur déjà authentifié ci-dessus) : le client n'a plus aucun droit d'écriture sur cette table.
+      const { data: nouvelle, error: insertError } = await getSupabaseAdmin()
         .from("formation_redaction_cv_inscriptions")
         .insert({ user_id: user.id, paye: false, montant_xof: MONTANT_XOF })
         .select("id")
@@ -116,10 +117,11 @@ export async function POST(req) {
       return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
 
-    await supabase
+    await getSupabaseAdmin()
       .from("formation_redaction_cv_inscriptions")
       .update({ provider_reference: qrCode.qrId })
-      .eq("id", inscriptionId);
+      .eq("id", inscriptionId)
+      .eq("user_id", user.id);
 
     return NextResponse.json({
       inscriptionId,
