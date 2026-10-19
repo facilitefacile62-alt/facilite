@@ -15,7 +15,7 @@ function charger() {
   return module_.exports;
 }
 
-const { lireLienRecuperation, lienExploitable, verifierNouveauMotDePasse, messageErreurMiseAJour, LONGUEUR_MIN_MDP } = charger();
+const { lireLienRecuperation, lienExploitable, verifierNouveauMotDePasse, verifierChangementMotDePasse, messageErreurMiseAJour, LONGUEUR_MIN_MDP } = charger();
 
 test.describe("lien de récupération", () => {
   test("jetons dans le fragment (#) : session exploitable", () => {
@@ -59,5 +59,18 @@ test.describe("nouveau mot de passe", () => {
     expect(messageErreurMiseAJour("Auth session missing!")).toMatch(/expiré/);
     expect(messageErreurMiseAJour("boom")).toMatch(/Impossible d'enregistrer/);
     expect(messageErreurMiseAJour(null)).toMatch(/Impossible d'enregistrer/);
+  });
+});
+
+test.describe("changement d'un mot de passe existant (l'ancien est exigé)", () => {
+  test("ancien absent, nouveau trop court, confirmation différente, identique à l'ancien : refusés", () => {
+    expect(verifierChangementMotDePasse("", "nouveau-mdp-123", "nouveau-mdp-123")).toMatch(/mot de passe actuel/);
+    expect(verifierChangementMotDePasse("ancien-mdp-123", "court", "court")).toMatch(/caractères/);
+    expect(verifierChangementMotDePasse("ancien-mdp-123", "nouveau-mdp-123", "nouveau-mdp-124")).toMatch(/ne correspondent pas/);
+    expect(verifierChangementMotDePasse("meme-mdp-1234", "meme-mdp-1234", "meme-mdp-1234")).toMatch(/différent de l'ancien/);
+  });
+
+  test("tout est correct : accepté", () => {
+    expect(verifierChangementMotDePasse("ancien-mdp-123", "nouveau-mdp-123", "nouveau-mdp-123")).toBeNull();
   });
 });

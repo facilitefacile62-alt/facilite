@@ -76,3 +76,12 @@ export function messageErreurMiseAJour(message: string | null | undefined): stri
   }
   return "Impossible d'enregistrer le mot de passe. Réessayez.";
 }
+
+/** Changement d'un mot de passe EXISTANT : l'ancien est exigé. Message d'erreur (français) ou null. */
+export function verifierChangementMotDePasse(actuel: string, nouveau: string, confirmation: string): string | null {
+  if (!actuel) return 'Veuillez saisir votre mot de passe actuel.';
+  const probleme = verifierNouveauMotDePasse(nouveau, confirmation);
+  if (probleme) return probleme;
+  if (nouveau === actuel) return "Choisissez un mot de passe différent de l'ancien.";
+  return null;
+}

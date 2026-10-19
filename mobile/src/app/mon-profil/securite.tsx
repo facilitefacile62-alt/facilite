@@ -1,15 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useRouter, type Href } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
+import { verifierChangementMotDePasse } from '@/lib/recuperationMotDePasse';
 import { supabase } from '@/lib/supabase';
+import { SITE_URL } from '@/lib/webEcrans';
 
 // Sécurité & Connexion — maquette 56 : informations du compte (téléphone
 // SMS, e-mail confirmé, date de naissance, région/pays) puis définition
 // d'un mot de passe.
+//
+// Mot de passe : un compte qui en a DÉJÀ un doit saisir l'ancien (revérifié par une connexion ciblée, comme sur le site),
+// puis toutes ses sessions sont fermées ; un compte sans mot de passe (Google, téléphone) en crée un sans ancien.
+// « A déjà un mot de passe » est décidé par le serveur (/api/auth/has-password), jamais deviné côté appareil.
 //
 // Les informations viennent du compte d'authentification (user.email,
 // user.phone, email_confirmed_at) et de `profiles` (birth_date, country —
@@ -32,22 +39,79 @@ function texteOuNonRenseigne(v: unknown): string {
 
 export default function ProfilSecuriteScreen() {
   const { user, profile } = useAuth();
+  const router = useRouter();
   const [motDePasse, setMotDePasse] = useState('');
+  const [actuel, setActuel] = useState('');
+  const [confirmation, setConfirmation] = useState('');
   const [enCours, setEnCours] = useState(false);
+  // null = pas encore connu (aucun formulaire affiché plutôt que de deviner) ; 'echec' = le serveur n'a pas répondu.
+  const [aUnMotDePasse, setAUnMotDePasse] = useState<boolean | null | 'echec'>(null);
+  const [essai, setEssai] = useState(0);
+
+  useEffect(() => {
+    let annule = false;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const jeton = data.session?.access_token;
+        if (!jeton) throw new Error('session');
+        const reponse = await fetch(`${SITE_URL}/api/auth/has-password`, { headers: { Authorization: `Bearer ${jeton}` } });
+        const corps = await reponse.json();
+        if (!annule) setAUnMotDePasse(typeof corps?.hasPassword === 'boolean' ? corps.hasPassword : 'echec');
+      } catch {
+        if (!annule) setAUnMotDePasse('echec');
+      }
+    })();
+    return () => {
+      annule = true;
+    };
+  }, [essai]);
 
   const assezLong = motDePasse.length >= LONGUEUR_MIN;
+  // Changement : ancien + nouveau + confirmation remplis ; création : nouveau assez long.
+  const peutEnregistrer = aUnMotDePasse === true ? Boolean(actuel) && assezLong && Boolean(confirmation) : assezLong;
 
   async function definirMotDePasse() {
-    if (!assezLong || enCours) return;
+    if (enCours) return;
+    if (aUnMotDePasse === true) {
+      const probleme = verifierChangementMotDePasse(actuel, motDePasse, confirmation);
+      if (probleme) {
+        Alert.alert('Mot de passe non modifié', probleme);
+        return;
+      }
+    } else if (!assezLong) return;
+
     setEnCours(true);
-    const { error } = await supabase.auth.updateUser({ password: motDePasse });
-    setEnCours(false);
-    if (error) {
-      Alert.alert('Mot de passe non enregistré', error.message);
-      return;
+    try {
+      if (aUnMotDePasse === true) {
+        // L'ancien mot de passe est revérifié par une connexion ciblée sur l'identifiant du compte.
+        const identifiant = user?.email ? { email: user.email, password: actuel } : { phone: user?.phone ?? '', password: actuel };
+        const { error: erreurAncien } = await supabase.auth.signInWithPassword(identifiant);
+        if (erreurAncien) {
+          Alert.alert('Mot de passe non modifié', 'Mot de passe actuel incorrect.');
+          return;
+        }
+      }
+      const { error } = await supabase.auth.updateUser({ password: motDePasse });
+      if (error) {
+        Alert.alert('Mot de passe non enregistré', error.message);
+        return;
+      }
+      setMotDePasse('');
+      setActuel('');
+      setConfirmation('');
+      if (aUnMotDePasse === true) {
+        // Un vrai changement ferme TOUTES les sessions (y compris celle-ci) : un ancien mot de passe a pu fuiter.
+        await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+        Alert.alert('Mot de passe modifié', 'Reconnectez-vous avec votre nouveau mot de passe.');
+        router.replace('/login' as Href);
+        return;
+      }
+      setAUnMotDePasse(true);
+      Alert.alert('Mot de passe enregistré', 'Vous pouvez désormais vous connecter avec ce mot de passe.');
+    } finally {
+      setEnCours(false);
     }
-    setMotDePasse('');
-    Alert.alert('Mot de passe enregistré', 'Vous pouvez désormais vous connecter avec ce mot de passe.');
   }
 
   const lignes = [
@@ -117,59 +181,118 @@ export default function ProfilSecuriteScreen() {
           <View className="bg-white rounded-2xl p-3.5 mt-3.5">
             <View className="flex-row items-center gap-2">
               <Ionicons name="key-outline" size={15} color="#2563EB" />
-              <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Créer un mot de passe</Text>
+              <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">{aUnMotDePasse === true ? 'Changer le mot de passe' : 'Créer un mot de passe'}</Text>
             </View>
 
-            <View className="bg-[#F7F7F5] rounded-xl p-3 mt-3">
-              <Text className="text-[12px] text-black/60 leading-[17px]">
-                Ce compte n&apos;a pas encore de mot de passe (connexion Google ou téléphone). Vous pourrez ensuite aussi
-                vous connecter avec un mot de passe.
-              </Text>
-            </View>
-
-            <Text className="text-[12px] font-bold text-black/55 mt-3.5">Nouveau mot de passe</Text>
-            <TextInput
-              value={motDePasse}
-              onChangeText={setMotDePasse}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(0,0,0,0.3)"
-              secureTextEntry
-              autoCapitalize="none"
-              className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
-            />
-            <View className="flex-row items-center gap-1.5 mt-2">
-              <View
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: assezLong ? '#10B981' : 'rgba(0,0,0,0.25)' }}
-              />
-              <Text className="text-[11.5px] text-black/45">{LONGUEUR_MIN} caractères minimum</Text>
-            </View>
-
-            <Pressable
-              onPress={definirMotDePasse}
-              disabled={!assezLong || enCours}
-              className="flex-row items-center gap-3 rounded-full mt-3.5"
-              style={{
-                backgroundColor: '#F3FBF7',
-                borderWidth: 1.5,
-                borderColor: '#34D399',
-                opacity: !assezLong || enCours ? 0.5 : 1,
-                paddingVertical: 8,
-                paddingLeft: 8,
-                paddingRight: 20,
-              }}>
-              <View className="w-11 h-11 rounded-full bg-[#D7F2EA] items-center justify-center">
-                {enCours ? (
-                  <ActivityIndicator color="#047857" size="small" />
-                ) : (
-                  <Ionicons name="lock-closed-outline" size={18} color="#047857" />
-                )}
+            {aUnMotDePasse === null ? (
+              <View className="items-center py-6">
+                <ActivityIndicator color="#047857" />
+                <Text className="text-[12px] text-black/45 mt-2">Vérification en cours…</Text>
               </View>
-              <View className="flex-1">
-                <Text className="text-[14px] font-bold text-[#1A1A1A]">Enregistrer le mot de passe</Text>
-                <Text className="text-[12px] text-black/45 mt-0.5">Connexion par e-mail</Text>
+            ) : null}
+
+            {aUnMotDePasse === 'echec' ? (
+              <View className="bg-[#FEF2F2] rounded-xl p-3 mt-3">
+                <Text className="text-[12px] text-[#B91C1C] leading-[17px]">
+                  Impossible de vérifier l&apos;état de votre mot de passe pour le moment.
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    setAUnMotDePasse(null);
+                    setEssai((n) => n + 1);
+                  }}
+                  hitSlop={8}>
+                  <Text className="text-[12.5px] font-bold text-[#047857] mt-2">Réessayer</Text>
+                </Pressable>
               </View>
-            </Pressable>
+            ) : null}
+
+            {aUnMotDePasse === false ? (
+              <View className="bg-[#F7F7F5] rounded-xl p-3 mt-3">
+                <Text className="text-[12px] text-black/60 leading-[17px]">
+                  Ce compte n&apos;a pas encore de mot de passe (connexion Google ou téléphone). Vous pourrez ensuite aussi
+                  vous connecter avec un mot de passe.
+                </Text>
+              </View>
+            ) : null}
+
+            {aUnMotDePasse === true ? (
+              <>
+                <Text className="text-[12px] font-bold text-black/55 mt-3.5">Mot de passe actuel</Text>
+                <TextInput
+                  value={actuel}
+                  onChangeText={setActuel}
+                  placeholder="••••••••"
+                  placeholderTextColor="rgba(0,0,0,0.3)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
+                />
+              </>
+            ) : null}
+
+            {typeof aUnMotDePasse === 'boolean' ? (
+              <>
+                <Text className="text-[12px] font-bold text-black/55 mt-3.5">Nouveau mot de passe</Text>
+                <TextInput
+                  value={motDePasse}
+                  onChangeText={setMotDePasse}
+                  placeholder="••••••••"
+                  placeholderTextColor="rgba(0,0,0,0.3)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
+                />
+                <View className="flex-row items-center gap-1.5 mt-2">
+                  <View
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: assezLong ? '#10B981' : 'rgba(0,0,0,0.25)' }}
+                  />
+                  <Text className="text-[11.5px] text-black/45">{LONGUEUR_MIN} caractères minimum</Text>
+                </View>
+
+                {aUnMotDePasse === true ? (
+                  <>
+                    <Text className="text-[12px] font-bold text-black/55 mt-3.5">Confirmer le nouveau mot de passe</Text>
+                    <TextInput
+                      value={confirmation}
+                      onChangeText={setConfirmation}
+                      placeholder="••••••••"
+                      placeholderTextColor="rgba(0,0,0,0.3)"
+                      secureTextEntry
+                      autoCapitalize="none"
+                      className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
+                    />
+                  </>
+                ) : null}
+
+                <Pressable
+                  onPress={definirMotDePasse}
+                  disabled={!peutEnregistrer || enCours}
+                  className="flex-row items-center gap-3 rounded-full mt-3.5"
+                  style={{
+                    backgroundColor: '#F3FBF7',
+                    borderWidth: 1.5,
+                    borderColor: '#34D399',
+                    opacity: !peutEnregistrer || enCours ? 0.5 : 1,
+                    paddingVertical: 8,
+                    paddingLeft: 8,
+                    paddingRight: 20,
+                  }}>
+                  <View className="w-11 h-11 rounded-full bg-[#D7F2EA] items-center justify-center">
+                    {enCours ? (
+                      <ActivityIndicator color="#047857" size="small" />
+                    ) : (
+                      <Ionicons name="lock-closed-outline" size={18} color="#047857" />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[14px] font-bold text-[#1A1A1A]">{aUnMotDePasse === true ? 'Changer le mot de passe' : 'Enregistrer le mot de passe'}</Text>
+                    <Text className="text-[12px] text-black/45 mt-0.5">{aUnMotDePasse === true ? 'Vous serez déconnecté de tous vos appareils' : 'Connexion par e-mail'}</Text>
+                  </View>
+                </Pressable>
+              </>
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>
