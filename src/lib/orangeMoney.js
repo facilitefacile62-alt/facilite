@@ -291,3 +291,29 @@ export function evaluerConfirmationOrange(reponse, { reference, montantXof }) {
   if (unite && String(unite).toUpperCase() !== "XOF") return { etat: "incoherent", raison: "devise différente" };
   return { etat: "succes", raison: "ok" };
 }
+
+/**
+ * Secret GLOBAL de l'URL de callback (version de secours : si Orange n'honore qu'une URL fixe enregistrée sur le portail,
+ * le jeton par commande ne peut pas voyager dans l'URL). Comparaison en temps constant, via empreintes de même longueur.
+ * Faux si l'un des deux manque.
+ */
+export function secretCallbackGlobalValide(recu, attendu) {
+  if (!recu || !attendu) return false;
+  const a = Buffer.from(hasherJetonCallback(recu), "utf8");
+  const b = Buffer.from(hasherJetonCallback(attendu), "utf8");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * INTERFACE de recherche d'une transaction chez Orange, utilisée par le webhook et par le rattrapage.
+ * Aujourd'hui seule la recherche par identifiant de transaction Orange est branchée (chemin hérité de la spécification
+ * transmise en septembre, à valider contre la documentation du portail). La recherche par référence marchande / qrId —
+ * indispensable au rattrapage d'une commande dont aucune notification n'est jamais arrivée — attend la documentation
+ * « recherche de transaction » : elle échoue explicitement au lieu d'inventer un chemin.
+ */
+export async function rechercherTransactionOrange({ transactionId, reference, qrId }) {
+  if (transactionId) return obtenirStatutTransaction(transactionId);
+  throw new ErreurOrangeMoney(
+    `Recherche de transaction par référence (${reference || "?"}) / qrId (${qrId || "?"}) non implémentée : documentation Orange requise.`
+  );
+}

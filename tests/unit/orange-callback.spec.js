@@ -27,6 +27,25 @@ test.describe("jeton de callback", () => {
   });
 });
 
+test.describe("secret global de l'URL fixe (version de secours)", () => {
+  test("seul le bon secret passe, un secret absent ou non configuré jamais", async () => {
+    const { secretCallbackGlobalValide } = await charger();
+    expect(secretCallbackGlobalValide("s3cret-long-et-imprevisible", "s3cret-long-et-imprevisible")).toBe(true);
+    expect(secretCallbackGlobalValide("autre", "s3cret-long-et-imprevisible")).toBe(false);
+    expect(secretCallbackGlobalValide("", "s3cret-long-et-imprevisible")).toBe(false);
+    expect(secretCallbackGlobalValide(null, "s3cret-long-et-imprevisible")).toBe(false);
+    expect(secretCallbackGlobalValide("n-importe-quoi", undefined)).toBe(false);
+    expect(secretCallbackGlobalValide(undefined, undefined)).toBe(false);
+  });
+});
+
+test.describe("recherche de transaction (interface)", () => {
+  test("sans identifiant de transaction Orange, échoue explicitement au lieu d'inventer un chemin", async () => {
+    const { rechercherTransactionOrange } = await charger();
+    await expect(rechercherTransactionOrange({ reference: REF, qrId: "qr-1" })).rejects.toThrow(/documentation Orange requise/);
+  });
+});
+
 test.describe("confirmation Orange face à la commande", () => {
   const ok = { status: "SUCCESS", reference: REF, amount: { value: 5000, unit: "XOF" } };
 
