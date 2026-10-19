@@ -137,7 +137,8 @@ export async function POST(req) {
       return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
 
-    await supabase.from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
+    // Rôle serveur : le client n'a plus aucun droit d'écriture sur jetons_transactions.
+    await getSupabaseAdmin().from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
 
     return NextResponse.json({
       transactionId: transaction.id,
