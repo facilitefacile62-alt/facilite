@@ -4,6 +4,7 @@
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import { messagePublication } from "@/lib/messagePublication";
+import { preparerImagePourEnvoi } from "@/lib/imageUpload";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
@@ -900,7 +901,8 @@ export default function RecruteurDashboardPage() {
     const uploadedUrls = [];
     if (offerImageFiles.length > 0) {
       for (let i = 0; i < offerImageFiles.length; i++) {
-        const file = offerImageFiles[i];
+        // Redimensionnée et convertie en WebP avant l'envoi : une affiche brute pèse 2 à 5 Mo.
+        const file = await preparerImagePourEnvoi(offerImageFiles[i]);
         const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
         const storagePath = `${userSession.user.id}/offers-${Date.now()}-${i}.${ext}`;
         const { error: uploadError } = await supabase.storage

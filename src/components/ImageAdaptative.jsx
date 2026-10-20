@@ -19,6 +19,8 @@ export default function ImageAdaptative({
   className = "",
   imgClassName = "",
   loading = "lazy",
+  // "high" pour l'image la plus visible de la page (plus grand élément affiché) ; "auto" sinon.
+  fetchPriority = "auto",
   children = null,
   ...reste
 }) {
@@ -47,6 +49,8 @@ export default function ImageAdaptative({
         src={src}
         alt={alt}
         loading={loading}
+        decoding="async"
+        fetchPriority={fetchPriority}
         onLoad={(e) => lire(e.currentTarget)}
         className={`absolute inset-0 w-full h-full object-cover ${imgClassName}`}
       />

@@ -1648,7 +1648,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   >
                     <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
                       <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
-                        <img src={st.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        <img src={st.image_url} alt="" loading={i < 4 ? "eager" : "lazy"} decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition" />
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{st.titre}</span>
@@ -1699,7 +1699,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   ))}
                 </div>
               ) : getLoopedJobs().length > 0 ? (
-                getLoopedJobs().map((job) => (
+                getLoopedJobs().map((job, indexJob) => (
                   <div
                     key={job.loopId || job.id}
                     className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-3"
@@ -1796,6 +1796,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                         title={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
                         className="my-1"
                         offer={job}
+                        loadingCouverture={indexJob === 0 ? "eager" : "lazy"}
                       />
                     )}
 

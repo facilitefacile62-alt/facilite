@@ -12,6 +12,10 @@ export default function OfferMediaGallery({
   onEnlarge = null,
   showWatermark = true,
   className = "",
+  // Dans un fil, seule la première affiche est chargée tout de suite ; les suivantes attendent d'approcher de l'écran
+  // (chaque affiche pèse plusieurs centaines de Ko : toutes les charger d'un coup alourdissait l'accueil de plusieurs Mo).
+  // Valeur par défaut « eager » : une fiche d'offre ouverte seule affiche son affiche immédiatement.
+  loadingCouverture = "eager",
 }) {
   const images = parseOfferImages(media);
   const [lightboxIndex, setLightboxIndex] = useState(null);
@@ -53,7 +57,8 @@ export default function OfferMediaGallery({
         <ImageAdaptative
           src={images[0]}
           alt={images.length > 1 ? `${title} - Photo 1` : title}
-          loading="eager"
+          loading={loadingCouverture}
+          fetchPriority={loadingCouverture === "eager" ? "high" : "auto"}
           onClick={(e) => handleOpenLightbox(0, e)}
           className="group cursor-pointer"
         >
@@ -85,6 +90,7 @@ export default function OfferMediaGallery({
                   alt={`${title} - Photo ${idx + 2}`}
                   className="h-full w-auto block"
                   loading="lazy"
+                  decoding="async"
                 />
               </button>
             ))}

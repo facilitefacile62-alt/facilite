@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { preparerImagePourEnvoi } from "@/lib/imageUpload";
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -399,7 +400,8 @@ export default function AdminOffresPage() {
     // Si on a des fichiers locaux
     if (offerImageFiles.length > 0) {
       for (let i = 0; i < offerImageFiles.length; i++) {
-        const file = offerImageFiles[i];
+        // Redimensionnée et convertie en WebP avant l'envoi : une affiche brute pèse 2 à 5 Mo.
+        const file = await preparerImagePourEnvoi(offerImageFiles[i]);
         const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
         const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}-${i}.${ext}`;
 
