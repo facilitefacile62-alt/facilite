@@ -657,7 +657,7 @@ export default function ChatDetailScreen() {
             envoiEnCours={envoiEnCours || envoiFichierEnCours}
             onEnvoyer={handleEnvoyer}
             clavierOuvert={clavierOuvert}
-            paddingBas={Math.max(insets.bottom, 8) + 4}
+            paddingBas={marketplace ? Math.max(insets.bottom, 8) + 4 : 10}
             menuJointOuvert={menuJointOuvert}
             onToggleJoint={() => {
               setEmojiOuvert(false);
