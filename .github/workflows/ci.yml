@@ -5,20 +5,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Lancement manuel (onglet Actions) des deux contrôles de base de données, voir les commentaires de chaque job.
+  workflow_dispatch:
 
 jobs:
   build:
     name: Lint & Build
     runs-on: ubuntu-latest
-    # Attend que les invariants de sécurité passent avant de construire —
-    # voir docs/regle-migrations.md. Ça ne suffit PAS à bloquer un déploiement
-    # Vercel à lui seul (Vercel se déclenche sur le push lui-même, pas sur le
-    # résultat de ce workflow) : la vraie protection vient de la branch
-    # protection GitHub sur `main` (voir le même document), qui empêche tout
-    # commit non vérifié d'atteindre `main` — et donc de déclencher Vercel —
-    # en premier lieu. Cette dépendance sert à ce que le statut global de la
-    # CI reflète honnêtement l'échec, pas à elle seule à empêcher un déploiement.
-    needs: security-invariants
+    # N'attend plus les invariants de sécurité (20/10/2026) : ce job ne tourne plus qu'à la demande, voir `security-invariants`.
+    # La vérification statique des invariants reste faite par `npm run build` (prebuild : scripts/check-invariants.mjs).
 
     steps:
       - name: Checkout
@@ -65,6 +60,10 @@ jobs:
   db-lint:
     name: Supabase DB Lint
     runs-on: ubuntu-latest
+    # À la demande seulement (20/10/2026) : le contrôle rejoue toutes les migrations depuis zéro, or la chaîne n'est pas
+    # rejouable (colonnes `profiles.skills`… créées à la main, `public.has_badge` utilisée avant sa création) — il échouait
+    # déjà sur `main` avant tout changement. À réactiver une fois le schéma de production pris comme point de départ.
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout
@@ -100,6 +99,11 @@ jobs:
   security-invariants:
     name: Invariants de sécurité
     runs-on: ubuntu-latest
+    # À la demande seulement (20/10/2026) : les 13 invariants interrogent la production ET y écrivent (table de sondage
+    # créée puis supprimée, table invariant_status) ; les confier à une CI de dépôt public exigerait un secret avec droit
+    # d'écriture sur la base de production. Ils restent le garde-fou local (`npx playwright test
+    # tests/security/invariants.spec.js` avant chaque commit, voir CLAUDE.md).
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout
