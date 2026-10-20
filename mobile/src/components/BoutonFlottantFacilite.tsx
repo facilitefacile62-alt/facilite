@@ -11,8 +11,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 //  - bouton rond vert de 56 px (dégradé #34D399 → #0F766E, ombre) en bas à droite, au-dessus de la barre du bas ;
 //  - sous lui, sur l'Accueil, petit bouton rond rouge #E11D48 de 36 px avec une flèche vers le haut : il remonte
 //    en haut du fil par un défilement doux ;
-//  - ouvert : le « + » tourne de 45° et devient « × », un voile blanc léger couvre la page et trois pilules blanches
-//    s'empilent au-dessus (texte à gauche, rond coloré à droite) : Écrire un e-mail, Assistant vocal, Extracteur.
+//  - ouvert : le « + » tourne de 45° et devient « × », un voile blanc léger couvre la page et des pilules blanches
+//    s'empilent au-dessus (texte à gauche, rond coloré à droite) : Importer un document (violet, ouvre Profil > Documents
+//    et le sélecteur de fichiers), Écrire un e-mail, Assistant vocal, Extracteur.
 //    Toucher le voile ou le « × » referme.
 // L'Assistant vocal n'est pas encore branché dans l'application (interrupteur feat_voice_assistant coupé) : tant
 // qu'il l'est, sa pilule n'est pas proposée plutôt que de simuler un assistant.
@@ -32,6 +33,7 @@ export default function BoutonFlottantFacilite() {
 
   // Chaque action peut être coupée depuis le site (Administration → Fonctionnalités).
   const toutesActions: Action[] = [
+    { id: 'document', libelle: 'Importer un document', icone: 'cloud-upload', couleur: '#7C3AED', agir: () => router.navigate('/profil?importer=1' as Href) },
     { id: 'email', libelle: 'Écrire un e-mail', icone: 'mail', couleur: '#2563EB', agir: () => router.push('/messages?ecrire=1' as Href) },
     { id: 'assistant', libelle: 'Assistant vocal', icone: 'mic', couleur: '#065F46', agir: () => Alert.alert('Assistant vocal', 'Cette fonctionnalité arrive dans une prochaine mise à jour.'), interrupteur: 'feat_voice_assistant' },
     { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur'), interrupteur: 'nav_extracteur' },

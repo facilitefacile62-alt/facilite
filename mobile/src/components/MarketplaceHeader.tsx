@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import BasculePlateforme from '@/components/BasculePlateforme';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
@@ -22,13 +23,20 @@ export default function MarketplaceHeader() {
   const compteurs = useCompteursNonLus();
 
   return (
-    <View className="flex-row items-center gap-4 px-4 py-3" style={{ backgroundColor: FOND }}>
-      <Ionicons name="storefront" size={19} color={BLEU} />
-      <Pressable onPress={() => router.navigate('/marketplace')} className="flex-1 -ml-2.5">
-        <Text className="text-[18px] font-black" style={{ color: BLEU }}>
+    <View className="flex-row items-center gap-3 px-4 py-3" style={{ backgroundColor: FOND }}>
+      {/* Logo boutique dans son disque bleu pâle + « Locaux » en bleu. */}
+      <Pressable onPress={() => router.navigate('/marketplace')} accessibilityLabel="Accueil Locaux" className="flex-row items-center gap-2">
+        <View className="items-center justify-center" style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#DCE8FD' }}>
+          <Ionicons name="storefront" size={18} color={BLEU} />
+        </View>
+        <Text className="text-[19px] font-black" style={{ color: BLEU, letterSpacing: -0.3 }}>
           Locaux
         </Text>
       </Pressable>
+      {/* Bascule FIXE au milieu de l'en-tête. */}
+      <View className="flex-1 items-center">
+        <BasculePlateforme plateforme="locaux" />
+      </View>
       <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
         <View>
           <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />

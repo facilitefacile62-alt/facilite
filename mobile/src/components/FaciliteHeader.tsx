@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
+import BasculePlateforme from '@/components/BasculePlateforme';
 import { CleVectorielle } from '@/components/EcranConnexion';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
@@ -27,7 +28,7 @@ export type PetiteStory = { id: string; imageUrl: string; titre: string; index: 
 
 // `petitesStories` : stories non vues, en petits cercles à côté du logo quand la rangée a disparu au défilement
 // (maquette 09) ; vide = rien à afficher (aucun doublon quand tout est vu, maquette 16).
-export default function FaciliteHeader({ petitesStories = [], onStory }: { petitesStories?: PetiteStory[]; onStory?: (index: number) => void } = {}) {
+export default function FaciliteHeader({ petitesStories = [], onStory, accueil = false }: { petitesStories?: PetiteStory[]; onStory?: (index: number) => void; accueil?: boolean } = {}) {
   const router = useRouter();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const compteurs = useCompteursNonLus();
@@ -38,9 +39,9 @@ export default function FaciliteHeader({ petitesStories = [], onStory }: { petit
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
           paddingHorizontal: 18,
           paddingVertical: 13,
+          gap: 8,
         }}>
         {/* Logo clé dans son disque menthe + « ffacilite » (nouvelles maquettes du 12/10/2026). */}
         <Pressable onPress={() => router.navigate('/')} accessibilityLabel="Accueil ffacilite" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -50,7 +51,17 @@ export default function FaciliteHeader({ petitesStories = [], onStory }: { petit
           <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
         </Pressable>
 
-        {petitesStories.length > 0 ? (
+        {/* Bascule Facilité ⇄ Locaux : FIXE, au milieu de l'en-tête ; sur l'Accueil elle passe à droite, juste avant la loupe,
+            pour laisser la place aux petits ronds des stories à côté du logo. */}
+        {!accueil ? (
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <BasculePlateforme plateforme="facilite" />
+          </View>
+        ) : petitesStories.length === 0 ? (
+          <View style={{ flex: 1 }} />
+        ) : null}
+
+        {accueil && petitesStories.length > 0 ? (
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
             {petitesStories.slice(0, 3).map((s, i) => (
               <Pressable
@@ -65,7 +76,8 @@ export default function FaciliteHeader({ petitesStories = [], onStory }: { petit
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: accueil ? 14 : 18 }}>
+          {accueil ? <BasculePlateforme plateforme="facilite" /> : null}
           <Pressable
             onPress={() => router.push('/recherche')}
             accessibilityLabel="Rechercher"
