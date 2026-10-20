@@ -41,7 +41,8 @@ export default function Footer() {
             type="button"
             onClick={copierLien}
             title="Copier le lien"
-            className="text-gray-400 hover:text-emerald-600 dark:hover:text-[#10E688] transition cursor-pointer"
+            aria-label="Copier le lien du site"
+            className="inline-flex items-center justify-center min-w-6 min-h-6 text-gray-600 hover:text-emerald-700 dark:text-gray-400 dark:hover:text-[#10E688] transition cursor-pointer"
           >
             <i className={`fa-solid ${copie ? "fa-check text-emerald-600 dark:text-[#10E688]" : "fa-copy"} text-[10px]`}></i>
           </button>

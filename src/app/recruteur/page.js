@@ -3,6 +3,8 @@
 
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
+import { messagePublication } from "@/lib/messagePublication";
+import { preparerImagePourEnvoi } from "@/lib/imageUpload";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
@@ -899,7 +901,8 @@ export default function RecruteurDashboardPage() {
     const uploadedUrls = [];
     if (offerImageFiles.length > 0) {
       for (let i = 0; i < offerImageFiles.length; i++) {
-        const file = offerImageFiles[i];
+        // Redimensionnée et convertie en WebP avant l'envoi : une affiche brute pèse 2 à 5 Mo.
+        const file = await preparerImagePourEnvoi(offerImageFiles[i]);
         const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
         const storagePath = `${userSession.user.id}/offers-${Date.now()}-${i}.${ext}`;
         const { error: uploadError } = await supabase.storage
@@ -1023,7 +1026,7 @@ export default function RecruteurDashboardPage() {
       } else {
         setMyOffers((prev) => [insertedOffer, ...prev]);
         generateOfferEmbedding(insertedOffer.id, payload.title, payload.description);
-        triggerToast("🎉 Offre publiée avec succès sur le fil d'actualité !");
+        triggerToast(messagePublication(insertedOffer, "🎉 Offre publiée avec succès sur le fil d'actualité !"));
         setOfferForm(EMPTY_OFFER);
         setOfferAudioFile(null);
         setOfferImageFiles([]);
@@ -1115,7 +1118,7 @@ export default function RecruteurDashboardPage() {
           triggerToast("Erreur lors de la publication de l'offre.");
         } else {
           setMyOffers((prev) => [data, ...prev]);
-          triggerToast("Offre publiée !");
+          triggerToast(messagePublication(data, "Offre publiée !"));
           generateOfferEmbedding(data.id, payload.title, payload.description);
           handleCancelEditOffer();
         }

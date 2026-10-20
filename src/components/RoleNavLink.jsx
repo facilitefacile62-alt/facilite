@@ -164,7 +164,7 @@ export default function RoleNavLink({ session, className, variant = "desktop", o
             href={link.href}
             onClick={onClick}
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              link.label === "Admin" ? "text-orange-600 font-extrabold" : "text-emerald-600 font-extrabold"
+              link.label === "Admin" ? "text-orange-700 font-extrabold" : "text-emerald-700 font-extrabold"
             }`}
           >
             <i className={`fa-solid ${link.icon} text-sm sm:text-base`}></i>

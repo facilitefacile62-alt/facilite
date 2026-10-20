@@ -892,6 +892,7 @@ function OffresContent({ listingType } = {}) {
                         media={offer.photos || offer.images || offer.image_url || offer.image}
                         title={offer.title}
                         offer={offer}
+                        loadingCouverture={idx === 0 ? "eager" : "lazy"}
                       />
                     </div>
                   )}

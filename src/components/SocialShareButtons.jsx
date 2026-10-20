@@ -1,5 +1,6 @@
 "use client";
 
+import { useHydrated } from "@/lib/useHydrated";
 import { audioAutorise } from "@/lib/listingTypes";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -29,11 +30,15 @@ export default function SocialShareButtons({
   onToast,
   isExpired,
 }) {
+  const pret = useHydrated();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef(null);
 
   const offerExpired = typeof isExpired === "boolean" ? isExpired : isOfferExpired(offer);
+  // Offre en attente de modération (ou refusée) : visible de son auteur, mais postuler est refusé côté serveur
+  // (/api/postuler répond 404 tant qu'elle n'est pas approuvée). Le bouton le dit au lieu de laisser échouer la candidature.
+  const offerEnAttente = !!offer?.status && offer.status !== "approved";
 
   const offerId = offer?.id || "";
   const title = offer?.title || offer?.titleFR || "Offre d'emploi";
@@ -434,7 +439,17 @@ export default function SocialShareButtons({
           </button>
 
           {/* Bouton 3 : Action de Candidature Principale & Fidèle */}
-          {offerExpired ? (
+          {offerEnAttente ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-900/60"
+              title="Cette offre sera ouverte aux candidatures après validation"
+            >
+              <i className="fa-solid fa-hourglass-half text-xs"></i>
+              <span className="truncate">En cours de validation</span>
+            </button>
+          ) : offerExpired ? (
             <button
               type="button"
               disabled
@@ -447,6 +462,7 @@ export default function SocialShareButtons({
           ) : contactMethods.hasBoth ? (
             <div className="flex-1 flex items-center gap-1.5 min-w-0">
               <button
+              disabled={!pret}
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -456,11 +472,11 @@ export default function SocialShareButtons({
                     window.location.href = contactMethods.emailUrl;
                   }
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-2 sm:px-3 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5 min-w-0"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-2 sm:px-3 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5 min-w-0"
                 title="Postuler directement via Facilité"
               >
-                <i className="fa-solid fa-paper-plane text-xs"></i>
-                <span className="truncate">Postuler via Facilité</span>
+                <i className={`fa-solid ${pret ? "fa-paper-plane" : "fa-spinner fa-spin"} text-xs`}></i>
+                <span className="truncate">{pret ? "Postuler via Facilité" : "Chargement…"}</span>
               </button>
               <a
                 href={contactMethods.waUrl}
@@ -490,34 +506,36 @@ export default function SocialShareButtons({
           ) : (offer?.contact_email || offer?.recruiter_email || offer?.recruiterEmail) ? (
             /* Offre avec E-mail : L'action exclusive est 'Postuler via Facilité' */
             <button
+              disabled={!pret}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onApply) onApply(offer);
               }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
               title="Postuler via Facilité"
             >
-              <i className="fa-solid fa-paper-plane text-xs"></i>
-              <span className="truncate">Postuler via Facilité</span>
+              <i className={`fa-solid ${pret ? "fa-paper-plane" : "fa-spinner fa-spin"} text-xs`}></i>
+              <span className="truncate">{pret ? "Postuler via Facilité" : "Chargement…"}</span>
             </button>
           ) : onApply ? (
             <button
+              disabled={!pret}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onApply(offer);
               }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              <i className="fa-solid fa-paper-plane text-xs"></i>
-              <span className="truncate">Postuler via Facilité</span>
+              <i className={`fa-solid ${pret ? "fa-paper-plane" : "fa-spinner fa-spin"} text-xs`}></i>
+              <span className="truncate">{pret ? "Postuler via Facilité" : "Chargement…"}</span>
             </button>
           ) : (
             <Link
               href={`/offres/${offerId}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
               <span className="truncate">Voir l'offre</span>
@@ -731,7 +749,17 @@ export default function SocialShareButtons({
           </button>
 
           {/* Action 3 : Action Externe ou Postuler si fourni */}
-          {offerExpired ? (
+          {offerEnAttente ? (
+            <button
+              type="button"
+              disabled
+              className="flex-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5 border border-amber-200 dark:border-amber-900/60"
+              title="Cette offre sera ouverte aux candidatures après validation"
+            >
+              <i className="fa-solid fa-hourglass-half text-xs"></i>
+              <span className="truncate">En cours de validation</span>
+            </button>
+          ) : offerExpired ? (
             <button
               type="button"
               disabled
@@ -755,15 +783,16 @@ export default function SocialShareButtons({
             </a>
           ) : onApply ? (
             <button
+              disabled={!pret}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onApply(offer);
               }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait active:scale-98 text-white font-black text-xs sm:text-sm py-2.5 px-3 sm:px-4 rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-2"
             >
-              <i className="fa-solid fa-paper-plane text-xs"></i>
-              <span className="truncate">Postuler via Facilité</span>
+              <i className={`fa-solid ${pret ? "fa-paper-plane" : "fa-spinner fa-spin"} text-xs`}></i>
+              <span className="truncate">{pret ? "Postuler via Facilité" : "Chargement…"}</span>
             </button>
           ) : null}
 

@@ -53,7 +53,7 @@ const contentSecurityPolicy = [
   // silencieusement par la CSP, laissant la carte vide malgré un code
   // fonctionnel. Confirmé par les violations CSP réelles observées en
   // production avant ce correctif.
-  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms https://c.bing.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com",
   "media-src 'self' blob: data: https://*.supabase.co",
   // Clarity renvoie ses mesures par fetch/beacon vers *.clarity.ms : sans
   // cette entrée, le script se chargerait mais n'enverrait toujours rien.

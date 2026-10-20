@@ -292,7 +292,11 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
-  const [displayLimit, setDisplayLimit] = useState(30);
+  // Nombre de cartes affichées : 8 au premier rendu (+8 à chaque palier de défilement). Il était de 30 : 30 affiches,
+  // leurs boutons de partage et ~1 800 éléments à construire et à hydrater avant que la page ne réagisse (7,5 s de travail
+  // du processeur mesurés sur un mobile milieu de gamme, Lighthouse 35). Le fil s'allonge de lui-même en défilant.
+  const PAS_AFFICHAGE = 8;
+  const [displayLimit, setDisplayLimit] = useState(PAS_AFFICHAGE);
   // Fenêtre de chargement du fil (2026-08-24). L'accueil chargeait les 56
   // offres actives complètes à chaque visite — 529,3 Ko de JSON mesurés,
   // pour un travail base de données de 124 ms / 1,6 Ko une fois paginé.
@@ -308,8 +312,8 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
   // recherche porte sur allJobs, elle ne filtrerait sinon que la fenêtre.
   const limiteChargement = useMemo(() => {
     if (keyword.trim() || locationFilter.trim() || contractFilter.trim()) return 500;
-    const paliers = Math.floor(Math.max(0, displayLimit - 30) / 15);
-    return Math.min(96, 12 + paliers * 12);
+    const paliers = Math.floor(Math.max(0, displayLimit - PAS_AFFICHAGE) / PAS_AFFICHAGE);
+    return Math.min(96, 12 + paliers * 8);
   }, [keyword, locationFilter, contractFilter, displayLimit]);
   // Pagination du fil (2026-08-24) : l'accueil chargeait les 56 offres
   // ACTIVES complètes à chaque visite — 529,3 Ko de JSON mesurés, alors que
@@ -557,7 +561,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1000) {
-        setDisplayLimit((prev) => prev + 15);
+        setDisplayLimit((prev) => prev + 8);
       }
     };
     window.addEventListener("scroll", handleScroll);
@@ -1648,7 +1652,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   >
                     <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
                       <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
-                        <img src={st.image_url} alt={st.titre} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        <img src={st.image_url} alt="" loading={i < 4 ? "eager" : "lazy"} decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition" />
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{st.titre}</span>
@@ -1699,7 +1703,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   ))}
                 </div>
               ) : getLoopedJobs().length > 0 ? (
-                getLoopedJobs().map((job) => (
+                getLoopedJobs().map((job, indexJob) => (
                   <div
                     key={job.loopId || job.id}
                     className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs hover:shadow-md transition duration-300 flex flex-col space-y-3"
@@ -1796,6 +1800,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                         title={selectedLang === "FR" ? job.titleFR : job.titleEN || "Affiche de recrutement"}
                         className="my-1"
                         offer={job}
+                        loadingCouverture={indexJob === 0 ? "eager" : "lazy"}
                       />
                     )}
 

@@ -6,6 +6,7 @@
 // serveur) — cette page ne fait que l'interface. Tant qu'aucune story n'est
 // active, le fil garde son carrousel de modèles de CV.
 
+import { preparerImagePourEnvoi } from "@/lib/imageUpload";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -109,8 +110,10 @@ export default function AdminStoriesPage() {
       if (fichier) {
         if (!TYPES_ACCEPTES.includes(fichier.type)) throw new Error("Format non accepté : JPEG, PNG ou WebP.");
         if (fichier.size > TAILLE_MAX) throw new Error("Le visuel doit faire 5 Mo au maximum.");
-        const signee = await appeler("POST", { action: "upload-url", contentType: fichier.type, taille: fichier.size });
-        const { error } = await supabase.storage.from("stories-media").uploadToSignedUrl(signee.path, signee.token, fichier, { contentType: fichier.type });
+        // Un visuel de story s'affiche dans un petit cercle puis en plein écran de téléphone : 1280 px en WebP suffisent.
+        const aEnvoyer = await preparerImagePourEnvoi(fichier);
+        const signee = await appeler("POST", { action: "upload-url", contentType: aEnvoyer.type, taille: aEnvoyer.size });
+        const { error } = await supabase.storage.from("stories-media").uploadToSignedUrl(signee.path, signee.token, aEnvoyer, { contentType: aEnvoyer.type });
         if (error) throw new Error("Le téléversement a échoué : " + error.message);
         path = signee.path;
       }

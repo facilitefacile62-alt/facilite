@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { extractFullJobOfferFromPosterWithGemini } from "@/lib/documentParser";
 import { requireUser } from "@/lib/apiAuth";
@@ -55,13 +56,29 @@ export async function POST(req) {
 
       // 1. Sauvegarder automatiquement l'affiche sur Supabase Storage
       try {
-        const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
+        // L'affiche est enregistrée en WebP (1280 px max) : une affiche brute pèse 2 à 5 Mo et était resservie telle quelle
+        // à chaque visiteur du fil. L'original (`buffer`) reste celui que lit l'IA pour extraire l'offre.
+        let bufferStocke = buffer;
+        let mimeStocke = fileMime;
+        let ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
+        try {
+          bufferStocke = await sharp(buffer).rotate().resize({ width: 1280, height: 1280, fit: "inside", withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
+          if (bufferStocke.length < buffer.length) {
+            mimeStocke = "image/webp";
+            ext = "webp";
+          } else {
+            bufferStocke = buffer;
+          }
+        } catch (conversionErr) {
+          console.warn("[Poster WebP] conversion impossible, original conservé :", conversionErr?.message);
+          bufferStocke = buffer;
+        }
         const storageKey = `admin-posters/poster-${Date.now()}.${ext}`;
 
         const { error: uploadError } = await supabaseAdmin.storage
           .from("job-offers")
-          .upload(storageKey, buffer, {
-            contentType: fileMime,
+          .upload(storageKey, bufferStocke, {
+            contentType: mimeStocke,
             upsert: true,
           });
 

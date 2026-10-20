@@ -6903,10 +6903,12 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                           >
                             {nomBoutique}
                           </span>
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 flex items-center gap-1">
-                            <i className="fa-solid fa-circle-check text-[9px]"></i>
-                            Vérifié
-                          </span>
+                          {article.boutique_verifie === true ? (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 flex items-center gap-1">
+                              <i className="fa-solid fa-circle-check text-[9px]"></i>
+                              Vérifié
+                            </span>
+                          ) : null}
                         </div>
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                           {article.boutique_quartier || article.quartier || "Dakar"}, {article.boutique_ville || article.ville || "Sénégal"}
@@ -6938,26 +6940,29 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                     {article.titre}
                   </h1>
 
-                  {/* Ligne Avis & Preuve Sociale Style Alibaba */}
-                  <div className="flex items-center gap-2 flex-wrap text-xs">
-                    <div className="flex items-center text-[#ff6a00]">
-                      <i className="fa-solid fa-star text-xs"></i>
-                      <i className="fa-solid fa-star text-xs"></i>
-                      <i className="fa-solid fa-star text-xs"></i>
-                      <i className="fa-solid fa-star text-xs"></i>
-                      <i className="fa-solid fa-star-half-stroke text-xs"></i>
-                      <span className="ml-1.5 font-bold text-gray-900 dark:text-gray-100">4.3</span>
+                  {/* Avis : seulement des données réelles — rien n'est affiché tant qu'il n'y a aucun avis. */}
+                  {listeAvis.length > 0 ? (
+                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                      <div className="flex items-center text-[#ff6a00]">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <i
+                            key={n}
+                            className={`fa-solid fa-star text-xs ${n <= Math.round(listeAvis.reduce((t, a) => t + (Number(a.note) || 0), 0) / listeAvis.length) ? "" : "opacity-25"}`}
+                          ></i>
+                        ))}
+                        <span className="ml-1.5 font-bold text-gray-900 dark:text-gray-100">
+                          {(listeAvis.reduce((t, a) => t + (Number(a.note) || 0), 0) / listeAvis.length).toFixed(1)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOngletShein("commentaires")}
+                        className="text-gray-600 dark:text-gray-400 underline hover:text-blue-600 cursor-pointer font-medium"
+                      >
+                        ({listeAvis.length} avis)
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setOngletShein("commentaires")}
-                      className="text-gray-600 dark:text-gray-400 underline hover:text-blue-600 cursor-pointer font-medium"
-                    >
-                      ({listeAvis.length > 0 ? listeAvis.length : 23} avis)
-                    </button>
-                    <span className="text-gray-300 dark:text-zinc-700">•</span>
-                    <span className="text-gray-600 dark:text-gray-400 font-semibold">120+ vendus</span>
-                  </div>
+                  ) : null}
 
                   {/* SÉLECTEUR DE VARIANTES (Si plusieurs photos) */}
                   {photos.length > 1 && (
@@ -8454,9 +8459,11 @@ function ModalFicheBoutique({
           </div>
 
           {/* Ligne amis / abonnés */}
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-            {boutique?.amis_count || "4 K"} ami(e)s
-          </p>
+          {Number(boutique?.amis_count) > 0 ? (
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              {boutique.amis_count} ami(e)s
+            </p>
+          ) : null}
 
           {/* Bio / Description */}
           <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed max-w-md">
@@ -11439,6 +11446,11 @@ function FormulaireArticle({
             <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"} text-violet-600 dark:text-violet-400`}></i>
             {optimisationIA ? "Optimisation..." : "Optimiser texte SEO"}
           </button>
+          {!iaAutorisee && (
+            <p className="basis-full text-xs font-semibold text-gray-600 dark:text-gray-400" role="status">
+              {MESSAGE_IA_EN_PAUSE} : en attendant, remplissez la fiche vous-même — c&apos;est rapide.
+            </p>
+          )}
         </div>
       </div>
 

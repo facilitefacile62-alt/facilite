@@ -1,0 +1,854 @@
+[
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787583569412.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787583569412-w1280.webp",
+  "avant": 179623,
+  "apres": 91928
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020972668.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020972668-w1280.webp",
+  "avant": 192684,
+  "apres": 113328
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788192567861.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788192567861-w1280.webp",
+  "avant": 336443,
+  "apres": 134238
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788280601005-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788280601005-0-w1280.webp",
+  "avant": 242149,
+  "apres": 102946
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790415032127-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790415032127-0-w1280.webp",
+  "avant": 316007,
+  "apres": 155974
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/sensat_ingenieur_embarque.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/sensat_ingenieur_embarque-w1280.webp",
+  "avant": 212232,
+  "apres": 100470
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787584386294.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787584386294-w1280.webp",
+  "avant": 184329,
+  "apres": 92392
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788021219224.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788021219224-w1280.webp",
+  "avant": 187895,
+  "apres": 110690
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788207351582.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788207351582-w1280.webp",
+  "avant": 178679,
+  "apres": 98526
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788281216438-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788281216438-0-w1280.webp",
+  "avant": 225151,
+  "apres": 92852
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788439657762-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788439657762-0-w1280.webp",
+  "avant": 206099,
+  "apres": 84670
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787599175607.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787599175607-w1280.webp",
+  "avant": 4122222,
+  "apres": 148054
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788021983565.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788021983565-w1280.webp",
+  "avant": 145708,
+  "apres": 74526
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788207887204.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788207887204-w1280.webp",
+  "avant": 174036,
+  "apres": 96220
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788285291275-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788285291275-0-w1280.webp",
+  "avant": 282220,
+  "apres": 123070
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789157954937-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789157954937-0-w1280.webp",
+  "avant": 205515,
+  "apres": 80698
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/grant_thornton_architecte.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/grant_thornton_architecte-w1280.webp",
+  "avant": 159706,
+  "apres": 57646
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787615706303.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787615706303-w1280.webp",
+  "avant": 4413452,
+  "apres": 116296
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788022064961.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788022064961-w1280.webp",
+  "avant": 154873,
+  "apres": 86856
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788208003976.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788208003976-w1280.webp",
+  "avant": 206866,
+  "apres": 124376
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788286322907-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788286322907-0-w1280.webp",
+  "avant": 221850,
+  "apres": 88334
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788440280838-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788440280838-0-w1280.webp",
+  "avant": 286926,
+  "apres": 131314
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/terrou-bi-1791313718817.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/terrou-bi-1791313718817-w1280.webp",
+  "avant": 183274,
+  "apres": 76146
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785443837434.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785443837434-w1280.webp",
+  "avant": 160962,
+  "apres": 111858
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788022470609.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788022470609-w1280.webp",
+  "avant": 186197,
+  "apres": 108860
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788223729213.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788223729213-w1280.webp",
+  "avant": 317471,
+  "apres": 123048
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788288244221-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788288244221-0-w1280.webp",
+  "avant": 230877,
+  "apres": 99764
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788684462005-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788684462005-0-w1280.webp",
+  "avant": 242756,
+  "apres": 111380
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788041246823.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788041246823-w1280.webp",
+  "avant": 182382,
+  "apres": 109720
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788298913325-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788298913325-0-w1280.webp",
+  "avant": 271556,
+  "apres": 112848
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785444049202.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785444049202-w1280.webp",
+  "avant": 160962,
+  "apres": 111858
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/foundever_conseiller_client.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/foundever_conseiller_client-w1280.webp",
+  "avant": 130678,
+  "apres": 60508
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788607268664-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788607268664-0-w1280.webp",
+  "avant": 238401,
+  "apres": 106162
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787616199294.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787616199294-w1280.webp",
+  "avant": 200075,
+  "apres": 93760
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788041519189.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788041519189-w1280.webp",
+  "avant": 166328,
+  "apres": 90760
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788299606540-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788299606540-0-w1280.webp",
+  "avant": 179447,
+  "apres": 108336
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787569479449.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787569479449-w1280.webp",
+  "avant": 120193,
+  "apres": 91786
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787616255408.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787616255408-w1280.webp",
+  "avant": 197805,
+  "apres": 84968
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787567466042.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787567466042-w1280.webp",
+  "avant": 3051477,
+  "apres": 93970
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/casting_evenprod.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/casting_evenprod-w1280.webp",
+  "avant": 157367,
+  "apres": 58226
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788045700523.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788045700523-w1280.webp",
+  "avant": 201357,
+  "apres": 121108
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787531449519.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787531449519-w1280.webp",
+  "avant": 1945745,
+  "apres": 139350
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787616745213.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787616745213-w1280.webp",
+  "avant": 143307,
+  "apres": 73978
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788104917936.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788104917936-w1280.webp",
+  "avant": 228860,
+  "apres": 91848
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788104952342.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788104952342-w1280.webp",
+  "avant": 188730,
+  "apres": 74020
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788260787203.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788260787203-w1280.webp",
+  "avant": 374202,
+  "apres": 135196
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788361151707-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788361151707-0-w1280.webp",
+  "avant": 267854,
+  "apres": 115902
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785376222804.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785376222804-w1280.webp",
+  "avant": 137966,
+  "apres": 99512
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788007093725.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788007093725-w1280.webp",
+  "avant": 214428,
+  "apres": 83988
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788109227679.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788109227679-w1280.webp",
+  "avant": 271602,
+  "apres": 121982
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785378712766.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/a729afb9-d8b7-41f9-84c0-e8fd207f8706/1785378712766-w1280.webp",
+  "avant": 137966,
+  "apres": 99512
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/unicef_stage_2026.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/unicef_stage_2026-w1280.webp",
+  "avant": 144190,
+  "apres": 60062
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/dexintec_chauffeur.png",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/dexintec_chauffeur-w1280.webp",
+  "avant": 256139,
+  "apres": 14132
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788019615342.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788019615342-w1280.webp",
+  "avant": 203695,
+  "apres": 82310
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788120499160.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788120499160-w1280.webp",
+  "avant": 212068,
+  "apres": 85458
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788260858434.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788260858434-w1280.webp",
+  "avant": 374202,
+  "apres": 135196
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788361689752-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788361689752-0-w1280.webp",
+  "avant": 190742,
+  "apres": 74338
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788565001737-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788565001737-0-w1280.webp",
+  "avant": 262484,
+  "apres": 116028
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788685350509-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788685350509-0-w1280.webp",
+  "avant": 189320,
+  "apres": 76140
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/terrou_bi_reservation.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/terrou_bi_reservation-w1280.webp",
+  "avant": 128628,
+  "apres": 60320
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/semi_sarl_chef_chantier.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/semi_sarl_chef_chantier-w1280.webp",
+  "avant": 296881,
+  "apres": 133812
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788019764741.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788019764741-w1280.webp",
+  "avant": 269355,
+  "apres": 111906
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788188560826.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788188560826-w1280.webp",
+  "avant": 190489,
+  "apres": 72098
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/chauffeur_ambassade_usa.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/chauffeur_ambassade_usa-w1280.webp",
+  "avant": 203569,
+  "apres": 91996
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787569726545.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787569726545-w1280.webp",
+  "avant": 172378,
+  "apres": 106666
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788019975789.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788019975789-w1280.webp",
+  "avant": 212068,
+  "apres": 85458
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790505081813-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790505081813-0-w1280.webp",
+  "avant": 187718,
+  "apres": 80052
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787085268438.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787085268438-w1280.webp",
+  "avant": 1129772,
+  "apres": 88670
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020035484.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020035484-w1280.webp",
+  "avant": 212068,
+  "apres": 85458
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/ucad_ebad_recrutement.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/ucad_ebad_recrutement-w1280.webp",
+  "avant": 180583,
+  "apres": 75598
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/recrutement_massif_btp_30_profils.png",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/recrutement_massif_btp_30_profils-w1280.webp",
+  "avant": 748409,
+  "apres": 44468
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/ziac_stagiaire_informaticien.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/ziac_stagiaire_informaticien-w1280.webp",
+  "avant": 209178,
+  "apres": 85274
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020490431.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020490431-w1280.webp",
+  "avant": 151934,
+  "apres": 77010
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788192403965.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788192403965-w1280.webp",
+  "avant": 210635,
+  "apres": 90452
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787534373880.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787534373880-w1280.webp",
+  "avant": 2160149,
+  "apres": 137684
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788609977452-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788609977452-0-w1280.webp",
+  "avant": 287171,
+  "apres": 135428
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/recrutement_urgent_electrotechnicien_automatisme.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/recrutement_urgent_electrotechnicien_automatisme-w1280.webp",
+  "avant": 282025,
+  "apres": 111524
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787537240256.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1787537240256-w1280.webp",
+  "avant": 2840770,
+  "apres": 113308
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/mobilite_senegal_livreur_coursier.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/mobilite_senegal_livreur_coursier-w1280.webp",
+  "avant": 243207,
+  "apres": 116848
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/wave_pub.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/wave_pub-w1280.webp",
+  "avant": 130847,
+  "apres": 85668
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/cadre_infirmier_infections.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/cadre_infirmier_infections-w1280.webp",
+  "avant": 304524,
+  "apres": 138538
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/secam_chantier_kedougou.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/secam_chantier_kedougou-w1280.webp",
+  "avant": 157100,
+  "apres": 77630
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020647617.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/admin-posters/poster-1788020647617-w1280.webp",
+  "avant": 165402,
+  "apres": 90502
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788425880193-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788425880193-0-w1280.webp",
+  "avant": 213416,
+  "apres": 84394
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788609723873-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788609723873-0-w1280.webp",
+  "avant": 204654,
+  "apres": 88252
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788686716545-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1788686716545-0-w1280.webp",
+  "avant": 186103,
+  "apres": 74042
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789397066960-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789397066960-0-w1280.webp",
+  "avant": 275370,
+  "apres": 121090
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789432956623-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789432956623-0-w1280.webp",
+  "avant": 230547,
+  "apres": 103090
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789433308950-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789433308950-0-w1280.webp",
+  "avant": 211602,
+  "apres": 87932
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789433349874-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789433349874-0-w1280.webp",
+  "avant": 216309,
+  "apres": 87282
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789433813088-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789433813088-0-w1280.webp",
+  "avant": 230060,
+  "apres": 94100
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789479947358-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789479947358-0-w1280.webp",
+  "avant": 178211,
+  "apres": 104388
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789482719664-0.png",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789482719664-0-w1280.webp",
+  "avant": 955921,
+  "apres": 87630
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789504880223-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789504880223-0-w1280.webp",
+  "avant": 206063,
+  "apres": 128166
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790294385239-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790294385239-0-w1280.webp",
+  "avant": 219055,
+  "apres": 97220
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789505018189-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789505018189-0-w1280.webp",
+  "avant": 161874,
+  "apres": 93410
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789551375966-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789551375966-0-w1280.webp",
+  "avant": 234586,
+  "apres": 98574
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789551851188-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789551851188-0-w1280.webp",
+  "avant": 179173,
+  "apres": 105936
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789554065186-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789554065186-0-w1280.webp",
+  "avant": 197288,
+  "apres": 116620
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790368819953-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790368819953-0-w1280.webp",
+  "avant": 248536,
+  "apres": 116576
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789505056421-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789505056421-0-w1280.webp",
+  "avant": 161874,
+  "apres": 93410
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789561796109-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1789561796109-0-w1280.webp",
+  "avant": 161874,
+  "apres": 93410
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790257019111-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790257019111-0-w1280.webp",
+  "avant": 204719,
+  "apres": 85250
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369513384-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369513384-0-w1280.webp",
+  "avant": 191529,
+  "apres": 138916
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790508001055-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790508001055-0-w1280.webp",
+  "avant": 191985,
+  "apres": 83968
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790257391726-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790257391726-0-w1280.webp",
+  "avant": 270748,
+  "apres": 116548
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790273163910-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790273163910-0-w1280.webp",
+  "avant": 165796,
+  "apres": 65142
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790273194283-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790273194283-0-w1280.webp",
+  "avant": 222691,
+  "apres": 99948
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790293631888-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790293631888-0-w1280.webp",
+  "avant": 210318,
+  "apres": 93978
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790296652325-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790296652325-0-w1280.webp",
+  "avant": 232914,
+  "apres": 106720
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790296824450-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790296824450-0-w1280.webp",
+  "avant": 184698,
+  "apres": 133454
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790296881250-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790296881250-0-w1280.webp",
+  "avant": 114529,
+  "apres": 77550
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790349351790-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790349351790-0-w1280.webp",
+  "avant": 227526,
+  "apres": 104474
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790350725917-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790350725917-0-w1280.webp",
+  "avant": 324995,
+  "apres": 154678
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369436884-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369436884-0-w1280.webp",
+  "avant": 138382,
+  "apres": 82756
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369472697-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369472697-0-w1280.webp",
+  "avant": 134846,
+  "apres": 74182
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369492957-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790369492957-0-w1280.webp",
+  "avant": 155666,
+  "apres": 111850
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790383791184-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790383791184-0-w1280.webp",
+  "avant": 130509,
+  "apres": 79848
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790383857477-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790383857477-0-w1280.webp",
+  "avant": 256541,
+  "apres": 124528
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790505840842-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790505840842-0-w1280.webp",
+  "avant": 207676,
+  "apres": 91762
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790506254155-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790506254155-0-w1280.webp",
+  "avant": 198122,
+  "apres": 88448
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790508449767-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790508449767-0-w1280.webp",
+  "avant": 237651,
+  "apres": 111100
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790509327626-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790509327626-0-w1280.webp",
+  "avant": 198760,
+  "apres": 89826
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790509780990-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790509780990-0-w1280.webp",
+  "avant": 144807,
+  "apres": 79522
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790512718855-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790512718855-0-w1280.webp",
+  "avant": 205312,
+  "apres": 136108
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790512760049-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790512760049-0-w1280.webp",
+  "avant": 181605,
+  "apres": 107316
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790517906938-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790517906938-0-w1280.webp",
+  "avant": 130606,
+  "apres": 91530
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790523707945-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790523707945-0-w1280.webp",
+  "avant": 228143,
+  "apres": 160782
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790584267165-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790584267165-0-w1280.webp",
+  "avant": 193885,
+  "apres": 85044
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790597347912-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790597347912-0-w1280.webp",
+  "avant": 228978,
+  "apres": 161730
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790603476181-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790603476181-0-w1280.webp",
+  "avant": 208909,
+  "apres": 149908
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790609922462-0.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790609922462-0-w1280.webp",
+  "avant": 254219,
+  "apres": 119634
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790892292709-0.jpeg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1790892292709-0-w1280.webp",
+  "avant": 884060,
+  "apres": 182570
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1791126174956-aide-domicile.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1791126174956-aide-domicile-w1280.webp",
+  "avant": 107181,
+  "apres": 52178
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1791126174956-nounou.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/eda26422-98b2-436f-b3b6-8beaaebf1188/admin-offers-1791126174956-nounou-w1280.webp",
+  "avant": 111404,
+  "apres": 55806
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/tectra_senegal_peintre_dakar.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/tectra_senegal_peintre_dakar-w1280.webp",
+  "avant": 206034,
+  "apres": 94046
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/top_work_hydrocarbures_fatick.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/top_work_hydrocarbures_fatick-w1280.webp",
+  "avant": 229973,
+  "apres": 105040
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/auchan_renforts_ramadan_2027.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/auchan_renforts_ramadan_2027-w1280.webp",
+  "avant": 186450,
+  "apres": 82474
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/adepme_assistant_comptable_cdd.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/adepme_assistant_comptable_cdd-w1280.webp",
+  "avant": 103739,
+  "apres": 59238
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/sen_interim_appel_candidature.jpg",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/job-offers/sen_interim_appel_candidature-w1280.webp",
+  "avant": 194122,
+  "apres": 113634
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/stories-media/story-modele-cv-moderne.png",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/stories-media/story-modele-cv-moderne-w1280.webp",
+  "avant": 510663,
+  "apres": 30990
+ },
+ {
+  "ancienne": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/stories-media/story-modele-cv-etudiant.png",
+  "nouvelle": "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object/public/stories-media/story-modele-cv-etudiant-w1280.webp",
+  "avant": 536056,
+  "apres": 30710
+ }
+]

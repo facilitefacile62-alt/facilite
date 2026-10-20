@@ -172,10 +172,10 @@ function RegisterForm() {
           {/* Titre & Sous-titre */}
           <div className="text-center mb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-1">
-              Sign Up
+              Inscription
             </h1>
             <p className="text-xs sm:text-sm font-medium text-gray-500">
-              Create your account to get started.
+              Créez votre compte pour commencer.
             </p>
           </div>
 
@@ -245,6 +245,8 @@ function RegisterForm() {
               <input
                 type="text"
                 name="website"
+                aria-hidden="true"
+                aria-label="Laisser ce champ vide"
                 value={honeypot}
                 onChange={(e) => setHoneypot(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
@@ -255,10 +257,12 @@ function RegisterForm() {
               {/* Champs Nom / Prénom, côte à côte */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  <label htmlFor="reg-nom" className="block text-xs font-bold text-gray-700 mb-1.5">
                     Nom
                   </label>
                   <input
+                  id="reg-nom"
+                  autoComplete="family-name"
                     type="text"
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
@@ -268,10 +272,12 @@ function RegisterForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  <label htmlFor="reg-prenom" className="block text-xs font-bold text-gray-700 mb-1.5">
                     Prénom
                   </label>
                   <input
+                  id="reg-prenom"
+                  autoComplete="given-name"
                     type="text"
                     value={prenom}
                     onChange={(e) => setPrenom(e.target.value)}
@@ -284,54 +290,61 @@ function RegisterForm() {
 
               {/* Champ Email */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Email
+                <label htmlFor="reg-email" className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Adresse e-mail
                 </label>
                 <input
+                  id="reg-email"
+                  autoComplete="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="Enter your Email"
+                  placeholder="nom@exemple.com"
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                 />
               </div>
 
               {/* Champ Mot de Passe */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Password
+                <label htmlFor="reg-password" className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Mot de passe
                 </label>
                 <div className="relative">
                   <input
+                  id="reg-password"
+                  autoComplete="new-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Create a password"
+                    placeholder="Créez un mot de passe"
                     className="w-full pl-4 pr-10 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-gray-600 hover:text-gray-900 cursor-pointer"
                   >
-                    <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-chevron-down"} text-xs`}></i>
+                    <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"} text-xs`}></i>
                   </button>
                 </div>
               </div>
 
               {/* Champ Confirmation Mot de Passe */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Confirm Password
+                <label htmlFor="reg-confirm-password" className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Confirmer le mot de passe
                 </label>
                 <input
+                  id="reg-confirm-password"
+                  autoComplete="new-password"
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  placeholder="Confirm your password"
+                  placeholder="Confirmez votre mot de passe"
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition"
                 />
               </div>
@@ -351,15 +364,15 @@ function RegisterForm() {
                 {isLoading ? (
                   <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
                 ) : (
-                  <span>Create Account</span>
+                  <span>Créer mon compte</span>
                 )}
               </button>
 
               {/* Séparateur OR */}
               <div className="relative flex items-center justify-center my-6">
                 <div className="border-t border-gray-200 w-full"></div>
-                <span className="bg-white px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider relative z-10">
-                  OR
+                <span className="bg-white px-3 text-[11px] font-bold text-gray-600 uppercase tracking-wider relative z-10">
+                  OU
                 </span>
               </div>
 
@@ -388,18 +401,18 @@ function RegisterForm() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.37 0 3.26 2.61 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>{oauthLoading ? "Redirection..." : "Continue with Google"}</span>
+                <span>{oauthLoading ? "Redirection..." : "Continuer avec Google"}</span>
               </button>
 
               {/* Redirection Log in */}
               <div className="text-center pt-2">
                 <p className="text-xs text-gray-500 font-medium">
-                  Already have an account?{" "}
+                  Vous avez déjà un compte ?{" "}
                   <Link
                     href={`/login${redirectUrl && redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`}
                     className="font-extrabold text-gray-900 hover:underline cursor-pointer"
                   >
-                    Log In
+                    Se connecter
                   </Link>
                 </p>
               </div>
@@ -409,8 +422,8 @@ function RegisterForm() {
       </main>
 
       {/* Footer minimaliste */}
-      <footer className="w-full text-center py-4 text-xs font-semibold text-gray-400 z-10">
-        © 2026 Facilité. All rights reserved.
+      <footer className="w-full text-center py-4 text-xs font-semibold text-gray-600 z-10">
+        © 2026 Facilité. Tous droits réservés.
       </footer>
     </div>
   );

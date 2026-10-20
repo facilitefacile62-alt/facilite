@@ -507,7 +507,7 @@ export default function LoginPage() {
 
             {/* 2. SÉPARATEUR OU AU CENTRE */}
             <div className="flex items-center justify-center my-2">
-              <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">
+              <span className="text-[11px] text-gray-600 font-medium uppercase tracking-wider">
                 OU
               </span>
             </div>
@@ -563,6 +563,8 @@ export default function LoginPage() {
                 <input
                   type="text"
                   name="website"
+                  aria-hidden="true"
+                  aria-label="Laisser ce champ vide"
                   value={honeypot}
                   onChange={(e) => setHoneypot(e.target.value)}
                   style={{ position: "absolute", opacity: 0, height: 0, width: 0, zIndex: -1 }}
@@ -579,6 +581,7 @@ export default function LoginPage() {
                       setEmail(e.target.value);
                       if (errorMessage) setErrorMessage("");
                     }}
+                    aria-label="Adresse e-mail"
                     placeholder="nom@exemple.com"
                     className="w-full px-3.5 py-2.5 bg-white border-2 border-[#085041] hover:border-[#064034] rounded-xl text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#064034] focus:ring-4 focus:ring-[#085041]/20 shadow-[0_0_12px_rgba(8,80,65,0.18)] transition-all duration-300"
                   />
@@ -652,7 +655,8 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-black cursor-pointer"
+                        aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                        className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-gray-600 hover:text-black cursor-pointer"
                       >
                         <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"} text-xs`}></i>
                       </button>
@@ -734,7 +738,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer Minimaliste */}
-      <footer className="text-center py-2 text-[11px] text-gray-400">
+      <footer className="text-center py-2 text-[11px] text-gray-600">
         © 2026 Facilité · Tous droits réservés.
       </footer>
     </div>
