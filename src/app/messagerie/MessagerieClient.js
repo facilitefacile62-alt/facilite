@@ -357,6 +357,11 @@ export default function MessagerieClient() {
   // Messaging States
   const [conversations, setConversations] = useState(initialConversations);
   const [activeConvId, setActiveConvId] = useState(null);
+  // Copie lisible depuis la souscription Realtime (créée une seule fois au montage, donc avec une closure périmée).
+  const activeConvIdRef = useRef(null);
+  useEffect(() => {
+    activeConvIdRef.current = activeConvId;
+  }, [activeConvId]);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageText, setMessageText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -946,6 +951,14 @@ export default function MessagerieClient() {
               .maybeSingle();
             displayName = boutique?.nom || "Boutique";
             title = "Vendeur Locaux";
+            if (!boutique) {
+              // Le destinataire n'a pas de boutique : c'est un client. Son nom vient de la fonction réservée aux
+              // participants de la discussion (profiles est privée).
+              const { data: nomsClient } = await supabase.rpc("noms_interlocuteurs_marketplace", { p_conversation_ids: [result.conversationId] });
+              const nomClient = (nomsClient || [])[0]?.nom;
+              if (nomClient) displayName = nomClient;
+              title = "Client Locaux";
+            }
             if (boutique?.avatar_config) {
               try {
                 const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique");
@@ -1017,6 +1030,10 @@ export default function MessagerieClient() {
               favorite: false,
               typeDiscussion: estContexteMarketplace ? "MARKETPLACE" : "ECHANGE",
               messages: formattedMsgs,
+              // Discussion directe avec UNE personne précise (id de la carte = son user_id) : les réponses lui sont
+              // toujours adressées, jamais au support (voir resolveReplyTarget).
+              direct: true,
+              autrePartieId: recipientParam,
             };
             return [...prev, directConv];
           });
@@ -1224,6 +1241,12 @@ export default function MessagerieClient() {
           const recruteurParId = new Map((recruteurs || []).map((r) => [r.user_id, r]));
           const profilParId = new Map((profilsGeneraux || []).map((p) => [p.id, p]));
           const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique").catch(() => ({ dataUriAvatarBoutique: null }));
+          // profiles est privée : le nom d'un acheteur n'y est pas lisible par le vendeur (il voyait « Utilisateur »).
+          // noms_interlocuteurs_marketplace ne renvoie que son prénom + initiale, et seulement pour les participants.
+          const { data: nomsInterlocuteurs } = await supabase.rpc("noms_interlocuteurs_marketplace", {
+            p_conversation_ids: conversationsDirectes.map((c) => c.id),
+          });
+          const nomInterlocuteurParConv = new Map((nomsInterlocuteurs || []).map((n) => [n.conversation_id, n.nom]));
 
           directCards = conversationsDirectes.map((conv) => {
             const autrePartieId = conv.user_1_id === session.user.id ? conv.user_2_id : conv.user_1_id;
@@ -1268,9 +1291,12 @@ export default function MessagerieClient() {
               name = recruteur.company_name || "Recruteur";
               title = recruteur.sector || "Recruteur";
               logo = recruteur.logo_url || null;
-            } else if (profilGeneral) {
-              name = profilGeneral.full_name || "Utilisateur";
+            } else if (profilGeneral?.full_name) {
+              name = profilGeneral.full_name;
               logo = profilGeneral.avatar_url || null;
+            } else if (nomInterlocuteurParConv.get(conv.id)) {
+              name = nomInterlocuteurParConv.get(conv.id);
+              if (estMarketplace) title = "Client Locaux";
             }
 
             const dernierMsg = classement.messages[classement.messages.length - 1];
@@ -1289,6 +1315,8 @@ export default function MessagerieClient() {
               favorite: false,
               typeDiscussion: classement.typeDiscussion,
               messages: classement.messages,
+              direct: true,
+              autrePartieId,
             };
           });
         }
@@ -1408,6 +1436,9 @@ export default function MessagerieClient() {
               // closure, capturé une seule fois au montage et potentiellement
               // périmé) pour rester correct même après résolution tardive.
               const otherPartyId = newRow.sender_id === session.user.id ? newRow.receiver_id : newRow.sender_id;
+              if (newRow.receiver_id === session.user.id && activeConvIdRef.current === otherPartyId) {
+                supabase.from("messages").update({ is_read: true }).eq("id", newRow.id).then(() => {});
+              }
               setConversations(prev => {
                 const hasDirectConv = prev.some((c) => c.id === otherPartyId);
                 return prev.map(c => {
@@ -1458,6 +1489,10 @@ export default function MessagerieClient() {
   }, [activeConvId, conversations, isTyping]);
 
   // Handle active message read status
+  // Valeurs primitives dérivées : l'effet ci-dessous ne se relance que lorsque la discussion active change.
+  const conversationActiveCourante = conversations.find((c) => c.id === activeConvId);
+  const conversationDirecteActive = Boolean(conversationActiveCourante?.direct);
+  const autrePartieActiveId = conversationActiveCourante?.autrePartieId || null;
   useEffect(() => {
     if (!activeConvId) return;
 
@@ -1476,6 +1511,19 @@ export default function MessagerieClient() {
     // (id 1) correspond à des lignes persistées dans `messages` — le fil IA
     // n'est jamais stocké. Sans ce UPDATE, le badge global de la navbar ne
     // redescendait jamais après lecture, seul l'état local était réinitialisé.
+    // Discussion directe ouverte : ses messages reçus passent « lus » en base (ils restaient « non lus » indéfiniment :
+    // seule la conversation fusionnée historique, id 1, était marquée).
+    if (conversationDirecteActive && autrePartieActiveId && userSession?.user?.id) {
+      supabase
+        .from("messages")
+        .update({ is_read: true })
+        .eq("receiver_id", userSession.user.id)
+        .eq("sender_id", autrePartieActiveId)
+        .eq("is_read", false)
+        .then(({ error }) => {
+          if (error) console.error("Erreur marquage des messages comme lus:", error.message);
+        });
+    }
     if (activeConvId === 1 && userSession?.user?.id) {
       supabase
         .from("messages")
@@ -1486,7 +1534,7 @@ export default function MessagerieClient() {
           if (error) console.error("Erreur marquage des messages comme lus:", error.message);
         });
     }
-  }, [activeConvId, userSession]);
+  }, [activeConvId, userSession, conversationDirecteActive, autrePartieActiveId]);
 
   // Modals management
   const handleOpenContactModal = (e) => {
@@ -1663,6 +1711,19 @@ export default function MessagerieClient() {
     // destinataire fixe, indépendant du rôle et du fil Support.
     if (activeConvId === directRecipientId && directConversationId) {
       return { receiverId: directRecipientId, conversationId: directConversationId, error: null };
+    }
+
+    // Réponse dans une discussion DIRECTE existante (Locaux, vitrine recruteur…), ouverte depuis la liste ou avec
+    // ?recipient= : elle part TOUJOURS vers l'autre participant de CETTE conversation. Sans cela, hors ?recipient=,
+    // la réponse était envoyée au compte support : le vendeur voyait son message s'afficher, l'acheteur ne le
+    // recevait jamais (constaté le 19/10/2026).
+    const conversationActive = conversations.find((c) => c.id === activeConvId);
+    if (conversationActive?.direct && conversationActive.autrePartieId) {
+      const resultat = await resolveConversationWith(userSession?.user?.id, conversationActive.autrePartieId);
+      if (!resultat) {
+        return { receiverId: null, conversationId: null, error: "Impossible d'ouvrir la conversation avec cette personne." };
+      }
+      return { receiverId: conversationActive.autrePartieId, conversationId: resultat.conversationId, error: null };
     }
 
     if (currentUserRole !== "admin") {
