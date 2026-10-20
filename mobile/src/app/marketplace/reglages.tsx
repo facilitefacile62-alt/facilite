@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
+import { CarteMenu, FOND_CARTES, GroupeCartes } from '@/components/CarteMenu';
 import { LigneBascule, LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
 import { libelleLangue, lireLangue, type CodeLangue } from '@/lib/preferencesConnexion';
 import { chargerMesBoutiques, definirVisibiliteBoutique, type MaBoutique } from '@/lib/vendeur';
-import { useT } from '@/lib/i18n';
 
 // Réglages Marketplace — maquettes 69 (visiteur) et 79 (vendeur). Liste
 // volontairement différente de celle de Facilité (mon-profil/parametres.tsx,
@@ -37,30 +37,6 @@ function Groupe({ titre, enfants }: { titre?: string; enfants: React.ReactNode }
   );
 }
 
-
-// Réglages vendeur (maquette 31) : lignes à plat sur fond blanc, groupes
-// séparés par une bande grise, pastilles « Actif » pour les réglages.
-function LigneReglage({ titre, onPress, chevron = true, pastille, rouge, icone }: { titre: string; onPress: () => void; chevron?: boolean; pastille?: { texte: string; actif: boolean }; rouge?: boolean; icone?: keyof typeof Ionicons.glyphMap }) {
-  const t = useT();
-  return (
-    <Pressable onPress={onPress} className="flex-row items-center justify-between px-5" style={{ height: 56, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
-      <Text className="text-[15.5px] font-black" style={{ color: rouge ? '#DC2626' : '#1A1A1A' }}>{t(titre)}</Text>
-      {pastille ? (
-        <View className="rounded-full px-3 py-1" style={{ backgroundColor: pastille.actif ? '#D1FAE5' : '#E5E7EB' }}>
-          <Text className="text-[12.5px] font-black" style={{ color: pastille.actif ? '#047857' : '#4B5563' }}>{t(pastille.texte)}</Text>
-        </View>
-      ) : icone ? (
-        <Ionicons name={icone} size={18} color="#2563EB" />
-      ) : chevron ? (
-        <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.35)" />
-      ) : null}
-    </Pressable>
-  );
-}
-
-function BandeGrise() {
-  return <View style={{ height: 14, backgroundColor: '#F0EEE8' }} />;
-}
 
 export default function ReglagesMarketplaceScreen() {
   const router = useRouter();
@@ -114,40 +90,48 @@ export default function ReglagesMarketplaceScreen() {
   const estVendeur = Boolean(boutique);
 
   if (userId && !chargement && estVendeur) {
+    const rubrique = (cle: string) => router.push(`/marketplace/rubrique/${cle}` as Href);
     return (
-      <View className="flex-1 bg-white">
+      <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
         <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
           <MarketplaceHeader />
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          <View className="flex-row items-center px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
+          <View className="flex-row items-center px-4 py-3">
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'))}
               accessibilityLabel="Retour"
               className="items-center justify-center"
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F0EEE8' }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF' }}>
               <Ionicons name="arrow-back" size={19} color="#2563EB" />
             </Pressable>
             <Text className="flex-1 text-center text-[15px] font-black tracking-widest" style={{ marginRight: 44 }} numberOfLines={1}>{(boutique?.nom ?? 'Réglages').toUpperCase()}</Text>
           </View>
 
-          <LigneReglage titre="🤑 Faire profit & Boost" onPress={() => BIENTOT('Faire profit & Boost')} />
-          <LigneReglage titre="Abonnés" onPress={() => BIENTOT('Abonnés')} />
-          <LigneReglage titre="Avis clients" onPress={() => BIENTOT('Avis clients')} />
-          <BandeGrise />
-          <LigneReglage titre="Coordonnées" onPress={() => router.push('/mon-profil/coordonnees')} />
-          <LigneReglage titre="Contact & Livraison" onPress={() => BIENTOT('Contact & Livraison')} />
-          <LigneReglage titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
-          <LigneReglage titre="Changer la langue" chevron={false} onPress={() => router.push('/mon-profil/langue' as Href)} />
-          <BandeGrise />
-          <LigneReglage titre="Confidentialité" onPress={() => router.push('/mon-profil/confidentialite')} />
-          <LigneReglage titre="Désactiver le chat" pastille={{ texte: 'Actif', actif: true }} onPress={() => BIENTOT('Désactiver le chat')} />
-          <LigneReglage titre="Désactiver les commentaires" pastille={{ texte: 'Actifs', actif: true }} onPress={() => BIENTOT('Désactiver les commentaires')} />
-          <LigneReglage titre="Gérer les notifications" onPress={() => BIENTOT('Gérer les notifications')} />
-          <BandeGrise />
-          <LigneReglage titre="Sécurité & Connexion" onPress={() => router.push('/mon-profil/securite')} />
-          <LigneReglage titre="Se déconnecter" icone="log-out-outline" onPress={deconnexion} />
-          <LigneReglage titre="↩ Retour au Marketplace" chevron={false} rouge onPress={() => router.replace('/marketplace' as Href)} />
+          <View className="px-4">
+            <GroupeCartes>
+              <CarteMenu icone="rocket-outline" titre="Faire profit & Boost" sous="Mettre vos articles en avant" onPress={() => rubrique('boost')} />
+              <CarteMenu icone="people-outline" titre="Abonnés" sous="Les personnes qui suivent votre boutique" onPress={() => rubrique('abonnes')} />
+              <CarteMenu icone="star-outline" titre="Avis clients" sous="Ce que disent vos clients" onPress={() => rubrique('avis')} />
+            </GroupeCartes>
+            <GroupeCartes>
+              <CarteMenu icone="id-card-outline" titre="Coordonnées" sous="Téléphone, e-mail et adresse" onPress={() => router.push('/mon-profil/coordonnees')} />
+              <CarteMenu icone="bicycle-outline" titre="Contact & Livraison" sous="Comment les clients vous joignent" onPress={() => rubrique('livraison')} />
+              <CarteMenu icone="help-circle-outline" titre="Foire aux questions" sous="Les réponses à vos questions" onPress={() => router.push('/web/faq')} />
+              <CarteMenu icone="language-outline" titre="Changer la langue" sous={libelleLangue(langue)} onPress={() => router.push('/mon-profil/langue' as Href)} />
+            </GroupeCartes>
+            <GroupeCartes>
+              <CarteMenu icone="shield-checkmark-outline" titre="Confidentialité" sous="Vos données et votre visibilité" onPress={() => router.push('/mon-profil/confidentialite')} />
+              <CarteMenu icone="chatbubble-outline" titre="Désactiver le chat" sous="Bientôt disponible" pastille={{ texte: 'Actif', actif: true }} onPress={() => rubrique('chat')} />
+              <CarteMenu icone="chatbubbles-outline" titre="Désactiver les commentaires" sous="Bientôt disponible" pastille={{ texte: 'Actifs', actif: true }} onPress={() => rubrique('commentaires')} />
+              <CarteMenu icone="notifications-outline" titre="Gérer les notifications" sous="Choisir ce que vous recevez" onPress={() => rubrique('notifications')} />
+            </GroupeCartes>
+            <GroupeCartes>
+              <CarteMenu icone="lock-closed-outline" titre="Sécurité & Connexion" sous="Mot de passe et appareils" onPress={() => router.push('/mon-profil/securite')} />
+              <CarteMenu icone="log-out-outline" titre="Se déconnecter" rouge onPress={deconnexion} />
+              <CarteMenu icone="arrow-undo-outline" titre="Retour au Marketplace" sous="Revenir à Locaux" sansFleche onPress={() => router.replace('/marketplace' as Href)} />
+            </GroupeCartes>
+          </View>
         </ScrollView>
       </View>
     );
