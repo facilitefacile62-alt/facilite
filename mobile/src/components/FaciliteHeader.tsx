@@ -46,10 +46,9 @@ export default function FaciliteHeader() {
           <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
         </Pressable>
 
-        {/* Bascule FIXE, centrée sur l'écran (même position sur Facilité et Locaux), puis cloche, loupe dans sa pastille grise et menu : même disposition que Locaux
+        {/* Bascule FIXE au milieu de l'en-tête, puis cloche, loupe dans sa pastille grise et menu : même disposition que Locaux
             (choix du 20/10/2026). */}
-        <View style={{ flex: 1 }} />
-        <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ flex: 1, alignItems: 'center' }}>
           <BasculePlateforme plateforme="facilite" />
         </View>
 
