@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
 import BasculePlateforme from '@/components/BasculePlateforme';
@@ -24,11 +23,7 @@ const FOND = '#e3dbcc';
 const VERT_FONCE = '#0B3D2A';
 const ICONE = '#1A1A1A';
 
-export type PetiteStory = { id: string; imageUrl: string; titre: string; index: number; vue?: boolean };
-
-// `petitesStories` : stories non vues, en petits cercles à côté du logo quand la rangée a disparu au défilement
-// (maquette 09) ; vide = rien à afficher (aucun doublon quand tout est vu, maquette 16).
-export default function FaciliteHeader({ petitesStories = [], onStory, accueil = false }: { petitesStories?: PetiteStory[]; onStory?: (index: number) => void; accueil?: boolean } = {}) {
+export default function FaciliteHeader() {
   const router = useRouter();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const compteurs = useCompteursNonLus();
@@ -41,7 +36,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           alignItems: 'center',
           paddingHorizontal: 18,
           paddingVertical: 13,
-          gap: 8,
+          gap: 12,
         }}>
         {/* Logo clé dans son disque menthe + « ffacilite » (nouvelles maquettes du 12/10/2026). */}
         <Pressable onPress={() => router.navigate('/')} accessibilityLabel="Accueil ffacilite" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -51,54 +46,32 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
         </Pressable>
 
-        {/* Bascule Facilité ⇄ Locaux : FIXE, au milieu de l'en-tête ; sur l'Accueil elle passe à droite, juste avant la loupe,
-            pour laisser la place aux petits ronds des stories à côté du logo. */}
-        {!accueil ? (
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <BasculePlateforme plateforme="facilite" />
-          </View>
-        ) : petitesStories.length === 0 ? (
-          <View style={{ flex: 1 }} />
-        ) : null}
-
-        {accueil && petitesStories.length > 0 ? (
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
-            {petitesStories.slice(0, 3).map((s, i) => (
-              <Pressable
-                key={s.id}
-                onPress={() => onStory?.(s.index)}
-                accessibilityLabel={`Story : ${s.titre}`}
-                hitSlop={4}
-                style={{ marginLeft: i === 0 ? 0 : -7, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: s.vue ? '#C4C4C4' : '#10E688', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
-                <Image source={{ uri: s.imageUrl }} alt="" style={{ width: '100%', height: '100%' }} contentFit="cover" />
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: accueil ? 14 : 18 }}>
-          {accueil ? <BasculePlateforme plateforme="facilite" /> : null}
-          <Pressable
-            onPress={() => router.push('/recherche')}
-            accessibilityLabel="Rechercher"
-            hitSlop={10}>
-            <Ionicons name="search" size={20} color={ICONE} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => setNotifsOuvertes(true)}
-            accessibilityLabel="Notifications"
-            hitSlop={10}>
-            <View>
-              <Ionicons name="notifications-outline" size={20} color={ICONE} />
-              <PastilleCompteur valeur={compteurs.notifications} />
-            </View>
-          </Pressable>
-
-          <Pressable onPress={() => router.push('/menu')} accessibilityLabel="Menu" hitSlop={10}>
-            <Ionicons name="menu" size={22} color={ICONE} />
-          </Pressable>
+        {/* Bascule FIXE au milieu de l'en-tête, puis cloche, loupe dans sa pastille grise et menu : même disposition que Locaux
+            (choix du 20/10/2026). */}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <BasculePlateforme plateforme="facilite" />
         </View>
+
+        <Pressable
+          onPress={() => setNotifsOuvertes(true)}
+          accessibilityLabel="Notifications"
+          hitSlop={8}>
+          <View>
+            <Ionicons name="notifications-outline" size={20} color={ICONE} />
+            <PastilleCompteur valeur={compteurs.notifications} />
+          </View>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/recherche')}
+          accessibilityLabel="Rechercher"
+          style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.08)' }}>
+          <Ionicons name="search" size={18} color={ICONE} />
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/menu')} accessibilityLabel="Menu" hitSlop={8}>
+          <Ionicons name="menu" size={22} color={ICONE} />
+        </Pressable>
       </View>
 
       <PanneauNotifications visible={notifsOuvertes} onFermer={() => setNotifsOuvertes(false)} />
