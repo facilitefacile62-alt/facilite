@@ -33,22 +33,21 @@ export default function MarketplaceHeader() {
           Locaux
         </Text>
       </Pressable>
-      {/* Bascule FIXE au milieu de l'en-tête. */}
-      <View className="flex-1 items-center">
-        <BasculePlateforme plateforme="locaux" />
-      </View>
-      <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
-        <View>
-          <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />
-          <PastilleCompteur valeur={compteurs.notifications} />
-        </View>
-      </Pressable>
+      {/* Même disposition que Facilité (choix du 20/10/2026) : bascule à droite, puis loupe, cloche et menu. */}
+      <View className="flex-1" />
+      <BasculePlateforme plateforme="locaux" />
       <Pressable
         onPress={() => router.push('/marketplace/recherche')}
         accessibilityLabel="Rechercher"
         className="w-9 h-9 rounded-full items-center justify-center"
         style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}>
         <Ionicons name="search" size={18} color="#1A1A1A" />
+      </Pressable>
+      <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
+        <View>
+          <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />
+          <PastilleCompteur valeur={compteurs.notifications} />
+        </View>
       </Pressable>
       <Pressable onPress={() => router.push('/marketplace/menu' as Href)} accessibilityLabel="Menu" hitSlop={8}>
         <Ionicons name="menu" size={22} color="#1A1A1A" />
