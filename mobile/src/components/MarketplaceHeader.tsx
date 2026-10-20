@@ -34,7 +34,8 @@ export default function MarketplaceHeader() {
         </Text>
       </Pressable>
       {/* Bascule FIXE au milieu de l'en-tête. */}
-      <View className="flex-1 items-center">
+      <View className="flex-1" />
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
         <BasculePlateforme plateforme="locaux" />
       </View>
       <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
