@@ -292,7 +292,11 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
   const [keyword, setKeyword] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [contractFilter, setContractFilter] = useState("");
-  const [displayLimit, setDisplayLimit] = useState(30);
+  // Nombre de cartes affichées : 8 au premier rendu (+8 à chaque palier de défilement). Il était de 30 : 30 affiches,
+  // leurs boutons de partage et ~1 800 éléments à construire et à hydrater avant que la page ne réagisse (7,5 s de travail
+  // du processeur mesurés sur un mobile milieu de gamme, Lighthouse 35). Le fil s'allonge de lui-même en défilant.
+  const PAS_AFFICHAGE = 8;
+  const [displayLimit, setDisplayLimit] = useState(PAS_AFFICHAGE);
   // Fenêtre de chargement du fil (2026-08-24). L'accueil chargeait les 56
   // offres actives complètes à chaque visite — 529,3 Ko de JSON mesurés,
   // pour un travail base de données de 124 ms / 1,6 Ko une fois paginé.
@@ -308,8 +312,8 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
   // recherche porte sur allJobs, elle ne filtrerait sinon que la fenêtre.
   const limiteChargement = useMemo(() => {
     if (keyword.trim() || locationFilter.trim() || contractFilter.trim()) return 500;
-    const paliers = Math.floor(Math.max(0, displayLimit - 30) / 15);
-    return Math.min(96, 12 + paliers * 12);
+    const paliers = Math.floor(Math.max(0, displayLimit - PAS_AFFICHAGE) / PAS_AFFICHAGE);
+    return Math.min(96, 12 + paliers * 8);
   }, [keyword, locationFilter, contractFilter, displayLimit]);
   // Pagination du fil (2026-08-24) : l'accueil chargeait les 56 offres
   // ACTIVES complètes à chaque visite — 529,3 Ko de JSON mesurés, alors que
@@ -557,7 +561,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 1000) {
-        setDisplayLimit((prev) => prev + 15);
+        setDisplayLimit((prev) => prev + 8);
       }
     };
     window.addEventListener("scroll", handleScroll);

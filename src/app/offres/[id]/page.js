@@ -31,7 +31,7 @@ Envoyez votre CV et vos références à :
 📌 Objet du mail obligatoire : Candidature - Chauffeur
 
 🤝 Pyxis Logistics - Votre partenaire logistique de confiance.`,
-    image_url: "/pyxis_logistics_chauffeur.jpg",
+    image_url: "/pyxis_logistics_chauffeur.webp",
     min_education_level: "Permis B obligatoire (3 ans d'expérience min)",
     deadline: "2026-11-30",
     contact_email: "administratif@logistics-pyxis.com",
