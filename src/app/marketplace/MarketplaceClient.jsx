@@ -11446,6 +11446,11 @@ function FormulaireArticle({
             <i className={`fa-solid ${optimisationIA ? "fa-spinner fa-spin" : "fa-wand-magic-sparkles"} text-violet-600 dark:text-violet-400`}></i>
             {optimisationIA ? "Optimisation..." : "Optimiser texte SEO"}
           </button>
+          {!iaAutorisee && (
+            <p className="basis-full text-xs font-semibold text-gray-600 dark:text-gray-400" role="status">
+              {MESSAGE_IA_EN_PAUSE} : en attendant, remplissez la fiche vous-même — c&apos;est rapide.
+            </p>
+          )}
         </div>
       </div>
 

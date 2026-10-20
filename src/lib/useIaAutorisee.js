@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { DEFAULT_FEATURE_TREE, isFeatureAllowed, subscribeFeatureFlagsTree } from "@/lib/featureFlags";
+import { isFeatureAllowed, subscribeFeatureFlagsTree } from "@/lib/featureFlags";
 
 /**
  * Vrai si les fonctions IA de la Marketplace (recherche par photo, scan et optimisation à la
@@ -11,10 +11,12 @@ import { DEFAULT_FEATURE_TREE, isFeatureAllowed, subscribeFeatureFlagsTree } fro
  */
 export function useIaAutorisee() {
   const { session, isAdmin, isRecruiter } = useAuth();
-  const [arbre, setArbre] = useState(DEFAULT_FEATURE_TREE);
+  // null tant que l'interrupteur n'a pas été lu côté serveur : l'arbre par défaut autorise l'IA, ce qui laissait une
+  // photo ajoutée trop tôt déclencher un scan aussitôt refusé (403). Fermé d'abord, ouvert seulement si c'est confirmé.
+  const [arbre, setArbre] = useState(null);
   useEffect(() => subscribeFeatureFlagsTree(setArbre), []);
   const role = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
-  return isFeatureAllowed(arbre, "feat_marketplace_ia", role);
+  return arbre !== null && isFeatureAllowed(arbre, "feat_marketplace_ia", role);
 }
 
 export const MESSAGE_IA_EN_PAUSE = "Fonction IA bientôt disponible";
