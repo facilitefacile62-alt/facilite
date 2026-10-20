@@ -23,7 +23,7 @@ export const viewport = {
   themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // Pas de maximumScale ni de user-scalable=no : le zoom doit rester possible (accessibilité).
 };
 
 export const metadata = {

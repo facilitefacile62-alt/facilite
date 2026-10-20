@@ -1342,6 +1342,7 @@ export default function Header() {
                     if (debouncedQuery.length >= 1 || results.length > 0) setIsOpen(true);
                   }}
                   onKeyDown={handleKeyDown}
+                  aria-label="Rechercher une offre, une entreprise"
                   placeholder="Rechercher une offre, une entreprise..."
                   className={`w-full pl-10 pr-10 py-2 bg-white/80 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-full text-xs sm:text-sm font-medium border transition-all shadow-xs ${
                     isOpen
@@ -2183,7 +2184,7 @@ export default function Header() {
           ) : (
             <Link
               href={pathname && pathname !== "/" && pathname !== "/login" ? `/login?redirect=${encodeURIComponent(pathname)}` : "/login"}
-              className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
+              className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
             >
               <i className="fa-solid fa-right-to-bracket text-xs"></i>
               <span>Connexion</span>
@@ -2210,7 +2211,7 @@ export default function Header() {
               handleLogoOrHomeClick(e);
             }}
             className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-              pathname === "/" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              pathname === "/" ? "text-emerald-700 font-extrabold" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             }`}
           >
             <i className="fa-solid fa-house text-sm sm:text-base"></i>
@@ -2224,7 +2225,7 @@ export default function Header() {
                 onChoisir={choisirAutourOffres}
                 title="Où recrutent les entreprises"
                 className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                  pathname?.startsWith("/autour") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                  pathname?.startsWith("/autour") ? "text-emerald-700 font-extrabold" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                 }`}
               >
                 <i className="fa-solid fa-location-dot text-sm sm:text-base text-emerald-500"></i>
@@ -2234,7 +2235,7 @@ export default function Header() {
                 href="/offres"
                 onClick={(e) => handleNavClick(e, "/offres", "nav_offres", "Offres d'emploi")}
                 className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                  pathname.startsWith("/offres") ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                  pathname.startsWith("/offres") ? "text-emerald-700 font-extrabold" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                 }`}
               >
                 <i className="fa-solid fa-list-check text-sm sm:text-base"></i>
@@ -2253,7 +2254,7 @@ export default function Header() {
               href={isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie"}
               onClick={(e) => handleNavClick(e, isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie", "nav_messagerie", "Messagerie")}
               className={`flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition ${
-                pathname === "/messagerie" ? "text-emerald-600 font-extrabold" : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+                pathname === "/messagerie" ? "text-emerald-700 font-extrabold" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
               }`}
             >
               <i className="fa-regular fa-comments text-sm sm:text-base"></i>
@@ -2265,7 +2266,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setNotificationsModalOpen(true)}
-              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition relative text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white"
+              className="flex flex-col items-center justify-center text-center space-y-0.5 cursor-pointer flex-1 py-0.5 max-w-[64px] transition relative text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
               aria-label="Notifications"
             >
               <div className="relative">

@@ -1648,7 +1648,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   >
                     <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
                       <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
-                        <img src={st.image_url} alt={st.titre} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        <img src={st.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{st.titre}</span>

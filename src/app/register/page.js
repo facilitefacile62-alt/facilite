@@ -245,6 +245,8 @@ function RegisterForm() {
               <input
                 type="text"
                 name="website"
+                aria-hidden="true"
+                aria-label="Laisser ce champ vide"
                 value={honeypot}
                 onChange={(e) => setHoneypot(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1 }}
@@ -255,10 +257,12 @@ function RegisterForm() {
               {/* Champs Nom / Prénom, côte à côte */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  <label htmlFor="reg-nom" className="block text-xs font-bold text-gray-700 mb-1.5">
                     Nom
                   </label>
                   <input
+                  id="reg-nom"
+                  autoComplete="family-name"
                     type="text"
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
@@ -268,10 +272,12 @@ function RegisterForm() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  <label htmlFor="reg-prenom" className="block text-xs font-bold text-gray-700 mb-1.5">
                     Prénom
                   </label>
                   <input
+                  id="reg-prenom"
+                  autoComplete="given-name"
                     type="text"
                     value={prenom}
                     onChange={(e) => setPrenom(e.target.value)}
@@ -284,10 +290,12 @@ function RegisterForm() {
 
               {/* Champ Email */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label htmlFor="reg-email" className="block text-xs font-bold text-gray-700 mb-1.5">
                   Adresse e-mail
                 </label>
                 <input
+                  id="reg-email"
+                  autoComplete="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -299,11 +307,13 @@ function RegisterForm() {
 
               {/* Champ Mot de Passe */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label htmlFor="reg-password" className="block text-xs font-bold text-gray-700 mb-1.5">
                   Mot de passe
                 </label>
                 <div className="relative">
                   <input
+                  id="reg-password"
+                  autoComplete="new-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -314,19 +324,22 @@ function RegisterForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-gray-600 hover:text-gray-900 cursor-pointer"
                   >
-                    <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-chevron-down"} text-xs`}></i>
+                    <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"} text-xs`}></i>
                   </button>
                 </div>
               </div>
 
               {/* Champ Confirmation Mot de Passe */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label htmlFor="reg-confirm-password" className="block text-xs font-bold text-gray-700 mb-1.5">
                   Confirmer le mot de passe
                 </label>
                 <input
+                  id="reg-confirm-password"
+                  autoComplete="new-password"
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -358,7 +371,7 @@ function RegisterForm() {
               {/* Séparateur OR */}
               <div className="relative flex items-center justify-center my-6">
                 <div className="border-t border-gray-200 w-full"></div>
-                <span className="bg-white px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider relative z-10">
+                <span className="bg-white px-3 text-[11px] font-bold text-gray-600 uppercase tracking-wider relative z-10">
                   OU
                 </span>
               </div>
@@ -409,7 +422,7 @@ function RegisterForm() {
       </main>
 
       {/* Footer minimaliste */}
-      <footer className="w-full text-center py-4 text-xs font-semibold text-gray-400 z-10">
+      <footer className="w-full text-center py-4 text-xs font-semibold text-gray-600 z-10">
         © 2026 Facilité. Tous droits réservés.
       </footer>
     </div>
