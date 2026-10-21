@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CarteLeaflet, { type CommandesCarte, type MarqueurCarte, type PopupBoutique } from '@/components/CarteLeaflet';
 import { chargerOffresParVille, trouverVille, type GroupeVille, type ResultatAutour } from '@/lib/offresParVille';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import type { Position } from '@/lib/marketplace';
+import { sansAccent } from '@/lib/texte';
 import { useLocalisation } from '@/lib/useLocalisation';
 
 // « Autour de moi » de Facilité — pas celui de Locaux : ici la carte montre OÙ
@@ -18,7 +20,10 @@ import { useLocalisation } from '@/lib/useLocalisation';
 // (« Sénégal ») sont comptées à part.
 // Refonte du 18/10/2026 : même présentation que la carte Locaux (carte sombre plein écran, ronds à
 // pastille, carrousel de villes en bas), sans regroupement.
+// Mise à jour du 20/10/2026 : MÊME carte et même fonctionnement que Locaux — barre de recherche crème, filtres, boutons de
+// carte (recentrer, jour/nuit, zoom), bascule Entreprises / Offres et carrousel. Seules les informations changent.
 const BLEU = '#2563EB';
+const CREME_RECHERCHE = '#E8DFCF';
 const VERT = '#10B981';
 // Dépôts de candidature spontanée : une autre couleur que les offres, jamais mélangés avec elles.
 const VIOLET = '#8B5CF6';
@@ -66,6 +71,12 @@ export default function AutourFaciliteScreen() {
   const [selection, setSelection] = useState<string | null>(null);
   const [vue, setVue] = useState<Vue>('offres');
   const [carte, setCarte] = useState<CommandesCarte | null>(null);
+  const [saisie, setSaisie] = useState('');
+  const [recherche, setRecherche] = useState('');
+  // Carte sombre (défaut) ou claire : bouton lune des commandes de carte, comme dans Locaux.
+  const [sombre, setSombre] = useState(true);
+  // Carrousel du bas : entreprises (une pastille par entreprise) ou offres (une carte par offre).
+  const [onglet, setOnglet] = useState<'entreprises' | 'offres'>('entreprises');
 
   useEffect(() => {
     activer();
@@ -86,7 +97,18 @@ export default function AutourFaciliteScreen() {
     };
   }, []);
 
-  const groupes = useMemo(() => resultat?.groupes ?? [], [resultat]);
+  // Recherche (titre du poste, entreprise ou ville, sans accents) : ne garde que les offres qui correspondent.
+  const groupes = useMemo(() => {
+    const base = resultat?.groupes ?? [];
+    const terme = sansAccent(recherche.trim());
+    if (!terme) return base;
+    return base
+      .map((g) => {
+        const offres = g.offres.filter((o) => sansAccent(`${o.titre} ${o.entreprise} ${g.ville}`).includes(terme));
+        return { ...g, offres, entreprises: new Set(offres.map((o) => o.entreprise.toLowerCase())).size };
+      })
+      .filter((g) => g.offres.length > 0);
+  }, [resultat, recherche]);
   const courant: GroupeVille | null = groupes.find((g) => g.ville === selection) ?? null;
   const lieuSel = selection?.startsWith('lieu:') ? LIEUX.find((e) => `lieu:${e.slug}` === selection) ?? null : null;
   const courantSp: GroupeSpontane | null = selection?.startsWith('sp:') ? groupesSpontanes.find((g) => `sp:${g.ville}` === selection) ?? null : null;
@@ -180,6 +202,21 @@ export default function AutourFaciliteScreen() {
     if (!selection && cleListe !== cleAjustee) queueMicrotask(() => setCleAjustee(cleListe));
   }, [selection, cleListe, cleAjustee]);
 
+  // Carrousel « Entreprises » : une pastille par entreprise (initiales, nombre d'offres), la ville est celle de sa première offre.
+  const entreprisesListe = useMemo(() => {
+    const m = new Map<string, { cle: string; ville: string; n: number; couleur: string; texte: string; cleVille: string }>();
+    groupes.forEach((g, rang) =>
+      g.offres.forEach((o) => {
+        const cle = o.entreprise.toLowerCase();
+        const e = m.get(cle) ?? { cle: g.ville, ville: o.entreprise, n: 0, couleur: couleurVille(rang), texte: '', cleVille: g.ville };
+        e.n += 1;
+        e.texte = `${libelleOffres(e.n)} · ${e.cleVille}`;
+        m.set(cle, e);
+      })
+    );
+    return [...m.values()].sort((a, b) => b.n - a.n);
+  }, [groupes]);
+
   const origine = position ?? DAKAR;
   const totalOffres = groupes.reduce((n, g) => n + g.offres.length, 0);
   const totalEntreprises = new Set(groupes.flatMap((g) => g.offres.map((o) => o.entreprise.toLowerCase()))).size;
@@ -191,6 +228,11 @@ export default function AutourFaciliteScreen() {
     if (e.contactType === 'url' && e.externalLink) Linking.openURL(e.externalLink).catch(() => {});
     else if (e.email) Linking.openURL(`mailto:${e.email}?subject=${encodeURIComponent(`Candidature - ${e.company}`)}`).catch(() => {});
     else router.push(`/entreprise/${e.slug}` as Href);
+  };
+
+  const lancerRecherche = () => {
+    setRecherche(saisie);
+    setSelection(null);
   };
 
   const choisirVille = (cle: string) => {
@@ -211,7 +253,7 @@ export default function AutourFaciliteScreen() {
       <CarteLeaflet
         centre={{ lat: origine.latitude, lng: origine.longitude }}
         zoom={7}
-        sombre
+        sombre={sombre}
         regions
         marqueurs={marqueurs}
         ajuster={!selection && cleListe !== cleAjustee}
@@ -229,7 +271,7 @@ export default function AutourFaciliteScreen() {
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
 
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14 }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14, gap: 10 }}>
         <View className="flex-row items-center gap-3">
           <View className="items-center justify-center rounded-full" style={{ width: 44, height: 44, backgroundColor: VERT }}>
             <Ionicons name="person" size={20} color="#fff" />
@@ -243,7 +285,7 @@ export default function AutourFaciliteScreen() {
                   ? erreur
                     ? 'Impossible de charger les offres.'
                     : 'Chargement…'
-                  : `${totalEntreprises} entreprise${totalEntreprises > 1 ? 's' : ''} recrutent · ${libelleOffres(totalOffres)} · ${groupes.length} ville${groupes.length > 1 ? 's' : ''}`}
+                  : `${totalEntreprises} ${totalEntreprises > 1 ? 'offres & entreprises' : 'offre & entreprise'}`}
               </Text>
             </View>
           </View>
@@ -255,6 +297,78 @@ export default function AutourFaciliteScreen() {
             <Ionicons name="close" size={20} color="#fff" />
           </Pressable>
         </View>
+
+        <View className="flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 52, backgroundColor: CREME_RECHERCHE }}>
+          <TextInput
+            value={saisie}
+            onChangeText={setSaisie}
+            onSubmitEditing={lancerRecherche}
+            returnKeyType="search"
+            placeholder="Rechercher une offre, une entreprise..."
+            placeholderTextColor="rgba(0,0,0,0.45)"
+            className="flex-1 text-[13.5px] text-[#1A1A1A]"
+          />
+          <Pressable
+            onPress={lancerRecherche}
+            accessibilityRole="button"
+            className="flex-row items-center gap-1.5 rounded-[14px]"
+            style={{ height: 40, paddingHorizontal: 14, backgroundColor: VERT }}>
+            <Ionicons name="search" size={15} color="#fff" />
+            <Text className="text-white text-[13.5px] font-black">Rechercher</Text>
+          </Pressable>
+        </View>
+
+        {/* Filtres : Toutes les offres · Candidatures spontanées · Autour de moi */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 14 }}>
+          {([
+            { id: 'offres' as const, libelle: 'Toutes les offres', icone: 'briefcase' as const, couleur: BLEU },
+            { id: 'spontanees' as const, libelle: 'Candidatures spontanées', icone: 'mail' as const, couleur: VIOLET },
+          ]).map((f) => {
+            const actif = vue === f.id;
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => {
+                  setVue(f.id);
+                  setSelection(null);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: actif }}
+                className="flex-row items-center gap-1.5 rounded-full"
+                style={{ height: 38, paddingHorizontal: 14, backgroundColor: actif ? '#fff' : 'rgba(20,24,33,0.92)', borderWidth: actif ? 0 : 1, borderColor: 'rgba(75,85,99,0.8)' }}>
+                <Ionicons name={f.icone} size={14} color={f.couleur} />
+                <Text className="text-[12.5px] font-black" style={{ color: actif ? '#1A1A1A' : '#fff' }}>{f.libelle}</Text>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            onPress={() => position && carte?.centrer(position.latitude, position.longitude, 15)}
+            accessibilityRole="button"
+            className="flex-row items-center gap-1.5 rounded-full"
+            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
+            <Ionicons name="locate" size={14} color="#34D399" />
+            <Text className="text-[12.5px] font-black text-white">Autour de moi</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+
+      {/* Commandes de carte : recentrer, jour / nuit, zoom */}
+      <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
+        {[
+          { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
+          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => setSombre((v) => !v), couleur: '#FBBF24' },
+          { icone: 'add' as const, nom: 'Zoom avant', action: () => carte?.zoomer(1), couleur: '#fff' },
+          { icone: 'remove' as const, nom: 'Zoom arrière', action: () => carte?.zoomer(-1), couleur: '#fff' },
+        ].map((c) => (
+          <Pressable
+            key={c.nom}
+            onPress={c.action}
+            accessibilityLabel={c.nom}
+            className="items-center justify-center rounded-full"
+            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.88)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+            <Ionicons name={c.icone} size={20} color={c.couleur} />
+          </Pressable>
+        ))}
       </View>
 
       {resultat === null && !erreur ? (
@@ -279,39 +393,59 @@ export default function AutourFaciliteScreen() {
           </Text>
         </View>
 
-        <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>
-          {([
-            { id: 'offres' as const, libelle: 'Offres' },
-            { id: 'spontanees' as const, libelle: 'Candidatures spontanées' },
-          ]).map((o) => {
-            const actif = vue === o.id;
-            return (
-              <Pressable
-                key={o.id}
-                onPress={() => {
-                  setVue(o.id);
-                  setSelection(null);
-                }}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: actif }}
-                className="rounded-full items-center justify-center"
-                style={{ height: 38, paddingHorizontal: 18, backgroundColor: actif ? '#fff' : 'transparent' }}>
-                <Text className="text-[13px] font-black" style={{ color: actif ? '#1A1A1A' : 'rgba(255,255,255,0.75)' }}>{o.libelle}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {vue === 'offres' ? (
+          <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>
+            {([
+              { id: 'entreprises' as const, libelle: 'Entreprises' },
+              { id: 'offres' as const, libelle: 'Offres' },
+            ]).map((o) => {
+              const actif = onglet === o.id;
+              return (
+                <Pressable
+                  key={o.id}
+                  onPress={() => setOnglet(o.id)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: actif }}
+                  className="rounded-full items-center justify-center"
+                  style={{ height: 38, paddingHorizontal: 22, backgroundColor: actif ? '#fff' : 'transparent' }}>
+                  <Text className="text-[13.5px] font-black" style={{ color: actif ? '#1A1A1A' : 'rgba(255,255,255,0.75)' }}>{o.libelle}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
 
         <View className="rounded-[22px] py-3" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 108 }}>
           {(vue === 'offres' ? groupes.length === 0 : groupesSpontanes.length + LIEUX.length === 0) ? (
             <Text className="text-center text-[12.5px] py-8" style={{ color: 'rgba(255,255,255,0.6)' }}>
               {resultat === null ? 'Chargement…' : vue === 'offres' ? 'Aucune offre à afficher.' : 'Aucun dépôt à afficher.'}
             </Text>
+          ) : vue === 'offres' && onglet === 'offres' ? (
+            <FlatList
+              horizontal
+              data={groupes.flatMap((g) => g.offres.map((o) => ({ ...o, ville: g.ville })))}
+              keyExtractor={(o) => o.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
+              renderItem={({ item }) => (
+                <Pressable onPress={() => router.push(`/offre/${item.id}` as Href)} style={{ width: 124 }}>
+                  <View className="rounded-[14px] overflow-hidden items-center justify-center" style={{ width: 124, height: 70, backgroundColor: '#E4DED2' }}>
+                    {item.affiche && !item.affiche.startsWith('data:') ? (
+                      <Image source={{ uri: item.affiche }} alt={item.titre} style={{ width: 124, height: 70 }} contentFit="cover" />
+                    ) : (
+                      <Ionicons name="briefcase-outline" size={22} color="rgba(0,0,0,0.3)" />
+                    )}
+                  </View>
+                  <Text className="text-[11.5px] font-bold text-white mt-1.5" numberOfLines={1}>{item.titre}</Text>
+                  <Text className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.55)' }} numberOfLines={1}>{item.entreprise} · {item.ville}</Text>
+                </Pressable>
+              )}
+            />
           ) : (
             <FlatList
               horizontal
-              data={vue === 'offres' ? groupes.map((g, rang) => ({ cle: g.ville, ville: g.ville, n: g.offres.length, couleur: couleurVille(rang), texte: libelleOffres(g.offres.length) })) : [...LIEUX.map((e) => ({ cle: `lieu:${e.slug}`, ville: e.company, n: '🏬', couleur: VIOLET, texte: 'Emplacement exact' })), ...groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, couleur: VIOLET, texte: libelleSpontanees(g.entreprises.length) }))]}
-              keyExtractor={(g) => g.cle}
+              data={vue === 'offres' ? entreprisesListe : [...LIEUX.map((e) => ({ cle: `lieu:${e.slug}`, ville: e.company, n: '🏬', couleur: VIOLET, texte: 'Emplacement exact' })), ...groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, couleur: VIOLET, texte: libelleSpontanees(g.entreprises.length) }))]}
+              keyExtractor={(g) => `${g.cle}|${g.ville}`}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
               renderItem={({ item }) => {
