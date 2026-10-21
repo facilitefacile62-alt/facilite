@@ -20,6 +20,7 @@ import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } fro
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+import { variantesImage } from "@/lib/variantesImage";
 
 // Fenêtres et modules affichés seulement après un geste (ou en mode « Autour de moi ») : chargés à la demande pour alléger
 // le JavaScript du premier écran (20/10/2026, Lighthouse : 2,3 s d'évaluation de scripts, rendu de l'image principale retardé).
@@ -1656,7 +1657,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   >
                     <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
                       <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
-                        <img src={st.image_url} alt="" loading={i < 4 ? "eager" : "lazy"} decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        <img src={st.image_url} {...(variantesImage(st.image_url).srcSet ? { srcSet: variantesImage(st.image_url).srcSet, sizes: "96px" } : {})} alt="" loading={i < 4 ? "eager" : "lazy"} decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition" />
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{st.titre}</span>
