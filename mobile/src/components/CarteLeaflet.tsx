@@ -259,13 +259,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     });
     // Jamais de déplacement à un zoom faible (des pixels représenteraient des kilomètres : boutiques en mer). Le rangement
     // côte à côte ne s'applique qu'à partir du zoom 13 : les ronds y sont assez petits pour que le décalage reste de quelques centaines de mètres.
+    // Des boutiques qui se recouvrent sont TOUJOURS rangées côte à côte (même dézoomé) : aucune n'est cachée derrière une autre.
+    // Sa vraie position reste marquée par un point et un trait fin qui la relie à son rond (voir plus bas).
     piles = {};
-    if (carte.getZoom() < 13) {
-      spread = {};
-      // Sans deplacement, des boutiques qui se recouvrent sont EMPILEES : une pastille « +N » sur celle du dessus dit qu'il y en a
-      // d'autres ; un appui zoome sur la pile jusqu'a ce qu'elles se rangent cote a cote.
-      groupesVus.forEach(function (g) { var membres = g.map(function (x) { return x.m; }); piles[membres[0].id] = membres; });
-    }
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
@@ -282,6 +278,13 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       if (m.avatar) {
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
+        }
+        var sp = spread[m.id];
+        if (sp && Math.hypot(sp.dx, sp.dy) > 10) {
+          var pv = carte.latLngToContainerPoint([m.lat, m.lng]);
+          var ancre = carte.containerPointToLatLng(L.point(pv.x + sp.dx, pv.y + sp.dy));
+          L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
+          L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
         }
         var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
