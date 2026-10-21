@@ -4,7 +4,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import SelecteurDepartement from '@/components/SelecteurDepartement';
 import { useAuth } from '@/context/AuthContext';
 import {
   chargerMonStatutLivreur,
@@ -61,7 +60,7 @@ function FormulaireDemande({
   }
 
   async function envoyer() {
-    if (!nom.trim() || !telephone.trim() || !zone || !vehicule) {
+    if (!nom.trim() || !telephone.trim() || !zone?.trim() || !vehicule) {
       Alert.alert('Informations manquantes', 'Nom, téléphone, zone et véhicule sont obligatoires.');
       return;
     }
@@ -117,7 +116,15 @@ function FormulaireDemande({
 
       <View className="gap-1.5">
         <Text className="text-[13.5px] font-extrabold text-[#1A1A1A]">Ville / Zone</Text>
-        <SelecteurDepartement valeur={zone} onChoisir={setZone} />
+        {/* Champ libre, comme la maquette 64 (« Ex. Dakar, Pikine ») : on peut citer plusieurs zones. */}
+        <TextInput
+          value={zone ?? ''}
+          onChangeText={(t) => setZone(t)}
+          placeholder="Ex. Dakar, Pikine"
+          placeholderTextColor="#9CA3AF"
+          className="bg-white text-[14.5px] text-[#1A1A1A]"
+          style={champ}
+        />
       </View>
 
       {/* Véhicule : quatre tuiles à pictogramme, la tuile choisie en vert menthe (maquette 64) */}
@@ -234,7 +241,7 @@ export default function DevenirLivreurScreen() {
             Devenir livreur se fait depuis l&apos;espace Service de votre boutique.
           </Text>
           <Pressable onPress={() => router.replace('/marketplace/vendre')} className="rounded-2xl px-6 py-3" style={{ backgroundColor: VERT_PROFOND }}>
-            <Text className="text-white text-[14px] font-bold">Devenir Vendeur</Text>
+            <Text className="text-white text-[14px] font-bold">Devenir actif</Text>
           </Pressable>
         </View>
       );

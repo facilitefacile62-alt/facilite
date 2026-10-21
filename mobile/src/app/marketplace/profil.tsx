@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
@@ -13,6 +14,10 @@ const VERT_PROFOND = '#0d3b34';
 
 export default function ProfilMarketplaceScreen() {
   const router = useRouter();
+  // Interrupteurs du site (Administration → Fonctionnalités).
+  const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
+  const voyagesOuverts = useFonctionnalite('nav_marketplace_voyages');
   const { user, profile } = useAuth();
   const userId = user?.id;
   const [chargement, setChargement] = useState(true);
@@ -46,7 +51,7 @@ export default function ProfilMarketplaceScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         {!userId ? (
           <View className="flex-1 items-center justify-center px-8 gap-4">
-            <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour voir votre profil Marketplace.</Text>
+            <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour voir votre profil Locaux.</Text>
             <Pressable onPress={() => router.push('/login')} className="rounded-2xl px-6 py-3" style={{ backgroundColor: VERT_PROFOND }}>
               <Text className="text-white text-[14px] font-bold">Se connecter</Text>
             </Pressable>
@@ -87,7 +92,7 @@ export default function ProfilMarketplaceScreen() {
                 titre="Ma boutique"
                 droite={
                   <Text className="text-[13px] font-extrabold" style={{ color: '#047857' }}>
-                    {estVendeur ? 'Voir ma boutique' : 'Devenir Vendeur'}
+                    {estVendeur ? 'Voir ma boutique' : 'Devenir actif'}
                   </Text>
                 }
                 onPress={() => router.push('/marketplace/vendre')}
@@ -95,17 +100,33 @@ export default function ProfilMarketplaceScreen() {
               {estVendeur ? (
                 <>
                   <LigneMenu emoji="📊" titre="Tableau de bord" onPress={() => router.push('/marketplace/vendre/tableau-de-bord')} />
-                  <LigneMenu
-                    emoji="📦"
-                    titre="Commandes reçues"
-                    onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
-                  />
-                  <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} />
+                  {commandesOuvertes ? (
+                    <LigneMenu
+                      emoji="📦"
+                      titre="Commandes reçues"
+                      onPress={() => router.push(`/marketplace/vendre/commandes-recues?storeId=${boutique?.id}`)}
+                    />
+                  ) : null}
+                  {livreurOuvert ? <LigneMenu emoji="🛵" titre="Mes livraisons" onPress={() => router.push('/marketplace/livraisons')} /> : null}
+                  {voyagesOuverts ? (
+                    <>
+                      <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />
+                      <LigneMenu emoji="🧑‍✈️" titre="Mes voyages (chauffeur)" onPress={() => router.push('/marketplace/mes-voyages' as Href)} />
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <>
                   <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
-                  <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} />
+                  {commandesOuvertes ? <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} /> : null}
+                  {/* Seul bouton « transport » ouvert à tous : plus il y a de livreurs, plus on en trouve dans sa zone. */}
+                  {livreurOuvert ? <LigneMenu emoji="🛵" titre="Devenir livreur" onPress={() => router.push('/marketplace/vendre/livreur')} /> : null}
+                  {voyagesOuverts ? (
+                    <>
+                      <LigneMenu emoji="🚗" titre="Voyages" onPress={() => router.push('/marketplace/voyages' as Href)} />
+                      <LigneMenu emoji="🧑‍✈️" titre="Mes voyages (chauffeur)" onPress={() => router.push('/marketplace/mes-voyages' as Href)} />
+                    </>
+                  ) : null}
                 </>
               )}
               <LigneMenu emoji="⚙️" titre="Réglages" derniere onPress={() => router.push('/marketplace/reglages')} />

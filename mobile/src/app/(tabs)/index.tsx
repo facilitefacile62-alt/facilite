@@ -1,15 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CarteOffre from '@/components/CarteOffre';
-import BoutonAssistantVocal from '@/components/BoutonAssistantVocal';
 import FaciliteHeader from '@/components/FaciliteHeader';
+import StoryViewer from '@/components/StoryViewer';
 import { useAuth } from '@/context/AuthContext';
+import { surRemontee } from '@/lib/remonterFil';
+import { useStoriesVues } from '@/lib/storiesVues';
+import { chargerStories, type Story } from '@/lib/stories';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
 import { useOffresReelles } from '@/lib/useOffresReelles';
 
@@ -31,13 +33,6 @@ const BLEU = '#2563EB';
 const TEXTE = '#1A1A1A';
 const TEXTE_DOUX = 'rgba(0,0,0,0.5)';
 
-const STORIES_CV = [
-  { id: 'moderne', label: 'Moderne', template: 'modern', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#38BDF8', '#2563EB'] },
-  { id: 'minimaliste', label: 'Minimaliste', template: 'minimalist', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#34D399', '#059669'] },
-  { id: 'classique', label: 'Classique', template: 'classic', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#A78BFA', '#7C3AED'] },
-  { id: 'canadien', label: 'Canadien', template: 'canadian', image: 'https://ffacilite.com/affiche_cv_pro.jpg', gradient: ['#F87171', '#DC2626'] },
-];
-
 // Offres chargées par page : la base en compte plus d'une centaine (134 le
 // 23/09/2026) — sans pagination, l'Accueil n'en montrait que les 30 plus
 // récentes, sans aucun moyen d'atteindre les autres (constaté par
@@ -51,6 +46,37 @@ export default function AccueilScreen() {
   const [rafraichissement, setRafraichissement] = useState(false);
   const candidateMatchScores = useCandidateMatchScores(user?.id);
   const router = useRouter();
+  const listeRef = useRef<FlatList>(null);
+  // Flèche rouge du bouton « + » : remonte en haut du fil par un défilement doux.
+  useEffect(() => surRemontee(() => listeRef.current?.scrollToOffset({ offset: 0, animated: true })), []);
+
+  // Stories gérées depuis l'admin du site (table stories). Tant qu'il n'y en a
+  // aucune, le carrousel des modèles de CV reste affiché.
+  const [stories, setStories] = useState<Story[]>([]);
+  const [storyOuverte, setStoryOuverte] = useState<number | null>(null);
+  const vues = useStoriesVues();
+  // Quand le fil a défilé au-delà de la rangée, les stories NON VUES passent en petits cercles près du logo.
+  const [rangeeHors, setRangeeHors] = useState(false);
+  // La rangée met les stories NON VUES en premier. L'ordre est recalculé quand le lecteur est fermé, jamais pendant
+  // qu'il est ouvert (une story qui passe en « vue » ne doit pas changer de place sous le lecteur).
+  const [rangee, setRangee] = useState<Story[]>([]);
+  useEffect(() => {
+    if (storyOuverte !== null) return;
+    const ordonnee = [...stories.filter((s) => !vues.has(s.id)), ...stories.filter((s) => vues.has(s.id))];
+    queueMicrotask(() => setRangee(ordonnee));
+  }, [stories, vues, storyOuverte]);
+  // Près du logo (prompt § 2 et 4) : UNIQUEMENT les stories non vues, anneau vert ; aucun cercle quand tout est vu.
+  // Un appui ouvre la première story non vue.
+  const nonVues = rangee.map((s, index) => ({ id: s.id, imageUrl: s.imageUrl, titre: s.titre, index })).filter((s) => !vues.has(s.id));
+  useEffect(() => {
+    let annule = false;
+    chargerStories().then((liste) => {
+      if (!annule) setStories(liste);
+    });
+    return () => {
+      annule = true;
+    };
+  }, []);
 
   // Une page pleine (autant d'offres que demandées) signale qu'il peut en
   // rester : on n'en redemande qu'une fois la page précédente arrivée, ce qui
@@ -75,7 +101,7 @@ export default function AccueilScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: FOND_PAGE }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <FaciliteHeader />
+        <FaciliteHeader accueil petitesStories={rangeeHors ? nonVues : []} onStory={() => setStoryOuverte(nonVues[0]?.index ?? 0)} />
 
         {offres === null && !erreur ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -98,50 +124,40 @@ export default function AccueilScreen() {
           </View>
         ) : (
           <FlatList
+            ref={listeRef}
             data={offres}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
             refreshing={rafraichissement}
             onRefresh={rechargerFlux}
+            onScroll={(e) => {
+              const dehors = e.nativeEvent.contentOffset.y > 120;
+              setRangeeHors((v) => (v === dehors ? v : dehors));
+            }}
+            scrollEventThrottle={32}
             onEndReached={chargerPlus}
             onEndReachedThreshold={0.6}
             removeClippedSubviews={false}
             ListHeaderComponent={
-              // Modèles de CV, en tête de fil comme sur la maquette : carte
-              // blanche, pastilles rondes à anneau coloré, libellés bleus.
-              <View
-                style={{
-                  backgroundColor: CARTE,
-                  marginHorizontal: 12,
-                  marginTop: 10,
-                  marginBottom: 12,
-                  borderRadius: 18,
-                  padding: 12,
-                  borderWidth: 1,
-                  borderColor: BORDURE,
-                }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
-                  {STORIES_CV.map((s) => (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => router.push({ pathname: '/web/[cle]', params: { cle: 'creer-cv', template: s.template } })}
-                      style={{ alignItems: 'center', gap: 6 }}>
-                      <LinearGradient
-                        colors={s.gradient as [string, string]}
-                        style={{ width: 62, height: 62, borderRadius: 31, padding: 2.5, alignItems: 'center', justifyContent: 'center' }}>
-                        <View style={{ width: '100%', height: '100%', borderRadius: 30, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
-                          <Image
-                            source={{ uri: s.image }}
-                            alt={`Modèle de CV ${s.label}`}
-                            style={{ width: '100%', height: '100%' }}
-                            contentFit="cover"
-                          />
+              // Rangée des stories (maquette 08) : cercles avec photo, anneau VERT tant que la story n'est pas vue,
+              // GRIS une fois vue ; pas de « Ma story » ni d'« Ajouter une story ». Elle disparaît au défilement
+              // (les non vues passent près du logo, voir l'en-tête).
+              rangee.length === 0 ? null : <View style={{ marginHorizontal: 0, marginTop: 6, marginBottom: 6, paddingVertical: 6 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 14 }}>
+                  {rangee.map((st, i) => {
+                    const vue = vues.has(st.id);
+                    return (
+                      <Pressable key={st.id} onPress={() => setStoryOuverte(i)} accessibilityLabel={`Story : ${st.titre}`} style={{ alignItems: 'center', gap: 6, width: 70 }}>
+                        <View style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 3, borderColor: vue ? '#C4C4C4' : '#10E688', padding: 2, backgroundColor: 'transparent' }}>
+                          <View style={{ flex: 1, borderRadius: 30, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
+                            <Image source={{ uri: st.imageUrl }} alt={st.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                          </View>
                         </View>
-                      </LinearGradient>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: BLEU }}>{s.label}</Text>
-                    </Pressable>
-                  ))}
+                        <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: '600', color: '#374151' }}>{st.titre}</Text>
+                      </Pressable>
+                    );
+                  })}
                 </ScrollView>
               </View>
             }
@@ -183,8 +199,11 @@ export default function AccueilScreen() {
           />
         )}
 
-        <BoutonAssistantVocal />
       </SafeAreaView>
+
+      {storyOuverte !== null && rangee.length > 0 ? (
+        <StoryViewer stories={rangee} debut={storyOuverte} onFermer={() => setStoryOuverte(null)} />
+      ) : null}
     </View>
   );
 }

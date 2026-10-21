@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteAjouter, CarteLigne, ListeCartes, TexteVide } from '@/components/CarteProfil';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil, periodeFormation, type Formation } from '@/lib/profilChamps';
@@ -76,46 +77,27 @@ export default function ProfilFormationScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Formation" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
-          <View className="bg-white rounded-2xl p-3.5">
-            <View className="flex-row items-center justify-between gap-3">
-              <Text className="text-[13px] font-bold text-[#1A1A1A] flex-1">🎓 Formation & Diplômes</Text>
-              <Pressable
-                onPress={() => setModalOuvert(true)}
-                className="rounded-[10px] px-3 py-2"
-                style={{ borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.35)' }}>
-                <Text className="text-[12px] font-bold text-[#7C3AED]">+ Ajouter une formation</Text>
-              </Pressable>
-            </View>
-
-            <View className="gap-2.5 mt-3">
-              {formations.length === 0 ? (
-                <Text className="text-[12.5px] text-black/40 text-center py-4">
-                  Aucune formation enregistrée pour le moment.
-                </Text>
-              ) : (
-                formations.map((f, i) => (
-                  <View key={String(f.id ?? i)} className="flex-row items-start gap-3 bg-[#F7F7F5] rounded-xl p-3">
-                    <View className="w-[34px] h-[34px] rounded-lg bg-[#EDE9FE] items-center justify-center">
-                      <Text className="text-[12px] font-black text-[#7C3AED]">{initiales(f.school)}</Text>
-                    </View>
-                    <View className="flex-1 min-w-0">
-                      <Text className="text-[13.5px] font-bold text-[#1A1A1A]">{f.school}</Text>
-                      <Text className="text-[12px] text-black/55 mt-0.5" numberOfLines={2}>
-                        {[f.degree, f.field].filter(Boolean).join(' - ')}
-                      </Text>
-                      {periodeFormation(f) ? (
-                        <Text className="text-[11.5px] text-black/40 mt-0.5">{periodeFormation(f)}</Text>
-                      ) : null}
-                    </View>
-                    <Pressable onPress={() => supprimer(i)} hitSlop={8} accessibilityLabel="Supprimer">
-                      <Ionicons name="trash-outline" size={16} color="rgba(0,0,0,0.35)" />
-                    </Pressable>
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
+        <ScrollView contentContainerClassName="pb-8" showsVerticalScrollIndicator={false}>
+          <ListeCartes>
+            {formations.length === 0 ? <TexteVide texte="Aucune formation enregistrée pour le moment." /> : null}
+            {formations.map((f, i) => (
+              <CarteLigne
+                key={String(f.id ?? i)}
+                icone="school-outline"
+                titre={f.school}
+                sous={[f.degree, f.field].filter(Boolean).join(' - ')}
+                enfants={
+                  periodeFormation(f) ? <Text style={{ fontSize: 11.5, marginTop: 2, color: 'rgba(0,0,0,0.4)' }}>{periodeFormation(f)}</Text> : null
+                }
+                droite={
+                  <Pressable onPress={() => supprimer(i)} hitSlop={8} accessibilityLabel="Supprimer">
+                    <Ionicons name="trash-outline" size={17} color="rgba(0,0,0,0.35)" />
+                  </Pressable>
+                }
+              />
+            ))}
+            <CarteAjouter libelle="Ajouter une formation" onPress={() => setModalOuvert(true)} />
+          </ListeCartes>
         </ScrollView>
 
         <Modal visible={modalOuvert} transparent animationType="fade" onRequestClose={() => setModalOuvert(false)}>

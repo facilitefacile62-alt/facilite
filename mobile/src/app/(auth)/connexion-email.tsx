@@ -1,38 +1,31 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, Text, View } from 'react-native';
 
-import BoutonAction from '@/components/BoutonAction';
-import EnteteAuth from '@/components/EnteteAuth';
-import { IconGoogle } from '@/components/facilite-icons';
+import { BoutonContinuer } from '@/components/CasesCode';
+import {
+  BoiteErreur,
+  BoutonGoogle,
+  ChampCreme,
+  LienTexte,
+  SeparateurOu,
+} from '@/components/ChampsAuth';
+import EcranConnexion from '@/components/EcranConnexion';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 
-// Connexion par e-mail ou Google — maquette 45. Atteinte depuis
-// « Continuer avec l'e-mail ou Google › » de l'écran téléphone (login.tsx).
-// Le flux reste celui du site (src/app/login/page.js), à deux étapes :
-// étape 1 = e-mail seul (+ Google, + mot de passe oublié) ; étape 2 = mot de
-// passe (+ lien magique, + retour « Modifier »).
-//
-// Habillage de la maquette : fond crème, en-tête #e3dbcc avec le bouton vert
-// « Connexion », carte blanche, clé dans son halo, champs à bordure vert
-// foncé 1,5 px et coins 14 px, « Continuer avec l'e-mail » en vert foncé
-// #0d3b34 (charte §2.1).
-//
-// L'en-tête n'a ni recherche ni menu : avant la connexion, ils ouvriraient
-// des écrans protégés et renverraient aussitôt ici — des boutons morts.
-const VERT = '#10B981';
-const VERT_FONCE = '#0B3D2A';
-const BLEU = '#2563EB';
+// Écran 15 — connexion par e-mail et mot de passe (ou Google). Atteint depuis
+// « Besoin d'aide pour te connecter ? ». Mise à jour du 12/10/2026 : même
+// gabarit que les écrans 03 à 14 (bandeau vert #0B3D2A + logo clé fixe, champs
+// #EEECE7, bouton pilule, liens légaux en bas), plus d'en-tête du site.
+// Flux inchangé, en deux étapes : e-mail seul, puis mot de passe (+ lien
+// magique, + « Modifier »).
 
 export default function ConnexionEmailScreen() {
   const router = useRouter();
   const [etape, setEtape] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
@@ -113,195 +106,119 @@ export default function ConnexionEmailScreen() {
     }
   };
 
-  const champ = 'w-full bg-white rounded-[14px] px-4 text-[14px] text-[#1A1A1A]';
-  const styleChamp = { height: 56, borderWidth: 1.5, borderColor: VERT_FONCE } as const;
+  const retour = () => (router.canGoBack() ? router.back() : router.replace('/login'));
 
   return (
-    <View className="flex-1 bg-[#F2F0EA]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        {/* En-tête : « Facilité » + bouton vert Connexion (ramène au téléphone) */}
-        <EnteteAuth />
+    <EcranConnexion retour={retour}>
+      <Text className="text-[26px] font-black text-[#111] mt-1">Connexion</Text>
+      <Text className="text-[15px] mt-1.5 mb-5" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 21 }}>
+        Saisis tes identifiants pour te connecter.
+      </Text>
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-          <ScrollView contentContainerClassName="px-5 pt-5 pb-10" keyboardShouldPersistTaps="handled">
-            <View className="bg-white rounded-[24px] px-5 py-6 items-center" style={{ borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }}>
-              {/* Clé dans son halo */}
-              <View
-                className="items-center justify-center"
-                style={{ width: 74, height: 74, borderRadius: 37, backgroundColor: '#D9F5E8' }}>
-                <View
-                  className="items-center justify-center bg-white"
-                  style={{ width: 58, height: 58, borderRadius: 29, borderWidth: 1.5, borderColor: VERT }}>
-                  <Text style={{ fontSize: 26 }}>🔑</Text>
-                </View>
+      {etape === 1 ? (
+        <>
+          <BoutonGoogle libelle="Continuer avec Google" onPress={continuerAvecGoogle} chargement={googleLoading} />
+          <SeparateurOu texte="OU" />
+          <View className="mt-4">
+            <ChampCreme
+              value={email}
+              onChangeText={(t) => {
+                setEmail(t);
+                if (errorMessage) setErrorMessage('');
+              }}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              placeholder="nom@exemple.com"
+            />
+          </View>
+          {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
+          <View className="mt-4">
+            <BoutonContinuer onPress={validerEtape1} actif={emailPropre().includes('@')} />
+          </View>
+          <View className="mt-2">
+            <LienTexte texte="Mot de passe oublié ?" onPress={() => router.push('/forgot-password')} />
+          </View>
+        </>
+      ) : (
+        <>
+          <View
+            className="flex-row items-center justify-between px-4"
+            style={{ height: 52, borderRadius: 12, backgroundColor: '#EEECE7' }}>
+            <Text className="text-[15px] font-bold text-[#111] flex-1 mr-2" numberOfLines={1}>{email}</Text>
+            <Pressable
+              onPress={() => {
+                setEtape(1);
+                setPassword('');
+                setErrorMessage('');
+                setMagicLinkSent(false);
+              }}
+              hitSlop={8}>
+              <Text className="text-[14px] font-bold" style={{ color: 'rgba(0,0,0,0.5)' }}>Modifier</Text>
+            </Pressable>
+          </View>
+
+          {magicLinkSent ? (
+            <View className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mt-3">
+              <Text className="text-[13px] font-bold text-emerald-800">Lien de connexion envoyé !</Text>
+              <Text className="text-[13px] text-emerald-800 mt-0.5">
+                Vérifie ta boîte de réception pour te connecter en 1 clic.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View className="mt-3">
+                <ChampCreme
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    if (errorMessage) setErrorMessage('');
+                  }}
+                  masque
+                  autoCapitalize="none"
+                  placeholder="Mot de passe"
+                />
               </View>
 
-              <Text className="text-[22px] font-black text-[#1A1A1A] mt-3.5">Connexion</Text>
-              <Text className="text-[13px] mt-1.5 text-center" style={{ color: 'rgba(0,0,0,0.5)' }}>
-                Saisissez vos identifiants pour vous connecter.
-              </Text>
-
-              {etape === 1 ? (
-                <View className="w-full mt-5 gap-3">
-                  <Pressable
-                    onPress={continuerAvecGoogle}
-                    disabled={googleLoading}
-                    className="w-full flex-row items-center justify-center gap-2.5 bg-white rounded-[14px]"
-                    style={{ height: 54, borderWidth: 1, borderColor: 'rgba(0,0,0,0.15)', opacity: googleLoading ? 0.6 : 1 }}>
-                    <IconGoogle />
-                    <Text className="text-[14px] font-bold text-[#1A1A1A]">
-                      {googleLoading ? 'Redirection…' : 'Continuer avec Google'}
-                    </Text>
-                  </Pressable>
-
-                  <Text className="text-center text-[12px] font-bold" style={{ color: 'rgba(0,0,0,0.4)' }}>
-                    OU
+              <View className="flex-row items-center justify-between mt-3">
+                <Pressable onPress={envoyerLienMagique} disabled={magicLinkLoading} hitSlop={8}>
+                  <Text className="text-[14px] font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                    {magicLinkLoading ? 'Envoi…' : 'Lien magique'}
                   </Text>
+                </Pressable>
+                <Pressable onPress={() => router.push('/forgot-password')} hitSlop={8}>
+                  <Text className="text-[14px] font-bold" style={{ color: '#10B981' }}>Mot de passe oublié ?</Text>
+                </Pressable>
+              </View>
 
-                  <TextInput
-                    value={email}
-                    onChangeText={(t) => {
-                      setEmail(t);
-                      if (errorMessage) setErrorMessage('');
-                    }}
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    placeholder="nom@exemple.com"
-                    placeholderTextColor="rgba(0,0,0,0.35)"
-                    className={champ}
-                    style={styleChamp}
-                  />
+              {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
 
-                  {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
-
-                  <BoutonAction
-                    sombre
-                    titre="Continuer avec l'e-mail"
-                    sousTitre="Connexion par adresse e-mail"
-                    icone="mail-outline"
-                    onPress={validerEtape1}
-                  />
-
-                  <Link href="/forgot-password" className="self-center text-[13.5px] font-bold" style={{ color: '#10B981' }}>
-                    Mot de passe oublié ?
-                  </Link>
-                </View>
-              ) : (
-                <View className="w-full mt-5 gap-3">
-                  <View
-                    className="w-full flex-row items-center justify-between rounded-[14px] px-4 py-3.5"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.03)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }}>
-                    <Text className="text-[13px] font-semibold text-[#1A1A1A] flex-1 mr-2" numberOfLines={1}>
-                      {email}
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        setEtape(1);
-                        setPassword('');
-                        setErrorMessage('');
-                        setMagicLinkSent(false);
-                      }}>
-                      <Text className="text-[12px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>
-                        Modifier
-                      </Text>
-                    </Pressable>
-                  </View>
-
-                  {magicLinkSent ? (
-                    <View className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                      <Text className="text-[12.5px] font-bold text-emerald-800">✉️ Lien de connexion envoyé !</Text>
-                      <Text className="text-[12px] text-emerald-800 mt-0.5">
-                        Vérifiez votre boîte de réception pour vous connecter en 1 clic.
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      <View
-                        className="w-full flex-row items-center bg-white rounded-[14px] px-4"
-                        style={{ height: 56, borderWidth: 1.5, borderColor: VERT_FONCE }}>
-                        <TextInput
-                          value={password}
-                          onChangeText={(t) => {
-                            setPassword(t);
-                            if (errorMessage) setErrorMessage('');
-                          }}
-                          secureTextEntry={!showPassword}
-                          autoCapitalize="none"
-                          placeholder="Saisissez votre mot de passe"
-                          placeholderTextColor="rgba(0,0,0,0.35)"
-                          className="flex-1 text-[14px] text-[#1A1A1A]"
-                        />
-                        <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                          <Ionicons
-                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                            size={18}
-                            color="rgba(0,0,0,0.4)"
-                          />
-                        </Pressable>
-                      </View>
-
-                      <View className="w-full flex-row items-center justify-between">
-                        <Pressable onPress={envoyerLienMagique} disabled={magicLinkLoading} hitSlop={8}>
-                          <Text className="text-[12.5px] font-semibold" style={{ color: 'rgba(0,0,0,0.45)' }}>
-                            {magicLinkLoading ? 'Envoi…' : 'Lien magique'}
-                          </Text>
-                        </Pressable>
-                        <Link href="/forgot-password" className="text-[12.5px] font-bold" style={{ color: '#10B981' }}>
-                          Mot de passe oublié ?
-                        </Link>
-                      </View>
-
-                      {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
-
-                      {needsConfirmation && (
-                        <Pressable
-                          onPress={renvoyerConfirmation}
-                          disabled={isResending}
-                          className="py-3 rounded-[14px] items-center"
-                          style={{ borderWidth: 1.5, borderColor: VERT_FONCE }}>
-                          <Text className="text-[12.5px] font-bold" style={{ color: VERT_FONCE }}>
-                            {isResending ? 'Envoi en cours…' : "Renvoyer l'email de confirmation"}
-                          </Text>
-                        </Pressable>
-                      )}
-
-                      <BoutonAction
-                        sombre
-                        titre="Se connecter"
-                        sousTitre="Avec votre mot de passe"
-                        icone="log-in-outline"
-                        onPress={seConnecter}
-                        desactive={!password}
-                        chargement={loading}
-                      />
-                    </>
-                  )}
-                </View>
+              {needsConfirmation && (
+                <Pressable
+                  onPress={renvoyerConfirmation}
+                  disabled={isResending}
+                  className="py-3 rounded-[14px] items-center mt-3"
+                  style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+                  <Text className="text-[13px] font-bold" style={{ color: '#0B3D2A' }}>
+                    {isResending ? 'Envoi en cours…' : "Renvoyer l'email de confirmation"}
+                  </Text>
+                </Pressable>
               )}
 
-              <View className="w-full mt-5 pt-4 flex-row justify-center gap-1.5" style={{ borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
-                <Text className="text-[13.5px] text-[#1A1A1A]">Pas encore de compte ?</Text>
-                <Link href="/register" className="text-[13.5px] font-bold" style={{ color: BLEU }}>
-                  Inscrivez-vous
-                </Link>
+              <View className="mt-4">
+                <BoutonContinuer libelle="Se connecter" onPress={seConnecter} actif={Boolean(password)} chargement={loading} />
               </View>
-            </View>
+            </>
+          )}
+        </>
+      )}
 
-            <Text className="text-center text-[12px] mt-4" style={{ color: 'rgba(0,0,0,0.35)' }}>
-              © 2026 Facilité · Tous droits réservés.
-            </Text>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
-  );
-}
-
-function BoiteErreur({ texte }: { texte: string }) {
-  return (
-    <View className="w-full bg-red-50 border border-red-200 rounded-xl p-2.5">
-      <Text className="text-[11.5px] font-bold text-red-600">{texte}</Text>
-    </View>
+      <View className="flex-row justify-center items-center gap-1.5 mt-5 flex-wrap">
+        <Text className="text-[15px] text-[#111]">Pas encore de compte ?</Text>
+        <Pressable onPress={() => router.push('/register')} hitSlop={8}>
+          <Text className="text-[15px] font-bold" style={{ color: '#2563EB' }}>S&apos;inscrire</Text>
+        </Pressable>
+      </View>
+    </EcranConnexion>
   );
 }

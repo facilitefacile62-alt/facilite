@@ -1,14 +1,17 @@
+import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import EcrireEmailPage from '@/components/EcrireEmailPage';
 import FaciliteHeader from '@/components/FaciliteHeader';
-import { IconCrayon, IconPoints, IconRecherche } from '@/components/facilite-icons';
+import { IconPoints, IconRecherche } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import { resolveSupportConversation } from '@/lib/messages';
 import { useConversationsReelles, type ConversationReelle } from '@/lib/useConversationsReelles';
+import { useT } from '@/lib/i18n';
 
 // Reproduction de design_handoff_facilite/pages/05-messages.html. La ligne
 // "Support RH Facilité" est fixe dans le design (pas un élément de
@@ -29,22 +32,34 @@ const PUCES: { id: FiltrePuce; label: string; cablee: boolean }[] = [
 ];
 
 export default function MessagesScreen() {
+  const t = useT();
   const { user } = useAuth();
   const router = useRouter();
   const conversations = useConversationsReelles(user?.id);
   const [recherche, setRecherche] = useState('');
   const [puceActive, setPuceActive] = useState<FiltrePuce>('toutes');
   const [ouvertureSupportEnCours, setOuvertureSupportEnCours] = useState(false);
+  // « Écrire » ouvre la page e-mail À L'INTÉRIEUR de la messagerie (la barre du bas reste visible) ; le bouton
+  // « + » de Facilité l'ouvre aussi, par ?ecrire=1. Un nouvel appui sur ce bouton change le paramètre : on suit.
+  const { ecrire } = useLocalSearchParams<{ ecrire?: string }>();
+  const [ecrireOuvert, setEcrireOuvert] = useState(ecrire === '1');
+  const [ecrireVu, setEcrireVu] = useState(ecrire);
+  if (ecrire !== ecrireVu) {
+    setEcrireVu(ecrire);
+    if (ecrire === '1') setEcrireOuvert(true);
+  }
+  const fermerEcrire = () => {
+    setEcrireOuvert(false);
+    if (ecrire) router.setParams({ ecrire: undefined });
+  };
 
   const conversationsFiltrees = useMemo(() => {
     if (!conversations) return null;
     let liste = conversations;
     if (puceActive === 'non_lues') liste = liste.filter((c) => c.nonLue);
     if (recherche.trim()) {
-      const q = recherche.trim().toLowerCase();
-      liste = liste.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.lastText.toLowerCase().includes(q)
-      );
+      const q = recherche.trim();
+      liste = liste.filter((c) => contientSansAccent(c.name, q) || contientSansAccent(c.lastText, q));
     }
     return liste;
   }, [conversations, puceActive, recherche]);
@@ -72,6 +87,8 @@ export default function MessagesScreen() {
     router.push(`/chat/${conversation.id}`);
   }
 
+  if (ecrireOuvert) return <EcrireEmailPage onFermer={fermerEcrire} />;
+
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -79,18 +96,25 @@ export default function MessagesScreen() {
 
         <View className="flex-row items-center justify-between px-4 pt-4 pb-1">
           <View className="flex-row items-center gap-2">
-            <Text className="text-[19px] font-extrabold text-[#1A1A1A]">Discussions</Text>
+            <Text className="text-[19px] font-extrabold text-[#1A1A1A]">{t('Discussions')}</Text>
             <View className="bg-emerald-500 rounded-full px-2 py-0.5">
               <Text className="text-white text-[11px] font-bold">
                 {conversations ? conversations.length + 1 : 1}
               </Text>
             </View>
           </View>
-          <View className="flex-row items-center gap-3.5">
-            <Pressable onPress={() => Alert.alert('Nouvelle discussion', 'Bientôt disponible.')}>
-              <IconCrayon />
+          <View className="flex-row items-center gap-3">
+            {/* « Écrire » : pilule bleu clair, à la place de l'ancien petit crayon (maquette 17) */}
+            <Pressable
+              onPress={() => setEcrireOuvert(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Écrire un e-mail"
+              className="flex-row items-center gap-2"
+              style={{ height: 44, paddingHorizontal: 20, borderRadius: 14, backgroundColor: '#C2E7FF', boxShadow: '0 3px 8px rgba(0,29,53,0.12)' }}>
+              <Ionicons name="create-outline" size={17} color="#001D35" />
+              <Text className="text-[15px] font-black" style={{ color: '#001D35' }}>{t('Écrire')}</Text>
             </Pressable>
-            <Pressable onPress={() => Alert.alert('Options', 'Bientôt disponible.')}>
+            <Pressable onPress={() => Alert.alert('Options', 'Bientôt disponible.')} hitSlop={10}>
               <IconPoints />
             </Pressable>
           </View>
@@ -102,7 +126,7 @@ export default function MessagesScreen() {
             <TextInput
               value={recherche}
               onChangeText={setRecherche}
-              placeholder="Rechercher ou démarrer une discussion..."
+              placeholder={t('Rechercher ou démarrer une discussion...')}
               placeholderTextColor="rgba(0,0,0,0.4)"
               className="flex-1 text-[13px] text-[#1A1A1A]"
             />
@@ -123,7 +147,7 @@ export default function MessagesScreen() {
               }`}>
               <Text
                 className={`text-[12.5px] ${puceActive === puce.id ? 'font-bold text-white' : 'font-semibold text-[#1A1A1A]'}`}>
-                {puce.label}
+                {t(puce.label)}
               </Text>
             </Pressable>
           ))}
@@ -153,13 +177,13 @@ export default function MessagesScreen() {
                       🔗 Disponible 24/7 pour vos CV et démarches
                     </Text>
                   </View>
-                  <Text className="text-[11.5px] font-semibold text-emerald-500">Disponible</Text>
+                  <Text className="text-[11.5px] font-semibold text-emerald-500">{t('Disponible')}</Text>
                 </Pressable>
               ) : null
             }
             ListEmptyComponent={
               <Text className="text-[12.5px] text-black/40 font-medium text-center mt-10">
-                Aucune discussion pour l&apos;instant.
+                {t("Aucune discussion pour l'instant.")}
               </Text>
             }
             renderItem={({ item }) => <LigneConversation conversation={item} onPress={() => ouvrirConversation(item)} />}

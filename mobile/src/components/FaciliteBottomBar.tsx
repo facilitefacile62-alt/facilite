@@ -1,3 +1,4 @@
+import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
@@ -5,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
+import { useT } from '@/lib/i18n';
 
-// Barre du bas de la plateforme Facilité (Accueil · Offres · Extracteur ·
-// Messages · Profil), charte §1.1-§1.2 : fond #e3dbcc, actif vert #10B981
+// Barre du bas de la plateforme Facilité (Accueil · Offres · Autour de moi ·
+// Messages · Profil — « Autour de moi » a pris la place de l'Extracteur le
+// 13/10/2026 ; l'Extracteur s'ouvre depuis le bouton flottant), charte §1.1-§1.2 : fond #e3dbcc, actif vert #10B981
 // avec icône pleine, inactif rgba(0,0,0,0.6), libellés 10,5 px gras.
 //
 // Elle est rendue à deux endroits parce que les écrans de Facilité vivent à
@@ -26,7 +29,7 @@ const VERT = '#10B981';
 const FOND = '#e3dbcc';
 const INACTIF = 'rgba(0,0,0,0.6)';
 
-type IdEntree = 'accueil' | 'offres' | 'extracteur' | 'messages' | 'profil';
+type IdEntree = 'accueil' | 'offres' | 'autour' | 'messages' | 'profil';
 
 type Entree = {
   id: IdEntree;
@@ -34,31 +37,35 @@ type Entree = {
   icone: keyof typeof Ionicons.glyphMap;
   iconeActive: keyof typeof Ionicons.glyphMap;
   cible: string;
+  // Interrupteur du site (Administration → Fonctionnalités) qui commande cet onglet.
+  interrupteur?: string;
 };
 
 const ENTREES: Entree[] = [
   { id: 'accueil', libelle: 'Accueil', icone: 'home-outline', iconeActive: 'home', cible: '/' },
-  { id: 'offres', libelle: 'Offres', icone: 'briefcase-outline', iconeActive: 'briefcase', cible: '/offres' },
-  { id: 'extracteur', libelle: 'Extracteur', icone: 'flash-outline', iconeActive: 'flash', cible: '/extracteur' },
-  { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/messages' },
+  { id: 'offres', libelle: 'Offres', icone: 'briefcase-outline', iconeActive: 'briefcase', cible: '/offres', interrupteur: 'nav_offres' },
+  { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/autour', interrupteur: 'nav_offres' },
+  { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/messages', interrupteur: 'nav_messagerie' },
   { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/profil' },
 ];
 
 export function entreeActiveFacilite(chemin: string): IdEntree | null {
   if (chemin === '/' || chemin === '' || chemin.startsWith('/menu')) return 'accueil';
   if (chemin.startsWith('/offres') || chemin.startsWith('/offre/')) return 'offres';
-  if (chemin.startsWith('/extracteur')) return 'extracteur';
+  if (chemin.startsWith('/autour')) return 'autour';
   if (chemin.startsWith('/messages') || chemin.startsWith('/chat/')) return 'messages';
   if (chemin.startsWith('/profil') || chemin.startsWith('/mon-profil')) return 'profil';
   return null;
 }
 
 export default function FaciliteBottomBar() {
+  const t = useT();
   const router = useRouter();
   const chemin = usePathname();
   const insets = useSafeAreaInsets();
   const compteurs = useCompteursNonLus();
   const active = entreeActiveFacilite(chemin);
+  const ouvert = useFonctionnalites();
 
   return (
     <View
@@ -69,7 +76,7 @@ export default function FaciliteBottomBar() {
         borderTopColor: 'rgba(0,0,0,0.08)',
       }}>
       <View className="flex-row">
-        {ENTREES.map((e) => {
+        {ENTREES.filter((e) => ouvert(e.interrupteur)).map((e) => {
           const estActif = active === e.id;
           const couleur = estActif ? VERT : INACTIF;
           return (
@@ -77,7 +84,7 @@ export default function FaciliteBottomBar() {
               key={e.id}
               onPress={() => router.navigate(e.cible as Href)}
               accessibilityRole="tab"
-              accessibilityLabel={e.libelle}
+              accessibilityLabel={t(e.libelle)}
               accessibilityState={{ selected: estActif }}
               className="flex-1 items-center justify-center py-2 min-h-[52px]">
               <View>
@@ -85,7 +92,7 @@ export default function FaciliteBottomBar() {
                 {e.id === 'messages' ? <PastilleCompteur valeur={compteurs.messages} /> : null}
               </View>
               <Text className="text-[10.5px] font-bold mt-0.5" style={{ color: couleur }}>
-                {e.libelle}
+                {t(e.libelle)}
               </Text>
             </Pressable>
           );

@@ -81,3 +81,16 @@ export async function verifierCodeSms(chiffres: string, code: string): Promise<s
   });
   return error ? messageLisible(error, 'Erreur lors de la vérification du code. Réessayez.') : null;
 }
+
+/**
+ * Connexion OU création (écrans 03 à 07) : un numéro déjà connu se connecte,
+ * un numéro inconnu crée son compte à la validation du code, puis la page
+ * « Nom et prénom » est montrée une seule fois.
+ */
+export async function envoyerCodeSmsConnexion(chiffres: string): Promise<string | null> {
+  const { error } = await supabase.auth.signInWithOtp({
+    phone: numeroComplet(chiffres),
+    options: { shouldCreateUser: true },
+  });
+  return error ? messageLisible(error, "Impossible d'envoyer le SMS. Vérifie le numéro.") : null;
+}

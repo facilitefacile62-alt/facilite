@@ -34,7 +34,29 @@ export type MaBoutique = {
   description_prestation: string | null;
   categorie_etablissement: string | null;
   disponible_manuel: boolean;
+  /** Chemin du logo dans le bucket marketplace-photos (voir definirLogoBoutique). */
+  logo_photo: string | null;
 };
+
+/** Une boutique vue par n'importe quel visiteur (page publique) : mêmes champs que MaBoutique + propriétaire et avatar. */
+export type BoutiquePublique = MaBoutique & {
+  owner_id: string;
+  avatar_config: Record<string, unknown> | null;
+};
+
+/** Boutique ACTIVE lisible de tous (policy « actifs visibles de tous »). Null si introuvable ou masquée. */
+export async function chargerBoutiquePublique(id: string): Promise<BoutiquePublique | null> {
+  const { data, error } = await supabase
+    .from('marketplace_stores')
+    .select(
+      'id, owner_id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, avatar_config'
+    )
+    .eq('id', id)
+    .eq('actif', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as BoutiquePublique | null) ?? null;
+}
 
 export type MonArticle = {
   id: string;
@@ -68,7 +90,7 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
   const { data, error } = await supabase
     .from('marketplace_stores')
     .select(
-      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel'
+      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo'
     )
     .eq('owner_id', userId)
     .order('created_at', { ascending: true });
@@ -167,6 +189,12 @@ export async function modifierBoutique(
 }
 
 /** Boutique disponible maintenant, ou indisponible (Service / Établissement). */
+/** Enregistre (ou retire, avec null) le logo de la boutique : chemin renvoyé par envoyerPhotoArticle. */
+export async function definirLogoBoutique(storeId: string, chemin: string | null): Promise<void> {
+  const { error } = await supabase.rpc('definir_logo_ma_boutique', { p_store_id: storeId, p_logo: chemin });
+  if (error) throw new Error(error.message);
+}
+
 export async function definirDisponibiliteBoutique(storeId: string, disponible: boolean): Promise<void> {
   const { error } = await supabase.rpc('definir_disponibilite_boutique', { p_store_id: storeId, p_disponible: disponible });
   if (error) throw new Error(error.message);
@@ -189,6 +217,12 @@ export async function publierArticle(
     photos: string[];
     /** Chemin de la vidéo dans le bucket marketplace-videos, ou null. */
     urlVideo?: string | null;
+    /** Branche de l'arbre des catégories (identifiants de la table categories). */
+    sousCategorie?: string | null;
+    typeArticle?: string | null;
+    etat?: string | null;
+    marque?: string | null;
+    taille?: string | null;
   }
 ): Promise<string> {
   const titre = champs.titre.trim();
@@ -202,6 +236,11 @@ export async function publierArticle(
     p_description: champs.description?.trim() || null,
     p_photos: champs.photos.slice(0, 6),
     p_url_video: champs.urlVideo ?? null,
+    p_sous_categorie: champs.sousCategorie ?? null,
+    p_type_article: champs.typeArticle ?? null,
+    p_etat: champs.etat ?? null,
+    p_marque: champs.marque ?? null,
+    p_taille: champs.taille ?? null,
   });
   if (error) throw new Error(error.message);
   return data as string;

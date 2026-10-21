@@ -1,21 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
 import {
   annulerCommande,
+  chargerLitigesOuverts,
   chargerMesCommandesAcheteur,
   confirmerReceptionCommande,
   jourMois,
   pastilleAcheteur,
   premierePhoto,
   refCommande,
+  signalerLivraisonBloquee,
   type MaCommande,
 } from '@/lib/commandes';
+import { chargerGroupagesParIds, detacherCommandeDeGroupage, heureLisible, type InfoGroupage } from '@/lib/groupages';
 import { prixLisible } from '@/lib/marketplace';
 
 // « Mes commandes » (acheteur). Le suivi détaillé (position, confirmation de
@@ -29,12 +32,22 @@ function CarteCommande({
   onSuivre,
   onConfirmer,
   onAnnuler,
+  groupage,
+  onRejoindre,
+  onRetirer,
+  signalee,
+  onSignaler,
 }: {
   commande: MaCommande;
   occupee: boolean;
   onSuivre: () => void;
   onConfirmer: () => void;
   onAnnuler: () => void;
+  groupage?: InfoGroupage;
+  onRejoindre: () => void;
+  onRetirer: () => void;
+  signalee: boolean;
+  onSignaler: () => void;
 }) {
   const pastille = pastilleAcheteur(commande.statut);
   const photo = premierePhoto(commande.item?.photos);
@@ -69,6 +82,46 @@ function CarteCommande({
           </Text>
         </View>
       </View>
+
+      {commande.groupage_id && groupage && (
+        <View className="rounded-[14px] px-3 py-2.5 gap-1" style={{ backgroundColor: '#E8F0FE' }}>
+          <Text className="text-[12.5px] font-black" style={{ color: '#1D4ED8' }}>
+            Groupage vers {groupage.destination_libelle} · {heureLisible(groupage.heure_depart)}
+          </Text>
+          <Text className="text-[11.5px]" style={{ color: 'rgba(0,0,0,0.6)' }}>
+            {commande.groupage_decision === 'acceptee' ? 'Le livreur a accepté ta commande.' : 'En attente de l’accord du livreur.'} Livraison :{' '}
+            {Number(groupage.frais_par_livraison_xof).toLocaleString('fr-FR')} FCFA, à régler au livreur.
+          </Text>
+          {groupage.statut === 'ouvert' && (commande.statut === 'en_attente_livreur' || commande.statut === 'assignee') && (
+            <Pressable onPress={onRetirer} disabled={occupee} hitSlop={6} className="self-start py-0.5 disabled:opacity-60">
+              <Text className="text-[12px] font-bold text-red-600">Retirer ma commande du groupage</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {commande.groupage_decision === 'refusee' && !commande.groupage_id && commande.statut === 'en_attente_livreur' && (
+        <Text className="text-[12px]" style={{ color: '#B45309' }}>
+          Le livreur n’a pas pu prendre cette commande dans son groupage : elle reste disponible pour d’autres livreurs.
+        </Text>
+      )}
+
+      {commande.statut === 'en_attente_livreur' && !commande.groupage_id && (
+        <Pressable onPress={onRejoindre} className="items-center justify-center rounded-[14px]" style={{ height: 46, backgroundColor: '#E8F0FE' }}>
+          <Text className="text-[14px] font-black" style={{ color: '#1D4ED8' }}>Rejoindre un groupage</Text>
+        </Pressable>
+      )}
+
+      {['assignee', 'recuperee', 'en_livraison'].includes(commande.statut) &&
+        (signalee ? (
+          <Text className="text-[12px] font-bold" style={{ color: '#B45309' }}>
+            Signalement envoyé : l’équipe examine cette livraison et vous tiendra au courant.
+          </Text>
+        ) : (
+          <Pressable onPress={onSignaler} hitSlop={6} className="self-start py-0.5">
+            <Text className="text-[12.5px] font-bold underline" style={{ color: 'rgba(0,0,0,0.5)' }}>Le livreur ne répond plus ? Signaler un blocage</Text>
+          </Pressable>
+        ))}
 
       {suivable && (
         <Pressable
@@ -105,6 +158,8 @@ export default function MesCommandesScreen() {
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] = useState(false);
   const [occupee, setOccupee] = useState<string | null>(null);
+  const [groupagesInfo, setGroupagesInfo] = useState<Record<string, InfoGroupage>>({});
+  const [litiges, setLitiges] = useState<string[]>([]);
 
   const userId = user?.id;
   const recharger = useCallback(async () => {
@@ -126,6 +181,55 @@ export default function MesCommandesScreen() {
       recharger();
     }, [recharger])
   );
+
+  // Infos des groupages auxquels mes commandes sont rattachées (destination, heure, statut).
+  useEffect(() => {
+    let annule = false;
+    chargerGroupagesParIds(commandes.map((c) => c.groupage_id))
+      .then((m) => {
+        if (!annule) setGroupagesInfo(m);
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [commandes]);
+
+  // Commandes déjà signalées comme bloquées (pour ne pas proposer deux fois le signalement).
+  useEffect(() => {
+    let annule = false;
+    chargerLitigesOuverts()
+      .then((l) => {
+        if (!annule) setLitiges(l);
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [commandes]);
+
+  async function signaler(commande: MaCommande) {
+    try {
+      await signalerLivraisonBloquee(commande.id);
+      setLitiges((l) => [...l, commande.id]);
+      Alert.alert('Signalement envoyé', 'L’équipe examine cette livraison et vous tiendra au courant.');
+    } catch (e) {
+      // Le message de la base explique le délai d'inactivité à attendre avant de pouvoir signaler.
+      Alert.alert('Signalement impossible pour le moment', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    }
+  }
+
+  async function retirerDuGroupage(commande: MaCommande) {
+    setOccupee(commande.id);
+    try {
+      await detacherCommandeDeGroupage(commande.id);
+      await recharger();
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Retrait impossible.');
+    } finally {
+      setOccupee(null);
+    }
+  }
 
   function demanderAnnulation(commande: MaCommande) {
     Alert.alert('Annuler cette commande ?', "L'article ne sera plus réservé pour vous.", [
@@ -219,6 +323,13 @@ export default function MesCommandesScreen() {
                 onSuivre={() => router.push(`/marketplace/suivi/${item.id}` as Href)}
                 onConfirmer={() => demanderConfirmation(item)}
                 onAnnuler={() => demanderAnnulation(item)}
+                groupage={item.groupage_id ? groupagesInfo[item.groupage_id] : undefined}
+                onRejoindre={() =>
+                  router.push({ pathname: '/marketplace/rejoindre-groupage', params: { commandeId: item.id, titre: item.item?.titre ?? '' } } as Href)
+                }
+                onRetirer={() => retirerDuGroupage(item)}
+                signalee={litiges.includes(item.id)}
+                onSignaler={() => signaler(item)}
               />
             )}
           />

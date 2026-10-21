@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteAjouter, CarteLigne, ListeCartes, TexteVide } from '@/components/CarteProfil';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -103,52 +104,27 @@ export default function ProfilExperiencesScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Expériences professionnelles" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
-          <View className="bg-white rounded-2xl p-3.5">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[13px] font-bold text-[#1A1A1A]">💼 Expérience professionnelle</Text>
-              <Pressable onPress={() => setModalOuvert(true)} className="border border-[#2563EB]/35 rounded-full px-3 py-1.5">
-                <Text className="text-[12px] font-semibold text-[#2563EB]">+ Ajouter une expérience</Text>
-              </Pressable>
-            </View>
-
-            <View className="gap-3 mt-3">
-              {experiences.length === 0 ? (
-                <Text className="text-[12.5px] text-black/40 text-center py-4">
-                  Aucune expérience enregistrée pour le moment.
-                </Text>
-              ) : (
-                experiences.map((x, i) => (
-                  <View
-                    key={x.id ?? i}
-                    className={`flex-row items-start gap-3 pb-3 ${
-                      i < experiences.length - 1 ? 'border-b border-black/[0.06]' : ''
-                    }`}>
-                    <View
-                      className="w-[34px] h-[34px] rounded-[9px] items-center justify-center"
-                      style={{ backgroundColor: PALETTE[i % PALETTE.length] }}>
-                      <Text className="text-white text-[12.5px] font-bold">
-                        {(x.company || 'EX').slice(0, 2).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View className="flex-1 min-w-0">
-                      <Text className="text-[13.5px] font-bold text-[#1A1A1A]">{x.title}</Text>
-                      <Text className="text-[12px] text-black/50 mt-0.5">
-                        {x.company}
-                        {x.location ? ` • ${x.location}` : ''}
-                      </Text>
-                      {periodeLisible(x) ? (
-                        <Text className="text-[11.5px] text-black/40 mt-0.5">{periodeLisible(x)}</Text>
-                      ) : null}
-                    </View>
-                    <Pressable onPress={() => supprimerExperience(i)}>
-                      <Ionicons name="trash-outline" size={16} color="rgba(0,0,0,0.35)" />
-                    </Pressable>
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
+        <ScrollView contentContainerClassName="pb-8" showsVerticalScrollIndicator={false}>
+          <ListeCartes>
+            {experiences.length === 0 ? <TexteVide texte="Aucune expérience enregistrée pour le moment." /> : null}
+            {experiences.map((x, i) => (
+              <CarteLigne
+                key={x.id ?? i}
+                icone="briefcase-outline"
+                titre={x.title}
+                sous={`${x.company}${x.location ? ` • ${x.location}` : ''} · ${x.isCurrent ? 'En cours' : 'Terminé'}`}
+                enfants={
+                  periodeLisible(x) ? <Text style={{ fontSize: 11.5, marginTop: 2, color: 'rgba(0,0,0,0.4)' }}>{periodeLisible(x)}</Text> : null
+                }
+                droite={
+                  <Pressable onPress={() => supprimerExperience(i)} hitSlop={8} accessibilityLabel="Supprimer cette expérience">
+                    <Ionicons name="trash-outline" size={17} color="rgba(0,0,0,0.35)" />
+                  </Pressable>
+                }
+              />
+            ))}
+            <CarteAjouter libelle="Ajouter une expérience" onPress={() => setModalOuvert(true)} />
+          </ListeCartes>
         </ScrollView>
 
         <Modal visible={modalOuvert} transparent animationType="fade" onRequestClose={() => setModalOuvert(false)}>

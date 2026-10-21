@@ -27,7 +27,7 @@ import {
   type OffrePourCandidature,
 } from '@/lib/candidature';
 
-// « Candidature Rapide » (maquette 08) puis « Candidature Envoyée ! »
+// « Candidature Rapide » (maquette 08, sans le champ « Nom complet ») puis « Candidature Envoyée ! »
 // (maquette 09). Charte §3 : « Postuler via Facilité » — sur le fil ET sur la
 // fiche offre — ouvre CETTE feuille : titre + « poste • entreprise », croix,
 // champs pré-remplis (Nom complet*, Votre e-mail*, E-mail du recruteur*,
@@ -78,6 +78,7 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
   const { height: hauteurEcran } = useWindowDimensions();
 
   const [contexte, setContexte] = useState<ContexteCandidature | null>(null);
+  // Le nom vient du profil (champ « Nom complet » supprimé le 12/10/2026).
   const [nomComplet, setNomComplet] = useState('');
   const [email, setEmail] = useState('');
   const [emailRecruteur, setEmailRecruteur] = useState(offre.contactEmail ?? '');
@@ -107,15 +108,13 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
         const ctx = await chargerContexteCandidature(userId);
         if (annule) return;
         if (!ctx.emailConfirme) {
-          Alert.alert(
-            'E-mail confirmé requis',
-            "Un e-mail confirmé est obligatoire pour postuler. Ajoutez et confirmez le vôtre dans Sécurité & Connexion.",
-            [
-              { text: 'Plus tard', style: 'cancel' },
-              { text: 'Ajouter mon e-mail', onPress: () => router.push('/web/securite') },
-            ]
-          );
+          // Sans e-mail confirmé (inscription par téléphone) : page « Confirmer mon compte », qui ramène ensuite
+          // sur cette offre.
           onFermer();
+          router.push({
+            pathname: '/confirmer-compte',
+            params: { titre: offre.titre, entreprise: offre.entreprise, retour: `/offre/${offre.id}` },
+          });
           return;
         }
         setContexte(ctx);
@@ -155,7 +154,7 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
     // adresse, c'est la route /api/postuler qui applique son repli (on ne
     // devine jamais une adresse).
     const recruteurManquant = Boolean(offre.contactEmail) && !emailRecruteur.trim();
-    if (!nomComplet.trim() || !email.trim() || recruteurManquant || !objet.trim()) {
+    if (!email.trim() || recruteurManquant || !objet.trim()) {
       setErreur('Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -256,10 +255,8 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
                 <ActivityIndicator color={VERT} />
               </View>
             ) : (
-              <ScrollView contentContainerClassName="px-5 pt-4 pb-6 gap-3.5" keyboardShouldPersistTaps="handled">
-                <Champ libelle="Nom complet *">
-                  <TextInput value={nomComplet} onChangeText={setNomComplet} style={champ} />
-                </Champ>
+              <>
+              <ScrollView style={{ flexShrink: 1 }} contentContainerClassName="px-5 pt-4 pb-4 gap-3.5" keyboardShouldPersistTaps="handled">
                 <Champ libelle="Votre e-mail *">
                   <TextInput
                     value={email}
@@ -363,6 +360,9 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
                   </View>
                 ) : null}
 
+              </ScrollView>
+              {/* Bouton hors du défilement : entièrement visible sans défiler (mise à jour du 12/10/2026). */}
+              <View className="px-5 pt-2 pb-5" style={{ borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', backgroundColor: '#fff' }}>
                 <Pressable
                   onPress={envoyer}
                   disabled={envoi}
@@ -371,7 +371,8 @@ function FeuilleCandidature({ visible, offre, onFermer, onEnvoyee }: Props) {
                   {envoi ? <ActivityIndicator color="#fff" /> : <Ionicons name="paper-plane" size={17} color="#fff" />}
                   <Text className="text-[16px] font-black text-white">{envoi ? 'Envoi en cours…' : 'Envoyer ma candidature'}</Text>
                 </Pressable>
-              </ScrollView>
+              </View>
+              </>
             )}
           </View>
         </KeyboardAvoidingView>

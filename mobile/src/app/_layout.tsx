@@ -1,4 +1,5 @@
-import { DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -6,6 +7,10 @@ import { View } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { fondSombre } from '@/components/themeSombre';
+import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
+import { LangueProvider } from '@/lib/i18n';
+import { bienvenueDejaVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
 
@@ -19,7 +24,7 @@ SplashScreen.preventAutoHideAsync();
  * laisse juste passer les enfants une fois la redirection décidée).
  */
 function AuthGate({ children }: { children: ReactNode }) {
-  const { session, profile, profilChargePour, loading } = useAuth();
+  const { session, profile, profilChargePour, loading, signOut } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   // Compte pour lequel l'onboarding a déjà été examiné pendant cette
@@ -28,15 +33,38 @@ function AuthGate({ children }: { children: ReactNode }) {
   // 24) renverrait sans cesse à « Bienvenue ». Tant que onboarding_done reste
   // false, l'ouverture suivante le propose de nouveau.
   const onboardingExamine = useRef<string | null>(null);
+  // Session héritée d'un lancement précédent : vérifiée une seule fois.
+  const sessionVerifiee = useRef(false);
+  // Dernier univers (Facilité / Locaux) : relu une seule fois par lancement, puis suivi à chaque changement d'univers.
+  const universRestaure = useRef(false);
+  const universPret = useRef(false);
 
   useEffect(() => {
     if (loading) return;
     const dansGroupeAuth = segments[0] === '(auth)';
+    // Lien « mot de passe oublié » : accessible sans session, et jamais renvoyé ailleurs pendant la session de récupération.
+    if ((segments[0] as string) === 'nouveau-mot-de-passe') return;
+    const surNomPrenom = dansGroupeAuth && (segments as string[])[1] === 'nom-prenom';
     if (!session) {
       onboardingExamine.current = null;
-      if (!dansGroupeAuth) router.replace('/login');
+      sessionVerifiee.current = false;
+      universRestaure.current = false;
+      if (!dansGroupeAuth) {
+        // Écran « Bienvenue » au tout premier lancement, connexion ensuite.
+        bienvenueDejaVue().then((vu) => router.replace((vu ? '/login' : '/bienvenue') as Href));
+      }
       return;
     }
+
+    // « Enregistre tes informations de connexion » décoché : une session
+    // laissée par un lancement précédent est fermée.
+    if (!sessionVerifiee.current) {
+      sessionVerifiee.current = true;
+      sessionAFermerAuDemarrage().then((fermer) => {
+        if (fermer) signOut();
+      });
+    }
+
     // Le profil réel de CET utilisateur doit être lu avant de décider (le
     // cache local peut venir d'un autre compte ou être périmé).
     if (profilChargePour !== session.user.id) return;
@@ -47,12 +75,30 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (onboardingExamine.current !== session.user.id) {
       onboardingExamine.current = session.user.id;
       if (aOnboarding) {
-        router.replace('/onboarding/bienvenue');
+        // Nouveau compte : « Nom et prénom » une seule fois, puis l'onboarding.
+        nomDejaConfirme(session.user.id).then((confirme) =>
+          router.replace((confirme ? '/onboarding/bienvenue' : '/nom-prenom') as Href)
+        );
         return;
       }
     }
-    if (dansGroupeAuth) router.replace('/');
-  }, [session, profile, profilChargePour, loading, segments, router]);
+    if (dansGroupeAuth && !surNomPrenom) router.replace('/');
+    if (!universRestaure.current && !surNomPrenom) {
+      universRestaure.current = true;
+      obtenirUserMode().then((m) => {
+        universPret.current = true;
+        // Application fermée sur Locaux : on y revient à la réouverture.
+        if (m === 'business') router.replace('/marketplace' as Href);
+      });
+    }
+  }, [session, profile, profilChargePour, loading, segments, router, signOut]);
+
+  const racineActuelle = segments[0] as string | undefined;
+  useEffect(() => {
+    if (!universPret.current) return;
+    if (racineActuelle === 'marketplace') definirUserMode('business');
+    else if (racineActuelle === '(tabs)') definirUserMode('facilite');
+  }, [racineActuelle]);
 
   return children;
 }
@@ -71,36 +117,39 @@ function BarreFaciliteHorsOnglets() {
   const segments = useSegments();
   const racine = segments[0];
   if (racine === undefined) return null;
-  if (racine === '(auth)' || racine === '(tabs)' || racine === 'marketplace' || racine === 'onboarding') return null;
+  if (racine === '(auth)' || racine === '(tabs)' || racine === 'marketplace' || racine === 'onboarding' || (racine as string) === 'nouveau-mot-de-passe') return null;
   return <FaciliteBottomBar />;
 }
 
-export default function RootLayout() {
+/** Contenu racine : navigation et écrans, aux couleurs du thème choisi (clair, sombre ou automatique). */
+function ContenuRacine() {
+  const { sombre } = useThemeApp();
+  const fond = sombre ? fondSombre('#F2F0EA') : '#F2F0EA';
   return (
-    <AuthProvider>
-      {/* DefaultTheme (jamais DarkTheme) : toute l'app est pensée en thème
-          clair, aucun écran du design ne prévoit de mode sombre. Suivre
-          colorScheme rendait la navigation quasi noire par défaut sur un
-          téléphone en mode sombre système — trouvé le 13/09/2026. */}
-      <ThemeProvider value={DefaultTheme}>
-        <AnimatedSplashOverlay />
+    <ThemeProvider value={sombre ? DarkTheme : DefaultTheme}>
+      <AnimatedSplashOverlay />
+      <ThemeFrontiere>
         <AuthGate>
-          {/* Stack (pas Slot) requis à partir de ce point : les écrans
-              poussés hors des onglets (offre/[id], chat/[id]...) ont besoin
-              d'une navigation native (retour, geste de balayage, transition)
-              par-dessus (auth)/(tabs). headerShown:false partout — chaque
-              écran construit son propre en-tête, comme le reste de l'app.
-              contentStyle : couleur de fond de secours pendant les
-              transitions/le chargement d'un écran, avant que son propre
-              contenu ne s'affiche — évite un flash noir. */}
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }}>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F2F0EA' } }} />
+              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fond } }} />
             </View>
             <BarreFaciliteHorsOnglets />
           </View>
         </AuthGate>
-      </ThemeProvider>
+      </ThemeFrontiere>
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <LangueProvider>
+    <AuthProvider>
+      <ThemeAppProvider>
+        <ContenuRacine />
+      </ThemeAppProvider>
     </AuthProvider>
+    </LangueProvider>
   );
 }

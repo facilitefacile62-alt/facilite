@@ -1,3 +1,4 @@
+import { contientSansAccent } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -70,9 +71,9 @@ export default function MessagesMarketplaceScreen() {
   );
 
   const affichees = useMemo(() => {
-    const texte = recherche.trim().toLowerCase();
+    const texte = recherche.trim();
     return discussions.filter(
-      (d) => (filtre === 'toutes' || d.nonLue) && (!texte || d.nom.toLowerCase().includes(texte))
+      (d) => (filtre === 'toutes' || d.nonLue) && (!texte || contientSansAccent(d.nom, texte))
     );
   }, [discussions, filtre, recherche]);
 
@@ -168,7 +169,7 @@ export default function MessagesMarketplaceScreen() {
               <LigneDiscussion
                 discussion={item}
                 onPress={() =>
-                  router.push(`/marketplace/chat/${item.id}?contexte=marketplace&nom=${encodeURIComponent(item.nom)}` as Href)
+                  router.push(`/marketplace/chat/${item.id}?contexte=marketplace&nom=${encodeURIComponent(item.nom)}&type=${item.estBoutique ? 'boutique' : 'client'}` as Href)
                 }
               />
             )}

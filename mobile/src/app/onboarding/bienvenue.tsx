@@ -1,14 +1,30 @@
 import { useRouter, type Href } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import BandeauOnboarding from '@/components/BandeauOnboarding';
+import { useAuth } from '@/context/AuthContext';
+import { definirUserMode } from '@/lib/userMode';
 
 // Onboarding 23 — Bienvenue : choix de l'univers. Illustration
 // onboarding-hero.jpg centrée à 30 %.
+//
+// Inscription par numéro de téléphone (compte sans e-mail) : pas de choix, on va directement à Locaux (Visiteur ou
+// Vendeur) — c'est l'usage business. Par e-mail : le choix reste proposé (demande du 20/10/2026).
 const VERT_VIF = '#10E58A';
 
 export default function OnboardingBienvenueScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const parTelephone = Boolean(user?.phone) && !user?.email;
+
+  useEffect(() => {
+    if (!parTelephone) return;
+    definirUserMode('business').catch(() => {});
+    router.replace('/onboarding/role' as Href);
+  }, [parTelephone, router]);
+
+  if (parTelephone) return null;
 
   return (
     <BandeauOnboarding image={require('../../../assets/images/onboarding/onboarding-hero.jpg')} centrage={30}>

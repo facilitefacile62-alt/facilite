@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ApercuDocument from '@/components/ApercuDocument';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import LigneOutil from '@/components/LigneOutil';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +19,9 @@ import {
   type DocumentProfil,
 } from '@/lib/documents';
 import { OUTILS } from '@/lib/outils';
+import { changerPhotoProfil } from '@/lib/photoProfil';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
+import { useT } from '@/lib/i18n';
 
 // Profil Facilité — maquettes « Profil — Documents » (37) et
 // « Profil — Fonctionnalités » (38).
@@ -38,10 +41,13 @@ const VERT = '#10B981';
 type Onglet = 'documents' | 'fonctionnalites';
 
 export default function ProfilScreen() {
+  const t = useT();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
 
+  const { importer: demandeImport } = useLocalSearchParams<{ importer?: string }>();
+  const importDemande = useRef(false);
   const [onglet, setOnglet] = useState<Onglet>('documents');
   const [documents, setDocuments] = useState<DocumentProfil[] | null>(null);
   const [erreur, setErreur] = useState(false);
@@ -119,10 +125,37 @@ export default function ProfilScreen() {
       .finally(() => setEnvoiEnCours(false));
   };
 
+  // « + » > Importer un document : l'écran s'ouvre sur l'onglet Documents et propose tout de suite le sélecteur de fichiers
+  // (une seule fois par ouverture).
+  useFocusEffect(
+    useCallback(() => {
+      if (demandeImport === '1' && userId && !importDemande.current) {
+        importDemande.current = true;
+        importer();
+      }
+      if (demandeImport !== '1') importDemande.current = false;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [demandeImport, userId])
+  );
+
+  // Toucher la photo : choisir une image dans la galerie, l'enregistrer, puis recharger le profil.
+  const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  const changerPhoto = () => {
+    if (!userId || envoiPhoto) return;
+    setEnvoiPhoto(true);
+    changerPhotoProfil(userId)
+      .then((fait) => (fait ? refreshProfile() : undefined))
+      .catch((e: Error) => Alert.alert('Photo impossible', e.message))
+      .finally(() => setEnvoiPhoto(false));
+  };
+
   const nomAffiche = boutique?.nom || profile?.full_name || 'Mon profil';
+  // Sous le nom : la description de la boutique, sinon le titre professionnel ou la bio
+  // du profil (maquette 44) — jamais l'adresse e-mail du compte.
+  const texteProfil = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const sousTitre = boutique
     ? [boutique.quartier, boutique.ville].filter(Boolean).join(', ') || 'Boutique sur Facilité'
-    : user?.email || '';
+    : texteProfil(profile?.headline) ?? texteProfil(profile?.bio) ?? '';
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
@@ -134,7 +167,7 @@ export default function ProfilScreen() {
           <View className="px-4 pt-4">
             <View className="flex-row items-center gap-3">
               <Pressable
-                onPress={() => router.push('/mon-profil/a-propos')}
+                onPress={changerPhoto}
                 accessibilityLabel="Photo de profil"
                 className="w-[72px] h-[72px] rounded-full bg-[#E8E4DA] items-center justify-center">
                 {profile?.avatar_url ? (
@@ -171,7 +204,7 @@ export default function ProfilScreen() {
                 className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5"
                 style={{ borderWidth: 1, borderColor: BORDURE }}>
                 <Ionicons name="pencil" size={13} color="#1A1A1A" />
-                <Text className="text-[12px] font-bold text-[#1A1A1A]">Modifier infos</Text>
+                <Text className="text-[12px] font-bold text-[#1A1A1A]">{t('Modifier infos')}</Text>
               </Pressable>
             </View>
           </View>
@@ -196,7 +229,7 @@ export default function ProfilScreen() {
                     borderColor: actif ? '#1A1A1A' : BORDURE,
                   }}>
                   <Ionicons name={o.icone} size={14} color="#1A1A1A" />
-                  <Text className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A]`}>{o.label}</Text>
+                  <Text className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A]`}>{t(o.label)}</Text>
                 </Pressable>
               );
             })}
@@ -215,7 +248,7 @@ export default function ProfilScreen() {
                   <Ionicons name="add" size={16} color={BLEU} />
                 )}
                 <Text className="text-[13.5px] font-bold" style={{ color: BLEU }}>
-                  {envoiEnCours ? 'Envoi en cours…' : 'Ajouter mes documents'}
+                  {envoiEnCours ? t('Envoi en cours…') : t('Ajouter mes documents')}
                 </Text>
               </Pressable>
 
@@ -224,7 +257,7 @@ export default function ProfilScreen() {
                   <View className="py-12 px-6 items-center">
                     <Ionicons name="cloud-offline-outline" size={32} color="rgba(0,0,0,0.25)" />
                     <Text className="text-[13px] text-black/50 text-center mt-2">
-                      Impossible de charger vos documents pour le moment.
+                      {t('Impossible de charger vos documents pour le moment.')}
                     </Text>
                   </View>
                 ) : (
@@ -236,7 +269,7 @@ export default function ProfilScreen() {
                 <View className="py-12 px-6 items-center">
                   <Ionicons name="document-outline" size={32} color="rgba(0,0,0,0.25)" />
                   <Text className="text-[13px] text-black/50 text-center mt-2">
-                    Aucun document pour l&apos;instant. Ajoutez votre CV ou votre lettre de motivation.
+                    {t("Aucun document pour l'instant. Ajoutez votre CV ou votre lettre de motivation.")}
                   </Text>
                 </View>
               ) : (
@@ -260,7 +293,7 @@ export default function ProfilScreen() {
               keyExtractor={(item) => item.id}
               contentContainerClassName="px-4 py-3"
               ItemSeparatorComponent={() => <View className="h-2.5" />}
-              renderItem={({ item }) => <LigneOutil outil={item} onPress={() => item.ouvrir(router)} />}
+              renderItem={({ item, index }) => <LigneOutil outil={item} vedette={index === 0} onPress={() => item.ouvrir(router)} />}
             />
           )}
         </ScrollView>
@@ -286,7 +319,7 @@ function CarteDocument({
       className="rounded-2xl overflow-hidden"
       style={{ width: '47.5%', backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
       <Pressable onPress={onOuvrir} className="w-full aspect-[3/4] bg-[#E8E4DA] items-center justify-center">
-        <Ionicons name={document.estImage ? 'image-outline' : 'document-text-outline'} size={30} color="rgba(0,0,0,0.3)" />
+        <ApercuDocument document={document} />
         <View className="absolute bottom-2 left-2 bg-black/70 rounded px-1.5 py-0.5">
           <Text className="text-white text-[9px] font-black">{badgeDocument(document)}</Text>
         </View>

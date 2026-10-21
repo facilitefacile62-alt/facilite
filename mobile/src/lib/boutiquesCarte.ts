@@ -19,17 +19,25 @@ export type BoutiqueCarte = {
   latitude: number;
   longitude: number;
   distanceKm: number | null;
+  /** Paramètres de l'avatar façon Bitmoji (même `avatar_config` que le site). */
+  avatarConfig: Record<string, unknown> | null;
+  /** Vrai si la boutique a au moins un article actif en stock (filtre « En stock (LIVE) »). */
+  enStock: boolean;
 };
 
 export async function chargerBoutiquesCarte(depuis: Position | null): Promise<BoutiqueCarte[]> {
   const { data, error } = await supabase
     .from('marketplace_stores')
-    .select('id, nom, quartier, ville, type_boutique, verifie, latitude, longitude')
+    .select('id, nom, quartier, ville, type_boutique, verifie, latitude, longitude, avatar_config')
     .eq('actif', true)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
     .limit(200);
   if (error) throw new Error(error.message);
+
+  // Boutiques qui ont au moins un article actif en stock (une seule requête légère).
+  const { data: enStockData } = await supabase.from('marketplace_items').select('store_id').eq('actif', true).gt('quantite', 0).limit(2000);
+  const idsEnStock = new Set((enStockData ?? []).map((r) => r.store_id as string));
 
   const liste = (data ?? []).map((b) => ({
     id: b.id as string,
@@ -41,6 +49,8 @@ export async function chargerBoutiquesCarte(depuis: Position | null): Promise<Bo
     latitude: b.latitude as number,
     longitude: b.longitude as number,
     distanceKm: depuis ? distanceKm(depuis, { latitude: b.latitude as number, longitude: b.longitude as number }) : null,
+    avatarConfig: (b.avatar_config as Record<string, unknown> | null) ?? null,
+    enStock: idsEnStock.has(b.id as string),
   }));
   return liste.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
 }

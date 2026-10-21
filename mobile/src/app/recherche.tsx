@@ -1,14 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRechercheOffres, useRecherchesRecentes, type ResultatRecherche } from '@/lib/useRechercheOffres';
 
-// Reproduction de design_handoff_facilite/pages/04-recherche.html — sombre,
-// comme offre/[id].tsx. Pas de bouton retour dans le mock (recherche
+// Recherche Facilité aux couleurs de la recherche Locaux (choix du 20/10/2026) : bande #e3dbcc avec retour, champ #d3cab9 et
+// loupe, corps blanc. Avant : version sombre de design_handoff_facilite/pages/04-recherche.html. Pas de bouton retour dans le mock (recherche
 // "flottante" sans chrome), mais un moyen visible de sortir de l'écran
 // reste nécessaire sur mobile (le geste de balayage iOS n'est pas toujours
 // évident) — même bouton rond #15181D que sur offre/[id].tsx, léger écart
@@ -47,94 +47,78 @@ export default function RechercheScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultats]);
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View className="flex-1 bg-[#0B0D10]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="flex-row items-center gap-3 px-5 pt-2">
-          <Pressable
-            onPress={() => router.back()}
-            className="w-[38px] h-[38px] rounded-full bg-[#15181D] items-center justify-center">
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M15 5L8 12L15 19" stroke="#F5F6F7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Pressable>
-          <Text className="text-[20px] font-extrabold text-[#F5F6F7]">Rechercher</Text>
-        </View>
+    <View className="flex-1 bg-white">
+      <View className="px-4 pb-3 flex-row items-center gap-3" style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top + 10 }}>
+        <Pressable onPress={() => router.back()} accessibilityLabel="Retour" hitSlop={10}>
+          <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+        </Pressable>
+        <TextInput
+          value={requete}
+          onChangeText={setRequete}
+          placeholder="Rechercher..."
+          placeholderTextColor="rgba(0,0,0,0.45)"
+          returnKeyType="search"
+          autoFocus
+          autoCorrect={false}
+          className="flex-1 text-[14.5px] text-[#1A1A1A]"
+          style={[{ height: 46, borderRadius: 23, backgroundColor: '#d3cab9', paddingHorizontal: 18 }, { outlineStyle: 'none' } as object]}
+        />
+        <Ionicons name="search" size={24} color="#111" />
+      </View>
 
-        <View className="px-5 pt-3 pb-2">
-          <View className="flex-row items-center gap-2.5 bg-[#15181D] border border-white/[0.07] rounded-full px-4 py-3.5">
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Circle cx={10.5} cy={10.5} r={6.5} stroke="rgba(245,246,247,0.4)" strokeWidth={1.8} />
-              <Line x1={15.5} y1={15.5} x2={20.5} y2={20.5} stroke="rgba(245,246,247,0.4)" strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-            <TextInput
-              value={requete}
-              onChangeText={setRequete}
-              placeholder="Titre, entreprise, secteur..."
-              placeholderTextColor="rgba(245,246,247,0.4)"
-              autoFocus
-              className="flex-1 text-[14.5px] text-[#F5F6F7]"
-            />
-          </View>
-        </View>
-
-        {hasQuery ? (
-          <FlatList
-            data={resultats ?? []}
-            keyExtractor={(item) => item.id}
-            contentContainerClassName="px-5 pt-4 pb-6 gap-3"
-            ItemSeparatorComponent={() => <View className="h-3" />}
-            renderItem={({ item }) => <CarteResultat resultat={item} />}
-            ListEmptyComponent={
-              noResults ? (
-                <Text className="text-center py-10 text-[14px] text-[#F5F6F7]/40">
-                  Aucun résultat pour cette recherche.
-                </Text>
-              ) : null
-            }
-          />
-        ) : (
-          <ScrollView contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled">
-            {recherches.length > 0 && (
-              <>
-                <Text className="px-5 pt-4.5 pb-2.5 text-[13px] font-bold text-[#F5F6F7]/50 uppercase tracking-wider">
-                  Recherches récentes
-                </Text>
-                <View className="flex-row flex-wrap gap-2 px-5">
-                  {recherches.map((r) => (
-                    <Pressable
-                      key={r}
-                      onPress={() => setRequete(r)}
-                      className="px-3.5 py-2 rounded-full bg-[#15181D] border border-white/[0.07]">
-                      <Text className="text-[13px] text-[#F5F6F7]">{r}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
-            )}
-
-            <Text className="px-5 pt-5 pb-2.5 text-[13px] font-bold text-[#F5F6F7]/50 uppercase tracking-wider">
-              Catégories populaires
-            </Text>
-            <View className="flex-row flex-wrap gap-3 px-5">
-              {CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat.code}
-                  onPress={() => setRequete(cat.motCle)}
-                  className="bg-[#15181D] border border-white/[0.06] rounded-2xl p-4 gap-5"
-                  style={{ width: '46.5%' }}>
-                  <View
-                    className="w-9 h-9 rounded-[11px] items-center justify-center"
-                    style={{ backgroundColor: cat.color }}>
-                    <Text className="text-[13px] font-bold text-[#0B0D10]">{cat.code}</Text>
-                  </View>
-                  <Text className="text-[14px] font-semibold text-[#F5F6F7]">{cat.label}</Text>
+      {hasQuery ? (
+        <FlatList
+          data={resultats ?? []}
+          keyExtractor={(item) => item.id}
+          style={{ backgroundColor: '#F2F0EA' }}
+          contentContainerClassName="px-4 pt-4 pb-6"
+          ItemSeparatorComponent={() => <View className="h-3" />}
+          renderItem={({ item }) => <CarteResultat resultat={item} />}
+          ListEmptyComponent={
+            noResults ? (
+              <Text className="text-center py-10 text-[14px]" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                Aucun résultat pour cette recherche.
+              </Text>
+            ) : null
+          }
+        />
+      ) : (
+        <ScrollView contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled">
+          {recherches.length > 0 ? (
+            <View className="px-4 pt-4 gap-1">
+              {recherches.map((r) => (
+                <Pressable key={r} onPress={() => setRequete(r)} className="flex-row items-center gap-3 py-2.5">
+                  <Ionicons name="time-outline" size={17} color="#9CA3AF" />
+                  <Text className="text-[14.5px] text-[#1A1A1A]">{r}</Text>
                 </Pressable>
               ))}
             </View>
-          </ScrollView>
-        )}
-      </SafeAreaView>
+          ) : (
+            <Text className="px-4 pt-4 text-[14.5px]" style={{ color: 'rgba(0,0,0,0.5)' }}>Aucune recherche récente</Text>
+          )}
+
+          <Text className="px-4 pt-5 pb-2.5 text-[13px] font-bold uppercase tracking-wider" style={{ color: 'rgba(0,0,0,0.45)' }}>
+            Catégories populaires
+          </Text>
+          <View className="flex-row flex-wrap gap-3 px-4">
+            {CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat.code}
+                onPress={() => setRequete(cat.motCle)}
+                className="rounded-2xl p-4 gap-5"
+                style={{ width: '47%', backgroundColor: '#F2F0EA', borderWidth: 1, borderColor: '#D9D1C1' }}>
+                <View className="w-9 h-9 rounded-[11px] items-center justify-center" style={{ backgroundColor: cat.color }}>
+                  <Text className="text-[13px] font-bold text-white">{cat.code}</Text>
+                </View>
+                <Text className="text-[14px] font-semibold text-[#1A1A1A]">{cat.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -146,12 +130,13 @@ function CarteResultat({ resultat }: { resultat: ResultatRecherche }) {
   return (
     <Pressable
       onPress={() => router.push(`/offre/${resultat.id}`)}
-      className="bg-[#15181D] border border-white/[0.06] rounded-3xl p-4 flex-row gap-3 items-start">
+      className="bg-white rounded-3xl p-4 flex-row gap-3 items-start"
+      style={{ borderWidth: 1, borderColor: '#D9D1C1' }}>
       {resultat.posterUri && !logoErreur ? (
         <Image
           source={{ uri: resultat.posterUri }}
           alt={resultat.entreprise}
-          style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#0B0D10' }}
+          style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#F2F0EA' }}
           contentFit="cover"
           transition={150}
           onError={() => setLogoErreur(true)}
@@ -160,12 +145,12 @@ function CarteResultat({ resultat }: { resultat: ResultatRecherche }) {
         <View
           className="w-10 h-10 rounded-xl items-center justify-center"
           style={{ backgroundColor: resultat.logoBg }}>
-          <Text className="text-[15px] font-bold text-[#0B0D10]">{resultat.logo}</Text>
+          <Text className="text-[15px] font-bold text-white">{resultat.logo}</Text>
         </View>
       )}
       <View className="flex-1 min-w-0">
-        <Text className="text-[15px] font-bold text-[#F5F6F7]">{resultat.titre}</Text>
-        <Text className="text-[13px] text-[#F5F6F7]/55 mt-0.5">
+        <Text className="text-[15px] font-bold text-[#1A1A1A]">{resultat.titre}</Text>
+        <Text className="text-[13px] mt-0.5" style={{ color: 'rgba(0,0,0,0.55)' }}>
           {resultat.entreprise} · {resultat.localisation}
         </Text>
       </View>

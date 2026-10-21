@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 
+import BoutonAction from '@/components/BoutonAction';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
@@ -10,14 +10,19 @@ import EnteteMarketplace from '@/components/EnteteMarketplace';
 // Modifier le profil (visiteur), maquette « Marketplace — Modifier profil
 // visiteur » : juste prénom et nom, à la différence du profil vendeur
 // (boutique, WhatsApp, position…).
-const VERT_PROFOND = '#0d3b34';
-
 function decouperNom(nomComplet: string | null | undefined): { prenom: string; nom: string } {
   const morceaux = (nomComplet ?? '').trim().split(/\s+/).filter(Boolean);
   return { prenom: morceaux[0] ?? '', nom: morceaux.slice(1).join(' ') };
 }
 
+// Le formulaire est remonté quand le profil arrive : ouvert directement par un
+// lien, il se remplit quand même avec le prénom et le nom du compte.
 export default function ModifierProfilVisiteurScreen() {
+  const { profile } = useAuth();
+  return <Formulaire key={(profile?.id as string | undefined) ?? 'chargement'} />;
+}
+
+function Formulaire() {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const connu = decouperNom(profile?.full_name as string | undefined);
@@ -74,13 +79,9 @@ export default function ModifierProfilVisiteurScreen() {
             />
           </View>
 
-          <Pressable
-            onPress={enregistrer}
-            disabled={enregistrement}
-            className="rounded-2xl py-3.5 items-center mt-2 disabled:opacity-60"
-            style={{ backgroundColor: VERT_PROFOND }}>
-            {enregistrement ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[14.5px] font-bold">Enregistrer</Text>}
-          </Pressable>
+          <View className="mt-2">
+            <BoutonAction titre="Enregistrer" sousTitre="Prénom et nom" icone="checkmark" onPress={enregistrer} chargement={enregistrement} />
+          </View>
         </View>
       </View>
     </View>

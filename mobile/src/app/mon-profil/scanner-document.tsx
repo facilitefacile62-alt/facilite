@@ -209,37 +209,34 @@ export default function ScannerDocumentScreen() {
               d&apos;enregistrer.
             </Text>
 
-            <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-2xl p-4 mt-4">
-              <View className="w-11 h-11 rounded-xl bg-[#d7f2ea] items-center justify-center">
+            <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-4" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+              <View className="w-11 h-11 rounded-full bg-[#d7f2ea] items-center justify-center">
                 <Ionicons name="camera-outline" size={20} color="#0d3b34" />
               </View>
               <View className="flex-1">
                 <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Prendre une photo</Text>
                 <Text className="text-[11.5px] text-black/45 mt-0.5">CNI, passeport, CV imprimé</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
             </Pressable>
 
-            <Pressable onPress={choisirPhoto} className="flex-row items-center gap-3 bg-white rounded-2xl p-4 mt-3">
-              <View className="w-11 h-11 rounded-xl bg-[#fdf1d9] items-center justify-center">
+            <Pressable onPress={choisirPhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-3" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+              <View className="w-11 h-11 rounded-full bg-[#fdf1d9] items-center justify-center">
                 <Ionicons name="images-outline" size={20} color="#b45309" />
               </View>
               <View className="flex-1">
                 <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Choisir dans la galerie</Text>
                 <Text className="text-[11.5px] text-black/45 mt-0.5">Une photo déjà prise</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
             </Pressable>
 
-            <Pressable onPress={choisirFichier} className="flex-row items-center gap-3 bg-white rounded-2xl p-4 mt-3">
-              <View className="w-11 h-11 rounded-xl bg-[#dbe8fc] items-center justify-center">
+            <Pressable onPress={choisirFichier} className="flex-row items-center gap-3 bg-white rounded-full mt-3" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+              <View className="w-11 h-11 rounded-full bg-[#dbe8fc] items-center justify-center">
                 <Ionicons name="document-outline" size={20} color="#2563EB" />
               </View>
               <View className="flex-1">
                 <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Choisir un fichier</Text>
                 <Text className="text-[11.5px] text-black/45 mt-0.5">PDF, Word, image</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.3)" />
             </Pressable>
           </ScrollView>
         )}

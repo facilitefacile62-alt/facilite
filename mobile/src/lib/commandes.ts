@@ -37,10 +37,29 @@ export type MaCommande = {
   livreur_position_lat: number | null;
   livreur_position_lng: number | null;
   livreur_position_maj_le: string | null;
+  // Groupage (migration 20261015120000) : tournée du livreur à laquelle la commande est rattachée.
+  groupage_id?: string | null;
+  groupage_decision?: 'en_attente' | 'acceptee' | 'refusee' | null;
+  // Lieu de livraison précis (renseigné quand la commande rejoint un groupage).
+  livraison_lat?: number | null;
+  livraison_lng?: number | null;
   created_at: string;
   item: { titre: string; photos?: unknown } | null;
   store?: { nom: string; quartier: string | null; ville: string | null } | null;
 };
+
+/** L'acheteur signale une livraison qui n'avance plus ; refusé tant que le délai d'inactivité n'est pas écoulé. */
+export async function signalerLivraisonBloquee(commandeId: string): Promise<void> {
+  const { error } = await supabase.rpc('signaler_livraison_bloquee', { p_commande_id: commandeId, p_motif: null });
+  if (error) throw new Error(error.message);
+}
+
+/** Ids des commandes déjà signalées comme bloquées (signalement en cours d'examen). */
+export async function chargerLitigesOuverts(): Promise<string[]> {
+  const { data, error } = await supabase.from('livraison_litiges').select('commande_id').is('resolu_le', null);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { commande_id: string }[]).map((l) => l.commande_id);
+}
 
 export const LIBELLES_STATUT: Record<StatutCommande, string> = {
   en_attente_livreur: "En attente d'un livreur",
