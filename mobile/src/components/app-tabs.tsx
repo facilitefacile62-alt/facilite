@@ -2,8 +2,9 @@ import { Tabs } from 'expo-router';
 
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 
-// Groupe (tabs) de la plateforme Facilité. Ordre demandé explicitement :
-// Accueil, Offres, Extracteur (au milieu), Messages, Profil —
+// Groupe (tabs) de la plateforme Facilité. Barre : Accueil, Offres, Autour de
+// moi (au milieu), Messages, Profil ; l'écran Extracteur reste dans le groupe,
+// ouvert par le bouton flottant —
 // Notifications n'est pas un onglet, elle vit dans l'en-tête
 // (FaciliteHeader), en haut.
 //
@@ -16,6 +17,7 @@ export default function AppTabs() {
     <Tabs screenOptions={{ headerShown: false }} tabBar={() => <FaciliteBottomBar />}>
       <Tabs.Screen name="index" options={{ title: 'Accueil' }} />
       <Tabs.Screen name="offres" options={{ title: 'Offres' }} />
+      <Tabs.Screen name="autour" options={{ title: 'Autour de moi' }} />
       <Tabs.Screen name="extracteur" options={{ title: 'Extracteur' }} />
       <Tabs.Screen name="messages" options={{ title: 'Messages' }} />
       <Tabs.Screen name="profil" options={{ title: 'Profil' }} />

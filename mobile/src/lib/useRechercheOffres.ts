@@ -1,3 +1,4 @@
+import { motPourFiltre } from '@/lib/texte';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -46,11 +47,15 @@ export function useRechercheOffres(requete: string) {
     let annule = false;
     const t = setTimeout(async () => {
       try {
-        const { data, error } = await supabase
+        // Chaque mot doit être présent (dans le titre, l'entreprise, le lieu ou la description), sans
+        // tenir compte des accents : voir public.sans_accent() et la colonne recherche_norm.
+        const mots = motPourFiltre(q).split(' ').filter(Boolean);
+        const base = supabase
           .from('job_offers')
           .select('id, title, company, location, image_url')
-          .eq('is_active', true)
-          .or(`title.ilike.%${q}%,company.ilike.%${q}%,description.ilike.%${q}%`)
+          .eq('is_active', true);
+        const { data, error } = await mots
+          .reduce((acc, m) => acc.ilike('recherche_norm', `%${m}%`), base)
           .limit(20);
 
         if (annule) return;

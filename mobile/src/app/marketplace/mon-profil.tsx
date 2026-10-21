@@ -81,7 +81,7 @@ export default function MonProfilVisiteurScreen() {
               className="flex-row items-center gap-3"
               style={{ backgroundColor: '#ECFDF5', borderRadius: 14, borderWidth: 1, borderColor: '#A7F3D0', padding: 14 }}>
               <Ionicons name="storefront" size={18} color="#047857" />
-              <Text className="text-[15px] font-black" style={{ color: '#047857' }}>Devenir Vendeur</Text>
+              <Text className="text-[15px] font-black" style={{ color: '#047857' }}>Devenir actif</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/web/faq' as Href)} className="flex-row items-center gap-3" style={{ padding: 14 }}>
               <Ionicons name="help-circle-outline" size={20} color="#1A1A1A" />
@@ -98,14 +98,14 @@ export default function MonProfilVisiteurScreen() {
           <View className="items-center justify-center" style={{ width: 58, height: 58, borderRadius: 18, backgroundColor: '#ECFDF5' }}>
             <Ionicons name="storefront" size={26} color="#047857" />
           </View>
-          <Text className="text-[18px] font-black text-[#1A1A1A] text-center mt-4">Devenez vendeur pour publier vos articles</Text>
+          <Text className="text-[18px] font-black text-[#1A1A1A] text-center mt-4">Devenez actif pour publier vos articles</Text>
           <Text className="text-[13.5px] text-center mt-2" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 20 }}>
             Vous naviguez pour l&apos;instant en tant que visiteur. Créez votre boutique (
             <Text style={{ color: '#2563EB' }}>nom</Text>, <Text style={{ color: '#2563EB' }}>contact</Text> et{' '}
             <Text style={{ color: '#2563EB' }}>position</Text>) pour commencer à publier.
           </Text>
           <View className="w-full mt-4">
-            <BoutonAction titre="Devenir Vendeur" sousTitre="Créer ma boutique" icone="storefront-outline" onPress={() => router.push('/marketplace/vendre' as Href)} />
+            <BoutonAction titre="Devenir actif" sousTitre="Créer ma boutique" icone="storefront-outline" onPress={() => router.push('/marketplace/vendre' as Href)} />
           </View>
         </View>
       </ScrollView>

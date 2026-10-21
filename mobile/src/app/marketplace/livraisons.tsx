@@ -268,6 +268,13 @@ export default function LivraisonsScreen() {
         )}
 
         <BoutonAction
+          titre="Mes groupages"
+          sousTitre="Annoncer une tournée et la partager"
+          icone="people-outline"
+          onPress={() => router.push('/marketplace/groupages' as Href)}
+        />
+
+        <BoutonAction
           titre="Livraisons disponibles"
           sousTitre="Triées par distance"
           icone="navigate-outline"

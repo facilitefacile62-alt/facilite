@@ -13,8 +13,8 @@ export default function PastilleCompteur({ valeur }: { valeur: number }) {
   if (!libelle) return null;
   return (
     <View
-      pointerEvents="none"
       style={{
+        pointerEvents: 'none',
         position: 'absolute',
         top: -5,
         right: -9,

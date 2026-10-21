@@ -1,15 +1,17 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BoutonPlusLocaux from '@/components/BoutonPlusLocaux';
 import CarteArticleMarketplace from '@/components/CarteArticleMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
-import { useAuth } from '@/context/AuthContext';
+import MiniCarteBoutiques from '@/components/MiniCarteBoutiques';
 import { CATEGORIES_MARKETPLACE, type ArticleMarketplace } from '@/lib/marketplace';
+import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
-import { chargerMesBoutiques } from '@/lib/vendeur';
 
 // Marketplace — Accueil (maquette « Marketplace », image 15). En-tête
 // compact (logo + recherche + menu, pas de barre de recherche en ligne : un
@@ -26,41 +28,35 @@ function avecCaseVide(articles: ArticleMarketplace[]): LigneGrille[] {
 }
 
 export default function MarketplaceScreen() {
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
   const router = useRouter();
   const [categorie, setCategorie] = useState<string | null>(null);
-  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, '');
-
-  // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...).
-  const { categorie: categorieParam } = useLocalSearchParams<{ categorie?: string }>();
+  // Catégorie choisie depuis la page Recherche (/marketplace?categorie=...) ; « Articles proches » (?proches=1)
+  // reste sur cette page et trie les articles par distance.
+  const { categorie: categorieParam, mini, proches } = useLocalSearchParams<{ categorie?: string; mini?: string; proches?: string }>();
+  const { position, activer } = useLocalisation();
+  useEffect(() => {
+    if (proches) activer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proches]);
+  const { articles, erreur, actualisation, recharger } = useMarketplaceArticles(categorie, '', proches ? position : null);
   useEffect(() => {
     if (!categorieParam) return;
     queueMicrotask(() => setCategorie(categorieParam));
   }, [categorieParam]);
 
-  // Libellé des actions rapides : « Devenir Vendeur » sans boutique, « Ma boutique » avec une.
-  const { user } = useAuth();
-  const userId = user?.id;
-  const [aBoutique, setAboutique] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      let annule = false;
-      if (userId) {
-        chargerMesBoutiques(userId)
-          .then((liste) => {
-            if (!annule) setAboutique(liste.length > 0);
-          })
-          .catch(() => {});
-      }
-      return () => {
-        annule = true;
-      };
-    }, [userId])
-  );
-
   return (
     <View className="flex-1" style={{ backgroundColor: '#F2F0EA' }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <MarketplaceHeader />
+
+        {/* Mini carte : ouverte par « Mini carte » de la ligne « Autour de moi » */}
+        {mini ? (
+          <MiniCarteBoutiques
+            onFermer={() => router.setParams({ mini: undefined })}
+            onPleineCarte={() => router.navigate('/marketplace/autour?onglet=boutiques' as Href)}
+          />
+        ) : null}
 
         <View style={{ height: 40, marginTop: 4 }}>
           <ScrollView
@@ -85,21 +81,19 @@ export default function MarketplaceScreen() {
           </ScrollView>
         </View>
 
-        {/* Actions rapides (maquette « Visiteur — Marketplace, actions rapides ») */}
-        <View className="flex-row gap-2 px-4 mt-3">
-          <Pressable
-            onPress={() => router.push('/marketplace/vendre')}
-            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-[#D1FAE5]">
-            <Ionicons name="storefront-outline" size={15} color="#047857" />
-            <Text className="text-[12.5px] font-bold text-[#047857]">{aBoutique ? 'Ma boutique' : 'Devenir Vendeur'}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/marketplace/commandes')}
-            className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-white border border-gray-200">
-            <Ionicons name="receipt-outline" size={15} color="#1A1A1A" />
-            <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Mes commandes</Text>
-          </Pressable>
-        </View>
+        {/* Actions rapides : « Ma boutique » est dans le menu ☰ (Boutique), plus sur le fil. */}
+        {commandesOuvertes ? (
+          <View className="flex-row gap-2 px-4 mt-3">
+          {commandesOuvertes ? (
+            <Pressable
+              onPress={() => router.push('/marketplace/commandes')}
+              className="flex-row items-center gap-1.5 rounded-full px-3.5 py-2 bg-white border border-gray-200">
+              <Ionicons name="receipt-outline" size={15} color="#1A1A1A" />
+              <Text className="text-[12.5px] font-bold text-[#1A1A1A]">Mes commandes</Text>
+            </Pressable>
+          ) : null}
+          </View>
+        ) : null}
 
         {articles === null && !erreur ? (
           <View className="flex-1 items-center justify-center">
@@ -143,6 +137,9 @@ export default function MarketplaceScreen() {
           />
         )}
       </SafeAreaView>
+
+      {/* « + » : seulement sur le fil Marketplace (maquettes 05 et 06) */}
+      <BoutonPlusLocaux />
     </View>
   );
 }

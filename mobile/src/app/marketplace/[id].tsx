@@ -1,3 +1,4 @@
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -54,6 +55,7 @@ const BORDURE_CARTE = 'rgba(0,0,0,0.06)';
 type Onglet = 'article' | 'commentaires' | 'recommander';
 
 export default function ArticleScreen() {
+  const commandesOuvertes = useFonctionnalite('feat_marketplace_commandes');
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -143,7 +145,7 @@ export default function ArticleScreen() {
         return;
       }
       router.push({
-        pathname: '/chat/[id]',
+        pathname: '/marketplace/chat/[id]',
         params: {
           id: conversationId,
           contexte: 'marketplace',
@@ -177,7 +179,7 @@ export default function ArticleScreen() {
     if (!article) return;
     try {
       await Share.share({
-        message: `${article.titre} — ${prixLisible(article.prixXof)} FCFA sur Facilité Marketplace\n${lienArticle(article.id)}`,
+        message: `${article.titre} — ${prixLisible(article.prixXof)} FCFA sur Facilité Locaux\n${lienArticle(article.id)}`,
       });
     } catch {
       /* partage annulé */
@@ -237,7 +239,7 @@ export default function ArticleScreen() {
           <Text className="text-[12.5px] font-extrabold" style={{ color: '#2563EB' }}>Retour</Text>
         </Pressable>
         <Text className="flex-1 text-[12px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>
-          Marketplace › <Text className="font-bold text-[#1A1A1A]">{article.titre}</Text>
+          Locaux › <Text className="font-bold text-[#1A1A1A]">{article.titre}</Text>
         </Text>
         <Pressable
           onPress={partager}
@@ -483,13 +485,15 @@ export default function ArticleScreen() {
             <Text className="text-[14px] font-black text-[#1A1A1A]">WhatsApp</Text>
           </Pressable>
 
-          <Pressable
-            onPress={commanderDirect}
-            accessibilityLabel="Commander"
-            className="items-center justify-center rounded-[14px]"
-            style={{ width: 52, height: 52, backgroundColor: '#111' }}>
-            <Ionicons name="cart-outline" size={21} color="#fff" />
-          </Pressable>
+          {commandesOuvertes ? (
+            <Pressable
+              onPress={commanderDirect}
+              accessibilityLabel="Commander"
+              className="items-center justify-center rounded-[14px]"
+              style={{ width: 52, height: 52, backgroundColor: '#111' }}>
+              <Ionicons name="cart-outline" size={21} color="#fff" />
+            </Pressable>
+          ) : null}
         </View>
       </View>
 

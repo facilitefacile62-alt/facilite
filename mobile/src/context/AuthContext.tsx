@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { urlPhotoProfil } from '@/lib/photoProfil';
 import { supabase } from '@/lib/supabase';
 
 // Port de src/context/AuthContext.jsx (site web) : même logique de session/
@@ -97,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Utilisateur',
         badges: [],
       };
+      // La photo est un chemin du bucket privé « avatars » : on la remplace par une URL signée affichable.
+      if (resolvedProfile.avatar_url) {
+        resolvedProfile.avatar_url = await urlPhotoProfil(resolvedProfile.avatar_url);
+      }
       setProfile(resolvedProfile);
 
       await AsyncStorage.multiSet([

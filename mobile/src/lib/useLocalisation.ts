@@ -24,6 +24,13 @@ export function useLocalisation() {
         setEtat('refusee');
         return { etat: 'refusee', position: null };
       }
+      // Dernière position connue d'abord (instantanée) : l'écran peut s'afficher tout de suite, la position
+      // précise la remplace dès qu'elle arrive.
+      const derniere = await Location.getLastKnownPositionAsync().catch(() => null);
+      if (derniere) {
+        setPosition({ latitude: derniere.coords.latitude, longitude: derniere.coords.longitude });
+        setEtat('active');
+      }
       const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const nouvellePosition = { latitude: p.coords.latitude, longitude: p.coords.longitude };
       setPosition(nouvellePosition);

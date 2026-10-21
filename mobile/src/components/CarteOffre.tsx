@@ -1,6 +1,7 @@
+import BoutonAudioOffre from '@/components/BoutonAudioOffre';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
 
@@ -31,7 +32,6 @@ export default function CarteOffre({
   expiree?: boolean;
 }) {
   const router = useRouter();
-  const [aime, setAime] = useState(false);
   const [descriptionEtendue, setDescriptionEtendue] = useState(false);
   const [logoErreur, setLogoErreur] = useState(false);
   // Candidature rapide (maquettes 08/09) : feuille ouverte par le bouton bleu,
@@ -171,24 +171,34 @@ export default function CarteOffre({
         </Text>
       </View>
 
-      {/* 8. ACTIONS — maquette 01 : J'aime, partager, puis le bouton bleu.
+      {/* 8. ACTIONS — maquette 01 : Aide (ex-« J'aime »), partager, puis le bouton bleu.
           Le signet n'y figure pas (il est sur la fiche offre, maquette 07). */}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
+        {/* Aide (remplace « J'aime », 13/10/2026) : ouvre la vidéo « comment postuler »,
+            la même sous toutes les publications. */}
         <Pressable
-          onPress={() => setAime(!aime)}
-          accessibilityLabel="J'aime"
+          onPress={() =>
+            router.push(
+              `/aide-video?titre=${encodeURIComponent(offre.titre)}${offre.externalLink ? `&lien=${encodeURIComponent(offre.externalLink)}` : ''}` as Href
+            )
+          }
+          accessibilityLabel="Aide : comment postuler"
           style={{
             width: 42,
             height: 42,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: aime ? '#EF4444' : 'rgba(0,0,0,0.08)',
-            backgroundColor: aime ? 'rgba(239,68,68,0.1)' : '#F5F3EE',
+            borderColor: 'rgba(0,0,0,0.08)',
+            backgroundColor: '#F5F3EE',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Ionicons name={aime ? 'thumbs-up' : 'thumbs-up-outline'} size={18} color={aime ? '#EF4444' : 'rgba(0,0,0,0.55)'} />
+          <Ionicons name="help-circle-outline" size={20} color="rgba(0,0,0,0.55)" />
         </Pressable>
+
+        {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
+        {/* L'audio ne concerne que les offres d'emploi (pas les concours, formations…). */}
+        <BoutonAudioOffre url={!offre.listingType || offre.listingType === 'offre_emploi' ? offre.audioUrl : undefined} />
 
         <Pressable
           onPress={partager}

@@ -73,7 +73,7 @@ export default function FonctionnalitesScreen() {
           keyExtractor={(item) => item.id}
           contentContainerClassName="px-4 py-3.5"
           ItemSeparatorComponent={() => <View className="h-2.5" />}
-          renderItem={({ item }) => <LigneOutil outil={item} onPress={() => item.ouvrir(router)} />}
+          renderItem={({ item, index }) => <LigneOutil outil={item} vedette={index === 0} onPress={() => item.ouvrir(router)} />}
         />
       </SafeAreaView>
     </View>

@@ -3,12 +3,14 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import FaciliteHeader from '@/components/FaciliteHeader';
+import { useT } from '@/lib/i18n';
 
 // En-tête de « Modifier infos » (maquettes 40 et 41) : l'en-tête Facilité,
 // la ligne « ← Retour  Modifier infos », puis les trois onglets
 // À propos · Scanner (pastille verte) · Paramètres. L'onglet actif est
 // souligné et en gras.
 export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'parametres' }) {
+  const t = useT();
   const router = useRouter();
   return (
     <>
@@ -16,13 +18,13 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
       <View className="flex-row items-center gap-3 px-4 py-3.5">
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/profil'))}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('Retour')}
           className="flex-row items-center gap-2 bg-white"
           style={{ borderRadius: 24, paddingHorizontal: 16, height: 46, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }}>
           <Ionicons name="arrow-back" size={15} color="#2563EB" />
-          <Text className="text-[14px] font-black text-[#1A1A1A]">Retour</Text>
+          <Text className="text-[14px] font-black text-[#1A1A1A]">{t('Retour')}</Text>
         </Pressable>
-        <Text className="text-[20px] font-black text-[#1A1A1A]">Modifier infos</Text>
+        <Text className="text-[20px] font-black text-[#1A1A1A]">{t('Modifier infos')}</Text>
       </View>
 
       <View className="flex-row items-center px-4 gap-5" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
@@ -32,7 +34,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
           <Text
             className="text-[15px]"
             style={{ fontWeight: actif === 'apropos' ? '900' : '700', color: actif === 'apropos' ? '#1A1A1A' : 'rgba(0,0,0,0.45)' }}>
-            À propos
+            {t('À propos')}
           </Text>
         </Pressable>
         <Pressable
@@ -40,7 +42,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
           className="flex-row items-center gap-2"
           style={{ backgroundColor: '#10E58A', borderRadius: 22, paddingHorizontal: 16, height: 42, marginBottom: 8 }}>
           <Ionicons name="scan-outline" size={16} color="#1A1A1A" />
-          <Text className="text-[14px] font-black text-[#1A1A1A]">Scanner</Text>
+          <Text className="text-[14px] font-black text-[#1A1A1A]">{t('Scanner')}</Text>
         </Pressable>
         <Pressable
           onPress={() => router.replace('/mon-profil/parametres' as Href)}
@@ -48,7 +50,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
           <Text
             className="text-[15px]"
             style={{ fontWeight: actif === 'parametres' ? '900' : '700', color: actif === 'parametres' ? '#1A1A1A' : 'rgba(0,0,0,0.45)' }}>
-            Paramètres
+            {t('Paramètres')}
           </Text>
         </Pressable>
       </View>

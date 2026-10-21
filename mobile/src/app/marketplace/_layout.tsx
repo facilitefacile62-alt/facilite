@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { View } from 'react-native';
 
 import MarketplaceBottomBar from '@/components/MarketplaceBottomBar';
+import { estSombre, fondSombre } from '@/components/themeSombre';
 
 // Plateforme Marketplace : toutes ses pages partagent la barre du bas.
 // Les pages gardent leur propre en-tête ; seule la barre est commune.
@@ -13,7 +14,7 @@ export default function MarketplaceLayout() {
   return (
     <View className="flex-1" style={{ backgroundColor: FOND_PAGE }}>
       <View className="flex-1">
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: FOND_PAGE } }} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: estSombre() ? fondSombre(FOND_PAGE) : FOND_PAGE } }} />
       </View>
       <MarketplaceBottomBar />
     </View>

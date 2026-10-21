@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteAjouter, CarteLigne, ListeCartes, PASTILLE_CERTIFIE, TexteVide } from '@/components/CarteProfil';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -62,45 +63,25 @@ export default function ProfilLanguesScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Langues" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
-          <View className="bg-white rounded-2xl p-3.5">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[13px] font-bold text-[#1A1A1A]">🌐 Langues du profil</Text>
-              <Pressable onPress={() => setModalOuvert(true)} className="border border-emerald-500/40 rounded-full px-3 py-1.5">
-                <Text className="text-[12px] font-semibold text-emerald-500">+ Ajouter une langue</Text>
-              </Pressable>
-            </View>
-
-            <View className="gap-2.5 mt-3">
-              {langues.length === 0 ? (
-                <Text className="text-[12.5px] text-black/40 text-center py-4">
-                  Aucune langue enregistrée pour le moment.
-                </Text>
-              ) : (
-                langues.map((l, i) => (
-                  <View key={l.id ?? i} className="flex-row items-center gap-3 bg-[#f7faf9] rounded-xl p-3">
-                    <View className="w-[30px] h-[30px] rounded-full bg-[#d7f2ea] items-center justify-center">
-                      <Text className="text-[14px]">🌐</Text>
-                    </View>
-                    <View className="flex-1 min-w-0">
-                      <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[13.5px] font-bold text-[#1A1A1A]">{l.name}</Text>
-                        {i === 0 && (
-                          <View className="bg-[#d7f2ea] rounded-full px-1.5 py-0.5">
-                            <Text className="text-[10px] font-semibold text-emerald-500">Principal</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="text-[12px] text-black/50 mt-0.5">{l.level}</Text>
-                    </View>
-                    <Pressable onPress={() => supprimerLangue(i)}>
-                      <Ionicons name="trash-outline" size={16} color="rgba(0,0,0,0.35)" />
-                    </Pressable>
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
+        <ScrollView contentContainerClassName="pb-8" showsVerticalScrollIndicator={false}>
+          <ListeCartes>
+            {langues.length === 0 ? <TexteVide texte="Aucune langue enregistrée pour le moment." /> : null}
+            {langues.map((l, i) => (
+              <CarteLigne
+                key={l.id ?? i}
+                icone="globe-outline"
+                titre={l.name}
+                sous={l.level}
+                badgeTitre={i === 0 ? { ...PASTILLE_CERTIFIE, texte: 'Principal' } : undefined}
+                droite={
+                  <Pressable onPress={() => supprimerLangue(i)} hitSlop={8} accessibilityLabel="Supprimer cette langue">
+                    <Ionicons name="trash-outline" size={17} color="rgba(0,0,0,0.35)" />
+                  </Pressable>
+                }
+              />
+            ))}
+            <CarteAjouter libelle="Ajouter une langue" onPress={() => setModalOuvert(true)} />
+          </ListeCartes>
         </ScrollView>
 
         <Modal visible={modalOuvert} transparent animationType="fade" onRequestClose={() => setModalOuvert(false)}>

@@ -4,6 +4,7 @@ import type { useRouter } from 'expo-router';
 // et l'onglet « Fonctionnalités » du profil (maquette 38) — les deux
 // montrent la même liste, elle ne doit exister qu'une fois.
 //
+// Titres, sous-titres et ordre des 8 premiers outils : maquettes du 12/10/2026.
 // Liste alignée sur les VRAIS outils du site
 // (src/app/fonctionnalites/FonctionnalitesClient.jsx). Les outils PDF
 // s'ouvrent sur la page du site, dans l'app : ils traitent le fichier sur
@@ -29,8 +30,8 @@ export const OUTILS: Outil[] = [
     type: 'pdf',
     icone: '📉',
     bg: '#E0E7FF',
-    titre: 'Compresser un PDF',
-    sous: 'Réduire la taille du fichier',
+    titre: 'Compresser PDF',
+    sous: 'Optimisation',
     ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
@@ -38,8 +39,8 @@ export const OUTILS: Outil[] = [
     type: 'pdf',
     icone: '📎',
     bg: '#DBEAFE',
-    titre: 'Fusionner des PDF',
-    sous: 'Combiner plusieurs documents',
+    titre: 'Fusionner PDF',
+    sous: 'Outil PDF',
     ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
@@ -47,8 +48,8 @@ export const OUTILS: Outil[] = [
     type: 'pdf',
     icone: '✂️',
     bg: '#FEF3C7',
-    titre: 'Diviser un PDF',
-    sous: 'Extraire les pages voulues',
+    titre: 'Diviser PDF',
+    sous: 'Outil PDF',
     ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
@@ -56,8 +57,8 @@ export const OUTILS: Outil[] = [
     type: 'pdf',
     icone: '🗂️',
     bg: '#D1FAE5',
-    titre: 'Organiser les pages',
-    sous: 'Trier, pivoter, supprimer',
+    titre: 'Organiser PDF',
+    sous: 'Outil PDF',
     ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
@@ -65,8 +66,8 @@ export const OUTILS: Outil[] = [
     type: 'pdf',
     icone: '🖼️',
     bg: '#FCE7F3',
-    titre: 'Convertir JPG en PDF',
-    sous: 'Photos vers un seul document',
+    titre: 'JPG en PDF',
+    sous: 'Conversion',
     ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
@@ -74,8 +75,8 @@ export const OUTILS: Outil[] = [
     type: 'pdf',
     icone: '📷',
     bg: '#EDE9FE',
-    titre: 'Convertir PDF en JPG',
-    sous: 'Chaque page en image',
+    titre: 'PDF en JPG',
+    sous: 'Conversion',
     ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
   },
   {
@@ -83,9 +84,18 @@ export const OUTILS: Outil[] = [
     type: 'ia',
     icone: '⚡',
     bg: '#FEF3C7',
-    titre: 'Extracteur 1-Clic',
-    sous: 'Candidature depuis une annonce',
+    titre: 'Extracteur 1-Click',
+    sous: 'Outil IA',
     ouvrir: (router) => router.push('/extracteur'),
+  },
+  {
+    id: 'boite_idees',
+    type: 'ia',
+    icone: '💡',
+    bg: '#EDE9FE',
+    titre: 'Boîte à idées',
+    sous: 'Collaboratif',
+    ouvrir: (router) => router.push('/web/boite-a-idees'),
   },
   {
     id: 'diagnostic_cv',
@@ -104,15 +114,6 @@ export const OUTILS: Outil[] = [
     titre: 'Studio Services & Modèles',
     sous: 'CV, lettres et modèles prêts',
     ouvrir: (router) => router.push('/web/modeles'),
-  },
-  {
-    id: 'boite_idees',
-    type: 'ia',
-    icone: '💡',
-    bg: '#EDE9FE',
-    titre: 'Boîte à idées',
-    sous: 'Proposer une amélioration',
-    ouvrir: (router) => router.push('/web/boite-a-idees'),
   },
 ];
 

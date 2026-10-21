@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import BasculePlateforme from '@/components/BasculePlateforme';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
@@ -22,19 +23,19 @@ export default function MarketplaceHeader() {
   const compteurs = useCompteursNonLus();
 
   return (
-    <View className="flex-row items-center gap-4 px-4 py-3" style={{ backgroundColor: FOND }}>
-      <Ionicons name="storefront" size={19} color={BLEU} />
-      <Pressable onPress={() => router.navigate('/marketplace')} className="flex-1 -ml-2.5">
-        <Text className="text-[18px] font-black" style={{ color: BLEU }}>
-          Marketplace
+    <View className="flex-row items-center gap-3 px-4 py-3" style={{ backgroundColor: FOND }}>
+      {/* Logo boutique dans son disque bleu pâle + « Locaux » en bleu. */}
+      <Pressable onPress={() => router.navigate('/marketplace')} accessibilityLabel="Accueil Locaux" className="flex-row items-center gap-2">
+        <View className="items-center justify-center" style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#DCE8FD' }}>
+          <Ionicons name="storefront" size={18} color={BLEU} />
+        </View>
+        <Text className="text-[19px] font-black" style={{ color: BLEU, letterSpacing: -0.3 }}>
+          Locaux
         </Text>
       </Pressable>
-      <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
-        <View>
-          <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />
-          <PastilleCompteur valeur={compteurs.notifications} />
-        </View>
-      </Pressable>
+      {/* Même disposition que Facilité (choix du 20/10/2026) : bascule à droite, puis loupe, cloche et menu. */}
+      <View className="flex-1" />
+      <BasculePlateforme plateforme="locaux" />
       <Pressable
         onPress={() => router.push('/marketplace/recherche')}
         accessibilityLabel="Rechercher"
@@ -42,7 +43,13 @@ export default function MarketplaceHeader() {
         style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}>
         <Ionicons name="search" size={18} color="#1A1A1A" />
       </Pressable>
-      <Pressable onPress={() => router.push('/marketplace/profil')} accessibilityLabel="Menu" hitSlop={8}>
+      <Pressable onPress={() => setNotifsOuvertes(true)} accessibilityLabel="Notifications" hitSlop={8}>
+        <View>
+          <Ionicons name="notifications-outline" size={20} color="#1A1A1A" />
+          <PastilleCompteur valeur={compteurs.notifications} />
+        </View>
+      </Pressable>
+      <Pressable onPress={() => router.push('/marketplace/menu' as Href)} accessibilityLabel="Menu" hitSlop={8}>
         <Ionicons name="menu" size={22} color="#1A1A1A" />
       </Pressable>
 

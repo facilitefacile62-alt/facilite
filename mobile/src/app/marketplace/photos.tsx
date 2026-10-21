@@ -3,11 +3,13 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CommandeRapideModal from '@/components/CommandeRapideModal';
-import { lienWhatsapp, obtenirArticle, type ArticleMarketplace } from '@/lib/marketplace';
+import { useAuth } from '@/context/AuthContext';
+import { brouillonArticle, lienWhatsapp, obtenirArticle, type ArticleMarketplace } from '@/lib/marketplace';
+import { ouvrirConversation } from '@/lib/messages';
 
 // « Marketplace — Photos & vidéo » — maquette 22 : visionneuse plein écran
 // noire, compteur en haut à gauche, croix de fermeture, flèches de
@@ -21,6 +23,7 @@ const ORANGE = '#F4551E';
 
 export default function PhotosArticleScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { id, index } = useLocalSearchParams<{ id?: string; index?: string }>();
   const { width } = Dimensions.get('window');
 
@@ -28,6 +31,38 @@ export default function PhotosArticleScreen() {
   const [introuvable, setIntrouvable] = useState(false);
   const [actif, setActif] = useState(() => Math.max(0, Number(index) || 0));
   const [commandeOuverte, setCommandeOuverte] = useState(false);
+  const [ouverture, setOuverture] = useState(false);
+
+  // Même parcours que « Discuter » de la fiche : on ouvre (ou crée) la VRAIE conversation avec le vendeur, étiquetée
+  // Marketplace, au lieu de passer l'identifiant du vendeur à la place d'un identifiant de conversation.
+  async function discuter() {
+    if (!article || ouverture) return;
+    if (!user?.id) {
+      router.push('/login');
+      return;
+    }
+    if (!article.proprietaireId) return;
+    setOuverture(true);
+    try {
+      const conversationId = await ouvrirConversation(user.id, article.proprietaireId);
+      if (!conversationId) {
+        Alert.alert('Discussion', "Impossible d'ouvrir la discussion pour le moment.");
+        return;
+      }
+      router.push({
+        pathname: '/marketplace/chat/[id]',
+        params: {
+          id: conversationId,
+          contexte: 'marketplace',
+          nom: article.boutiqueNom,
+          brouillon: brouillonArticle(article),
+          article: article.id,
+        },
+      });
+    } finally {
+      setOuverture(false);
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -148,8 +183,8 @@ export default function PhotosArticleScreen() {
               <Text className="text-[14px] font-bold text-[#1A1A1A]">Envoyer demande</Text>
             </Pressable>
             <Pressable
-              onPress={() => router.push(`/marketplace/chat/${article.proprietaireId}?article=${article.id}`)}
-              disabled={!article.proprietaireId}
+              onPress={discuter}
+              disabled={!article.proprietaireId || ouverture}
               className="flex-1 rounded-2xl py-3.5 items-center flex-row justify-center gap-2"
               style={{ backgroundColor: ORANGE, opacity: article.proprietaireId ? 1 : 0.5 }}>
               <Ionicons name="chatbubble" size={14} color="#fff" />

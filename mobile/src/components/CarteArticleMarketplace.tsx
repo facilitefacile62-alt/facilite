@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 
 import { distanceLisible, enStock, lieuBoutique, prixLisible, type ArticleMarketplace } from '@/lib/marketplace';
 
@@ -10,15 +11,15 @@ import { distanceLisible, enStock, lieuBoutique, prixLisible, type ArticleMarket
 // et Autour de moi pour qu'une carte ait toujours le même visage.
 const PRIX_COULEUR = '#D97706';
 
-function ouvrirItineraire(article: ArticleMarketplace) {
-  if (article.boutiqueLat != null && article.boutiqueLng != null) {
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${article.boutiqueLat},${article.boutiqueLng}`).catch(() => {});
-  }
-}
 
 export default function CarteArticleMarketplace({ article, onPress }: { article: ArticleMarketplace; onPress: () => void }) {
+  const router = useRouter();
   const photo = article.photos[0];
-  const positionConnue = article.boutiqueLat != null && article.boutiqueLng != null;
+  // « M'y rendre » reste dans l'application : la carte Autour de moi s'ouvre sur la boutique de l'article.
+  const ouvrirItineraire = () => {
+    if (article.boutiqueId) router.push(`/marketplace/autour?boutique=${article.boutiqueId}&route=1` as Href);
+  };
+  const positionConnue = Boolean(article.boutiqueId);
   return (
     <Pressable
       onPress={onPress}
@@ -66,7 +67,7 @@ export default function CarteArticleMarketplace({ article, onPress }: { article:
             {prixLisible(article.prixXof)} <Text className="text-[10px] font-bold">FCFA</Text>
           </Text>
           <Pressable
-            onPress={() => ouvrirItineraire(article)}
+            onPress={ouvrirItineraire}
             disabled={!positionConnue}
             accessibilityLabel="M'y rendre"
             className="w-7 h-7 rounded-full items-center justify-center disabled:opacity-40"
