@@ -66,6 +66,24 @@ export default function AutourDeMoiScreen() {
   // ref, pour pouvoir les lire dans les gestionnaires posés pendant le rendu.
   const [carte, setCarte] = useState<CommandesCarte | null>(null);
   const { articles } = useMarketplaceArticles(null, recherche, position);
+  // Recherche d'un produit : TOUS les articles correspondants de la plateforme (pas seulement les 40 premiers), pour que
+  // toutes les boutiques qui le vendent apparaissent sur la carte et dans le carrousel.
+  const [trouvesRecherche, setTrouvesRecherche] = useState<{ q: string; liste: ArticleMarketplace[] } | null>(null);
+  useEffect(() => {
+    const q = recherche.trim();
+    if (!q) return;
+    let annule = false;
+    chargerArticles({ texte: q, limite: 500 })
+      .then((liste) => {
+        if (!annule) setTrouvesRecherche({ q, liste });
+      })
+      .catch(() => {
+        if (!annule) setTrouvesRecherche({ q, liste: [] });
+      });
+    return () => {
+      annule = true;
+    };
+  }, [recherche]);
 
   // La position est demandée à l'ouverture : l'écran n'a pas de sens sans elle.
   useEffect(() => {
@@ -91,11 +109,13 @@ export default function AutourDeMoiScreen() {
   const photosRecherche = useMemo(() => {
     const m = new Map<string, string>();
     if (!recherche.trim()) return m;
-    (articles ?? []).forEach((a) => {
+    const q = recherche.trim();
+    const sources = [...(trouvesRecherche?.q === q ? trouvesRecherche.liste : []), ...(articles ?? [])];
+    sources.forEach((a) => {
       if (a.boutiqueId && !m.has(a.boutiqueId)) m.set(a.boutiqueId, a.photos[0] ?? '');
     });
     return m;
-  }, [articles, recherche]);
+  }, [articles, recherche, trouvesRecherche]);
 
   const visibles = useMemo(() => {
     const q = recherche.trim();
@@ -292,7 +312,12 @@ export default function AutourDeMoiScreen() {
     };
   }, [boutiqueSel, articlesSel]);
 
-  const lancerRecherche = () => setRecherche(saisie);
+  // Une recherche affiche tout de suite le carrousel des boutiques trouvées (moins de clics).
+  const lancerRecherche = () => {
+    setRecherche(saisie);
+    setSelection(null);
+    if (saisie.trim()) setOnglet('boutiques');
+  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: '#1b2330' }}>
@@ -458,7 +483,9 @@ export default function AutourDeMoiScreen() {
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
             {boutiqueSel
               ? `${boutiqueSel.nom} est ouvert à ${boutiqueSel.quartier || 'Dakar'}`
-              : `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} vérifiée${visibles.length > 1 ? 's' : ''} prête${visibles.length > 1 ? 's' : ''} à vous servir au Sénégal`}
+              : recherche.trim()
+                ? `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} ${visibles.length > 1 ? 'proposent' : 'propose'} « ${recherche.trim()} »`
+                : `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} vérifiée${visibles.length > 1 ? 's' : ''} prête${visibles.length > 1 ? 's' : ''} à vous servir au Sénégal`}
           </Text>
         </View>
         <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>

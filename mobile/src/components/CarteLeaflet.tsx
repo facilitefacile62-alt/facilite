@@ -252,8 +252,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       });
     });
     // Jamais de déplacement à un zoom faible (des pixels représenteraient des kilomètres : boutiques en mer). Le rangement
-    // côte à côte ne s'applique qu'à partir du zoom 15, où il ne représente que quelques dizaines de mètres.
-    if (carte.getZoom() < 15) spread = {};
+    // côte à côte ne s'applique qu'à partir du zoom 13 : les ronds y sont assez petits pour que le décalage reste de quelques centaines de mètres.
+    if (carte.getZoom() < 13) spread = {};
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
