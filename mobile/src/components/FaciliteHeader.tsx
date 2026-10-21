@@ -51,15 +51,9 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
         </Pressable>
 
-        {/* Bascule Facilité ⇄ Locaux : FIXE, au milieu de l'en-tête ; sur l'Accueil elle passe à droite, juste avant la loupe,
-            pour laisser la place aux petits ronds des stories à côté du logo. */}
-        {!accueil ? (
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <BasculePlateforme plateforme="facilite" />
-          </View>
-        ) : petitesStories.length === 0 ? (
-          <View style={{ flex: 1 }} />
-        ) : null}
+        {/* Bascule Facilité ⇄ Locaux : FIXE, à droite, juste avant la loupe, sur tous les écrans (même position que dans
+            Locaux, choix du 20/10/2026). Sur l'Accueil, les petits ronds de stories prennent la place libre à côté du logo. */}
+        {!accueil || petitesStories.length === 0 ? <View style={{ flex: 1 }} /> : null}
 
         {accueil && petitesStories.length > 0 ? (
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
@@ -76,8 +70,8 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: accueil ? 14 : 18 }}>
-          {accueil ? <BasculePlateforme plateforme="facilite" /> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <BasculePlateforme plateforme="facilite" />
           <Pressable
             onPress={() => router.push('/recherche')}
             accessibilityLabel="Rechercher"
