@@ -162,9 +162,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var popupCourant = null;
   var popupDonnees = null;
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  // Taille des ronds de boutiques : suit le zoom (pleine à partir du zoom 15, jusqu'à 55 % en dézoomant) et un peu plus grande
-  // qu'avant (×1,1 au maximum). Ils ne sont jamais déplacés : leur position est toujours celle de la boutique.
-  function echelleZoom() { return Math.max(0.55, Math.min(1.1, 1.1 * Math.pow(2, (carte.getZoom() - 15) / 1.5))); }
+  // Taille des ronds de boutiques : FIXE à tous les zooms, et jamais déplacés : leur position est toujours celle de la boutique.
+  function echelleZoom() { return 1; }
   function htmlAvatar(m) {
     var a = m.avatar, ring = a.bordure;
     var src = a.photo || a.uri;
@@ -175,7 +174,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var pastillePile = pile && pile.length > 1 ? '<div style="position:absolute;top:-7px;right:-9px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 10px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + (pile.length - 1) + '</div>' : '';
     var rond = '<div class="rond-cliquable" style="position:relative;width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div>' + pastillePile + '</div>';
     var k = echelleZoom();
-    var echelle = a.selectionne ? 'transform:scale(1.25);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';';
+    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';';
     if (a.moi) {
       // Pas d'étiquette « Vous êtes ici » : elle cachait les boutiques voisines. Le rond bleu et son halo suffisent (le bouton
       // « Autour de moi » recentre sur lui).
@@ -235,33 +234,21 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
     var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
     var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
-    var D = 38 * echelleZoom();
+    // Les ronds de boutiques ne bougent JAMAIS de leur position et gardent une taille fixe (choix du 21/10/2026). Des boutiques
+    // qui se recouvrent forment une PILE : le rond du dessus porte une pastille « +N » ; un appui sur la pile ouvre la liste de
+    // ses boutiques (envoyée à l'application, voir « pile: »).
+    spread = {};
+    piles = {};
+    var D = 38;
     var cand = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
     var vus = [];
-    var groupesVus = [];
     cand.forEach(function (a, i) {
       if (vus[i]) return;
       vus[i] = true;
       var g = [a];
       cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < D) { vus[j] = true; g.push(b); } });
-      var pres = g.some(function (x) { return !!moiPt && Math.hypot(x.p.x - moiPt.x, x.p.y - moiPt.y) < D + 8; });
-      if (g.length > 1) groupesVus.push(g);
-      if (g.length < 2 && !pres) return;
-      // Boutiques qui se recouvrent : rangées CÔTE À CÔTE, collées (5 par rangée, rangées empilées vers le haut), centrées sur
-      // leur position ; au-dessus de « Vous êtes ici » quand l'une d'elles est sur lui.
-      var pas = D + 2, parLigne = 5;
-      g.forEach(function (x, t) {
-        var ligne = Math.floor(t / parLigne);
-        var dansLigne = Math.min(parLigne, g.length - ligne * parLigne);
-        var col = t - ligne * parLigne;
-        spread[x.m.id] = { dx: (col - (dansLigne - 1) / 2) * pas, dy: -((pres ? 1 : 0) + ligne) * pas };
-      });
+      if (g.length > 1) piles[g[0].m.id] = g.map(function (x) { return x.m; });
     });
-    // Jamais de déplacement à un zoom faible (des pixels représenteraient des kilomètres : boutiques en mer). Le rangement
-    // côte à côte ne s'applique qu'à partir du zoom 13 : les ronds y sont assez petits pour que le décalage reste de quelques centaines de mètres.
-    // Des boutiques qui se recouvrent sont TOUJOURS rangées côte à côte (même dézoomé) : aucune n'est cachée derrière une autre.
-    // Sa vraie position reste marquée par un point et un trait fin qui la relie à son rond (voir plus bas).
-    piles = {};
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
@@ -279,24 +266,12 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
-        var sp = spread[m.id];
-        if (sp && Math.hypot(sp.dx, sp.dy) > 10) {
-          var pv = carte.latLngToContainerPoint([m.lat, m.lng]);
-          var ancre = carte.containerPointToLatLng(L.point(pv.x + sp.dx, pv.y + sp.dy));
-          L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
-          L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
-        }
         var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
-        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
+        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : (piles[m.id] ? 350 : 300)), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () {
           var pl = piles[m.id];
-          if (pl && pl.length > 1 && carte.getZoom() < 13) {
-            var bornes = L.latLngBounds(pl.map(function (x) { return [x.lat, x.lng]; }));
-            if (bornes.getSouthWest().equals(bornes.getNorthEast())) carte.setView([m.lat, m.lng], 15, { animate: true });
-            else carte.fitBounds(bornes, { padding: [70, 70], maxZoom: 16, animate: true });
-            return;
-          }
-          envoyer(m.id);
+          if (pl && pl.length > 1) envoyer('pile:' + pl.map(function (x) { return x.id; }).join(','));
+          else envoyer(m.id);
         });
         return;
       }
