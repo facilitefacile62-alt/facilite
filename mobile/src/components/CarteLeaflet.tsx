@@ -169,8 +169,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var rond = '<div class="rond-cliquable" style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
     var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
     if (a.moi) {
-      return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond
-        + '<div style="margin-top:4px;padding:2px 8px;background:#1877F2;color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;white-space:nowrap;border:1px solid rgba(255,255,255,.35);box-shadow:0 6px 16px rgba(0,0,0,.45)">Vous êtes ici</div></div>';
+      // Pas d'étiquette « Vous êtes ici » : elle cachait les boutiques voisines. Le rond bleu et son halo suffisent (le bouton
+      // « Autour de moi » recentre sur lui).
+      return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond + '</div>';
     }
     // Comme les cartes de commerces compactes : au repos, seul le petit rond ; le nom n'apparaît que sur la boutique touchée.
     if (!a.selectionne) return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">' + rond + '</div>';
@@ -222,17 +223,23 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // Marqueurs qui se recouvrent à l'écran (boutiques voisines, au marché) : écartés en cercle autour de leur
     // centre, à taille constante, pour que chacun reste visible et touchable. Recalculé à chaque zoom.
     spread = {};
-    var cand = libres.filter(function (m) { return m.avatar && !m.compteur; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
+    // « Vous êtes ici » reste à sa vraie place et ne bouge pas : ce sont les boutiques voisines qui s'écartent de lui
+    // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
+    var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
+    var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
+    var procheMoi = function (p) { return !!moiPt && Math.hypot(p.x - moiPt.x, p.y - moiPt.y) < 70; };
+    var cand = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
     var vus = [];
     cand.forEach(function (a, i) {
       if (vus[i]) return;
       vus[i] = true;
       var g = [a];
       cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < 40) { vus[j] = true; g.push(b); } });
-      if (g.length < 2) return;
+      var pres = g.some(function (x) { return procheMoi(x.p); });
+      if (g.length < 2 && !pres) return;
       var i0 = 0, anneau = 0;
       while (i0 < g.length) {
-        var r = 26 + anneau * 30;
+        var r = (pres ? 58 : 26) + anneau * 30;
         var cap = Math.max(2, Math.floor(2 * Math.PI * r / 42));
         var n = Math.min(cap, g.length - i0);
         for (var t = 0; t < n; t++) {
@@ -260,7 +267,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
         var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
-        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 640 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
+        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () { envoyer(m.id); });
         return;
       }
