@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
 
 import { BoutonContinuer, CaseRonde, CasesCode } from '@/components/CasesCode';
 import EcranConnexion, { CHAMP } from '@/components/EcranConnexion';
@@ -22,6 +22,7 @@ import {
   numeroValide,
   verifierCodeSms,
 } from '@/lib/connexionSms';
+import { seConnecterParMotDePasse } from '@/lib/motDePasse';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { memoriserGarderSession } from '@/lib/preferencesConnexion';
 
@@ -52,6 +53,11 @@ export default function LoginScreen() {
   const [googleEnCours, setGoogleEnCours] = useState(false);
   const [erreur, setErreur] = useState('');
   const [attente, setAttente] = useState(0);
+  // Secours « mot de passe » (facultatif) quand le code n'arrive pas : fenêtre ouverte depuis la page du code.
+  const [fenetreMdp, setFenetreMdp] = useState(false);
+  const [motDePasse, setMotDePasse] = useState('');
+  const [erreurMdp, setErreurMdp] = useState('');
+  const [mdpEnCours, setMdpEnCours] = useState(false);
 
   // Compte à rebours avant de pouvoir redemander un code.
   useEffect(() => {
@@ -90,6 +96,22 @@ export default function LoginScreen() {
       setCode('');
     }
     // Succès : la session déclenche la suite (Accueil, ou « Nom et prénom » pour un nouveau compte).
+  }
+
+  async function connexionMotDePasse() {
+    if (!motDePasse || mdpEnCours) return;
+    setMdpEnCours(true);
+    setErreurMdp('');
+    await memoriserGarderSession(garder);
+    const probleme = await seConnecterParMotDePasse(parTelephone ? { telephone: chiffres } : { email }, motDePasse);
+    setMdpEnCours(false);
+    if (probleme) {
+      setErreurMdp(probleme);
+      return;
+    }
+    // Succès : la session déclenche la suite, comme pour le code.
+    setFenetreMdp(false);
+    setMotDePasse('');
   }
 
   function changerCode(valeur: string) {
@@ -142,6 +164,11 @@ export default function LoginScreen() {
           {parTelephone ? `Ton code a été envoyé au numéro ${cible}` : `Utilise le lien ou saisis le code envoyé à ${cible}`}
         </Text>
 
+        <Pressable onPress={() => { setErreurMdp(''); setFenetreMdp(true); }} accessibilityRole="button" hitSlop={6} className="mb-4 self-start flex-row items-center gap-2">
+          <Ionicons name="key-outline" size={18} color="#2563EB" />
+          <Text className="text-[15px] font-black" style={{ color: '#2563EB' }}>Ou utiliser mon mot de passe</Text>
+        </Pressable>
+
         <CasesCode code={code} onChange={changerCode} longueur={parTelephone ? LONGUEUR_CODE : LONGUEUR_CODE_EMAIL} />
 
         {erreur ? (
@@ -167,6 +194,36 @@ export default function LoginScreen() {
             texte="Tu peux recevoir des notifications de notre part par SMS, WhatsApp et message instantané."
           />
         </View>
+
+        <Modal visible={fenetreMdp} transparent animationType="fade" onRequestClose={() => setFenetreMdp(false)}>
+          <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+            <View className="w-full rounded-[22px] bg-white p-5" style={{ maxWidth: 420 }}>
+              <Text className="text-[20px] font-black text-[#111]">Mon mot de passe</Text>
+              <Text className="text-[14px] mt-1 mb-4" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 20 }}>
+                Pour {cible}. Si tu n’as pas créé de mot de passe, utilise le code.
+              </Text>
+              <TextInput
+                value={motDePasse}
+                onChangeText={setMotDePasse}
+                placeholder="Ton mot de passe"
+                placeholderTextColor="rgba(0,0,0,0.45)"
+                secureTextEntry
+                autoCapitalize="none"
+                autoComplete="current-password"
+                textContentType="password"
+                onSubmitEditing={connexionMotDePasse}
+                style={{ height: 52, borderRadius: 12, backgroundColor: CHAMP, paddingHorizontal: 16, fontSize: 16, color: '#111', outlineStyle: 'none' } as object}
+              />
+              {erreurMdp ? <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreurMdp}</Text> : null}
+              <View className="mt-4">
+                <BoutonContinuer onPress={connexionMotDePasse} actif={motDePasse.length > 0} chargement={mdpEnCours} libelle="Me connecter" />
+              </View>
+              <Pressable onPress={() => setFenetreMdp(false)} hitSlop={8} className="mt-4 self-center">
+                <Text className="text-[15px] font-black" style={{ color: 'rgba(0,0,0,0.55)' }}>Annuler</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
       </EcranConnexion>
     );
   }

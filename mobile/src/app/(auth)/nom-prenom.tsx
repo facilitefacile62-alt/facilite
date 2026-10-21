@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, TextInput, View } from 'react-native';
 
@@ -53,7 +53,7 @@ export default function NomPrenomScreen() {
     await marquerNomConfirme(user.id);
     await refreshProfile();
     setEnregistrement(false);
-    router.replace('/onboarding/bienvenue');
+    router.replace('/onboarding/mot-de-passe' as Href);
   }
 
   async function retour() {
