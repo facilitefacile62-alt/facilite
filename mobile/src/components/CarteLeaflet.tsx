@@ -249,6 +249,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         i0 += n; anneau++;
       }
     });
+    // Jamais d'écartement à un zoom faible : 26 à 58 px représenteraient des kilomètres et poseraient des boutiques en mer.
+    // À ces zooms, les boutiques qui se recouvrent sont regroupées en pastille (regrouper) au lieu d'être déplacées.
+    if (carte.getZoom() < 15) spread = {};
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
