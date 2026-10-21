@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ApercuDocument from '@/components/ApercuDocument';
 import FaciliteHeader from '@/components/FaciliteHeader';
+import { useImportDocument } from '@/components/FeuilleImportDocument';
 import LigneOutil from '@/components/LigneOutil';
 import { useAuth } from '@/context/AuthContext';
 import {
-  ajouterDocument,
   badgeDocument,
   chargerMesDocuments,
   dateLisible,
@@ -46,12 +46,12 @@ export default function ProfilScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
 
-  const { importer: demandeImport } = useLocalSearchParams<{ importer?: string }>();
-  const importDemande = useRef(false);
   const [onglet, setOnglet] = useState<Onglet>('documents');
   const [documents, setDocuments] = useState<DocumentProfil[] | null>(null);
   const [erreur, setErreur] = useState(false);
-  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const { ouvrir: importer, occupe: envoiEnCours, feuille: feuilleImport } = useImportDocument((nouveau) =>
+    setDocuments((liste) => [nouveau, ...(liste ?? [])])
+  );
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
 
   useFocusEffect(
@@ -114,30 +114,6 @@ export default function ProfilScreen() {
     ]);
   };
 
-  const importer = () => {
-    if (!userId || envoiEnCours) return;
-    setEnvoiEnCours(true);
-    ajouterDocument(userId)
-      .then((nouveau) => {
-        if (nouveau) setDocuments((liste) => [nouveau, ...(liste ?? [])]);
-      })
-      .catch((e: Error) => Alert.alert('Ajout impossible', e.message))
-      .finally(() => setEnvoiEnCours(false));
-  };
-
-  // « + » > Importer un document : l'écran s'ouvre sur l'onglet Documents et propose tout de suite le sélecteur de fichiers
-  // (une seule fois par ouverture).
-  useFocusEffect(
-    useCallback(() => {
-      if (demandeImport === '1' && userId && !importDemande.current) {
-        importDemande.current = true;
-        importer();
-      }
-      if (demandeImport !== '1') importDemande.current = false;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [demandeImport, userId])
-  );
-
   // Toucher la photo : choisir une image dans la galerie, l'enregistrer, puis recharger le profil.
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
   const changerPhoto = () => {
@@ -161,6 +137,7 @@ export default function ProfilScreen() {
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader />
+        {feuilleImport}
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
           {/* En-tête de profil : photo + « + », nom de la boutique, Modifier infos */}

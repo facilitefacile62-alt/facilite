@@ -1,4 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '@/lib/supabase';
 
@@ -135,20 +136,33 @@ async function fichierEnOctets(uri: string): Promise<Uint8Array> {
 }
 
 const TAILLE_MAX_O = 10 * 1024 * 1024; // 10 Mo, comme le site
+/** Nombre maximum de documents importés par personne (choix du 21/10/2026). */
+export const MAX_DOCUMENTS = 2;
+
+export type SourceDocument = 'photo' | 'camera' | 'pdf';
+type FichierChoisi = { uri: string; name?: string | null; size?: number | null; mimeType?: string | null };
 
 /**
- * Ajout d'un document depuis le téléphone. Renvoie null si l'utilisateur
- * a simplement fermé le sélecteur.
+ * Ajout d'un document depuis le téléphone, soit une photo de la galerie, soit un fichier PDF. Renvoie null si
+ * l'utilisateur a simplement fermé le sélecteur.
  */
-export async function ajouterDocument(userId: string): Promise<DocumentProfil | null> {
-  const choix = await DocumentPicker.getDocumentAsync({
-    type: ['application/pdf', 'image/*'],
-    copyToCacheDirectory: true,
-    multiple: false,
-  });
-  if (choix.canceled || !choix.assets?.length) return null;
-
-  const fichier = choix.assets[0];
+export async function ajouterDocument(userId: string, source: SourceDocument = 'pdf'): Promise<DocumentProfil | null> {
+  let fichier: FichierChoisi;
+  if (source === 'photo' || source === 'camera') {
+    const permission = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) throw new Error(source === 'camera' ? "Autorisez l'accès à l'appareil photo pour prendre une photo." : "Autorisez l'accès à vos photos pour en choisir une.");
+    const choix =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+    if (choix.canceled || !choix.assets?.length) return null;
+    const photo = choix.assets[0];
+    fichier = { uri: photo.uri, name: photo.fileName, size: photo.fileSize, mimeType: photo.mimeType ?? 'image/jpeg' };
+  } else {
+    const choix = await DocumentPicker.getDocumentAsync({ type: ['application/pdf'], copyToCacheDirectory: true, multiple: false });
+    if (choix.canceled || !choix.assets?.length) return null;
+    fichier = choix.assets[0];
+  }
   if (typeof fichier.size === 'number' && fichier.size > TAILLE_MAX_O) {
     throw new Error('Fichier trop lourd : 10 Mo maximum.');
   }
@@ -180,4 +194,12 @@ export async function ajouterDocument(userId: string): Promise<DocumentProfil | 
     .single();
   if (error) throw new Error(error.message);
   return versDocument(data as LigneResume);
+}
+
+/** Refuse (en lançant une erreur claire) quand la personne a déjà importé le maximum de documents. */
+export async function verifierLimiteDocuments(userId: string): Promise<void> {
+  const existants = await chargerMesDocuments(userId);
+  if (existants.length >= MAX_DOCUMENTS) {
+    throw new Error(`Vous pouvez importer ${MAX_DOCUMENTS} documents au maximum. Supprimez-en un dans Profil > Documents pour en ajouter un autre.`);
+  }
 }
