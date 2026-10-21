@@ -1,4 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
@@ -135,20 +137,30 @@ async function fichierEnOctets(uri: string): Promise<Uint8Array> {
 }
 
 const TAILLE_MAX_O = 10 * 1024 * 1024; // 10 Mo, comme le site
+/** Nombre maximum de documents importés par personne (choix du 21/10/2026). */
+export const MAX_DOCUMENTS = 2;
+
+type SourceDocument = 'photo' | 'pdf';
+type FichierChoisi = { uri: string; name?: string | null; size?: number | null; mimeType?: string | null };
 
 /**
- * Ajout d'un document depuis le téléphone. Renvoie null si l'utilisateur
- * a simplement fermé le sélecteur.
+ * Ajout d'un document depuis le téléphone, soit une photo de la galerie, soit un fichier PDF. Renvoie null si
+ * l'utilisateur a simplement fermé le sélecteur.
  */
-export async function ajouterDocument(userId: string): Promise<DocumentProfil | null> {
-  const choix = await DocumentPicker.getDocumentAsync({
-    type: ['application/pdf', 'image/*'],
-    copyToCacheDirectory: true,
-    multiple: false,
-  });
-  if (choix.canceled || !choix.assets?.length) return null;
-
-  const fichier = choix.assets[0];
+export async function ajouterDocument(userId: string, source: SourceDocument = 'pdf'): Promise<DocumentProfil | null> {
+  let fichier: FichierChoisi;
+  if (source === 'photo') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) throw new Error("Autorisez l'accès à vos photos pour en choisir une.");
+    const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+    if (choix.canceled || !choix.assets?.length) return null;
+    const photo = choix.assets[0];
+    fichier = { uri: photo.uri, name: photo.fileName, size: photo.fileSize, mimeType: photo.mimeType ?? 'image/jpeg' };
+  } else {
+    const choix = await DocumentPicker.getDocumentAsync({ type: ['application/pdf'], copyToCacheDirectory: true, multiple: false });
+    if (choix.canceled || !choix.assets?.length) return null;
+    fichier = choix.assets[0];
+  }
   if (typeof fichier.size === 'number' && fichier.size > TAILLE_MAX_O) {
     throw new Error('Fichier trop lourd : 10 Mo maximum.');
   }
@@ -180,4 +192,29 @@ export async function ajouterDocument(userId: string): Promise<DocumentProfil | 
     .single();
   if (error) throw new Error(error.message);
   return versDocument(data as LigneResume);
+}
+
+/**
+ * « Importer un document » : vérifie la limite de 2 documents, propose « Photo » ou « Fichier PDF », puis ouvre le
+ * sélecteur choisi. Ne change jamais d'écran. Renvoie le document ajouté, ou null si la personne a annulé.
+ */
+export async function importerDocument(userId: string): Promise<DocumentProfil | null> {
+  const existants = await chargerMesDocuments(userId);
+  if (existants.length >= MAX_DOCUMENTS) {
+    throw new Error(`Vous pouvez importer ${MAX_DOCUMENTS} documents au maximum. Supprimez-en un dans Profil > Documents pour en ajouter un autre.`);
+  }
+  const source = await new Promise<SourceDocument | null>((resolve) => {
+    Alert.alert(
+      'Importer un document',
+      'Que voulez-vous importer ?',
+      [
+        { text: 'Choisir une photo', onPress: () => resolve('photo') },
+        { text: 'Choisir un fichier PDF', onPress: () => resolve('pdf') },
+        { text: 'Annuler', style: 'cancel', onPress: () => resolve(null) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(null) }
+    );
+  });
+  if (!source) return null;
+  return ajouterDocument(userId, source);
 }

@@ -1,3 +1,5 @@
+import { useAuth } from '@/context/AuthContext';
+import { importerDocument } from '@/lib/documents';
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { demanderRemontee } from '@/lib/remonterFil';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,8 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 //  - sous lui, sur l'Accueil, petit bouton rond rouge #E11D48 de 36 px avec une flèche vers le haut : il remonte
 //    en haut du fil par un défilement doux ;
 //  - ouvert : le « + » tourne de 45° et devient « × », un voile blanc léger couvre la page et des pilules blanches
-//    s'empilent au-dessus (texte à gauche, rond coloré à droite) : Importer un document (violet, ouvre Profil > Documents
-//    et le sélecteur de fichiers), Écrire un e-mail, Assistant vocal, Extracteur.
+//    s'empilent au-dessus (texte à gauche, rond coloré à droite) : Importer un document (violet : propose une photo ou un PDF
+//    sans changer d'écran, 2 documents au maximum), Écrire un e-mail, Assistant vocal, Extracteur.
 //    Toucher le voile ou le « × » referme.
 // L'Assistant vocal n'est pas encore branché dans l'application (interrupteur feat_voice_assistant coupé) : tant
 // qu'il l'est, sa pilule n'est pas proposée plutôt que de simuler un assistant.
@@ -26,6 +28,7 @@ export default function BoutonFlottantFacilite() {
   const [ouvert, setOuvert] = useState(false);
   const [rotation] = useState(() => new Animated.Value(0));
   const autorise = useFonctionnalites();
+  const { user } = useAuth();
 
   useEffect(() => {
     Animated.timing(rotation, { toValue: ouvert ? 1 : 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
@@ -33,7 +36,16 @@ export default function BoutonFlottantFacilite() {
 
   // Chaque action peut être coupée depuis le site (Administration → Fonctionnalités).
   const toutesActions: Action[] = [
-    { id: 'document', libelle: 'Importer un document', icone: 'cloud-upload', couleur: '#7C3AED', agir: () => router.navigate('/profil?importer=1' as Href) },
+    { id: 'document', libelle: 'Importer un document', icone: 'cloud-upload', couleur: '#7C3AED', agir: () => {
+        // Import direct (photo ou PDF), sans quitter l'écran en cours ; 2 documents au maximum.
+        if (!user?.id) {
+          Alert.alert('Connexion requise', 'Connectez-vous pour importer un document.');
+          return;
+        }
+        importerDocument(user.id)
+          .then((d) => d && Alert.alert('Document ajouté', `« ${d.titre} » est dans Profil > Documents.`))
+          .catch((e: Error) => Alert.alert('Ajout impossible', e.message));
+      } },
     { id: 'email', libelle: 'Écrire un e-mail', icone: 'mail', couleur: '#2563EB', agir: () => router.push('/messages?ecrire=1' as Href) },
     { id: 'assistant', libelle: 'Assistant vocal', icone: 'mic', couleur: '#065F46', agir: () => Alert.alert('Assistant vocal', 'Cette fonctionnalité arrive dans une prochaine mise à jour.'), interrupteur: 'feat_voice_assistant' },
     { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur'), interrupteur: 'nav_extracteur' },
