@@ -36,13 +36,14 @@ export default function ProfilAProposScreen() {
               <Pressable
                 key={r.id}
                 onPress={() => router.push(r.route)}
-                className={`flex-row items-center gap-3 px-4 py-3.5 ${i > 0 ? 'border-t border-black/[0.05]' : ''}`}>
-                <View className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F0EEE8' }}>
+                className={`flex-row items-center gap-3.5 px-4 py-2 ${i > 0 ? 'border-t border-black/[0.05]' : ''}`}
+                style={{ minHeight: 60 }}>
+                <View className="items-center justify-center" style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6' }}>
                   <Ionicons name={r.icone} size={17} color="rgba(0,0,0,0.6)" />
                 </View>
                 <View className="flex-1 min-w-0">
-                  <Text className="text-[14px] font-black text-[#1A1A1A]">{r.label}</Text>
-                  <Text className="text-[12px] mt-0.5" style={{ color: 'rgba(0,0,0,0.45)' }}>{r.sous}</Text>
+                  <Text className="text-[14px] font-bold text-[#1A1A1A]">{r.label}</Text>
+                  <Text className="text-[11.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.45)' }}>{r.sous}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
               </Pressable>

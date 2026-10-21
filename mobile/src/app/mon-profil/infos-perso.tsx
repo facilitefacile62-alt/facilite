@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteLigne, ListeCartes, PASTILLE_CERTIFIE, PASTILLE_PRIVE, PASTILLE_PUBLIC } from '@/components/CarteProfil';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
@@ -27,7 +28,9 @@ const SITE_URL = 'https://ffacilite.com';
 
 type Ligne = {
   cle: 'city' | 'quartier' | 'country' | 'membre' | 'education_level' | 'gender';
-  emoji: string;
+  icone: keyof typeof Ionicons.glyphMap;
+  /** Libellé affiché sous la valeur (maquette du 20/10/2026). */
+  nom: string;
   label: string;
   aide: string;
   bleu?: boolean;
@@ -35,12 +38,12 @@ type Ligne = {
 };
 
 const LIGNES: Ligne[] = [
-  { cle: 'city', emoji: '📍', label: 'LIEU', aide: 'Ville actuelle', bleu: true, modifiable: true },
-  { cle: 'quartier', emoji: '📌', label: 'QUARTIER', aide: 'Peut être pré-rempli via "Scanner Document"', modifiable: true },
-  { cle: 'country', emoji: '🧭', label: "PAYS / ORIGINE", aide: "Pays d'origine", bleu: true, modifiable: true },
-  { cle: 'membre', emoji: '🏢', label: 'MEMBRE DE', aide: 'Organisation certifiée', modifiable: false },
-  { cle: 'education_level', emoji: '🎓', label: "NIVEAU D'ÉTUDES", aide: "Utilisé pour vérifier votre éligibilité aux offres d'emploi", modifiable: true },
-  { cle: 'gender', emoji: '♂', label: 'GENRE', aide: 'Genre du profil', modifiable: true },
+  { cle: 'city', icone: 'location-outline', nom: 'Lieu', label: 'LIEU', aide: 'Ville actuelle', bleu: true, modifiable: true },
+  { cle: 'quartier', icone: 'home-outline', nom: 'Quartier', label: 'QUARTIER', aide: 'Peut être pré-rempli via "Scanner Document"', modifiable: true },
+  { cle: 'country', icone: 'compass-outline', nom: 'Pays / origine', label: "PAYS / ORIGINE", aide: "Pays d'origine", bleu: true, modifiable: true },
+  { cle: 'membre', icone: 'business-outline', nom: 'Membre de', label: 'MEMBRE DE', aide: 'Organisation certifiée', modifiable: false },
+  { cle: 'education_level', icone: 'school-outline', nom: "Niveau d'études", label: "NIVEAU D'ÉTUDES", aide: "Utilisé pour vérifier votre éligibilité aux offres d'emploi", modifiable: true },
+  { cle: 'gender', icone: 'person-outline', nom: 'Genre', label: 'GENRE', aide: 'Genre du profil', modifiable: true },
 ];
 
 export default function ProfilInfosPersoScreen() {
@@ -88,45 +91,33 @@ export default function ProfilInfosPersoScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Informations personnelles" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <View className="gap-1">
+        <ScrollView contentContainerClassName="pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ListeCartes>
             {LIGNES.map((l) => {
               const valeur = valeurDe(l);
               const certifie = l.cle === 'membre' && Boolean(valeur);
               const pastille =
-                l.cle === 'education_level'
+                l.cle === 'education_level' || (l.cle === 'membre' && !certifie)
                   ? null
                   : certifie
-                    ? { texte: 'Certifié', fond: '#D1FAE5', couleur: '#047857' }
-                    : l.cle === 'membre'
-                      ? null
-                      : estPublic
-                        ? { texte: 'Public', fond: '#DBEAFE', couleur: '#2563EB' }
-                        : { texte: 'Privé', fond: '#E5E7EB', couleur: '#4B5563' };
+                    ? PASTILLE_CERTIFIE
+                    : estPublic
+                      ? PASTILLE_PUBLIC
+                      : PASTILLE_PRIVE;
               return (
-                <View key={l.cle} className="flex-row items-start gap-3" style={{ paddingVertical: 9 }}>
-                  <View className="items-center justify-center" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EEF1FB' }}>
-                    <Text style={{ fontSize: 17 }}>{l.emoji}</Text>
-                  </View>
-                  <View className="flex-1 min-w-0">
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[11.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{l.label}</Text>
-                      <View className="flex-row items-center gap-3">
-                        {pastille ? (
-                          <View style={{ backgroundColor: pastille.fond, borderRadius: 11, paddingHorizontal: 9, paddingVertical: 2 }}>
-                            <Text className="text-[11.5px] font-black" style={{ color: pastille.couleur }}>{pastille.texte}</Text>
-                          </View>
-                        ) : null}
-                        {l.modifiable ? (
-                          <Pressable onPress={() => ouvrir(l)} accessibilityLabel={`Modifier ${l.label.toLowerCase()}`} hitSlop={8}>
-                            <Ionicons name="pencil" size={14} color="rgba(0,0,0,0.45)" />
-                          </Pressable>
-                        ) : null}
-                      </View>
-                    </View>
-
-                    {enEdition === l.cle ? (
-                      <View className="gap-2 mt-1">
+                <CarteLigne
+                  key={l.cle}
+                  icone={l.icone}
+                  titre={valeur || 'Non renseigné'}
+                  sous={enEdition === l.cle ? undefined : l.nom}
+                  pastille={enEdition === l.cle ? null : pastille}
+                  fleche={l.modifiable && enEdition !== l.cle}
+                  alignHaut={enEdition === l.cle}
+                  accessibilityLabel={l.modifiable ? `Modifier ${l.nom.toLowerCase()}` : undefined}
+                  onPress={l.modifiable && enEdition !== l.cle ? () => ouvrir(l) : undefined}
+                  enfants={
+                    enEdition === l.cle ? (
+                      <View className="gap-2 mt-2">
                         <TextInput
                           value={saisie}
                           onChangeText={setSaisie}
@@ -144,20 +135,14 @@ export default function ProfilInfosPersoScreen() {
                           </Pressable>
                         </View>
                       </View>
-                    ) : (
-                      <>
-                        <Text className="text-[16px] font-black mt-0.5" style={{ color: valeur && l.bleu ? '#2563EB' : '#1A1A1A' }}>
-                          {valeur || 'Non renseigné'}
-                        </Text>
-                        <Text className="text-[12.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.45)' }}>{l.aide}</Text>
-                      </>
-                    )}
-                  </View>
-                </View>
+                    ) : null
+                  }
+                />
               );
             })}
-          </View>
+          </ListeCartes>
 
+          <View className="px-5">
           <View className="flex-row items-center justify-between mt-6">
             <View className="flex-1 min-w-0 pr-3">
               <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.45)' }}>Lien d&apos;invitation</Text>
@@ -167,6 +152,7 @@ export default function ProfilInfosPersoScreen() {
               <Ionicons name="copy-outline" size={14} color="#1A1A1A" />
               <Text className="text-[13px] font-black text-[#1A1A1A]">Copier</Text>
             </Pressable>
+          </View>
           </View>
         </ScrollView>
       </SafeAreaView>
