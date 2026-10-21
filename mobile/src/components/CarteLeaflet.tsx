@@ -160,6 +160,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var popupCourant = null;
   var popupDonnees = null;
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // Taille des ronds de boutiques : suit le zoom (pleine à partir du zoom 15, jusqu'à 55 % en dézoomant) et un peu plus grande
+  // qu'avant (×1,1 au maximum). Ils ne sont jamais déplacés : leur position est toujours celle de la boutique.
+  function echelleZoom() { return Math.max(0.55, Math.min(1.1, 1.1 * Math.pow(2, (carte.getZoom() - 15) / 1.5))); }
   function htmlAvatar(m) {
     var a = m.avatar, ring = a.bordure;
     var src = a.photo || a.uri;
@@ -167,10 +170,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
       : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
     var rond = '<div class="rond-cliquable" style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
-    // Taille qui SUIT le zoom (21/10/2026) : pleine taille à partir du zoom 15, de plus en plus petit en dézoomant (minimum 45 %, pour rester touchable),
-    // pour que les boutiques ne se recouvrent pas quand la carte s'éloigne — elles ne sont jamais déplacées ni regroupées.
-    var k = Math.max(0.45, Math.min(1, Math.pow(2, (carte.getZoom() - 15) / 1.5)));
-    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : (k < 1 ? 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';' : '');
+    var k = echelleZoom();
+    var echelle = a.selectionne ? 'transform:scale(1.25);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';';
     if (a.moi) {
       // Pas d'étiquette « Vous êtes ici » : elle cachait les boutiques voisines. Le rond bleu et son halo suffisent (le bouton
       // « Autour de moi » recentre sur lui).
@@ -230,31 +231,29 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
     var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
     var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
-    var procheMoi = function (p) { return !!moiPt && Math.hypot(p.x - moiPt.x, p.y - moiPt.y) < 70; };
+    var D = 38 * echelleZoom();
     var cand = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
     var vus = [];
     cand.forEach(function (a, i) {
       if (vus[i]) return;
       vus[i] = true;
       var g = [a];
-      cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < 40) { vus[j] = true; g.push(b); } });
-      var pres = g.some(function (x) { return procheMoi(x.p); });
+      cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < D) { vus[j] = true; g.push(b); } });
+      var pres = g.some(function (x) { return !!moiPt && Math.hypot(x.p.x - moiPt.x, x.p.y - moiPt.y) < D + 8; });
       if (g.length < 2 && !pres) return;
-      var i0 = 0, anneau = 0;
-      while (i0 < g.length) {
-        var r = (pres ? 58 : 26) + anneau * 30;
-        var cap = Math.max(2, Math.floor(2 * Math.PI * r / 42));
-        var n = Math.min(cap, g.length - i0);
-        for (var t = 0; t < n; t++) {
-          var ang = 2 * Math.PI * t / n + (anneau % 2 ? Math.PI / n : 0);
-          spread[g[i0 + t].m.id] = { dx: Math.cos(ang) * r, dy: Math.sin(ang) * r };
-        }
-        i0 += n; anneau++;
-      }
+      // Boutiques qui se recouvrent : rangées CÔTE À CÔTE, collées (5 par rangée, rangées empilées vers le haut), centrées sur
+      // leur position ; au-dessus de « Vous êtes ici » quand l'une d'elles est sur lui.
+      var pas = D + 2, parLigne = 5;
+      g.forEach(function (x, t) {
+        var ligne = Math.floor(t / parLigne);
+        var dansLigne = Math.min(parLigne, g.length - ligne * parLigne);
+        var col = t - ligne * parLigne;
+        spread[x.m.id] = { dx: (col - (dansLigne - 1) / 2) * pas, dy: -((pres ? 1 : 0) + ligne) * pas };
+      });
     });
-    // Jamais d'écartement à un zoom faible : 26 à 58 px représenteraient des kilomètres et poseraient des boutiques en mer.
-    // Seules des boutiques qui se recouvrent encore à très fort zoom (≥ 17, quelques dizaines de mètres) sont écartées.
-    if (carte.getZoom() < 17) spread = {};
+    // Jamais de déplacement à un zoom faible (des pixels représenteraient des kilomètres : boutiques en mer). Le rangement
+    // côte à côte ne s'applique qu'à partir du zoom 15, où il ne représente que quelques dizaines de mètres.
+    if (carte.getZoom() < 15) spread = {};
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
