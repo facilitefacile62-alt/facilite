@@ -167,14 +167,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
       : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
     var rond = '<div class="rond-cliquable" style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
-    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
+    // Taille qui SUIT le zoom (21/10/2026) : pleine taille à partir du zoom 15, de plus en plus petit en dézoomant (minimum 45 %, pour rester touchable),
+    // pour que les boutiques ne se recouvrent pas quand la carte s'éloigne — elles ne sont jamais déplacées ni regroupées.
+    var k = Math.max(0.45, Math.min(1, Math.pow(2, (carte.getZoom() - 15) / 1.5)));
+    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : (k < 1 ? 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';' : '');
     if (a.moi) {
       // Pas d'étiquette « Vous êtes ici » : elle cachait les boutiques voisines. Le rond bleu et son halo suffisent (le bouton
       // « Autour de moi » recentre sur lui).
       return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond + '</div>';
     }
     // Comme les cartes de commerces compactes : au repos, seul le petit rond ; le nom n'apparaît que sur la boutique touchée.
-    if (!a.selectionne) return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">' + rond + '</div>';
+    if (!a.selectionne) return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + rond + '</div>';
     var pastille = '<div style="margin-bottom:6px;padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
       + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
@@ -250,8 +253,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       }
     });
     // Jamais d'écartement à un zoom faible : 26 à 58 px représenteraient des kilomètres et poseraient des boutiques en mer.
-    // À ces zooms, les boutiques qui se recouvrent sont regroupées en pastille (regrouper) au lieu d'être déplacées.
-    if (carte.getZoom() < 15) spread = {};
+    // Seules des boutiques qui se recouvrent encore à très fort zoom (≥ 17, quelques dizaines de mètres) sont écartées.
+    if (carte.getZoom() < 17) spread = {};
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
