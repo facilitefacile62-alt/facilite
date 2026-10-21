@@ -79,7 +79,7 @@ const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leafle
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
 const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean): string {
+function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean, margeHaut: number, margeBas: number): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8" />
@@ -157,6 +157,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   // boutiques et leurs regroupements disparaissent jusqu'à ce que la fixation soit levée.
   var focusId = null;
   var spread = {};
+  var piles = {};   // id de la boutique du dessus -> boutiques empilees avec elle (zoom faible)
+  var MARGE_H = ${margeHaut}, MARGE_B = ${margeBas};
   var popupCourant = null;
   var popupDonnees = null;
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -169,7 +171,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var contenu = src
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
       : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
-    var rond = '<div class="rond-cliquable" style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+    var pile = piles[m.id];
+    var pastillePile = pile && pile.length > 1 ? '<div style="position:absolute;top:-7px;right:-9px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 10px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + (pile.length - 1) + '</div>' : '';
+    var rond = '<div class="rond-cliquable" style="position:relative;width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div>' + pastillePile + '</div>';
     var k = echelleZoom();
     var echelle = a.selectionne ? 'transform:scale(1.25);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';';
     if (a.moi) {
@@ -234,12 +238,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var D = 38 * echelleZoom();
     var cand = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
     var vus = [];
+    var groupesVus = [];
     cand.forEach(function (a, i) {
       if (vus[i]) return;
       vus[i] = true;
       var g = [a];
       cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < D) { vus[j] = true; g.push(b); } });
       var pres = g.some(function (x) { return !!moiPt && Math.hypot(x.p.x - moiPt.x, x.p.y - moiPt.y) < D + 8; });
+      if (g.length > 1) groupesVus.push(g);
       if (g.length < 2 && !pres) return;
       // Boutiques qui se recouvrent : rangées CÔTE À CÔTE, collées (5 par rangée, rangées empilées vers le haut), centrées sur
       // leur position ; au-dessus de « Vous êtes ici » quand l'une d'elles est sur lui.
@@ -253,7 +259,13 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     });
     // Jamais de déplacement à un zoom faible (des pixels représenteraient des kilomètres : boutiques en mer). Le rangement
     // côte à côte ne s'applique qu'à partir du zoom 13 : les ronds y sont assez petits pour que le décalage reste de quelques centaines de mètres.
-    if (carte.getZoom() < 13) spread = {};
+    piles = {};
+    if (carte.getZoom() < 13) {
+      spread = {};
+      // Sans deplacement, des boutiques qui se recouvrent sont EMPILEES : une pastille « +N » sur celle du dessus dit qu'il y en a
+      // d'autres ; un appui zoome sur la pile jusqu'a ce qu'elles se rangent cote a cote.
+      groupesVus.forEach(function (g) { var membres = g.map(function (x) { return x.m; }); piles[membres[0].id] = membres; });
+    }
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
@@ -273,7 +285,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         }
         var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
-        ma.on('click', function () { envoyer(m.id); });
+        ma.on('click', function () {
+          var pl = piles[m.id];
+          if (pl && pl.length > 1 && carte.getZoom() < 13) {
+            var bornes = L.latLngBounds(pl.map(function (x) { return [x.lat, x.lng]; }));
+            if (bornes.getSouthWest().equals(bornes.getNorthEast())) carte.setView([m.lat, m.lng], 15, { animate: true });
+            else carte.fitBounds(bornes, { padding: [70, 70], maxZoom: 16, animate: true });
+            return;
+          }
+          envoyer(m.id);
+        });
         return;
       }
       if (m.halo) {
@@ -293,14 +314,45 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     popupCourant.options.offset = L.point(decalagePopup());
     popupCourant._updatePosition();
   }
-  carte.on('zoomend', function () { dessiner(); suivrePopup(); });
+  // Boutiques HORS DE LA VUE : un petit rond sur le bord de l'ecran, du cote ou elles se trouvent ; un appui les ouvre.
+  var bord = document.createElement('div');
+  bord.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:800;overflow:hidden';
+  carte.getContainer().appendChild(bord);
+  function majBords() {
+    bord.innerHTML = '';
+    if (focusId) return;
+    var t = carte.getSize();
+    var haut = MARGE_H + 18, bas = t.y - MARGE_B - 18;
+    if (bas <= haut) return;
+    dernier.forEach(function (m) {
+      if (!m.avatar || m.avatar.moi || m.compteur) return;
+      var p = carte.latLngToContainerPoint([m.lat, m.lng]);
+      if (p.x >= 14 && p.x <= t.x - 14 && p.y >= MARGE_H && p.y <= t.y - MARGE_B) return;
+      var x = Math.min(Math.max(p.x, 22), t.x - 22), y = Math.min(Math.max(p.y, haut), bas);
+      var a = m.avatar, src = a.photo || a.uri;
+      var el = document.createElement('div');
+      el.style.cssText = 'position:absolute;left:' + (x - 15) + 'px;top:' + (y - 15) + 'px;width:30px;height:30px;border-radius:9999px;box-sizing:border-box;border:2.5px solid ' + a.bordure + ';background:#111827;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.5);opacity:.92;pointer-events:auto;cursor:pointer';
+      el.innerHTML = src ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover" />' : '<span style="font-size:13px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '') + '</span>';
+      el.title = m.libelle || '';
+      el.addEventListener('click', function (e) { e.stopPropagation(); envoyer(m.id); });
+      bord.appendChild(el);
+    });
+  }
+  carte.on('move', majBords);
+  carte.on('zoomend', function () { dessiner(); suivrePopup(); majBords(); });
   window.majMarqueurs = function (liste, ajuster, focus) {
     dernier = liste;
     focusId = focus || null;
     dessiner();
-    var points = (focusId ? liste.filter(function (m) { return m.id === focusId; }) : liste).map(function (m) { return [m.lat, m.lng]; });
-    if (ajuster && points.length > 1) carte.fitBounds(points, { padding: [36, 36], maxZoom: 16 });
+    // Cadrage : PLUSIEURS boutiques (par exemple celles qui vendent le produit cherché) = vue d'ensemble de toutes, sans zoomer
+    // sur l'une d'elles (zoom plafonné à 13) ; une SEULE boutique = on peut zoomer dessus. Toujours dans la bande visible entre
+    // les bandeaux du haut et du bas.
+    var boutiquesAff = liste.filter(function (m) { return m.avatar && !m.avatar.moi && !m.compteur; });
+    var points = (focusId ? liste.filter(function (m) { return m.id === focusId; }) : (boutiquesAff.length > 1 ? boutiquesAff : liste)).map(function (m) { return [m.lat, m.lng]; });
+    var plafond = !focusId && boutiquesAff.length > 1 ? 13 : 16;
+    if (ajuster && points.length > 1) carte.fitBounds(points, { paddingTopLeft: [36, MARGE_H + 24], paddingBottomRight: [36, MARGE_B + 24], maxZoom: plafond });
     else if (ajuster && points.length === 1) carte.setView(points[0], Math.max(carte.getZoom(), 14));
+    majBords();
   };
   // decalage : fraction de la hauteur dont le point est remonté à l'écran (laisse la place d'un aperçu en bas).
   window.centrer = function (lat, lng, z, decalage) {
@@ -356,6 +408,8 @@ export default function CarteLeaflet({
   interactive = true,
   regrouper = false,
   regions = false,
+  margeHaut = 0,
+  margeBas = 0,
   onMarqueur,
   commandes,
   focus = null,
@@ -369,6 +423,9 @@ export default function CarteLeaflet({
   /** Cadre la carte sur l'ensemble des marqueurs à chaque mise à jour. */
   ajuster?: boolean;
   sombre?: boolean;
+  /** Hauteur (px) des bandeaux posés EN HAUT / EN BAS de la carte : les repères de boutiques hors vue restent entre les deux. */
+  margeHaut?: number;
+  margeBas?: number;
   interactive?: boolean;
   /** Regroupe en pastilles à compteur les marqueurs qui se recouvrent. */
   regrouper?: boolean;
@@ -392,9 +449,9 @@ export default function CarteLeaflet({
   // Le document ne dépend que de la configuration initiale : changer de
   // marqueurs ne le régénère pas (voir plus haut).
   const html = useMemo(
-    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions),
+    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions, margeHaut, margeBas),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sombre, interactive, regrouper, regions]
+    [sombre, interactive, regrouper, regions, margeHaut, margeBas]
   );
 
   const executer = useCallback((script: string) => {

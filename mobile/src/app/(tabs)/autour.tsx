@@ -255,6 +255,8 @@ export default function AutourFaciliteScreen() {
         zoom={7}
         sombre={sombre}
         regions
+        margeHaut={insets.top + 215}
+        margeBas={290}
         marqueurs={marqueurs}
         ajuster={!selection && cleListe !== cleAjustee}
         focus={selection}

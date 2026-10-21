@@ -327,6 +327,8 @@ export default function AutourDeMoiScreen() {
         marqueurs={marqueurs}
         sombre={sombre}
         regions
+        margeHaut={insets.top + 215}
+        margeBas={290}
         ajuster={!selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={popup}
