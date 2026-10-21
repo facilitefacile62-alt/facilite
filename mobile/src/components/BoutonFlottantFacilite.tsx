@@ -1,5 +1,4 @@
-import { useAuth } from '@/context/AuthContext';
-import { importerDocument } from '@/lib/documents';
+import { useImportDocument } from '@/components/FeuilleImportDocument';
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { demanderRemontee } from '@/lib/remonterFil';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +27,7 @@ export default function BoutonFlottantFacilite() {
   const [ouvert, setOuvert] = useState(false);
   const [rotation] = useState(() => new Animated.Value(0));
   const autorise = useFonctionnalites();
-  const { user } = useAuth();
+  const { ouvrir: importerDocument, feuille: feuilleImport } = useImportDocument();
 
   useEffect(() => {
     Animated.timing(rotation, { toValue: ouvert ? 1 : 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
@@ -36,16 +35,7 @@ export default function BoutonFlottantFacilite() {
 
   // Chaque action peut être coupée depuis le site (Administration → Fonctionnalités).
   const toutesActions: Action[] = [
-    { id: 'document', libelle: 'Importer un document', icone: 'cloud-upload', couleur: '#7C3AED', agir: () => {
-        // Import direct (photo ou PDF), sans quitter l'écran en cours ; 2 documents au maximum.
-        if (!user?.id) {
-          Alert.alert('Connexion requise', 'Connectez-vous pour importer un document.');
-          return;
-        }
-        importerDocument(user.id)
-          .then((d) => d && Alert.alert('Document ajouté', `« ${d.titre} » est dans Profil > Documents.`))
-          .catch((e: Error) => Alert.alert('Ajout impossible', e.message));
-      } },
+    { id: 'document', libelle: 'Importer un document', icone: 'cloud-upload', couleur: '#7C3AED', agir: importerDocument },
     { id: 'email', libelle: 'Écrire un e-mail', icone: 'mail', couleur: '#2563EB', agir: () => router.push('/messages?ecrire=1' as Href) },
     { id: 'assistant', libelle: 'Assistant vocal', icone: 'mic', couleur: '#065F46', agir: () => Alert.alert('Assistant vocal', 'Cette fonctionnalité arrive dans une prochaine mise à jour.'), interrupteur: 'feat_voice_assistant' },
     { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur'), interrupteur: 'nav_extracteur' },
@@ -57,6 +47,7 @@ export default function BoutonFlottantFacilite() {
 
   return (
     <>
+      {feuilleImport}
       {ouvert ? (
         <Pressable
           onPress={() => setOuvert(false)}

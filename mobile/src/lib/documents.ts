@@ -1,6 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
@@ -140,7 +139,7 @@ const TAILLE_MAX_O = 10 * 1024 * 1024; // 10 Mo, comme le site
 /** Nombre maximum de documents importés par personne (choix du 21/10/2026). */
 export const MAX_DOCUMENTS = 2;
 
-type SourceDocument = 'photo' | 'pdf';
+export type SourceDocument = 'photo' | 'camera' | 'pdf';
 type FichierChoisi = { uri: string; name?: string | null; size?: number | null; mimeType?: string | null };
 
 /**
@@ -149,10 +148,13 @@ type FichierChoisi = { uri: string; name?: string | null; size?: number | null; 
  */
 export async function ajouterDocument(userId: string, source: SourceDocument = 'pdf'): Promise<DocumentProfil | null> {
   let fichier: FichierChoisi;
-  if (source === 'photo') {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) throw new Error("Autorisez l'accès à vos photos pour en choisir une.");
-    const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+  if (source === 'photo' || source === 'camera') {
+    const permission = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) throw new Error(source === 'camera' ? "Autorisez l'accès à l'appareil photo pour prendre une photo." : "Autorisez l'accès à vos photos pour en choisir une.");
+    const choix =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
     if (choix.canceled || !choix.assets?.length) return null;
     const photo = choix.assets[0];
     fichier = { uri: photo.uri, name: photo.fileName, size: photo.fileSize, mimeType: photo.mimeType ?? 'image/jpeg' };
@@ -194,27 +196,10 @@ export async function ajouterDocument(userId: string, source: SourceDocument = '
   return versDocument(data as LigneResume);
 }
 
-/**
- * « Importer un document » : vérifie la limite de 2 documents, propose « Photo » ou « Fichier PDF », puis ouvre le
- * sélecteur choisi. Ne change jamais d'écran. Renvoie le document ajouté, ou null si la personne a annulé.
- */
-export async function importerDocument(userId: string): Promise<DocumentProfil | null> {
+/** Refuse (en lançant une erreur claire) quand la personne a déjà importé le maximum de documents. */
+export async function verifierLimiteDocuments(userId: string): Promise<void> {
   const existants = await chargerMesDocuments(userId);
   if (existants.length >= MAX_DOCUMENTS) {
     throw new Error(`Vous pouvez importer ${MAX_DOCUMENTS} documents au maximum. Supprimez-en un dans Profil > Documents pour en ajouter un autre.`);
   }
-  const source = await new Promise<SourceDocument | null>((resolve) => {
-    Alert.alert(
-      'Importer un document',
-      'Que voulez-vous importer ?',
-      [
-        { text: 'Choisir une photo', onPress: () => resolve('photo') },
-        { text: 'Choisir un fichier PDF', onPress: () => resolve('pdf') },
-        { text: 'Annuler', style: 'cancel', onPress: () => resolve(null) },
-      ],
-      { cancelable: true, onDismiss: () => resolve(null) }
-    );
-  });
-  if (!source) return null;
-  return ajouterDocument(userId, source);
 }
