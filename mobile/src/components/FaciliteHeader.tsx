@@ -39,7 +39,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 18,
+          paddingHorizontal: 16,
           paddingVertical: 13,
           gap: 8,
         }}>
@@ -70,12 +70,12 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <BasculePlateforme plateforme="facilite" />
           <Pressable
             onPress={() => router.push('/recherche')}
             accessibilityLabel="Rechercher"
-            hitSlop={10}>
+            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="search" size={20} color={ICONE} />
           </Pressable>
 
