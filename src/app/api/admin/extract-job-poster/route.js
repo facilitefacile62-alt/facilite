@@ -73,7 +73,10 @@ export async function POST(req) {
           console.warn("[Poster WebP] conversion impossible, original conservé :", conversionErr?.message);
           bufferStocke = buffer;
         }
-        const storageKey = `admin-posters/poster-${Date.now()}.${ext}`;
+        // Affiche convertie : nommée « -w1280.webp » + deux variantes (480 et 960 px) téléversées à côté, pour que le fil serve
+        // la taille adaptée à l'écran (src/lib/variantesImage.js). Sinon, nom d'origine, sans variantes.
+        const base = `admin-posters/poster-${Date.now()}`;
+        const storageKey = ext === "webp" && mimeStocke === "image/webp" ? `${base}-w1280.webp` : `${base}.${ext}`;
 
         const { error: uploadError } = await supabaseAdmin.storage
           .from("job-offers")
@@ -83,6 +86,18 @@ export async function POST(req) {
           });
 
         if (!uploadError) {
+          if (storageKey.endsWith("-w1280.webp")) {
+            for (const largeur of [480, 960]) {
+              try {
+                const variante = await sharp(bufferStocke).resize({ width: largeur, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
+                await supabaseAdmin.storage
+                  .from("job-offers")
+                  .upload(storageKey.replace("-w1280.webp", `-w${largeur}.webp`), variante, { contentType: "image/webp", upsert: true });
+              } catch (varianteErr) {
+                console.warn("[Poster variante]", largeur, varianteErr?.message);
+              }
+            }
+          }
           const { data: pubData } = supabaseAdmin.storage
             .from("job-offers")
             .getPublicUrl(storageKey);

@@ -3,6 +3,7 @@
 
 import React, { useState } from "react";
 import { ratioAffichage, RATIO_ATTENTE } from "@/lib/formatImage";
+import { variantesImage } from "@/lib/variantesImage";
 
 /**
  * Image publiée affichée à SON rapport (largeur / hauteur) : ni bandes sur les
@@ -21,6 +22,8 @@ export default function ImageAdaptative({
   loading = "lazy",
   // "high" pour l'image la plus visible de la page (plus grand élément affiché) ; "auto" sinon.
   fetchPriority = "auto",
+  // Largeur d'affichage réelle de l'image (attribut sizes) : sert à choisir la variante 480 / 960 / 1280 px.
+  sizes = "(min-width: 1024px) 560px, 100vw",
   children = null,
   ...reste
 }) {
@@ -47,6 +50,7 @@ export default function ImageAdaptative({
           if (el && el.complete && ratio === null) lire(el);
         }}
         src={src}
+        {...(variantesImage(src).srcSet ? { srcSet: variantesImage(src).srcSet, sizes } : {})}
         alt={alt}
         loading={loading}
         decoding="async"
