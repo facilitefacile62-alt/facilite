@@ -4,16 +4,12 @@
 import { sansAccent } from "@/lib/texte";
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import DiagnosticModal from "@/components/DiagnosticModal";
-import ApplyModal from "@/components/ApplyModal";
 import RoleNavLink from "@/components/RoleNavLink";
-import AutourCentre from "@/app/autour/AutourCentre";
 import UnreadBadge from "@/components/UnreadBadge";
-import TemplatePreviewModal from "@/components/TemplatePreviewModal";
-import StoryViewer from "@/components/StoryViewer";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import SocialShareButtons from "@/components/SocialShareButtons";
@@ -24,6 +20,14 @@ import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } fro
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
+
+// Fenêtres et modules affichés seulement après un geste (ou en mode « Autour de moi ») : chargés à la demande pour alléger
+// le JavaScript du premier écran (20/10/2026, Lighthouse : 2,3 s d'évaluation de scripts, rendu de l'image principale retardé).
+const DiagnosticModal = dynamic(() => import("@/components/DiagnosticModal"), { ssr: false });
+const ApplyModal = dynamic(() => import("@/components/ApplyModal"), { ssr: false });
+const AutourCentre = dynamic(() => import("@/app/autour/AutourCentre"), { ssr: false });
+const TemplatePreviewModal = dynamic(() => import("@/components/TemplatePreviewModal"), { ssr: false });
+const StoryViewer = dynamic(() => import("@/components/StoryViewer"), { ssr: false });
 import { TexteAvecLiens } from "@/lib/liens";
 import { useCandidateMatchScores } from "@/lib/useCandidateMatchScores";
 import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
@@ -34,9 +38,9 @@ const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP
 // mêmes 3 modèles réellement sélectionnables dans /creer-cv (voir son
 // urlTemplate côté client), pas de 4e modèle décoratif sans mapping clair.
 const CV_TEMPLATE_STORIES = [
-  { id: "modern", name: "Moderne", previewUrl: "/affiche_cv_pro.jpg", description: "2 colonnes structuré" },
-  { id: "minimalist", name: "Minimaliste", previewUrl: "/affiche_cv_pro.jpg", description: "Aéré & moderne" },
-  { id: "classic", name: "Classique", previewUrl: "/affiche_cv_pro.jpg", description: "Traditionnel & chic" },
+  { id: "modern", name: "Moderne", previewUrl: "/affiche_cv_pro.webp", description: "2 colonnes structuré" },
+  { id: "minimalist", name: "Minimaliste", previewUrl: "/affiche_cv_pro.webp", description: "Aéré & moderne" },
+  { id: "classic", name: "Classique", previewUrl: "/affiche_cv_pro.webp", description: "Traditionnel & chic" },
 ];
 
 // --- DICTIONNAIRE DE TRADUCTION COMPLET ---
@@ -1985,15 +1989,17 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
       ) : null}
 
       {/* Aperçu plein écran d'un modèle de CV (carrousel Stories ci-dessus) */}
-      <TemplatePreviewModal
-        template={previewTemplate}
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        onConfirm={(tpl) => {
-          setIsPreviewOpen(false);
-          router.push(`/creer-cv?template=${tpl.id}`);
-        }}
-      />
+      {isPreviewOpen && (
+        <TemplatePreviewModal
+          template={previewTemplate}
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          onConfirm={(tpl) => {
+            setIsPreviewOpen(false);
+            router.push(`/creer-cv?template=${tpl.id}`);
+          }}
+        />
+      )}
 
       {/* Modal 1: CV Requis pour postuler */}
       {noCvModalOpen && (
@@ -2763,15 +2769,17 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
           </div>
         </div>
       )}
-      <DiagnosticModal isOpen={diagnosticModalOpen} onClose={() => setDiagnosticModalOpen(false)} />
-      <ApplyModal
-        isOpen={applyModalOpen}
-        onClose={() => setApplyModalOpen(false)}
-        job={selectedJobToApply}
-        selectedLang={selectedLang}
-        t={t}
-        triggerToast={triggerToast}
-      />
+      {diagnosticModalOpen && <DiagnosticModal isOpen={diagnosticModalOpen} onClose={() => setDiagnosticModalOpen(false)} />}
+      {applyModalOpen && (
+        <ApplyModal
+          isOpen={applyModalOpen}
+          onClose={() => setApplyModalOpen(false)}
+          job={selectedJobToApply}
+          selectedLang={selectedLang}
+          t={t}
+          triggerToast={triggerToast}
+        />
+      )}
 
       {/* MODAL LIGHTBOX POUR IMAGES (Style Facebook) */}
       {viewImageModal.isOpen && (
