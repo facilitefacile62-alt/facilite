@@ -166,6 +166,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var focusId = null;
   var spread = {};
   var TAILLE = 28, LARGEUR_ETIQ = 112;   // petit rond de taille FIXE (px) ; largeur maximale d'un nom
+  var enCluster = {};   // id -> true quand la boutique fait partie d'une grappe (rond sans pointe)
   var piles = {};   // id de la boutique du dessus -> boutiques empilees avec elle (zoom faible)
   var MARGE_H = ${margeHaut}, MARGE_B = ${margeBas};
   var popupCourant = null;
@@ -188,6 +189,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // ne gêner aucun autre nom ni rond ; nom masqué s'il n'y a pas de place).
     var rond = '<div class="rond-cliquable" style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;border-radius:9999px;padding:2px;box-sizing:border-box;background:' + ring + ';box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
     var queue = '<div style="position:absolute;left:50%;top:' + (TAILLE - 3) + 'px;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ' + ring + '"></div>';
+    if (enCluster[m.id]) queue = '';
     var pl = piles[m.id];
     var badge = pl && pl.length ? '<div style="position:absolute;top:-8px;right:-10px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 9.5px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + pl.length + '</div>' : '';
     var cote = etiquettes[m.id];
@@ -201,7 +203,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
       + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
       + '</div>' : '';
-    var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% ' + (TAILLE + 5) + 'px;z-index:5;' : '';
+    var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% ' + (enCluster[m.id] ? TAILLE / 2 : TAILLE + 5) + 'px;z-index:5;' : '';
     return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + queue + badge + etiq + pastille + '</div>';
   }
   function dessiner() {
@@ -248,30 +250,95 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
     var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
     var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
-    // Aucune boutique n'est associée ni cachée : chaque rond (taille FIXE) garde sa place exacte s'il est libre ; sinon il prend la
-    // place libre la plus proche (anneaux autour de sa position, en commençant par le haut), de sorte qu'AUCUN rond n'en
-    // recouvre un autre, ni « Vous êtes ici ». Un trait fin le relie alors à un point posé sur la vraie position de la boutique
-    // (ce point ne bouge jamais). Ordre de placement stable (par identifiant) : la disposition ne saute pas d'un zoom à l'autre.
+    // GRAPPES (choix du 22/10/2026) : des boutiques très proches les unes des autres (moins de 200 m, mesurés sur la carte, donc
+    // indépendamment du zoom) forment une grappe : leurs ronds se serrent en couronne, collés, autour du centre du groupe (autour du
+    // point bleu « Vous êtes ici » quand il est dans le groupe), avec un halo vert doux. Tous les ronds ont la MÊME taille à tous les
+    // zooms et la couronne a toujours la même forme ; seule la grappe entière suit la carte. Une boutique isolée reste une icône
+    // à pointe exactement sur sa position. Entre groupes qui se recouvriraient à l'écran, le moins prioritaire est masqué et signalé
+    // par « +N » (comme Google Maps) jusqu'à un zoom où la place le permet.
     spread = {};
     piles = {};
-    var D = TAILLE + 2, PAS = D + 2;
+    enCluster = {};
+    var D = TAILLE + 1, RAYON_GRAPPE = 200;
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
-      .sort(function (u, v) { return (v.m.avatar.selectionne ? 1 : 0) - (u.m.avatar.selectionne ? 1 : 0) || (u.m.avatar.bordure === v.m.avatar.bordure ? 0 : (u.m.avatar.bordure < v.m.avatar.bordure ? 1 : -1)) || (String(u.m.id) < String(v.m.id) ? -1 : 1); });
-    // Aucun déplacement (choix du 22/10/2026) : chaque rond reste EXACTEMENT sur la position de sa boutique, à taille fixe,
-    // même s'il en recouvre un autre. (L'ancien rangement « place libre la plus proche » avec traits a été supprimé.)
-    var centres = {};
-    aPlacer.forEach(function (it) { centres[it.m.id] = { x: it.p.x, y: it.p.y - (TAILLE / 2 + 5) }; });
-    // Comme Google Maps : par ordre de priorité (boutique touchée, puis vérifiées), un rond qui en recouvrirait un déjà affiché
-    // (ou « Vous êtes ici ») est masqué jusqu'à un zoom où la place le permet. Rien n'est jamais déplacé.
-    var afficher = {};
+      .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
+    var centres = {}, afficher = {}, grappes = [];
+    var moiAff = moiPt;
+    var pris = {}, moiPris = false, entites = [];
+    aPlacer.forEach(function (a) {
+      if (pris[a.m.id]) return;
+      pris[a.m.id] = true;
+      var membres = [a];
+      aPlacer.forEach(function (b) { if (!pris[b.m.id] && carte.distance([a.m.lat, a.m.lng], [b.m.lat, b.m.lng]) < RAYON_GRAPPE) { pris[b.m.id] = true; membres.push(b); } });
+      var avecMoi = false;
+      if (moiMarq && !moiPris && carte.distance([a.m.lat, a.m.lng], [moiMarq.lat, moiMarq.lng]) < RAYON_GRAPPE) { avecMoi = true; moiPris = true; }
+      entites.push({ membres: membres, avecMoi: avecMoi, selection: membres.some(function (x) { return x.m.avatar.selectionne; }) });
+    });
+    function couronnes(k, centreOccupe) {
+      var pos = [], reste = k, i = 0;
+      var cap0 = centreOccupe ? Math.min(k, 8) : Math.min(k, 7);
+      var r0 = Math.max(centreOccupe ? D : 0, D / (2 * Math.sin(Math.PI / Math.max(cap0, 2))));
+      var r = r0;
+      while (reste > 0) {
+        r = r0 + i * D;
+        var n = i === 0 ? cap0 : Math.min(reste, Math.max(1, Math.floor(2 * Math.PI * r / D)));
+        for (var t = 0; t < n; t++) {
+          var ang = -Math.PI / 2 + 2 * Math.PI * t / n + (i % 2 ? Math.PI / n : 0);
+          pos.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
+        }
+        reste -= n; i++;
+      }
+      return { pos: pos, rayon: r + D / 2 };
+    }
+    entites.forEach(function (e) {
+      var k = e.membres.length;
+      var sx = 0, sy = 0;
+      e.membres.forEach(function (x) { sx += x.p.x; sy += x.p.y; });
+      e.cx = sx / k; e.cy = sy / k;
+      e.grappe = k > 1 || e.avecMoi;
+      if (e.grappe) {
+        var c = couronnes(k, e.avecMoi);
+        e.pos = c.pos; e.R = c.rayon;
+      } else {
+        e.cx = e.membres[0].p.x; e.cy = e.membres[0].p.y - (TAILLE / 2 + 5); e.R = TAILLE / 2;
+      }
+    });
+    entites.sort(function (u, v) { return ((v.selection || v.avecMoi) ? 1 : 0) - ((u.selection || u.avecMoi) ? 1 : 0) || v.membres.length - u.membres.length || (String(u.membres[0].m.id) < String(v.membres[0].m.id) ? -1 : 1); });
     var montres = [];
-    aPlacer.forEach(function (it) {
-      var c = centres[it.m.id];
+    entites.forEach(function (e) {
       var bloque = null;
-      for (var q = 0; q < montres.length && !bloque; q++) if (Math.hypot(montres[q].x - c.x, montres[q].y - c.y) < TAILLE) bloque = montres[q];
-      if (it.m.avatar.selectionne || !bloque) { montres.push({ x: c.x, y: c.y, id: it.m.id }); afficher[it.m.id] = true; }
-      else (piles[bloque.id] = piles[bloque.id] || []).push(it.m);   // masquée : signalée par « +N » sur le rond qui la couvre
+      for (var q = 0; q < montres.length && !bloque; q++) if (Math.hypot(montres[q].cx - e.cx, montres[q].cy - e.cy) < montres[q].R + e.R) bloque = montres[q];
+      if (bloque && !e.selection && !e.avecMoi) {
+        // masquée : signalée par « +N » sur le premier rond de l'entité qui la couvre
+        var cible = bloque.membres[0].m.id;
+        piles[cible] = (piles[cible] || []).concat(e.membres.map(function (x) { return x.m; }));
+        return;
+      }
+      montres.push(e);
+      e.membres.forEach(function (x, t) {
+        afficher[x.m.id] = true;
+        if (e.grappe) {
+          var cible2 = { x: e.cx + e.pos[t].x, y: e.cy + e.pos[t].y };
+          centres[x.m.id] = cible2;
+          enCluster[x.m.id] = true;
+          spread[x.m.id] = { dx: cible2.x - x.p.x, dy: cible2.y - x.p.y };
+        } else {
+          centres[x.m.id] = { x: e.cx, y: e.cy };
+        }
+      });
+      if (e.avecMoi && moiPt) {
+        spread[moiMarq.id] = { dx: e.cx - moiPt.x, dy: e.cy - moiPt.y };
+        moiAff = { x: e.cx, y: e.cy };
+      }
+      if (e.grappe) grappes.push(e);
+    });
+    // halo vert doux derrière chaque grappe affichée
+    grappes.forEach(function (e) {
+      var S = Math.round(2 * (e.R + 18));
+      var centreHalo = carte.containerPointToLatLng(L.point(e.cx, e.cy));
+      var icHalo = L.divIcon({ className: 'bulle-regroupement', html: '<div style="width:' + S + 'px;height:' + S + 'px;border-radius:9999px;background:radial-gradient(circle, rgba(16,185,129,.42) 0%, rgba(16,185,129,.26) 55%, rgba(16,185,129,0) 72%);pointer-events:none"></div>', iconSize: [S, S], iconAnchor: [S / 2, S / 2] });
+      L.marker(centreHalo, { icon: icHalo, interactive: false, keyboard: false, zIndexOffset: 100 }).addTo(couche);
     });
     // Noms (comme Google Maps) : à partir du zoom 14, chacun prend le premier côté libre (droite, gauche, dessous, dessus) ;
     // s'il n'y en a aucun, le nom est masqué, jamais le rond.
@@ -279,7 +346,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var rects = [];
     var croise = function (u, v) { return u.x1 < v.x2 && u.x2 > v.x1 && u.y1 < v.y2 && u.y2 > v.y1; };
     aPlacer.forEach(function (it) { if (!afficher[it.m.id]) return; var c = centres[it.m.id]; rects.push({ x1: c.x - TAILLE / 2, y1: c.y - TAILLE / 2, x2: c.x + TAILLE / 2, y2: c.y + TAILLE / 2 }); });
-    if (moiPt) rects.push({ x1: moiPt.x - 14, y1: moiPt.y - 14, x2: moiPt.x + 14, y2: moiPt.y + 14 });
+    if (moiAff) rects.push({ x1: moiAff.x - 14, y1: moiAff.y - 14, x2: moiAff.x + 14, y2: moiAff.y + 14 });
     if (carte.getZoom() >= 14) {
       aPlacer.forEach(function (it) {
         var m = it.m, c = centres[m.id];
@@ -319,14 +386,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
-        var sp = spread[m.id];
-        if (sp && Math.hypot(sp.dx, sp.dy) > 10) {
-          var pv = carte.latLngToContainerPoint([m.lat, m.lng]);
-          var ancre = carte.containerPointToLatLng(L.point(pv.x + sp.dx, pv.y + sp.dy));
-          L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
-          L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
-        }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 44], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 14 : TAILLE + 5) - (spread[m.id] ? spread[m.id].dy : 0)] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 44], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 14 : (enCluster[m.id] ? TAILLE / 2 : TAILLE + 5)) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () {
           var pl2 = piles[m.id];
