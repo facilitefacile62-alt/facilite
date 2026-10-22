@@ -252,30 +252,13 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     spread = {};
     piles = {};
     var D = TAILLE + 2, PAS = D + 2;
-    var occupes = [];
-    if (moiPt) occupes.push({ x: moiPt.x, y: moiPt.y });
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
       .sort(function (u, v) { return (v.m.avatar.selectionne ? 1 : 0) - (u.m.avatar.selectionne ? 1 : 0) || (u.m.avatar.bordure === v.m.avatar.bordure ? 0 : (u.m.avatar.bordure < v.m.avatar.bordure ? 1 : -1)) || (String(u.m.id) < String(v.m.id) ? -1 : 1); });
-    var libreEn = function (x, y) { return occupes.every(function (o) { return Math.hypot(o.x - x, o.y - y) >= D; }); };
+    // Aucun déplacement (choix du 22/10/2026) : chaque rond reste EXACTEMENT sur la position de sa boutique, à taille fixe,
+    // même s'il en recouvre un autre. (L'ancien rangement « place libre la plus proche » avec traits a été supprimé.)
     var centres = {};
-    aPlacer.forEach(function (it) {
-      var cx = it.p.x, cy = it.p.y, off = { dx: 0, dy: 0 };
-      if (!libreEn(cx, cy)) {
-        var trouve = false;
-        for (var r = 1; r <= 10 && !trouve; r++) {
-          var n = 6 * r;
-          for (var t = 0; t < n && !trouve; t++) {
-            var ang = -Math.PI / 2 + 2 * Math.PI * t / n;
-            var dx = Math.cos(ang) * PAS * r, dy = Math.sin(ang) * PAS * r;
-            if (libreEn(cx + dx, cy + dy)) { off = { dx: dx, dy: dy }; trouve = true; }
-          }
-        }
-      }
-      occupes.push({ x: cx + off.dx, y: cy + off.dy });
-      centres[it.m.id] = { x: cx + off.dx, y: cy + off.dy };
-      if (off.dx || off.dy) spread[it.m.id] = off;
-    });
+    aPlacer.forEach(function (it) { centres[it.m.id] = { x: it.p.x, y: it.p.y }; });
     // Noms (comme Google Maps) : à partir du zoom 14, chacun prend le premier côté libre (droite, gauche, dessous, dessus) ;
     // s'il n'y en a aucun, le nom est masqué, jamais le rond.
     etiquettes = {};
