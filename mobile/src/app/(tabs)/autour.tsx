@@ -264,10 +264,6 @@ export default function AutourFaciliteScreen() {
         commandes={setCarte}
         onMarqueur={(id) => {
           if (id === 'moi' || id === 'boutique') return;
-          if (id.startsWith('pile:')) {
-            choisirVille(id.slice(5).split(',')[0]);
-            return;
-          }
           if (id === 'fermer') setSelection(null);
           else if (id.startsWith('postuler:')) postuler(id.slice(9));
           else if (id.startsWith('article:sp-')) router.push(`/entreprise/${id.slice(11)}` as Href);

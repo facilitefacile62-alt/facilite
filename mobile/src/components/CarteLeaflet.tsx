@@ -234,9 +234,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
     var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
     var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
-    // Les ronds de boutiques ne bougent JAMAIS de leur position et gardent une taille fixe (choix du 21/10/2026). Des boutiques
-    // qui se recouvrent forment une PILE : le rond du dessus porte une pastille « +N » ; un appui sur la pile ouvre la liste de
-    // ses boutiques (envoyée à l'application, voir « pile: »).
+    // Aucune boutique n'est associée ni cachée : celles qui se recouvrent sont rangées CÔTE À CÔTE, à taille fixe, 5 par rangée
+    // (rangées empilées vers le haut), centrées sur leur position. Chaque rond est RELIÉ par un trait fin à un point posé sur la
+    // vraie position de la boutique : ce point ne bouge jamais ; la disposition des ronds est la même à tous les zooms.
     spread = {};
     piles = {};
     var D = 38;
@@ -247,7 +247,15 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       vus[i] = true;
       var g = [a];
       cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < D) { vus[j] = true; g.push(b); } });
-      if (g.length > 1) piles[g[0].m.id] = g.map(function (x) { return x.m; });
+      var pres = g.some(function (x) { return !!moiPt && Math.hypot(x.p.x - moiPt.x, x.p.y - moiPt.y) < D + 8; });
+      if (g.length < 2 && !pres) return;
+      var pas = D + 2, parLigne = 5;
+      g.forEach(function (x, t) {
+        var ligne = Math.floor(t / parLigne);
+        var dansLigne = Math.min(parLigne, g.length - ligne * parLigne);
+        var col = t - ligne * parLigne;
+        spread[x.m.id] = { dx: (col - (dansLigne - 1) / 2) * pas, dy: -((pres ? 1 : 0) + ligne) * pas };
+      });
     });
     libres.forEach(function (m) {
       if (m.compteur) {
@@ -266,13 +274,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
+        var sp = spread[m.id];
+        if (sp && Math.hypot(sp.dx, sp.dy) > 10) {
+          var pv = carte.latLngToContainerPoint([m.lat, m.lng]);
+          var ancre = carte.containerPointToLatLng(L.point(pv.x + sp.dx, pv.y + sp.dy));
+          L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
+          L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
+        }
         var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
-        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : (piles[m.id] ? 350 : 300)), keyboard: false, title: m.libelle || '' }).addTo(couche);
-        ma.on('click', function () {
-          var pl = piles[m.id];
-          if (pl && pl.length > 1) envoyer('pile:' + pl.map(function (x) { return x.id; }).join(','));
-          else envoyer(m.id);
-        });
+        var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
+        ma.on('click', function () { envoyer(m.id); });
         return;
       }
       if (m.halo) {

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ModalTrouverLivreur from '@/components/ModalTrouverLivreur';
@@ -254,14 +254,8 @@ export default function AutourDeMoiScreen() {
 
   // Appui sur la carte : une boutique, ou une pastille de groupe (« groupe:id1,id2 »,
   // seulement pour des boutiques situées exactement au même endroit).
-  // Pile de boutiques (plusieurs au même endroit) : appui sur le rond du dessus = liste pour choisir la boutique voulue.
-  const [pile, setPile] = useState<string[] | null>(null);
   const surMarqueur = useCallback(
     (id: string) => {
-      if (id.startsWith('pile:')) {
-        setPile(id.slice(5).split(','));
-        return;
-      }
       if (id === 'fermer') {
         setSelection(null);
         return;
@@ -581,41 +575,6 @@ export default function AutourDeMoiScreen() {
           )}
         </View>
       </View>
-      <Modal visible={pile !== null} transparent animationType="fade" onRequestClose={() => setPile(null)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }} onPress={() => setPile(null)}>
-          <Pressable onPress={() => {}} style={{ backgroundColor: '#1F2023', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 18, paddingBottom: 28, paddingHorizontal: 16 }}>
-            <Text className="text-white text-[15px] font-black text-center mb-3">{pile?.length ?? 0} boutiques à cet endroit</Text>
-            {(pile ?? []).map((id) => {
-              const b = boutiques?.find((x) => x.id === id);
-              if (!b) return null;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => {
-                    setPile(null);
-                    choisirBoutique(id, 17);
-                  }}
-                  className="flex-row items-center gap-3 py-2.5">
-                  <View className="items-center justify-center rounded-full overflow-hidden" style={{ width: 44, height: 44, backgroundColor: '#111827', borderWidth: 2, borderColor: b.verifie ? BLEU : VERT }}>
-                    {photosRecherche.get(id) ? (
-                      <Image source={{ uri: photosRecherche.get(id) }} alt={b.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                    ) : avatars.get(id)?.xml ? (
-                      <SvgXml xml={avatars.get(id)!.xml!} width="100%" height="100%" />
-                    ) : (
-                      <Text className="text-[20px]">{avatars.get(id)?.emoji ?? '🏪'}</Text>
-                    )}
-                  </View>
-                  <View className="flex-1 min-w-0">
-                    <Text className="text-white text-[14px] font-bold" numberOfLines={1}>{b.nom}</Text>
-                    <Text className="text-[12px]" style={{ color: 'rgba(255,255,255,0.55)' }} numberOfLines={1}>{distanceLisible(b.distanceKm) ?? b.quartier ?? b.ville ?? ''}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.4)" />
-                </Pressable>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
       <ModalTrouverLivreur visible={livreursOuverts} onFermer={() => setLivreursOuverts(false)} />
     </View>
   );
