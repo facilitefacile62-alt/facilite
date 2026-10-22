@@ -18,6 +18,7 @@ import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
+import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
@@ -233,7 +234,7 @@ export default function GlobeExplorateurBoutiques({
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
-  const [styleActif, setStyleActif] = useState("dark"); // 'dark' (Défaut Dark Mapbox) | 'voyager' | 'satellite'
+  const [styleActif, setStyleActif] = useState("voyager"); // plan clair par défaut (22/10/2026) ; .dark. | 'voyager' | 'satellite'
   const [localisationEnCours, setLocalisationEnCours] = useState(false);
   const [erreurLocalisation, setErreurLocalisation] = useState("");
   const [vueBoutiqueDetails, setVueBoutiqueDetails] = useState(false);
@@ -1043,6 +1044,7 @@ export default function GlobeExplorateurBoutiques({
         carte.on("zoomend", () => {
           zoomAnimationEnCoursRef.current = false;
         });
+        brancherDensiteNoms(carte);
 
         // URL de tuiles propre sans paramètre erroné
         const urlTuiles = styleActif === "satellite" ? TUILES_SATELLITE : TUILES_OSM;
@@ -1372,7 +1374,10 @@ export default function GlobeExplorateurBoutiques({
       pixels.forEach((p) => {
         const entree = marqueursCreesParId.get(p.id);
         if (!entree) return;
-        const d = decalages.get(p.id);
+        // Jamais d'écartement tant que la vue est éloignée (22/10/2026) : à ces zooms quelques pixels représentent des centaines
+        // de mètres et posaient des pins en mer. La pointe d'un pin reste sur ses coordonnées ; l'écartement relié par un trait
+        // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
+        const d = zoom < 16 ? { dx: 0, dy: 0 } : decalages.get(p.id);
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
       regroupes.forEach((id) => {
@@ -1388,7 +1393,7 @@ export default function GlobeExplorateurBoutiques({
       const rectAvatar = (entree) => {
         const el = entree?.marqueur?.getElement?.();
         if (!el || el.style.display === "none") return null; // absent ou caché dans une bulle
-        const av = el.querySelector(".avatar-boutique-zoom-scale");
+        const av = el.querySelector(".epingle-pin");
         const r = av?.getBoundingClientRect();
         return r && r.width > 0 ? r : null;
       };
@@ -1520,37 +1525,13 @@ export default function GlobeExplorateurBoutiques({
         ? `<div class="absolute -top-1 -right-1 bg-amber-400 text-gray-950 text-[9px] px-1 rounded-full border border-white shadow-xs">👑</div>`
         : "";
 
+      // Épingle façon Google Maps (voir src/lib/epingleCarte.js) : taille fixe (28 px, 36 px rouge sélectionnée), pointe sur la
+      // coordonnée (ancre [70, 85]), nom à droite avec halo. Le décalage de dissociation reste appliqué au contenu en pixels.
       const htmlMarqueur = `
         <div class="marqueur-decale">
         ${htmlTraitRappel(70, 85)}
         <div class="marqueur-decale-contenu">
-        <div class="snap-marker-pin group flex flex-col items-center select-none cursor-pointer ${
-          estSelectionne ? "z-50" : "z-10"
-        }">
-          <!-- Bulle Tooltip / Badge au-dessus de l'avatar -->
-          <!-- pointer-events:none : l'étiquette d'une boutique recouvre souvent l'avatar de sa voisine ; elle captait les clics (retour utilisateur du 12/10/2026 : « je ne parviens pas à cliquer sur une des boutiques à cause du nom de l'autre »). -->
-          <div class="marqueur-etiquette mb-1.5 px-3 py-1 bg-gray-900/95 text-white rounded-full text-[10px] font-black shadow-2xl border border-gray-700/80 flex items-center gap-1.5 whitespace-nowrap backdrop-blur-md" style="pointer-events:none;">
-            <span class="w-2 h-2 rounded-full ${pointStatutTooltip}"></span>
-            <span class="font-extrabold max-w-[110px] truncate text-white">${nomCourt}</span>
-            <span class="text-[9px] font-bold text-gray-400">· ${quartier}</span>
-          </div>
-
-          <!-- Avatar Circulaire avec Bordure Colorée (#10B981 ou #2563EB) & Story Ring.
-               avatar-boutique-zoom-scale (redimensionné en JS sur zoomend) et
-               avatar-boutique-anime (respiration CSS, sur l'enfant) doivent
-               rester deux éléments distincts — sinon l'animation qui tourne
-               écrase le transform:scale() posé par le JS. -->
-          <div class="relative ${estSelectionne ? "w-9 h-9" : "w-7 h-7"} rounded-full p-[2px] shadow-2xl flex items-center justify-center avatar-boutique-zoom-scale" style="margin-top:-10px;background: ${bordureCouleur}; box-shadow: 0 4px 14px ${bordureCouleur}60;">
-            <div class="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-white dark:border-gray-950 shadow-inner avatar-boutique-anime">
-              ${contenuAvatar}
-            </div>
-            ${badgeLive}
-            ${premiumBadgeHtml}
-          </div>
-
-          <!-- Ombre portée 3D au sol -->
-          <div class="w-8 h-2 bg-black/60 rounded-full blur-[1.5px] mt-1"></div>
-        </div>
+        ${htmlEpingle({ couleur: bordureCouleur, type: typeEpingle(b), nom: nomCourt, selectionne: estSelectionne, contenuHtml: contenuAvatar })}
         </div>
         </div>
       `;
@@ -1758,7 +1739,7 @@ export default function GlobeExplorateurBoutiques({
       const offsetPopup = () => {
         const entree = marqueursCreesParId.get(b.id);
         const d = entree?.decalage || { dx: 0, dy: 0 };
-        const pastille = marqueur.getElement()?.querySelector(".marqueur-etiquette");
+        const pastille = marqueur.getElement()?.querySelector(".epingle-pin");
         if (pastille) {
           const c = carte.getContainer().getBoundingClientRect();
           const r = pastille.getBoundingClientRect();
