@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -79,6 +79,11 @@ export default function AutourFaciliteScreen() {
   const [satellite, setSatellite] = useState(false);
   // Carrousel du bas : entreprises (une pastille par entreprise) ou offres (une carte par offre).
   const [onglet, setOnglet] = useState<'entreprises' | 'offres'>('entreprises');
+  // Flèches du carrousel du bas : défilement par à-coups, avec le décalage courant mémorisé.
+  const listeOffres = useRef<FlatList<any>>(null);
+  const listePastilles = useRef<FlatList<any>>(null);
+  const decalageOffres = useRef(0);
+  const decalagePastilles = useRef(0);
 
   useEffect(() => {
     activer();
@@ -111,26 +116,50 @@ export default function AutourFaciliteScreen() {
       })
       .filter((g) => g.offres.length > 0);
   }, [resultat, recherche]);
-  const courant: GroupeVille | null = groupes.find((g) => g.ville === selection) ?? null;
+  // Offres sans ville reconnue : filtrées par la même recherche, listées dans le carrousel (pas de point sur la carte).
+  const sansVilleFiltrees = useMemo(() => {
+    const base = resultat?.offresSansVille ?? [];
+    const terme = sansAccent(recherche.trim());
+    if (!terme) return base;
+    return base.filter((o) => sansAccent(`${o.titre} ${o.entreprise}`).includes(terme));
+  }, [resultat, recherche]);
+  // Entreprise sélectionnée (« ent:Dakar|nom de l'entreprise ») : ses offres dans cette ville.
+  const courantEnt = useMemo(() => {
+    if (!selection?.startsWith('ent:')) return null;
+    const reste = selection.slice(4);
+    const i = reste.indexOf('|');
+    const g = groupes.find((x) => x.ville === reste.slice(0, i));
+    if (!g) return null;
+    const offres = g.offres.filter((o) => o.entreprise.toLowerCase() === reste.slice(i + 1));
+    return offres.length ? { g, entreprise: offres[0].entreprise, offres } : null;
+  }, [selection, groupes]);
   const lieuSel = selection?.startsWith('lieu:') ? LIEUX.find((e) => `lieu:${e.slug}` === selection) ?? null : null;
   const courantSp: GroupeSpontane | null = selection?.startsWith('sp:') ? groupesSpontanes.find((g) => `sp:${g.ville}` === selection) ?? null : null;
 
   const marqueurs = useMemo<MarqueurCarte[]>(() => {
-    const liste: MarqueurCarte[] = groupes.map((g, rang) => ({
-      id: g.ville,
-      lat: g.lat,
-      lng: g.lng,
-      couleur: couleurVille(rang),
-      libelle: g.ville,
-      avatar: {
-        emoji: String(g.offres.length),
-        bordure: couleurVille(rang),
-        sous: libelleOffres(g.offres.length),
-        selectionne: selection === g.ville,
-        actif: true,
-      },
-    }));
-    groupesSpontanes.forEach((g) =>
+    // Un pin par ENTREPRISE et par ville, comme une boutique dans Locaux : même carte, mêmes grappes, mêmes noms.
+    const liste: MarqueurCarte[] = (vue === 'offres' ? groupes : []).flatMap((g, rang) => {
+      const parEntreprise = new Map<string, { nom: string; offres: typeof g.offres }>();
+      g.offres.forEach((o) => {
+        const cle = o.entreprise.toLowerCase();
+        const e = parEntreprise.get(cle) ?? { nom: o.entreprise, offres: [] };
+        e.offres.push(o);
+        parEntreprise.set(cle, e);
+      });
+      return [...parEntreprise.entries()].map(([cle, e]) => {
+        const id = `ent:${g.ville}|${cle}`;
+        const photo = e.offres.map((o) => o.affiche).find((u) => u && !u.startsWith('data:'));
+        return {
+          id,
+          lat: g.lat,
+          lng: g.lng,
+          couleur: couleurVille(rang),
+          libelle: e.nom,
+          avatar: { emoji: '🏢', photo: photo || undefined, bordure: couleurVille(rang), sous: libelleOffres(e.offres.length), selectionne: selection === id, actif: true },
+        };
+      });
+    });
+    (vue === 'spontanees' ? groupesSpontanes : []).forEach((g) =>
       liste.push({
         id: `sp:${g.ville}`,
         lat: g.lat,
@@ -146,7 +175,7 @@ export default function AutourFaciliteScreen() {
         },
       })
     );
-    LIEUX.forEach((e) =>
+    (vue === 'spontanees' ? LIEUX : []).forEach((e) =>
       liste.push({
         id: `lieu:${e.slug}`,
         lat: e.lat as number,
@@ -160,7 +189,7 @@ export default function AutourFaciliteScreen() {
       liste.push({ id: 'moi', lat: position.latitude, lng: position.longitude, couleur: BLEU, halo: true, libelle: 'Vous êtes ici', avatar: { emoji: '🧑🏾', bordure: '#1877F2', moi: true } });
     }
     return liste;
-  }, [groupes, selection, position]);
+  }, [groupes, selection, position, vue]);
 
   // Bulle d'aperçu au-dessus du rond de la ville : ses offres (poste + entreprise), comme celle des boutiques.
   const popup = useMemo<PopupBoutique | null>(() => {
@@ -186,16 +215,16 @@ export default function AutourFaciliteScreen() {
         articles: courantSp.entreprises.map((e) => ({ id: `sp-${e.slug}`, titre: e.domains, prix: e.company, photo: e.image_url ?? undefined, icone: '✉️' })),
       };
     }
-    if (!courant) return null;
+    if (!courantEnt) return null;
     return {
-      cle: courant.ville,
-      lat: courant.lat,
-      lng: courant.lng,
-      titre: courant.ville,
-      sous: `${libelleOffres(courant.offres.length)} · ${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''}`,
-      articles: courant.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, photo: o.affiche && !o.affiche.startsWith('data:') ? o.affiche : undefined, icone: '🏢' })),
+      cle: selection ?? courantEnt.g.ville,
+      lat: courantEnt.g.lat,
+      lng: courantEnt.g.lng,
+      titre: courantEnt.entreprise,
+      sous: `${courantEnt.g.ville} · ${libelleOffres(courantEnt.offres.length)}`,
+      articles: courantEnt.offres.map((o) => ({ id: o.id, titre: o.titre, prix: o.entreprise, photo: o.affiche && !o.affiche.startsWith('data:') ? o.affiche : undefined, icone: '🏢' })),
     };
-  }, [courant, courantSp, lieuSel]);
+  }, [courantEnt, courantSp, lieuSel, selection]);
 
   // Recadrage de la carte : seulement quand la liste affichée change, jamais à la fermeture d'une bulle.
   const cleListe = `${groupes.map((g) => g.ville).join(',')}|${resultat === null ? 'chargement' : 'pret'}`;
@@ -210,7 +239,7 @@ export default function AutourFaciliteScreen() {
     groupes.forEach((g, rang) =>
       g.offres.forEach((o) => {
         const cle = o.entreprise.toLowerCase();
-        const e = m.get(cle) ?? { cle: g.ville, ville: o.entreprise, n: 0, couleur: couleurVille(rang), texte: '', cleVille: g.ville };
+        const e = m.get(cle) ?? { cle: `ent:${g.ville}|${cle}`, ville: o.entreprise, n: 0, couleur: couleurVille(rang), texte: '', cleVille: g.ville };
         e.n += 1;
         e.texte = `${libelleOffres(e.n)} · ${e.cleVille}`;
         m.set(cle, e);
@@ -235,10 +264,22 @@ export default function AutourFaciliteScreen() {
   const lancerRecherche = () => {
     setRecherche(saisie);
     setSelection(null);
+    // Une recherche affiche tout de suite la liste des offres trouvées (y compris celles sans ville, sans point sur la carte).
+    if (saisie.trim()) {
+      setVue('offres');
+      setOnglet('offres');
+    }
   };
 
   const choisirVille = (cle: string) => {
     setSelection(cle);
+    if (cle.startsWith('ent:')) {
+      setVue('offres');
+      const ville = cle.slice(4, cle.indexOf('|'));
+      const gv = groupes.find((x) => x.ville === ville);
+      if (gv) carte?.centrer(gv.lat, gv.lng, 13, -0.07);
+      return;
+    }
     const lieu = cle.startsWith('lieu:') ? LIEUX.find((e) => `lieu:${e.slug}` === cle) : undefined;
     const sp = cle.startsWith('sp:') || Boolean(lieu);
     setVue(sp ? 'spontanees' : 'offres');
@@ -258,8 +299,8 @@ export default function AutourFaciliteScreen() {
         sombre={sombre && !satellite}
         satellite={satellite}
         regions
-        margeHaut={insets.top + 215}
-        margeBas={290}
+        margeHaut={insets.top + 125}
+        margeBas={265}
         marqueurs={marqueurs}
         ajuster={!selection && cleListe !== cleAjustee}
         focus={selection}
@@ -277,33 +318,9 @@ export default function AutourFaciliteScreen() {
       />
 
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14, gap: 10 }}>
-        <View className="flex-row items-center gap-3">
-          <View className="items-center justify-center rounded-full" style={{ width: 44, height: 44, backgroundColor: VERT }}>
-            <Ionicons name="person" size={20} color="#fff" />
-          </View>
-          <View className="flex-1 min-w-0">
-            <Text className="text-[17px] font-black" style={{ color: sombre || satellite ? '#fff' : '#0F172A' }}>Autour de moi</Text>
-            <View className="flex-row items-center gap-1.5">
-              <View className="rounded-full" style={{ width: 7, height: 7, backgroundColor: VERT }} />
-              <Text className="text-[12px] font-semibold" style={{ color: sombre || satellite ? '#6EE7C9' : '#047857' }} numberOfLines={1}>
-                {resultat === null
-                  ? erreur
-                    ? 'Impossible de charger les offres.'
-                    : 'Chargement…'
-                  : `${totalEntreprises} ${totalEntreprises > 1 ? 'offres & entreprises' : 'offre & entreprise'}`}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            accessibilityLabel="Fermer"
-            className="items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.72)' }}>
-            <Ionicons name="close" size={20} color="#fff" />
-          </Pressable>
-        </View>
-
-        <View className="flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 52, backgroundColor: CREME_RECHERCHE }}>
+        {/* Barre de recherche tout en haut, avec la fermeture à sa droite (même disposition que Locaux). */}
+        <View className="flex-row items-center gap-2.5">
+        <View className="flex-1 flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 48, backgroundColor: CREME_RECHERCHE }}>
           <TextInput
             value={saisie}
             onChangeText={setSaisie}
@@ -321,6 +338,14 @@ export default function AutourFaciliteScreen() {
             <Ionicons name="search" size={15} color="#fff" />
             <Text className="text-white text-[13.5px] font-black">Rechercher</Text>
           </Pressable>
+        </View>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          accessibilityLabel="Fermer"
+          className="items-center justify-center rounded-full"
+          style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.78)' }}>
+          <Ionicons name="close" size={20} color="#fff" />
+        </Pressable>
         </View>
 
         {/* Filtres : Toutes les offres · Candidatures spontanées · Autour de moi */}
@@ -346,19 +371,11 @@ export default function AutourFaciliteScreen() {
               </Pressable>
             );
           })}
-          <Pressable
-            onPress={() => position && carte?.centrer(position.latitude, position.longitude, 15)}
-            accessibilityRole="button"
-            className="flex-row items-center gap-1.5 rounded-full"
-            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
-            <Ionicons name="locate" size={14} color="#34D399" />
-            <Text className="text-[12.5px] font-black text-white">Autour de moi</Text>
-          </Pressable>
         </ScrollView>
       </View>
 
       {/* Commandes de carte : recentrer, jour / nuit, zoom */}
-      <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
+      <View style={{ position: 'absolute', right: 14, top: insets.top + 140, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
           { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
@@ -389,8 +406,10 @@ export default function AutourFaciliteScreen() {
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
             {courantSp
               ? `${libelleSpontanees(courantSp.entreprises.length)} de candidature spontanée à ${courantSp.ville}`
-              : courant
-                ? `${courant.entreprises} entreprise${courant.entreprises > 1 ? 's' : ''} recrute${courant.entreprises > 1 ? 'nt' : ''} à ${courant.ville}`
+              : courantEnt
+                ? `${courantEnt.entreprise} recrute à ${courantEnt.g.ville}`
+                : recherche.trim() && vue === 'offres'
+                  ? `${totalOffres + sansVilleFiltrees.length} offre${totalOffres + sansVilleFiltrees.length > 1 ? 's' : ''} pour « ${recherche.trim()} »`
                 : vue === 'spontanees'
                   ? `${spontanesSansVille} dépôt${spontanesSansVille > 1 ? 's' : ''} ouvert${spontanesSansVille > 1 ? 's' : ''} sur tout le Sénégal`
                   : resultat && resultat.sansVille > 0
@@ -421,15 +440,38 @@ export default function AutourFaciliteScreen() {
           </View>
         ) : null}
 
-        <View className="rounded-[22px] py-3" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 108 }}>
-          {(vue === 'offres' ? groupes.length === 0 : groupesSpontanes.length + LIEUX.length === 0) ? (
+        <View className="rounded-[20px] py-2" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 100 }}>
+          {/* Flèches FIXES (elles ne défilent pas), à la couleur de la barre de navigation du bas. */}
+          {([
+            { sens: -1, cote: 'left', icone: 'chevron-back', nom: 'Précédent' },
+            { sens: 1, cote: 'right', icone: 'chevron-forward', nom: 'Suivant' },
+          ] as const).map((f) => (
+            <Pressable
+              key={f.cote}
+              onPress={() => {
+                const offresActif = vue === 'offres' && onglet === 'offres';
+                const decalage = offresActif ? decalageOffres : decalagePastilles;
+                const cible = Math.max(0, decalage.current + f.sens * 240);
+                (offresActif ? listeOffres : listePastilles).current?.scrollToOffset({ offset: cible, animated: true });
+              }}
+              accessibilityLabel={f.nom}
+              hitSlop={6}
+              className="absolute items-center justify-center rounded-full"
+              style={{ [f.cote]: 6, top: 34, width: 32, height: 32, backgroundColor: '#e3dbcc', zIndex: 5, boxShadow: '0 2px 6px rgba(0,0,0,0.35)' }}>
+              <Ionicons name={f.icone} size={18} color="#1A1A1A" />
+            </Pressable>
+          ))}
+          {(vue === 'offres' ? groupes.length === 0 && sansVilleFiltrees.length === 0 : groupesSpontanes.length + LIEUX.length === 0) ? (
             <Text className="text-center text-[12.5px] py-8" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {resultat === null ? 'Chargement…' : vue === 'offres' ? 'Aucune offre à afficher.' : 'Aucun dépôt à afficher.'}
+              {resultat === null ? 'Chargement…' : vue === 'offres' ? (recherche.trim() ? `Aucune offre pour « ${recherche.trim()} ».` : 'Aucune offre à afficher.') : 'Aucun dépôt à afficher.'}
             </Text>
           ) : vue === 'offres' && onglet === 'offres' ? (
             <FlatList
+              ref={listeOffres}
+              onScroll={(e) => { decalageOffres.current = e.nativeEvent.contentOffset.x; }}
+              scrollEventThrottle={32}
               horizontal
-              data={groupes.flatMap((g) => g.offres.map((o) => ({ ...o, ville: g.ville })))}
+              data={[...groupes.flatMap((g) => g.offres.map((o) => ({ ...o, ville: g.ville }))), ...sansVilleFiltrees.map((o) => ({ ...o, ville: 'Sénégal' }))]}
               keyExtractor={(o) => o.id}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
@@ -449,6 +491,9 @@ export default function AutourFaciliteScreen() {
             />
           ) : (
             <FlatList
+              ref={listePastilles}
+              onScroll={(e) => { decalagePastilles.current = e.nativeEvent.contentOffset.x; }}
+              scrollEventThrottle={32}
               horizontal
               data={vue === 'offres' ? entreprisesListe : [...LIEUX.map((e) => ({ cle: `lieu:${e.slug}`, ville: e.company, n: '🏬', couleur: VIOLET, texte: 'Emplacement exact' })), ...groupesSpontanes.map((g) => ({ cle: `sp:${g.ville}`, ville: g.ville, n: g.entreprises.length, couleur: VIOLET, texte: libelleSpontanees(g.entreprises.length) }))]}
               keyExtractor={(g) => `${g.cle}|${g.ville}`}
@@ -457,10 +502,10 @@ export default function AutourFaciliteScreen() {
               renderItem={({ item }) => {
                 const actif = selection === item.cle;
                 return (
-                  <Pressable onPress={() => choisirVille(item.cle)} className="items-center" style={{ width: 76 }}>
+                  <Pressable onPress={() => choisirVille(item.cle)} className="items-center" style={{ width: 66 }}>
                     <View
                       className="items-center justify-center rounded-full"
-                      style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: item.couleur, borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                      style={{ width: actif ? 52 : 46, height: actif ? 52 : 46, backgroundColor: item.couleur, borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
                       <Text className="text-[20px] font-black text-white">{item.n}</Text>
                     </View>
                     <Text className="text-[11.5px] font-bold text-white mt-1.5 text-center" numberOfLines={1}>{item.ville}</Text>
