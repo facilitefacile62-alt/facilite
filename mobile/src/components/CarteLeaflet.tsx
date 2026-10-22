@@ -187,6 +187,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // Comme les points d'intérêt de Google Maps : un petit rond CENTRÉ sur la position exacte, son nom à côté (côté choisi pour
     // ne gêner aucun autre nom ni rond ; nom masqué s'il n'y a pas de place).
     var rond = '<div class="rond-cliquable" style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;border-radius:9999px;padding:2px;box-sizing:border-box;background:' + ring + ';box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+    var queue = '<div style="position:absolute;left:50%;top:' + (TAILLE - 3) + 'px;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ' + ring + '"></div>';
+    var pl = piles[m.id];
+    var badge = pl && pl.length ? '<div style="position:absolute;top:-8px;right:-10px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 9.5px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + pl.length + '</div>' : '';
     var cote = etiquettes[m.id];
     var position = cote === 'd' ? 'left:' + (TAILLE + 5) + 'px;top:50%;transform:translateY(-50%);'
       : cote === 'g' ? 'right:' + (TAILLE + 5) + 'px;top:50%;transform:translateY(-50%);'
@@ -198,8 +201,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
       + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
       + '</div>' : '';
-    var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% 50%;z-index:5;' : '';
-    return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + etiq + pastille + '</div>';
+    var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% ' + (TAILLE + 5) + 'px;z-index:5;' : '';
+    return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + queue + badge + etiq + pastille + '</div>';
   }
   function dessiner() {
     couche.clearLayers();
@@ -258,18 +261,29 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // Aucun déplacement (choix du 22/10/2026) : chaque rond reste EXACTEMENT sur la position de sa boutique, à taille fixe,
     // même s'il en recouvre un autre. (L'ancien rangement « place libre la plus proche » avec traits a été supprimé.)
     var centres = {};
-    aPlacer.forEach(function (it) { centres[it.m.id] = { x: it.p.x, y: it.p.y }; });
+    aPlacer.forEach(function (it) { centres[it.m.id] = { x: it.p.x, y: it.p.y - (TAILLE / 2 + 5) }; });
+    // Comme Google Maps : par ordre de priorité (boutique touchée, puis vérifiées), un rond qui en recouvrirait un déjà affiché
+    // (ou « Vous êtes ici ») est masqué jusqu'à un zoom où la place le permet. Rien n'est jamais déplacé.
+    var afficher = {};
+    var montres = [];
+    aPlacer.forEach(function (it) {
+      var c = centres[it.m.id];
+      var bloque = null;
+      for (var q = 0; q < montres.length && !bloque; q++) if (Math.hypot(montres[q].x - c.x, montres[q].y - c.y) < TAILLE) bloque = montres[q];
+      if (it.m.avatar.selectionne || !bloque) { montres.push({ x: c.x, y: c.y, id: it.m.id }); afficher[it.m.id] = true; }
+      else (piles[bloque.id] = piles[bloque.id] || []).push(it.m);   // masquée : signalée par « +N » sur le rond qui la couvre
+    });
     // Noms (comme Google Maps) : à partir du zoom 14, chacun prend le premier côté libre (droite, gauche, dessous, dessus) ;
     // s'il n'y en a aucun, le nom est masqué, jamais le rond.
     etiquettes = {};
     var rects = [];
     var croise = function (u, v) { return u.x1 < v.x2 && u.x2 > v.x1 && u.y1 < v.y2 && u.y2 > v.y1; };
-    aPlacer.forEach(function (it) { var c = centres[it.m.id]; rects.push({ x1: c.x - TAILLE / 2, y1: c.y - TAILLE / 2, x2: c.x + TAILLE / 2, y2: c.y + TAILLE / 2 }); });
+    aPlacer.forEach(function (it) { if (!afficher[it.m.id]) return; var c = centres[it.m.id]; rects.push({ x1: c.x - TAILLE / 2, y1: c.y - TAILLE / 2, x2: c.x + TAILLE / 2, y2: c.y + TAILLE / 2 }); });
     if (moiPt) rects.push({ x1: moiPt.x - 14, y1: moiPt.y - 14, x2: moiPt.x + 14, y2: moiPt.y + 14 });
     if (carte.getZoom() >= 14) {
       aPlacer.forEach(function (it) {
         var m = it.m, c = centres[m.id];
-        if (!m.libelle || m.avatar.selectionne) return;
+        if (!afficher[m.id] || !m.libelle || m.avatar.selectionne) return;
         var w = Math.min(LARGEUR_ETIQ, 6.3 * String(m.libelle).length + 4), h = 14, g = TAILLE / 2 + 4;
         var essais = [
           ['d', { x1: c.x + g, y1: c.y - h / 2, x2: c.x + g + w, y2: c.y + h / 2 }],
@@ -301,6 +315,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         return;
       }
       if (m.avatar) {
+        if (!m.avatar.moi && !afficher[m.id]) return;
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
@@ -311,9 +326,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
           L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
           L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 36], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 14 : TAILLE / 2) - (spread[m.id] ? spread[m.id].dy : 0)] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 44], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 14 : TAILLE + 5) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
-        ma.on('click', function () { envoyer(m.id); });
+        ma.on('click', function () {
+          var pl2 = piles[m.id];
+          if (pl2 && pl2.length && !m.avatar.selectionne) {
+            // Rond qui en cache d'autres : on zoome sur eux pour qu'ils se séparent (Google Maps fait de même).
+            var bornes = L.latLngBounds([[m.lat, m.lng]].concat(pl2.map(function (x) { return [x.lat, x.lng]; })));
+            if (bornes.getSouthWest().equals(bornes.getNorthEast()) || carte.getZoom() >= 18) envoyer(m.id);
+            else carte.fitBounds(bornes, { padding: [80, 80], maxZoom: 18, animate: true });
+          } else envoyer(m.id);
+        });
         return;
       }
       if (m.halo) {
