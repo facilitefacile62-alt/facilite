@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconGoogle } from '@/components/facilite-icons';
 import { useAuth } from '@/context/AuthContext';
 import {
+  BLOCAGE_ESSAIS_S,
   DELAI_RENVOI_S,
   ESSAIS_MAX,
   LONGUEUR_CODE,
@@ -47,6 +48,7 @@ export default function ConfirmerCompteScreen() {
   const [erreurCode, setErreurCode] = useState<ErreurCode>(null);
   const [essais, setEssais] = useState(0);
   const [charge, setCharge] = useState<Charge>(null);
+  const [erreurGoogle, setErreurGoogle] = useState(false);
   const [bandeau, setBandeau] = useState<{ message: string; reessayer?: () => void } | null>(null);
   const [restant, setRestant] = useState(0);
   const champCode = useRef<TextInput>(null);
@@ -57,6 +59,12 @@ export default function ConfirmerCompteScreen() {
     const t = setTimeout(() => setRestant((r) => r - 1), 1000);
     return () => clearTimeout(t);
   }, [restant]);
+  useEffect(() => {
+    if (erreurCode === 'essais' && restant === 0) {
+      setErreurCode(null);
+      setEssais(0);
+    }
+  }, [erreurCode, restant]);
 
   const revenir = () => {
     if (etape === 'code') {
@@ -81,7 +89,7 @@ export default function ConfirmerCompteScreen() {
     setBandeau(null);
     setErreurEmail('');
     if (!emailValide(email)) {
-      setErreurEmail('Cette adresse e-mail ne semble pas valide. Vérifiez-la.');
+      setErreurEmail('Adresse e-mail invalide. Exemple : prenom@gmail.com');
       return;
     }
     setCharge('envoi');
@@ -133,17 +141,23 @@ export default function ConfirmerCompteScreen() {
     const total = essais + 1;
     setEssais(total);
     setErreurCode(total >= ESSAIS_MAX ? 'essais' : 'incorrect');
+    if (total >= ESSAIS_MAX) {
+      setCode('');
+      setRestant(BLOCAGE_ESSAIS_S);
+    }
   };
 
   const google = async () => {
     setBandeau(null);
+    setErreurGoogle(false);
     setCharge('google');
     try {
       await lierCompteGoogle();
       await refreshProfile();
       setEtape('succes');
     } catch (e) {
-      setBandeau({ message: e instanceof Error ? e.message : 'La connexion avec Google a échoué.', reessayer: google });
+      if (e instanceof Error && /network|réseau|reseau|internet|connexion/i.test(e.message)) setBandeau({ message: 'Pas de connexion internet', reessayer: google });
+      else setErreurGoogle(true);
     } finally {
       setCharge(null);
     }
@@ -152,7 +166,7 @@ export default function ConfirmerCompteScreen() {
   const terminer = () => router.replace((retour as Href) || '/');
 
   const saisieBloquee = erreurCode === 'essais';
-  const casesRouges = erreurCode === 'incorrect' || erreurCode === 'essais' || erreurCode === 'expire';
+  const casesRouges = erreurCode === 'incorrect' || erreurCode === 'expire';
 
   return (
     <View className="flex-1" style={{ backgroundColor: FOND }}>
@@ -217,6 +231,18 @@ export default function ConfirmerCompteScreen() {
                     Pour que les recruteurs puissent vous répondre, nous avons besoin d’un compte Google confirmé. Cela prend moins d’une minute.
                   </Text>
 
+                  {erreurGoogle ? (
+                    <View className="flex-row items-center gap-3 rounded-[18px] mt-6 p-4" style={{ backgroundColor: '#FEF2F2', borderWidth: 2, borderColor: '#FECACA' }}>
+                      <View className="items-center justify-center rounded-full" style={{ width: 26, height: 26, backgroundColor: ROUGE }}>
+                        <Text className="text-white text-[15px] font-black">!</Text>
+                      </View>
+                      <View className="flex-1 min-w-0">
+                        <Text className="text-[15px] font-black" style={{ color: '#991B1B' }}>La connexion Google n’a pas abouti.</Text>
+                        <Text className="text-[14px]" style={{ color: '#991B1B' }}>Vérifiez votre compte et réessayez.</Text>
+                      </View>
+                    </View>
+                  ) : null}
+
                   <Pressable
                     onPress={google}
                     disabled={charge !== null}
@@ -266,7 +292,14 @@ export default function ConfirmerCompteScreen() {
                     accessibilityRole="button"
                     className="items-center justify-center rounded-[18px] bg-white mt-4"
                     style={{ height: 56, borderWidth: 1.5, borderColor: VERT, opacity: charge === 'google' ? 0.6 : 1 }}>
-                    {charge === 'envoi' ? <ActivityIndicator color={VERT} /> : <Text className="text-[16px] font-black" style={{ color: '#047857' }}>Continuer</Text>}
+                    {charge === 'envoi' ? (
+                      <View className="flex-row items-center gap-2">
+                        <ActivityIndicator color={VERT} />
+                        <Text className="text-[16px] font-black" style={{ color: '#047857' }}>Envoi du code…</Text>
+                      </View>
+                    ) : (
+                      <Text className="text-[16px] font-black" style={{ color: '#047857' }}>Continuer</Text>
+                    )}
                   </Pressable>
 
                   <View className="flex-row items-center gap-2 mt-auto pt-8">
@@ -302,8 +335,8 @@ export default function ConfirmerCompteScreen() {
                             height: 58,
                             borderRadius: 16,
                             borderWidth: 2,
-                            borderColor: casesRouges ? '#DC2626' : code.length === i ? VERT : code[i] ? VERT_FONCE : '#D9D6CE',
-                            backgroundColor: casesRouges ? '#FEF2F2' : '#fff',
+                            borderColor: casesRouges ? '#DC2626' : saisieBloquee ? '#DDDAD2' : code.length === i ? VERT : code[i] ? VERT_FONCE : '#D9D6CE',
+                            backgroundColor: casesRouges ? '#FEF2F2' : saisieBloquee ? '#EBE9E4' : '#fff',
                           }}>
                           <Text className="text-[26px] font-black" style={{ color: casesRouges ? '#B91C1C' : VERT_FONCE }}>{code[i] ?? ''}</Text>
                         </View>
@@ -331,7 +364,7 @@ export default function ConfirmerCompteScreen() {
                   {erreurCode === 'incorrect' ? <Text className="text-[14px] font-black mt-3" style={{ color: ROUGE }}>Code incorrect, réessayez.</Text> : null}
                   {erreurCode === 'expire' ? <Text className="text-[14px] font-black mt-3" style={{ color: ROUGE }}>Ce code a expiré, demandez-en un nouveau.</Text> : null}
                   {erreurCode === 'essais' ? (
-                    <Text className="text-[14px] font-black mt-3" style={{ color: ROUGE }}>Trop d’essais. Demandez un nouveau code pour continuer.</Text>
+                    <Text className="text-[14px] font-black mt-3" style={{ color: ROUGE }}>Trop d’essais. Réessayez dans 10 minutes.</Text>
                   ) : null}
 
                   <Pressable
@@ -339,8 +372,15 @@ export default function ConfirmerCompteScreen() {
                     disabled={code.length < LONGUEUR_CODE || charge !== null || saisieBloquee || erreurCode === 'expire'}
                     accessibilityRole="button"
                     className="items-center justify-center rounded-[18px] mt-5"
-                    style={{ height: 56, backgroundColor: VERT, opacity: code.length < LONGUEUR_CODE || saisieBloquee || erreurCode === 'expire' || erreurCode === 'incorrect' ? 0.4 : 1 }}>
-                    {charge === 'verif' ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-[17px] font-black">Vérifier</Text>}
+                    style={{ height: 56, backgroundColor: code.length < LONGUEUR_CODE || saisieBloquee || erreurCode === 'expire' || erreurCode === 'incorrect' ? '#A7E9CF' : VERT }}>
+                    {charge === 'verif' ? (
+                      <View className="flex-row items-center gap-2">
+                        <ActivityIndicator color="#fff" />
+                        <Text className="text-white text-[17px] font-black">Vérification…</Text>
+                      </View>
+                    ) : (
+                      <Text className="text-white text-[17px] font-black">Vérifier</Text>
+                    )}
                   </Pressable>
 
                   <Pressable onPress={renvoyer} disabled={restant > 0 || charge !== null} className="items-center mt-5 py-2">
@@ -348,7 +388,7 @@ export default function ConfirmerCompteScreen() {
                       <ActivityIndicator color={VERT} />
                     ) : (
                       <Text className="text-[15px] font-black" style={{ color: restant > 0 ? '#8A8780' : '#059669' }}>
-                        {restant > 0 ? `Renvoyer le code dans ${restant} s` : 'Renvoyer le code'}
+                        {restant > 0 ? `Renvoyer le code dans ${restant >= 60 ? `${Math.floor(restant / 60)} min ${restant % 60} s` : `${restant} s`}` : 'Renvoyer le code'}
                       </Text>
                     )}
                   </Pressable>
