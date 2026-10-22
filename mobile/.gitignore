@@ -45,3 +45,9 @@ example
 # generated native folders
 /ios
 /android
+
+# Clés Apple (App Store Connect) : jamais dans le dépôt, qui est PUBLIC
+*.p8
+AuthKey_*
+*.p12
+*.mobileprovision

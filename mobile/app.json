@@ -8,7 +8,7 @@
     "scheme": "facilite",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon-ios.png",
       "bundleIdentifier": "com.ffacilite.mobile",
       "supportsTablet": true,
       "infoPlist": {

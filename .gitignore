@@ -97,3 +97,9 @@ scripts/_*
 # Cache de build Gradle (projet android/ natif) — généré localement,
 # jamais le même d'une machine à l'autre
 android/.gradle/
+
+# Clés Apple (App Store Connect) : jamais dans le dépôt, qui est PUBLIC
+*.p8
+AuthKey_*
+*.p12
+*.mobileprovision
