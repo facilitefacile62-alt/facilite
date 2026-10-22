@@ -43,7 +43,11 @@ export default function BoutonFlottantFacilite() {
   const actions = toutesActions.filter((a) => autorise(a.interrupteur));
 
   const sousAccueil = chemin === '/' || chemin === '/index';
+  // Pas de « + » sur la carte « Autour de moi » : il recouvrirait la flèche du carrousel du bas (comme dans Locaux, qui n'en a pas).
+  const surCarte = chemin.startsWith('/autour');
   const bas = Math.max(insets.bottom, 6) + 76 + (sousAccueil ? 46 : 0);
+
+  if (surCarte) return <>{feuilleImport}</>;
 
   return (
     <>
