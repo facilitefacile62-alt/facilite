@@ -337,11 +337,13 @@ html.dark .bg-whatsapp-chat {
     transform: translateY(-3px);
   }
 }
+/* 21/10/2026 : plus d'animation ni de transition sur les marqueurs de boutiques — un marqueur reste immobile sur ses coordonnées
+   (l'ancienne « respiration » le faisait monter et descendre de 3 px en permanence). */
 .avatar-boutique-zoom-scale {
-  transition: transform 0.15s ease-out;
+  transition: none;
 }
 .avatar-boutique-anime {
-  animation: avatar-boutique-respire 2s ease-in-out infinite;
+  animation: none;
 }
 
 /* Marqueurs dissociés de l'Explorer (voir src/lib/dissociationMarqueurs.js
