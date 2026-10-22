@@ -13,7 +13,9 @@ import { supabase } from '@/lib/supabase';
 // Address » doit contenir le code ({{ .Token }}) ; pour « Continuer avec Google », l'option « Manual linking »
 // (Authentication > Sign In / Providers) doit être activée.
 export const LONGUEUR_CODE = 6;
-export const DELAI_RENVOI_S = 60;
+export const DELAI_RENVOI_S = 45;
+/** Blocage après ESSAIS_MAX codes faux (maquette « Trop d'essais », 10 minutes). */
+export const BLOCAGE_ESSAIS_S = 600;
 /** Au-delà de ce nombre de codes faux, on bloque la saisie le temps d'en redemander un. */
 export const ESSAIS_MAX = 5;
 
