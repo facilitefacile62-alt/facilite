@@ -56,8 +56,8 @@ export default function AutourDeMoiScreen() {
     if (ongletParam === 'articles' || ongletParam === 'boutiques') setOnglet(ongletParam);
   }
   const [filtre, setFiltre] = useState<Filtre>('tous');
-  // Carte sombre (défaut) ou claire : bouton lune des commandes de carte.
-  const [sombre, setSombre] = useState(true);
+  // Plan clair (défaut, comme Google Maps) ou sombre : bouton soleil / lune des commandes de carte.
+  const [sombre, setSombre] = useState(false);
   // Vue satellite façon Google Maps : photo aérienne et noms de lieux.
   const [satellite, setSatellite] = useState(false);
   const champRecherche = useRef<TextInput>(null);
@@ -348,10 +348,10 @@ export default function AutourDeMoiScreen() {
             <Ionicons name="person" size={20} color="#fff" />
           </View>
           <View className="flex-1 min-w-0">
-            <Text className="text-[17px] font-black text-white">Autour de moi</Text>
+            <Text className="text-[17px] font-black" style={{ color: sombre || satellite ? '#fff' : '#0F172A' }}>Autour de moi</Text>
             <View className="flex-row items-center gap-1.5">
               <View className="rounded-full" style={{ width: 7, height: 7, backgroundColor: VERT }} />
-              <Text className="text-[12px] font-semibold" style={{ color: '#6EE7C9' }}>
+              <Text className="text-[12px] font-semibold" style={{ color: sombre || satellite ? '#6EE7C9' : '#047857' }}>
                 {boutiques === null ? 'Chargement…' : `${boutiques.length} ${boutiques.length > 1 ? 'membres & boutiques' : 'membre & boutique'}`}
               </Text>
             </View>
@@ -360,7 +360,7 @@ export default function AutourDeMoiScreen() {
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
             accessibilityLabel="Fermer"
             className="items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.14)' }}>
+            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.72)' }}>
             <Ionicons name="close" size={20} color="#fff" />
           </Pressable>
         </View>

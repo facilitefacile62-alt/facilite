@@ -77,7 +77,9 @@ import { REGIONS_CARTE } from '@/lib/regionsCarte';
 
 const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
-const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+// Plan clair aux couleurs proches de Google Maps (Esri World Street Map, sans clé). CARTO « Voyager » a été essayé : il exige
+// maintenant une clé d'API et affiche un filigrane « API KEY REQUIRED ».
+const TUILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 // Vue satellite façon Google Maps (photo aérienne + noms de lieux par-dessus) : fonds Esri World Imagery et Esri Reference.
 const TUILES_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const TUILES_NOMS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
@@ -127,7 +129,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     .setView([${centre.lat}, ${centre.lng}], ${zoom});
   ${satellite
     ? "L.tileLayer('" + TUILES_SATELLITE + "', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }).addTo(carte); L.tileLayer('" + TUILES_NOMS + "', { maxZoom: 19 }).addTo(carte);"
-    : "L.tileLayer('" + TUILES + "', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(carte);"}
+    : "L.tileLayer('" + TUILES + "', { maxZoom: 19, attribution: 'Map &copy; Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(carte);"}
+  var CLAIR = ${!sombre && !satellite};
   var couche = L.layerGroup().addTo(carte);
   // Limites et noms des 14 régions du Sénégal (OCHA / geoBoundaries) : contour coloré, léger voile, nom au centre.
   var REGIONS = ${regions ? JSON.stringify(REGIONS_CARTE) : 'null'};
@@ -179,20 +182,22 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var pastillePile = pile && pile.length > 1 ? '<div style="position:absolute;top:-7px;right:-9px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 10px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + (pile.length - 1) + '</div>' : '';
     var rond = '<div class="rond-cliquable" style="position:relative;width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div>' + pastillePile + '</div>';
     var k = echelleZoom();
-    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';';
+    var pointe = '<div style="width:0;height:0;margin-top:-3px;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid ' + ring + ';filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))"></div>';
+    var etiq = (carte.getZoom() >= 16 && !a.selectionne && m.libelle) ? '<div style="position:absolute;left:calc(50% + 24px);top:8px;white-space:nowrap;pointer-events:none;font:800 11px system-ui,sans-serif;color:' + (CLAIR ? '#0F766E' : '#fff') + ';text-shadow:' + (CLAIR ? '0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 5px #fff' : '0 0 3px #000,0 0 3px #000,0 0 5px #000') + '">' + esc(m.libelle) + '</div>' : '';
+    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '45px') + ';';
     if (a.moi) {
       // Point bleu à bordure blanche et halo, comme Google Maps (le halo de précision est tracé séparément).
       return '<div style="display:flex;flex-direction:column;align-items:center"><div style="margin-top:8px;width:22px;height:22px;border-radius:9999px;background:#4285F4;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 7px rgba(66,133,244,.25),0 2px 6px rgba(0,0,0,.45)"></div></div>';
     }
     // Comme les cartes de commerces compactes : au repos, seul le petit rond ; le nom n'apparaît que sur la boutique touchée.
-    if (!a.selectionne) return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + rond + '</div>';
+    if (!a.selectionne) return '<div style="position:relative;display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + rond + pointe + etiq + '</div>';
     var pastille = '<div style="margin-bottom:6px;padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
       + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
       + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
       + '</div>';
     var ombre = '';
-    return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + pastille + rond + ombre + '</div>';
+    return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + pastille + rond + pointe + ombre + '</div>';
   }
   function dessiner() {
     couche.clearLayers();
@@ -252,7 +257,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
     var libreEn = function (x, y) { return occupes.every(function (o) { return Math.hypot(o.x - x, o.y - y) >= D + 2; }); };
     aPlacer.forEach(function (it) {
-      var cx = it.p.x, cy = it.p.y - 19, off = { dx: 0, dy: 0 };
+      var cx = it.p.x, cy = it.p.y - 26, off = { dx: 0, dy: 0 };
       if (!libreEn(cx, cy)) {
         var trouve = false;
         for (var r = 1; r <= 10 && !trouve; r++) {
@@ -291,7 +296,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
           L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
           L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 71 : 45)) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () { envoyer(m.id); });
         return;
