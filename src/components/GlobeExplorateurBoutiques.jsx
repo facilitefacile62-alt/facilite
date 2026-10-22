@@ -19,6 +19,7 @@ import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
+import CarteBoutiqueChoisie from "@/components/CarteBoutiqueChoisie";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
@@ -233,6 +234,9 @@ export default function GlobeExplorateurBoutiques({
   const boutiqueEpingleeIdRef = useRef(null);
 
   const [boutiqueSelectionnee, setBoutiqueSelectionnee] = useState(null);
+  // Carte du bas (nom + Itinéraire / Appeler / WhatsApp / Partager) : ouverte seulement quand la personne touche un pin ou une
+  // boutique du carrousel, jamais par la sélection automatique de la première boutique au chargement.
+  const [ficheCarteOuverte, setFicheCarteOuverte] = useState(false);
   const [filtreActif, setFiltreActif] = useState("tous"); // 'tous' | 'populaires' | 'live'
   const [styleActif, setStyleActif] = useState("voyager"); // plan clair par défaut (22/10/2026) ; .dark. | 'voyager' | 'satellite'
   const [localisationEnCours, setLocalisationEnCours] = useState(false);
@@ -573,6 +577,7 @@ export default function GlobeExplorateurBoutiques({
   const selectionnerBoutiqueCarousel = (b, element = null) => {
     if (dragRef.current.hasMoved) return;
     setBoutiqueSelectionnee(b);
+    setFicheCarteOuverte(true);
     const handler = popupsBoutiquesRef.current.get(b.id);
     if (handler?.ouvrir && !aDesVoisinsRef.current(b.id)) {
       handler.ouvrir();
@@ -1884,6 +1889,7 @@ export default function GlobeExplorateurBoutiques({
         boutiqueEpingleeIdRef.current = b.id;
         ouvrirBulle();
         setBoutiqueSelectionnee(b);
+        setFicheCarteOuverte(true);
         // Pas de recentrage ici : ajusterBulle déplace la carte juste ce qu'il faut pour que toute la
         // fenêtre soit visible, sans éloigner la boutique de l'endroit touché.
       });
@@ -2562,6 +2568,9 @@ export default function GlobeExplorateurBoutiques({
           ref={dockRef}
           className="absolute bottom-4 inset-x-0 z-20 px-3 sm:px-6 flex flex-col items-center gap-2 pointer-events-none"
         >
+          {boutiqueSelectionnee && ficheCarteOuverte ? (
+            <CarteBoutiqueChoisie boutique={boutiqueSelectionnee} onFermer={() => setFicheCarteOuverte(false)} />
+          ) : null}
           {/* Pilule d'information active */}
           <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/95 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-2xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
             <i className="fa-solid fa-house text-xs"></i>
