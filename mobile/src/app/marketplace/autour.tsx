@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, Share, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ModalTrouverLivreur from '@/components/ModalTrouverLivreur';
@@ -40,6 +40,13 @@ type Filtre = 'tous' | 'populaires' | 'live';
 
 // Avatars de repli quand la boutique n'a pas encore créé son Bitmoji (mêmes emojis que le site).
 const EMOJIS_REPLI = ['👩🏾‍🦱', '👨🏾‍💼', '👩🏾‍💼', '🧑🏾‍💻', '🧕🏾', '🧢'];
+
+// Numéro au format international sans « + » ni espaces (9 chiffres = Sénégal, indicatif 221 ajouté) ; null si inexploitable.
+function numeroInternational(valeur: string | null): string | null {
+  const chiffres = String(valeur ?? '').replace(/\D/g, '');
+  if (chiffres.length < 8) return null;
+  return chiffres.length === 9 ? `221${chiffres}` : chiffres;
+}
 
 export default function AutourDeMoiScreen() {
   const router = useRouter();
@@ -481,6 +488,46 @@ export default function AutourDeMoiScreen() {
             <Pressable onPress={() => { setTrajet(null); setRouteFermee(boutiqueParam ?? null); }} accessibilityLabel="Effacer le trajet" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: '#EFEDE7' }}>
               <Ionicons name="close" size={15} color="#1A1A1A" />
             </Pressable>
+          </View>
+        ) : null}
+        {/* Carte de la boutique sélectionnée (façon Google Maps) : nom, quartier, Itinéraire / Appeler / WhatsApp / Partager */}
+        {boutiqueSel ? (
+          <View className="rounded-[22px] p-3.5" style={{ backgroundColor: 'rgba(20,24,33,0.96)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.7)' }}>
+            <View className="flex-row items-start justify-between gap-3">
+              <View className="flex-1 min-w-0">
+                <Text className="text-[15px] font-black text-white" numberOfLines={1}>{boutiqueSel.nom}</Text>
+                <Text className="text-[12px]" style={{ color: 'rgba(255,255,255,0.6)' }} numberOfLines={1}>
+                  {[boutiqueSel.quartier, boutiqueSel.ville].filter(Boolean).join(', ') || 'Sénégal'}
+                </Text>
+              </View>
+              <Pressable onPress={() => setSelection(null)} accessibilityLabel="Fermer la fiche" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 30, height: 30, backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                <Ionicons name="close" size={16} color="#fff" />
+              </Pressable>
+            </View>
+            <View className="flex-row gap-2 mt-3">
+              {(() => {
+                const numero = numeroInternational(boutiqueSel.telephone);
+                const actions: { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; fond: string; actif: boolean; agir: () => void }[] = [
+                  { id: 'itineraire', libelle: 'Itinéraire', icone: 'navigate', fond: '#2563EB', actif: true, agir: () => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${boutiqueSel.latitude},${boutiqueSel.longitude}`).catch(() => {}) },
+                  { id: 'appeler', libelle: 'Appeler', icone: 'call', fond: '#374151', actif: Boolean(numero), agir: () => Linking.openURL(`tel:+${numero}`).catch(() => {}) },
+                  { id: 'whatsapp', libelle: 'WhatsApp', icone: 'logo-whatsapp', fond: '#25D366', actif: Boolean(numero), agir: () => Linking.openURL(`https://wa.me/${numero}`).catch(() => {}) },
+                  { id: 'partager', libelle: 'Partager', icone: 'share-social', fond: '#374151', actif: true, agir: () => { Share.share({ message: `${boutiqueSel.nom} — ${[boutiqueSel.quartier, boutiqueSel.ville].filter(Boolean).join(', ') || 'Sénégal'} (Facilité Locaux) https://www.google.com/maps/search/?api=1&query=${boutiqueSel.latitude},${boutiqueSel.longitude}` }).catch(() => {}); } },
+                ];
+                return actions.map((a) => (
+                  <Pressable
+                    key={a.id}
+                    onPress={a.agir}
+                    disabled={!a.actif}
+                    accessibilityRole="button"
+                    accessibilityLabel={a.libelle}
+                    className="flex-1 items-center justify-center gap-1 rounded-[16px] py-2.5"
+                    style={{ backgroundColor: a.fond, opacity: a.actif ? 1 : 0.4 }}>
+                    <Ionicons name={a.icone} size={18} color="#fff" />
+                    <Text className="text-[11px] font-black text-white">{a.libelle}</Text>
+                  </Pressable>
+                ));
+              })()}
+            </View>
           </View>
         ) : null}
         {/* Pastille d'information (texte du site) */}
