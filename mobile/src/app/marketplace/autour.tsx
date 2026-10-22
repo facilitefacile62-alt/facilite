@@ -267,6 +267,18 @@ export default function AutourDeMoiScreen() {
         setSelection(null);
         return;
       }
+      if (id === 'itineraire') {
+        const b = boutiques?.find((x) => x.id === selection);
+        if (!b) return;
+        if (!position) {
+          activer();
+          return;
+        }
+        const arrivee = { latitude: b.latitude, longitude: b.longitude };
+        setTrajet(ligneDroite(position, arrivee));
+        calculerItineraire(position, arrivee).then(setTrajet);
+        return;
+      }
       if (id === 'boutique') {
         if (selection) router.push(`/marketplace/boutique/${selection}` as Href);
         return;
@@ -282,7 +294,7 @@ export default function AutourDeMoiScreen() {
       }
       toucherBoutique(id);
     },
-    [choisirBoutique, toucherBoutique, router, selection]
+    [choisirBoutique, toucherBoutique, router, selection, boutiques, position, activer]
   );
 
   // Articles de la boutique sélectionnée, pour l'aperçu fixe.
@@ -316,6 +328,7 @@ export default function AutourDeMoiScreen() {
         articlesSel?.id === boutiqueSel.id
           ? articlesSel.liste.map((a) => ({ id: a.id, titre: a.titre, prix: `${prixLisible(a.prixXof)} F`, photo: a.photos[0] }))
           : null,
+      action: { id: 'itineraire', libelle: 'Itinéraire', icone: '🧭' },
     };
   }, [boutiqueSel, articlesSel]);
 
@@ -335,8 +348,8 @@ export default function AutourDeMoiScreen() {
         sombre={sombre && !satellite}
         satellite={satellite}
         regions
-        margeHaut={insets.top + 215}
-        margeBas={290}
+        margeHaut={insets.top + 150}
+        margeBas={150}
         ajuster={!selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={popup}
@@ -348,29 +361,9 @@ export default function AutourDeMoiScreen() {
 
       {/* En-tête : titre, nombre réel de boutiques, fermeture */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14, gap: 10 }}>
-        <View className="flex-row items-center gap-3">
-          <View className="items-center justify-center rounded-full" style={{ width: 44, height: 44, backgroundColor: VERT }}>
-            <Ionicons name="person" size={20} color="#fff" />
-          </View>
-          <View className="flex-1 min-w-0">
-            <Text className="text-[17px] font-black" style={{ color: sombre || satellite ? '#fff' : '#0F172A' }}>Autour de moi</Text>
-            <View className="flex-row items-center gap-1.5">
-              <View className="rounded-full" style={{ width: 7, height: 7, backgroundColor: VERT }} />
-              <Text className="text-[12px] font-semibold" style={{ color: sombre || satellite ? '#6EE7C9' : '#047857' }}>
-                {boutiques === null ? 'Chargement…' : `${boutiques.length} ${boutiques.length > 1 ? 'membres & boutiques' : 'membre & boutique'}`}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
-            accessibilityLabel="Fermer"
-            className="items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.72)' }}>
-            <Ionicons name="close" size={20} color="#fff" />
-          </Pressable>
-        </View>
-
-        <View className="flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 52, backgroundColor: CREME_RECHERCHE }}>
+        {/* Barre de recherche tout en haut, avec la fermeture à sa droite (le titre « Autour de moi » est retiré : le bouton bleu de recentrage et le filtre suffisent). */}
+        <View className="flex-row items-center gap-2.5">
+        <View className="flex-1 flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 48, backgroundColor: CREME_RECHERCHE }}>
           <TextInput
             ref={champRecherche}
             value={saisie}
@@ -390,6 +383,14 @@ export default function AutourDeMoiScreen() {
             <Ionicons name="search" size={15} color="#fff" />
             <Text className="text-white text-[13.5px] font-black">Rechercher</Text>
           </Pressable>
+        </View>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
+          accessibilityLabel="Fermer"
+          className="items-center justify-center rounded-full"
+          style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.78)' }}>
+          <Ionicons name="close" size={20} color="#fff" />
+        </Pressable>
         </View>
 
         {/* Filtres, comme sur le site : Toutes les boutiques · Les plus visités · En stock (LIVE) · Autour de moi */}
@@ -426,14 +427,6 @@ export default function AutourDeMoiScreen() {
               </Pressable>
             );
           })}
-          <Pressable
-            onPress={() => position && carte?.centrer(position.latitude, position.longitude, 15)}
-            accessibilityRole="button"
-            className="flex-row items-center gap-1.5 rounded-full"
-            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
-            <Ionicons name="locate" size={14} color="#34D399" />
-            <Text className="text-[12.5px] font-black text-white">Autour de moi</Text>
-          </Pressable>
           {livreurOuvert ? (
             <Pressable
               onPress={() => setLivreursOuverts(true)}
@@ -454,7 +447,7 @@ export default function AutourDeMoiScreen() {
       </View>
 
       {/* Commandes de carte */}
-      <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
+      <View style={{ position: 'absolute', right: 14, top: insets.top + 140, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
           { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
@@ -518,7 +511,7 @@ export default function AutourDeMoiScreen() {
           })}
         </View>
 
-        <View className="rounded-[22px] py-3" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 128 }}>
+        <View className="rounded-[20px] py-2" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 100 }}>
           {/* Flèches FIXES (elles ne défilent pas), à la couleur de la barre de navigation du bas. */}
           {([
             { sens: -1, cote: 'left', icone: 'chevron-back', nom: 'Précédent' },
@@ -535,7 +528,7 @@ export default function AutourDeMoiScreen() {
               accessibilityLabel={f.nom}
               hitSlop={6}
               className="absolute items-center justify-center rounded-full"
-              style={{ [f.cote]: 6, top: 46, width: 34, height: 34, backgroundColor: '#e3dbcc', zIndex: 5, boxShadow: '0 2px 6px rgba(0,0,0,0.35)' }}>
+              style={{ [f.cote]: 6, top: 34, width: 32, height: 32, backgroundColor: '#e3dbcc', zIndex: 5, boxShadow: '0 2px 6px rgba(0,0,0,0.35)' }}>
               <Ionicons name={f.icone} size={18} color="#1A1A1A" />
             </Pressable>
           ))}
@@ -558,10 +551,10 @@ export default function AutourDeMoiScreen() {
                   const actif = selection === item.id;
                   const distance = distanceLisible(item.distanceKm);
                   return (
-                    <Pressable onPress={() => toucherBoutique(item.id)} className="items-center" style={{ width: 76 }}>
+                    <Pressable onPress={() => toucherBoutique(item.id)} className="items-center" style={{ width: 66 }}>
                       <View
                         className="items-center justify-center rounded-full overflow-hidden"
-                        style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: '#111827', borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                        style={{ width: actif ? 52 : 46, height: actif ? 52 : 46, backgroundColor: '#111827', borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
                         {photosRecherche.get(item.id) ? (
                           <Image source={{ uri: photosRecherche.get(item.id) }} alt={item.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                         ) : avatars.get(item.id)?.xml ? (

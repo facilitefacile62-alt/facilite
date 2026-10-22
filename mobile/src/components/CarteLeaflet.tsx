@@ -63,7 +63,7 @@ export type PopupBoutique = {
   titre: string;
   sous?: string;
   /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
-  action?: { id: string; libelle: string };
+  action?: { id: string; libelle: string; icone?: string };
   /** null = chargement des articles en cours. */
   articles: { id: string; titre: string; prix: string; photo?: string; icone?: string }[] | null;
 };
@@ -255,7 +255,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     spread = {};
     piles = {};
     enCluster = {};
-    var D = TAILLE + 1, RAYON_GRAPPE = 200;
+    var D = TAILLE + 1, RAYON_GRAPPE = 0;   // 22/10/2026 : plus aucune grappe ni masquage — chaque boutique reste affichée sur sa position exacte
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
       .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
@@ -304,7 +304,6 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var montres = [];
     entites.forEach(function (e) {
       var bloque = null;
-      for (var q = 0; q < montres.length && !bloque; q++) if (Math.hypot(montres[q].cx - e.cx, montres[q].cy - e.cy) < montres[q].R + e.R) bloque = montres[q];
       if (bloque && !e.selection && !e.avecMoi) {
         // masquée : signalée par « +N » sur le premier rond de l'entité qui la couvre
         var cible = bloque.membres[0].m.id;
@@ -471,7 +470,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.createElement('div');
     el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
       + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps
-      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">📨 ' + esc(d.action.libelle) + '</div>' : '');
+      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">' + (d.action.icone ? esc(d.action.icone) : '📨') + ' ' + esc(d.action.libelle) + '</div>' : '');
     el.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
