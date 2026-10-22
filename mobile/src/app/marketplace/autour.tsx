@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, Share, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ModalTrouverLivreur from '@/components/ModalTrouverLivreur';
@@ -41,13 +41,6 @@ type Filtre = 'tous' | 'populaires' | 'live';
 // Avatars de repli quand la boutique n'a pas encore créé son Bitmoji (mêmes emojis que le site).
 const EMOJIS_REPLI = ['👩🏾‍🦱', '👨🏾‍💼', '👩🏾‍💼', '🧑🏾‍💻', '🧕🏾', '🧢'];
 
-// Numéro au format international sans « + » ni espaces (9 chiffres = Sénégal, indicatif 221 ajouté) ; null si inexploitable.
-function numeroInternational(valeur: string | null): string | null {
-  const chiffres = String(valeur ?? '').replace(/\D/g, '');
-  if (chiffres.length < 8) return null;
-  return chiffres.length === 9 ? `221${chiffres}` : chiffres;
-}
-
 export default function AutourDeMoiScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -68,6 +61,11 @@ export default function AutourDeMoiScreen() {
   // Vue satellite façon Google Maps : photo aérienne et noms de lieux.
   const [satellite, setSatellite] = useState(false);
   const champRecherche = useRef<TextInput>(null);
+  // Flèches du carrousel du bas : défilement par à-coups, avec le décalage courant mémorisé.
+  const listeBoutiques = useRef<FlatList<BoutiqueCarte>>(null);
+  const listeArticles = useRef<FlatList<ArticleMarketplace>>(null);
+  const decalageBoutiques = useRef(0);
+  const decalageArticles = useRef(0);
   const [saisie, setSaisie] = useState('');
   const [recherche, setRecherche] = useState('');
   const [selection, setSelection] = useState<string | null>(null);
@@ -269,6 +267,20 @@ export default function AutourDeMoiScreen() {
         setSelection(null);
         return;
       }
+      if (id === 'itineraire') {
+        const b = boutiques?.find((x) => x.id === selection);
+        if (!b) return;
+        if (!position) {
+          activer();
+          return;
+        }
+        const arrivee = { latitude: b.latitude, longitude: b.longitude };
+        setTrajet(ligneDroite(position, arrivee));
+        calculerItineraire(position, arrivee).then(setTrajet);
+        // La bulle est fermée : tout le trajet reste visible entre la barre de recherche et le carrousel du bas.
+        setSelection(null);
+        return;
+      }
       if (id === 'boutique') {
         if (selection) router.push(`/marketplace/boutique/${selection}` as Href);
         return;
@@ -284,7 +296,7 @@ export default function AutourDeMoiScreen() {
       }
       toucherBoutique(id);
     },
-    [choisirBoutique, toucherBoutique, router, selection]
+    [choisirBoutique, toucherBoutique, router, selection, boutiques, position, activer]
   );
 
   // Articles de la boutique sélectionnée, pour l'aperçu fixe.
@@ -318,6 +330,7 @@ export default function AutourDeMoiScreen() {
         articlesSel?.id === boutiqueSel.id
           ? articlesSel.liste.map((a) => ({ id: a.id, titre: a.titre, prix: `${prixLisible(a.prixXof)} F`, photo: a.photos[0] }))
           : null,
+      action: { id: 'itineraire', libelle: 'Itinéraire', icone: '🧭' },
     };
   }, [boutiqueSel, articlesSel]);
 
@@ -337,8 +350,8 @@ export default function AutourDeMoiScreen() {
         sombre={sombre && !satellite}
         satellite={satellite}
         regions
-        margeHaut={insets.top + 215}
-        margeBas={290}
+        margeHaut={insets.top + 125}
+        margeBas={265}
         ajuster={!selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={popup}
@@ -350,29 +363,9 @@ export default function AutourDeMoiScreen() {
 
       {/* En-tête : titre, nombre réel de boutiques, fermeture */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14, gap: 10 }}>
-        <View className="flex-row items-center gap-3">
-          <View className="items-center justify-center rounded-full" style={{ width: 44, height: 44, backgroundColor: VERT }}>
-            <Ionicons name="person" size={20} color="#fff" />
-          </View>
-          <View className="flex-1 min-w-0">
-            <Text className="text-[17px] font-black" style={{ color: sombre || satellite ? '#fff' : '#0F172A' }}>Autour de moi</Text>
-            <View className="flex-row items-center gap-1.5">
-              <View className="rounded-full" style={{ width: 7, height: 7, backgroundColor: VERT }} />
-              <Text className="text-[12px] font-semibold" style={{ color: sombre || satellite ? '#6EE7C9' : '#047857' }}>
-                {boutiques === null ? 'Chargement…' : `${boutiques.length} ${boutiques.length > 1 ? 'membres & boutiques' : 'membre & boutique'}`}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
-            accessibilityLabel="Fermer"
-            className="items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.72)' }}>
-            <Ionicons name="close" size={20} color="#fff" />
-          </Pressable>
-        </View>
-
-        <View className="flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 52, backgroundColor: CREME_RECHERCHE }}>
+        {/* Barre de recherche tout en haut, avec la fermeture à sa droite (le titre « Autour de moi » est retiré : le bouton bleu de recentrage et le filtre suffisent). */}
+        <View className="flex-row items-center gap-2.5">
+        <View className="flex-1 flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 48, backgroundColor: CREME_RECHERCHE }}>
           <TextInput
             ref={champRecherche}
             value={saisie}
@@ -392,6 +385,14 @@ export default function AutourDeMoiScreen() {
             <Ionicons name="search" size={15} color="#fff" />
             <Text className="text-white text-[13.5px] font-black">Rechercher</Text>
           </Pressable>
+        </View>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
+          accessibilityLabel="Fermer"
+          className="items-center justify-center rounded-full"
+          style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.78)' }}>
+          <Ionicons name="close" size={20} color="#fff" />
+        </Pressable>
         </View>
 
         {/* Filtres, comme sur le site : Toutes les boutiques · Les plus visités · En stock (LIVE) · Autour de moi */}
@@ -428,14 +429,6 @@ export default function AutourDeMoiScreen() {
               </Pressable>
             );
           })}
-          <Pressable
-            onPress={() => position && carte?.centrer(position.latitude, position.longitude, 15)}
-            accessibilityRole="button"
-            className="flex-row items-center gap-1.5 rounded-full"
-            style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
-            <Ionicons name="locate" size={14} color="#34D399" />
-            <Text className="text-[12.5px] font-black text-white">Autour de moi</Text>
-          </Pressable>
           {livreurOuvert ? (
             <Pressable
               onPress={() => setLivreursOuverts(true)}
@@ -456,7 +449,7 @@ export default function AutourDeMoiScreen() {
       </View>
 
       {/* Commandes de carte */}
-      <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
+      <View style={{ position: 'absolute', right: 14, top: insets.top + 140, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
           { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
@@ -490,57 +483,17 @@ export default function AutourDeMoiScreen() {
             </Pressable>
           </View>
         ) : null}
-        {/* Carte de la boutique sélectionnée (façon Google Maps) : nom, quartier, Itinéraire / Appeler / WhatsApp / Partager */}
-        {boutiqueSel ? (
-          <View className="rounded-[22px] p-3.5" style={{ backgroundColor: 'rgba(20,24,33,0.96)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.7)' }}>
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 min-w-0">
-                <Text className="text-[15px] font-black text-white" numberOfLines={1}>{boutiqueSel.nom}</Text>
-                <Text className="text-[12px]" style={{ color: 'rgba(255,255,255,0.6)' }} numberOfLines={1}>
-                  {[boutiqueSel.quartier, boutiqueSel.ville].filter(Boolean).join(', ') || 'Sénégal'}
-                </Text>
-              </View>
-              <Pressable onPress={() => setSelection(null)} accessibilityLabel="Fermer la fiche" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 30, height: 30, backgroundColor: 'rgba(255,255,255,0.12)' }}>
-                <Ionicons name="close" size={16} color="#fff" />
-              </Pressable>
-            </View>
-            <View className="flex-row gap-2 mt-3">
-              {(() => {
-                const numero = numeroInternational(boutiqueSel.telephone);
-                const actions: { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; fond: string; actif: boolean; agir: () => void }[] = [
-                  { id: 'itineraire', libelle: 'Itinéraire', icone: 'navigate', fond: '#2563EB', actif: true, agir: () => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${boutiqueSel.latitude},${boutiqueSel.longitude}`).catch(() => {}) },
-                  { id: 'appeler', libelle: 'Appeler', icone: 'call', fond: '#374151', actif: Boolean(numero), agir: () => Linking.openURL(`tel:+${numero}`).catch(() => {}) },
-                  { id: 'whatsapp', libelle: 'WhatsApp', icone: 'logo-whatsapp', fond: '#25D366', actif: Boolean(numero), agir: () => Linking.openURL(`https://wa.me/${numero}`).catch(() => {}) },
-                  { id: 'partager', libelle: 'Partager', icone: 'share-social', fond: '#374151', actif: true, agir: () => { Share.share({ message: `${boutiqueSel.nom} — ${[boutiqueSel.quartier, boutiqueSel.ville].filter(Boolean).join(', ') || 'Sénégal'} (Facilité Locaux) https://www.google.com/maps/search/?api=1&query=${boutiqueSel.latitude},${boutiqueSel.longitude}` }).catch(() => {}); } },
-                ];
-                return actions.map((a) => (
-                  <Pressable
-                    key={a.id}
-                    onPress={a.agir}
-                    disabled={!a.actif}
-                    accessibilityRole="button"
-                    accessibilityLabel={a.libelle}
-                    className="flex-1 items-center justify-center gap-1 rounded-[16px] py-2.5"
-                    style={{ backgroundColor: a.fond, opacity: a.actif ? 1 : 0.4 }}>
-                    <Ionicons name={a.icone} size={18} color="#fff" />
-                    <Text className="text-[11px] font-black text-white">{a.libelle}</Text>
-                  </Pressable>
-                ));
-              })()}
-            </View>
-          </View>
-        ) : null}
-        {/* Pastille d'information (texte du site) */}
+        {/* Pastille d'information (texte du site) : masquée quand une boutique est sélectionnée, son nom est déjà dans la bulle */}
+        {boutiqueSel ? null : (
         <View className="self-center flex-row items-center gap-2 rounded-full" style={{ backgroundColor: 'rgba(24,119,242,0.96)', paddingHorizontal: 16, paddingVertical: 9, maxWidth: '100%' }}>
           <Ionicons name="storefront" size={13} color="#fff" />
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
-            {boutiqueSel
-              ? `${boutiqueSel.nom} est ouvert à ${boutiqueSel.quartier || 'Dakar'}`
-              : recherche.trim()
+            {recherche.trim()
                 ? `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} ${visibles.length > 1 ? 'proposent' : 'propose'} « ${recherche.trim()} »`
                 : `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} vérifiée${visibles.length > 1 ? 's' : ''} prête${visibles.length > 1 ? 's' : ''} à vous servir au Sénégal`}
           </Text>
         </View>
+        )}
         <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>
           {(['boutiques', 'articles'] as const).map((o) => {
             const actif = onglet === o;
@@ -560,7 +513,27 @@ export default function AutourDeMoiScreen() {
           })}
         </View>
 
-        <View className="rounded-[22px] py-3" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 128 }}>
+        <View className="rounded-[20px] py-2" style={{ backgroundColor: 'rgba(20,24,33,0.92)', minHeight: 100 }}>
+          {/* Flèches FIXES (elles ne défilent pas), à la couleur de la barre de navigation du bas. */}
+          {([
+            { sens: -1, cote: 'left', icone: 'chevron-back', nom: 'Précédent' },
+            { sens: 1, cote: 'right', icone: 'chevron-forward', nom: 'Suivant' },
+          ] as const).map((f) => (
+            <Pressable
+              key={f.cote}
+              onPress={() => {
+                const boutiquesActif = onglet === 'boutiques';
+                const decalage = boutiquesActif ? decalageBoutiques : decalageArticles;
+                const cible = Math.max(0, decalage.current + f.sens * 240);
+                (boutiquesActif ? listeBoutiques : listeArticles).current?.scrollToOffset({ offset: cible, animated: true });
+              }}
+              accessibilityLabel={f.nom}
+              hitSlop={6}
+              className="absolute items-center justify-center rounded-full"
+              style={{ [f.cote]: 6, top: 34, width: 32, height: 32, backgroundColor: '#e3dbcc', zIndex: 5, boxShadow: '0 2px 6px rgba(0,0,0,0.35)' }}>
+              <Ionicons name={f.icone} size={18} color="#1A1A1A" />
+            </Pressable>
+          ))}
           {onglet === 'boutiques' ? (
             boutiques === null ? (
               <View className="py-8"><ActivityIndicator color={VERT} /></View>
@@ -568,6 +541,9 @@ export default function AutourDeMoiScreen() {
               <Text className="text-center text-[12.5px] py-9" style={{ color: 'rgba(255,255,255,0.6)' }}>Aucune boutique ne correspond.</Text>
             ) : (
               <FlatList
+                ref={listeBoutiques}
+                onScroll={(e) => { decalageBoutiques.current = e.nativeEvent.contentOffset.x; }}
+                scrollEventThrottle={32}
                 horizontal
                 data={visibles}
                 keyExtractor={(b) => b.id}
@@ -577,10 +553,10 @@ export default function AutourDeMoiScreen() {
                   const actif = selection === item.id;
                   const distance = distanceLisible(item.distanceKm);
                   return (
-                    <Pressable onPress={() => toucherBoutique(item.id)} className="items-center" style={{ width: 76 }}>
+                    <Pressable onPress={() => toucherBoutique(item.id)} className="items-center" style={{ width: 66 }}>
                       <View
                         className="items-center justify-center rounded-full overflow-hidden"
-                        style={{ width: actif ? 64 : 56, height: actif ? 64 : 56, backgroundColor: '#111827', borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                        style={{ width: actif ? 52 : 46, height: actif ? 52 : 46, backgroundColor: '#111827', borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
                         {photosRecherche.get(item.id) ? (
                           <Image source={{ uri: photosRecherche.get(item.id) }} alt={item.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                         ) : avatars.get(item.id)?.xml ? (
@@ -604,6 +580,9 @@ export default function AutourDeMoiScreen() {
             <Text className="text-center text-[12.5px] py-9" style={{ color: 'rgba(255,255,255,0.6)' }}>Aucun article à proximité.</Text>
           ) : (
             <FlatList
+              ref={listeArticles}
+              onScroll={(e) => { decalageArticles.current = e.nativeEvent.contentOffset.x; }}
+              scrollEventThrottle={32}
               horizontal
               data={articles.slice(0, 20)}
               keyExtractor={(a) => a.id}

@@ -63,7 +63,7 @@ export type PopupBoutique = {
   titre: string;
   sous?: string;
   /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
-  action?: { id: string; libelle: string };
+  action?: { id: string; libelle: string; icone?: string };
   /** null = chargement des articles en cours. */
   articles: { id: string; titre: string; prix: string; photo?: string; icone?: string }[] | null;
 };
@@ -103,21 +103,21 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .marqueur-avatar { background: none; border: 0; }
   .marqueur-avatar.leaflet-interactive { pointer-events: none; }
   .marqueur-avatar .rond-cliquable { pointer-events: auto; }
-  .popup-boutique .leaflet-popup-content-wrapper { background: #fff; border-radius: 22px; padding: 0; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
+  .popup-boutique .leaflet-popup-content-wrapper { background: #fff; border-radius: 22px; padding: 0 0 18px; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
   .popup-boutique .leaflet-popup-content { margin: 0; width: auto !important; }
   .popup-boutique .leaflet-popup-tip { background: #fff; }
   .pb-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px 12px 6px 16px; }
   .pb-nom { font: 900 15px system-ui, sans-serif; color: #111; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .pb-lieu { font: 700 12px system-ui, sans-serif; color: #2563EB; margin-top: 2px; }
   .pb-x { width: 30px; height: 30px; border-radius: 9999px; background: #EFEDE7; color: #111; display: flex; align-items: center; justify-content: center; font: 700 15px system-ui, sans-serif; cursor: pointer; flex: none; }
-  .pb-liste { touch-action: pan-x; display: flex; gap: 10px; overflow-x: auto; padding: 4px 14px 14px; max-width: 280px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pb-liste { touch-action: pan-x; display: flex; gap: 10px; overflow-x: auto; padding: 2px 12px 10px; max-width: 250px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .pb-liste::-webkit-scrollbar { display: none; }
-  .pb-art { flex: none; width: 118px; cursor: pointer; }
-  .pb-photo { position: relative; width: 118px; height: 118px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
+  .pb-art { flex: none; width: 96px; cursor: pointer; }
+  .pb-photo { position: relative; width: 96px; height: 96px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
   .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-prix { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pb-action { display: block; margin: 0 14px 14px; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
+  .pb-action { display: block; margin: 0 14px 0; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
@@ -198,11 +198,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       : cote === 'b' ? 'top:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);'
       : cote === 'h' ? 'bottom:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);' : '';
     var etiq = (cote && !a.selectionne && m.libelle) ? '<div style="position:absolute;' + position + 'max-width:' + LARGEUR_ETIQ + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;font:700 11px system-ui,sans-serif;color:' + (CLAIR ? '#0F766E' : '#fff') + ';text-shadow:' + (CLAIR ? '0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 5px #fff' : '0 0 3px #000,0 0 3px #000,0 0 5px #000') + '">' + esc(m.libelle) + '</div>' : '';
-    var pastille = a.selectionne ? '<div style="position:absolute;bottom:' + (TAILLE + 8) + 'px;left:50%;transform:translateX(-50%);padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
-      + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
-      + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
-      + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
-      + '</div>' : '';
+    var pastille = '';   // pas de pastille de nom au-dessus du pin sélectionné : la bulle des produits porte déjà le nom
     var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% ' + (enCluster[m.id] ? TAILLE / 2 : TAILLE + 5) + 'px;z-index:5;' : '';
     return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + queue + badge + etiq + pastille + '</div>';
   }
@@ -259,7 +255,11 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     spread = {};
     piles = {};
     enCluster = {};
-    var D = TAILLE + 1, RAYON_GRAPPE = 200;
+    var D = TAILLE + 1;
+    // Des boutiques qui se recouvrent À L'ÉCRAN forment une grappe en couronne (comme sur l'image de référence) : jamais de pin caché
+    // derrière un autre. En vue très éloignée (zoom < 12) rien ne bouge : un pixel y représente trop de mètres.
+    var grappesActives = carte.getZoom() >= 12;
+    var proche = function (u, v) { return grappesActives && Math.hypot(u.x - v.x, u.y - v.y) < D + 6; };
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
       .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
@@ -270,9 +270,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       if (pris[a.m.id]) return;
       pris[a.m.id] = true;
       var membres = [a];
-      aPlacer.forEach(function (b) { if (!pris[b.m.id] && carte.distance([a.m.lat, a.m.lng], [b.m.lat, b.m.lng]) < RAYON_GRAPPE) { pris[b.m.id] = true; membres.push(b); } });
+      aPlacer.forEach(function (b) { if (!pris[b.m.id] && proche(a.p, b.p)) { pris[b.m.id] = true; membres.push(b); } });
       var avecMoi = false;
-      if (moiMarq && !moiPris && carte.distance([a.m.lat, a.m.lng], [moiMarq.lat, moiMarq.lng]) < RAYON_GRAPPE) { avecMoi = true; moiPris = true; }
+      if (moiMarq && !moiPris && moiPt && proche(a.p, moiPt)) { avecMoi = true; moiPris = true; }
       entites.push({ membres: membres, avecMoi: avecMoi, selection: membres.some(function (x) { return x.m.avatar.selectionne; }) });
     });
     function couronnes(k, centreOccupe) {
@@ -308,7 +308,6 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var montres = [];
     entites.forEach(function (e) {
       var bloque = null;
-      for (var q = 0; q < montres.length && !bloque; q++) if (Math.hypot(montres[q].cx - e.cx, montres[q].cy - e.cy) < montres[q].R + e.R) bloque = montres[q];
       if (bloque && !e.selection && !e.avecMoi) {
         // masquée : signalée par « +N » sur le premier rond de l'entité qui la couvre
         var cible = bloque.membres[0].m.id;
@@ -422,6 +421,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   carte.getContainer().appendChild(bord);
   function majBords() {
     bord.innerHTML = '';
+    // 22/10/2026 : plus de ronds collés au bord de l'écran pour les boutiques hors vue — ils glissaient le long du bord quand la carte
+    // bougeait, alors que tout marqueur doit rester fixe sur sa position. Le carrousel du bas liste toutes les boutiques.
+    if (true) return;
     if (focusId) return;
     var t = carte.getSize();
     var haut = MARGE_H + 18, bas = t.y - MARGE_B - 18;
@@ -475,12 +477,12 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.createElement('div');
     el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
       + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps
-      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">📨 ' + esc(d.action.libelle) + '</div>' : '');
+      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">' + (d.action.icone ? esc(d.action.icone) : '📨') + ' ' + esc(d.action.libelle) + '</div>' : '');
     el.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
     });
-    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: decalagePopup(), minWidth: 250, maxWidth: 300 })
+    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: decalagePopup(), minWidth: 220, maxWidth: 260 })
       .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
   };
   var trace = null;
@@ -488,7 +490,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     if (trace) { carte.removeLayer(trace); trace = null; }
     if (!t || !t.points || t.points.length < 2) return;
     trace = L.polyline(t.points, { color: '#38BDF8', weight: 5, opacity: .95, dashArray: t.approximatif ? '9 9' : null, lineCap: 'round', interactive: false }).addTo(carte);
-    carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, 300], paddingBottomRight: [40, 330], maxZoom: 17, animate: false });
+    carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, MARGE_H + 30], paddingBottomRight: [40, MARGE_B + 30], maxZoom: 17, animate: false });
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
