@@ -165,6 +165,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   // boutiques et leurs regroupements disparaissent jusqu'à ce que la fixation soit levée.
   var focusId = null;
   var spread = {};
+  var TAILLE = 28, LARGEUR_ETIQ = 112;   // petit rond de taille FIXE (px) ; largeur maximale d'un nom
   var piles = {};   // id de la boutique du dessus -> boutiques empilees avec elle (zoom faible)
   var MARGE_H = ${margeHaut}, MARGE_B = ${margeBas};
   var popupCourant = null;
@@ -172,32 +173,33 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   // Taille des ronds de boutiques : FIXE à tous les zooms, et jamais déplacés : leur position est toujours celle de la boutique.
   function echelleZoom() { return 1; }
+  var etiquettes = {};   // id -> cote ou le nom est ecrit : 'd' droite, 'g' gauche, 'b' dessous, 'h' dessus (absent = pas de nom)
   function htmlAvatar(m) {
     var a = m.avatar, ring = a.bordure;
+    if (a.moi) {
+      // Point bleu à bordure blanche et halo, comme Google Maps (le halo de précision est tracé séparément).
+      return '<div style="display:flex;justify-content:center"><div style="margin-top:3px;width:22px;height:22px;border-radius:9999px;background:#4285F4;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 7px rgba(66,133,244,.25),0 2px 6px rgba(0,0,0,.45)"></div></div>';
+    }
     var src = a.photo || a.uri;
     var contenu = src
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
-      : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
-    var pile = piles[m.id];
-    var pastillePile = pile && pile.length > 1 ? '<div style="position:absolute;top:-7px;right:-9px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 10px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + (pile.length - 1) + '</div>' : '';
-    var rond = '<div class="rond-cliquable" style="position:relative;width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div>' + pastillePile + '</div>';
-    var k = echelleZoom();
-    var pointe = '<div style="width:0;height:0;margin-top:-3px;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid ' + ring + ';filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))"></div>';
-    var etiq = (carte.getZoom() >= 16 && !a.selectionne && m.libelle) ? '<div style="position:absolute;left:calc(50% + 24px);top:8px;white-space:nowrap;pointer-events:none;font:800 11px system-ui,sans-serif;color:' + (CLAIR ? '#0F766E' : '#fff') + ';text-shadow:' + (CLAIR ? '0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 5px #fff' : '0 0 3px #000,0 0 3px #000,0 0 5px #000') + '">' + esc(m.libelle) + '</div>' : '';
-    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '45px') + ';';
-    if (a.moi) {
-      // Point bleu à bordure blanche et halo, comme Google Maps (le halo de précision est tracé séparément).
-      return '<div style="display:flex;flex-direction:column;align-items:center"><div style="margin-top:8px;width:22px;height:22px;border-radius:9999px;background:#4285F4;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 7px rgba(66,133,244,.25),0 2px 6px rgba(0,0,0,.45)"></div></div>';
-    }
-    // Comme les cartes de commerces compactes : au repos, seul le petit rond ; le nom n'apparaît que sur la boutique touchée.
-    if (!a.selectionne) return '<div style="position:relative;display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + rond + pointe + etiq + '</div>';
-    var pastille = '<div style="margin-bottom:6px;padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
+      : '<span style="font-size:13px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
+    // Comme les points d'intérêt de Google Maps : un petit rond CENTRÉ sur la position exacte, son nom à côté (côté choisi pour
+    // ne gêner aucun autre nom ni rond ; nom masqué s'il n'y a pas de place).
+    var rond = '<div class="rond-cliquable" style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;border-radius:9999px;padding:2px;box-sizing:border-box;background:' + ring + ';box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+    var cote = etiquettes[m.id];
+    var position = cote === 'd' ? 'left:' + (TAILLE + 5) + 'px;top:50%;transform:translateY(-50%);'
+      : cote === 'g' ? 'right:' + (TAILLE + 5) + 'px;top:50%;transform:translateY(-50%);'
+      : cote === 'b' ? 'top:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);'
+      : cote === 'h' ? 'bottom:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);' : '';
+    var etiq = (cote && !a.selectionne && m.libelle) ? '<div style="position:absolute;' + position + 'max-width:' + LARGEUR_ETIQ + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;font:700 11px system-ui,sans-serif;color:' + (CLAIR ? '#0F766E' : '#fff') + ';text-shadow:' + (CLAIR ? '0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 5px #fff' : '0 0 3px #000,0 0 3px #000,0 0 5px #000') + '">' + esc(m.libelle) + '</div>' : '';
+    var pastille = a.selectionne ? '<div style="position:absolute;bottom:' + (TAILLE + 8) + 'px;left:50%;transform:translateX(-50%);padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
       + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
       + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
-      + '</div>';
-    var ombre = '';
-    return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + pastille + rond + pointe + ombre + '</div>';
+      + '</div>' : '';
+    var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% 50%;z-index:5;' : '';
+    return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + etiq + pastille + '</div>';
   }
   function dessiner() {
     couche.clearLayers();
@@ -249,15 +251,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (ce point ne bouge jamais). Ordre de placement stable (par identifiant) : la disposition ne saute pas d'un zoom à l'autre.
     spread = {};
     piles = {};
-    var D = 38, PAS = D + 3;
+    var D = TAILLE + 2, PAS = D + 2;
     var occupes = [];
     if (moiPt) occupes.push({ x: moiPt.x, y: moiPt.y });
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
-      .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
-    var libreEn = function (x, y) { return occupes.every(function (o) { return Math.hypot(o.x - x, o.y - y) >= D + 2; }); };
+      .sort(function (u, v) { return (v.m.avatar.selectionne ? 1 : 0) - (u.m.avatar.selectionne ? 1 : 0) || (u.m.avatar.bordure === v.m.avatar.bordure ? 0 : (u.m.avatar.bordure < v.m.avatar.bordure ? 1 : -1)) || (String(u.m.id) < String(v.m.id) ? -1 : 1); });
+    var libreEn = function (x, y) { return occupes.every(function (o) { return Math.hypot(o.x - x, o.y - y) >= D; }); };
+    var centres = {};
     aPlacer.forEach(function (it) {
-      var cx = it.p.x, cy = it.p.y - 26, off = { dx: 0, dy: 0 };
+      var cx = it.p.x, cy = it.p.y, off = { dx: 0, dy: 0 };
       if (!libreEn(cx, cy)) {
         var trouve = false;
         for (var r = 1; r <= 10 && !trouve; r++) {
@@ -270,8 +273,37 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         }
       }
       occupes.push({ x: cx + off.dx, y: cy + off.dy });
+      centres[it.m.id] = { x: cx + off.dx, y: cy + off.dy };
       if (off.dx || off.dy) spread[it.m.id] = off;
     });
+    // Noms (comme Google Maps) : à partir du zoom 14, chacun prend le premier côté libre (droite, gauche, dessous, dessus) ;
+    // s'il n'y en a aucun, le nom est masqué, jamais le rond.
+    etiquettes = {};
+    var rects = [];
+    var croise = function (u, v) { return u.x1 < v.x2 && u.x2 > v.x1 && u.y1 < v.y2 && u.y2 > v.y1; };
+    aPlacer.forEach(function (it) { var c = centres[it.m.id]; rects.push({ x1: c.x - TAILLE / 2, y1: c.y - TAILLE / 2, x2: c.x + TAILLE / 2, y2: c.y + TAILLE / 2 }); });
+    if (moiPt) rects.push({ x1: moiPt.x - 14, y1: moiPt.y - 14, x2: moiPt.x + 14, y2: moiPt.y + 14 });
+    if (carte.getZoom() >= 14) {
+      aPlacer.forEach(function (it) {
+        var m = it.m, c = centres[m.id];
+        if (!m.libelle || m.avatar.selectionne) return;
+        var w = Math.min(LARGEUR_ETIQ, 6.3 * String(m.libelle).length + 4), h = 14, g = TAILLE / 2 + 4;
+        var essais = [
+          ['d', { x1: c.x + g, y1: c.y - h / 2, x2: c.x + g + w, y2: c.y + h / 2 }],
+          ['g', { x1: c.x - g - w, y1: c.y - h / 2, x2: c.x - g, y2: c.y + h / 2 }],
+          ['b', { x1: c.x - w / 2, y1: c.y + g - 2, x2: c.x + w / 2, y2: c.y + g - 2 + h }],
+          ['h', { x1: c.x - w / 2, y1: c.y - g + 2 - h, x2: c.x + w / 2, y2: c.y - g + 2 }]
+        ];
+        for (var e = 0; e < essais.length; e++) {
+          var libreCote = true;
+          for (var q = 0; q < rects.length; q++) {
+            // le rond du marqueur lui-même ne compte pas : seuls les autres ronds et noms déjà posés gênent
+            if (croise(essais[e][1], rects[q])) { libreCote = false; break; }
+          }
+          if (libreCote) { etiquettes[m.id] = essais[e][0]; rects.push(essais[e][1]); break; }
+        }
+      });
+    }
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
@@ -296,7 +328,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
           L.polyline([[m.lat, m.lng], ancre], { color: m.avatar.bordure, weight: 1.6, opacity: .85, interactive: false }).addTo(couche);
           L.circleMarker([m.lat, m.lng], { radius: 3.2, color: '#ffffff', weight: 1.2, fillColor: m.avatar.bordure, fillOpacity: 1, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 71 : 45)) - (spread[m.id] ? spread[m.id].dy : 0)] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 36], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 14 : TAILLE / 2) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
         ma.on('click', function () { envoyer(m.id); });
         return;
