@@ -78,8 +78,11 @@ import { REGIONS_CARTE } from '@/lib/regionsCarte';
 const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
 const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+// Vue satellite façon Google Maps (photo aérienne + noms de lieux par-dessus) : fonds Esri World Imagery et Esri Reference.
+const TUILES_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const TUILES_NOMS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
-function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean, margeHaut: number, margeBas: number): string {
+function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean, margeHaut: number, margeBas: number, satellite: boolean): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8" />
@@ -122,7 +125,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 <script>
   var carte = L.map('carte', { zoomControl: false, attributionControl: true, dragging: ${interactive}, touchZoom: ${interactive}, scrollWheelZoom: ${interactive}, doubleClickZoom: ${interactive}, boxZoom: false, keyboard: false })
     .setView([${centre.lat}, ${centre.lng}], ${zoom});
-  L.tileLayer('${TUILES}', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(carte);
+  ${satellite
+    ? "L.tileLayer('" + TUILES_SATELLITE + "', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }).addTo(carte); L.tileLayer('" + TUILES_NOMS + "', { maxZoom: 19 }).addTo(carte);"
+    : "L.tileLayer('" + TUILES + "', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(carte);"}
   var couche = L.layerGroup().addTo(carte);
   // Limites et noms des 14 régions du Sénégal (OCHA / geoBoundaries) : contour coloré, léger voile, nom au centre.
   var REGIONS = ${regions ? JSON.stringify(REGIONS_CARTE) : 'null'};
@@ -176,9 +181,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var k = echelleZoom();
     var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : 'transform:scale(' + k.toFixed(2) + ');transform-origin:50% ' + (a.moi ? '19px' : '38px') + ';';
     if (a.moi) {
-      // Pas d'étiquette « Vous êtes ici » : elle cachait les boutiques voisines. Le rond bleu et son halo suffisent (le bouton
-      // « Autour de moi » recentre sur lui).
-      return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond + '</div>';
+      // Point bleu à bordure blanche et halo, comme Google Maps (le halo de précision est tracé séparément).
+      return '<div style="display:flex;flex-direction:column;align-items:center"><div style="margin-top:8px;width:22px;height:22px;border-radius:9999px;background:#4285F4;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 7px rgba(66,133,244,.25),0 2px 6px rgba(0,0,0,.45)"></div></div>';
     }
     // Comme les cartes de commerces compactes : au repos, seul le petit rond ; le nom n'apparaît que sur la boutique touchée.
     if (!a.selectionne) return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + rond + '</div>';
@@ -405,6 +409,7 @@ export default function CarteLeaflet({
   regions = false,
   margeHaut = 0,
   margeBas = 0,
+  satellite = false,
   onMarqueur,
   commandes,
   focus = null,
@@ -421,6 +426,8 @@ export default function CarteLeaflet({
   /** Hauteur (px) des bandeaux posés EN HAUT / EN BAS de la carte : les repères de boutiques hors vue restent entre les deux. */
   margeHaut?: number;
   margeBas?: number;
+  /** Vue satellite (photo aérienne + noms de lieux), comme Google Maps. */
+  satellite?: boolean;
   interactive?: boolean;
   /** Regroupe en pastilles à compteur les marqueurs qui se recouvrent. */
   regrouper?: boolean;
@@ -444,9 +451,9 @@ export default function CarteLeaflet({
   // Le document ne dépend que de la configuration initiale : changer de
   // marqueurs ne le régénère pas (voir plus haut).
   const html = useMemo(
-    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions, margeHaut, margeBas),
+    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions, margeHaut, margeBas, satellite),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sombre, interactive, regrouper, regions, margeHaut, margeBas]
+    [sombre, interactive, regrouper, regions, margeHaut, margeBas, satellite]
   );
 
   const executer = useCallback((script: string) => {

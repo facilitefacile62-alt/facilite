@@ -75,6 +75,8 @@ export default function AutourFaciliteScreen() {
   const [recherche, setRecherche] = useState('');
   // Carte sombre (défaut) ou claire : bouton lune des commandes de carte, comme dans Locaux.
   const [sombre, setSombre] = useState(true);
+  // Vue satellite façon Google Maps : photo aérienne et noms de lieux.
+  const [satellite, setSatellite] = useState(false);
   // Carrousel du bas : entreprises (une pastille par entreprise) ou offres (une carte par offre).
   const [onglet, setOnglet] = useState<'entreprises' | 'offres'>('entreprises');
 
@@ -253,7 +255,8 @@ export default function AutourFaciliteScreen() {
       <CarteLeaflet
         centre={{ lat: origine.latitude, lng: origine.longitude }}
         zoom={7}
-        sombre={sombre}
+        sombre={sombre && !satellite}
+        satellite={satellite}
         regions
         margeHaut={insets.top + 215}
         margeBas={290}
@@ -358,7 +361,8 @@ export default function AutourFaciliteScreen() {
       <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
-          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => setSombre((v) => !v), couleur: '#FBBF24' },
+          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
+          { icone: 'layers' as const, nom: satellite ? 'Plan' : 'Satellite', action: () => setSatellite((v) => !v), couleur: satellite ? '#34D399' : '#fff' },
           { icone: 'add' as const, nom: 'Zoom avant', action: () => carte?.zoomer(1), couleur: '#fff' },
           { icone: 'remove' as const, nom: 'Zoom arrière', action: () => carte?.zoomer(-1), couleur: '#fff' },
         ].map((c) => (
