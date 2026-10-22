@@ -103,7 +103,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .marqueur-avatar { background: none; border: 0; }
   .marqueur-avatar.leaflet-interactive { pointer-events: none; }
   .marqueur-avatar .rond-cliquable { pointer-events: auto; }
-  .popup-boutique .leaflet-popup-content-wrapper { background: #fff; border-radius: 22px; padding: 0; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
+  .popup-boutique .leaflet-popup-content-wrapper { background: #fff; border-radius: 22px; padding: 0 0 18px; box-shadow: 0 14px 34px rgba(0,0,0,.5); }
   .popup-boutique .leaflet-popup-content { margin: 0; width: auto !important; }
   .popup-boutique .leaflet-popup-tip { background: #fff; }
   .pb-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px 12px 6px 16px; }
@@ -117,7 +117,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-prix { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pb-action { display: block; margin: 0 14px 14px; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
+  .pb-action { display: block; margin: 0 14px 0; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
