@@ -198,11 +198,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       : cote === 'b' ? 'top:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);'
       : cote === 'h' ? 'bottom:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);' : '';
     var etiq = (cote && !a.selectionne && m.libelle) ? '<div style="position:absolute;' + position + 'max-width:' + LARGEUR_ETIQ + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;font:700 11px system-ui,sans-serif;color:' + (CLAIR ? '#0F766E' : '#fff') + ';text-shadow:' + (CLAIR ? '0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 5px #fff' : '0 0 3px #000,0 0 3px #000,0 0 5px #000') + '">' + esc(m.libelle) + '</div>' : '';
-    var pastille = a.selectionne ? '<div style="position:absolute;bottom:' + (TAILLE + 8) + 'px;left:50%;transform:translateX(-50%);padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
-      + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
-      + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
-      + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
-      + '</div>' : '';
+    var pastille = '';   // pas de pastille de nom au-dessus du pin sélectionné : la bulle des produits porte déjà le nom
     var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% ' + (enCluster[m.id] ? TAILLE / 2 : TAILLE + 5) + 'px;z-index:5;' : '';
     return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + queue + badge + etiq + pastille + '</div>';
   }
