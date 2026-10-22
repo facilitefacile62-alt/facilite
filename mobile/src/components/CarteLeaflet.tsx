@@ -77,9 +77,14 @@ import { REGIONS_CARTE } from '@/lib/regionsCarte';
 
 const LEAFLET_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
 const LEAFLET_JS = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
-const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+// Plan clair aux couleurs proches de Google Maps (Esri World Street Map, sans clé). CARTO « Voyager » a été essayé : il exige
+// maintenant une clé d'API et affiche un filigrane « API KEY REQUIRED ».
+const TUILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+// Vue satellite façon Google Maps (photo aérienne + noms de lieux par-dessus) : fonds Esri World Imagery et Esri Reference.
+const TUILES_SATELLITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const TUILES_NOMS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
-function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean): string {
+function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, interactive: boolean, regrouper: boolean, regions: boolean, margeHaut: number, margeBas: number, satellite: boolean): string {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8" />
@@ -122,7 +127,10 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 <script>
   var carte = L.map('carte', { zoomControl: false, attributionControl: true, dragging: ${interactive}, touchZoom: ${interactive}, scrollWheelZoom: ${interactive}, doubleClickZoom: ${interactive}, boxZoom: false, keyboard: false })
     .setView([${centre.lat}, ${centre.lng}], ${zoom});
-  L.tileLayer('${TUILES}', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(carte);
+  ${satellite
+    ? "L.tileLayer('" + TUILES_SATELLITE + "', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }).addTo(carte); L.tileLayer('" + TUILES_NOMS + "', { maxZoom: 19 }).addTo(carte);"
+    : "L.tileLayer('" + TUILES + "', { maxZoom: 19, attribution: 'Map &copy; Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(carte);"}
+  var CLAIR = ${!sombre && !satellite};
   var couche = L.layerGroup().addTo(carte);
   // Limites et noms des 14 régions du Sénégal (OCHA / geoBoundaries) : contour coloré, léger voile, nom au centre.
   var REGIONS = ${regions ? JSON.stringify(REGIONS_CARTE) : 'null'};
@@ -157,31 +165,46 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   // boutiques et leurs regroupements disparaissent jusqu'à ce que la fixation soit levée.
   var focusId = null;
   var spread = {};
+  var TAILLE = 28, LARGEUR_ETIQ = 112;   // petit rond de taille FIXE (px) ; largeur maximale d'un nom
+  var enCluster = {};   // id -> true quand la boutique fait partie d'une grappe (rond sans pointe)
+  var piles = {};   // id de la boutique du dessus -> boutiques empilees avec elle (zoom faible)
+  var MARGE_H = ${margeHaut}, MARGE_B = ${margeBas};
   var popupCourant = null;
   var popupDonnees = null;
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // Taille des ronds de boutiques : FIXE à tous les zooms, et jamais déplacés : leur position est toujours celle de la boutique.
+  function echelleZoom() { return 1; }
+  var etiquettes = {};   // id -> cote ou le nom est ecrit : 'd' droite, 'g' gauche, 'b' dessous, 'h' dessus (absent = pas de nom)
   function htmlAvatar(m) {
     var a = m.avatar, ring = a.bordure;
+    if (a.moi) {
+      // Point bleu à bordure blanche et halo, comme Google Maps (le halo de précision est tracé séparément).
+      return '<div style="display:flex;justify-content:center"><div style="margin-top:3px;width:22px;height:22px;border-radius:9999px;background:#4285F4;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 7px rgba(66,133,244,.25),0 2px 6px rgba(0,0,0,.45)"></div></div>';
+    }
     var src = a.photo || a.uri;
     var contenu = src
       ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;display:block" />'
-      : '<span style="font-size:17px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
-    var rond = '<div class="rond-cliquable" style="width:38px;height:38px;border-radius:9999px;padding:2.5px;box-sizing:border-box;background:' + ring + ';box-shadow:0 4px 14px ' + ring + '60;display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:2px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
-    var echelle = a.selectionne ? 'transform:scale(1.15);transform-origin:50% 100%;' : '';
-    if (a.moi) {
-      // Pas d'étiquette « Vous êtes ici » : elle cachait les boutiques voisines. Le rond bleu et son halo suffisent (le bouton
-      // « Autour de moi » recentre sur lui).
-      return '<div style="display:flex;flex-direction:column;align-items:center;' + echelle + '">' + rond + '</div>';
-    }
-    // Comme les cartes de commerces compactes : au repos, seul le petit rond ; le nom n'apparaît que sur la boutique touchée.
-    if (!a.selectionne) return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">' + rond + '</div>';
-    var pastille = '<div style="margin-bottom:6px;padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
+      : '<span style="font-size:13px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '🏪') + '</span>';
+    // Comme les points d'intérêt de Google Maps : un petit rond CENTRÉ sur la position exacte, son nom à côté (côté choisi pour
+    // ne gêner aucun autre nom ni rond ; nom masqué s'il n'y a pas de place).
+    var rond = '<div class="rond-cliquable" style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;border-radius:9999px;padding:2px;box-sizing:border-box;background:' + ring + ';box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><div style="width:100%;height:100%;border-radius:9999px;overflow:hidden;background:#111827;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box">' + contenu + '</div></div>';
+    var queue = '<div style="position:absolute;left:50%;top:' + (TAILLE - 3) + 'px;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ' + ring + '"></div>';
+    if (enCluster[m.id]) queue = '';
+    var pl = piles[m.id];
+    var badge = pl && pl.length ? '<div style="position:absolute;top:-8px;right:-10px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:9999px;background:#EF4444;color:#fff;border:1.5px solid #fff;font:800 9.5px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:none">+' + pl.length + '</div>' : '';
+    var cote = etiquettes[m.id];
+    var position = cote === 'd' ? 'left:' + (TAILLE + 5) + 'px;top:50%;transform:translateY(-50%);'
+      : cote === 'g' ? 'right:' + (TAILLE + 5) + 'px;top:50%;transform:translateY(-50%);'
+      : cote === 'b' ? 'top:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);'
+      : cote === 'h' ? 'bottom:' + (TAILLE + 3) + 'px;left:50%;transform:translateX(-50%);' : '';
+    var etiq = (cote && !a.selectionne && m.libelle) ? '<div style="position:absolute;' + position + 'max-width:' + LARGEUR_ETIQ + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;font:700 11px system-ui,sans-serif;color:' + (CLAIR ? '#0F766E' : '#fff') + ';text-shadow:' + (CLAIR ? '0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 5px #fff' : '0 0 3px #000,0 0 3px #000,0 0 5px #000') + '">' + esc(m.libelle) + '</div>' : '';
+    var pastille = a.selectionne ? '<div style="position:absolute;bottom:' + (TAILLE + 8) + 'px;left:50%;transform:translateX(-50%);padding:3px 10px;background:rgba(17,24,39,.95);color:#fff;border-radius:9999px;font:800 10px system-ui,sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid rgba(55,65,81,.8);box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none">'
       + '<span style="width:8px;height:8px;border-radius:9999px;background:' + (a.actif === false ? '#9CA3AF' : '#10B981') + '"></span>'
       + '<span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;font-weight:800">' + esc(m.libelle || '') + '</span>'
       + (a.sous ? '<span style="font-size:9px;font-weight:700;color:#9CA3AF">· ' + esc(a.sous) + '</span>' : '')
-      + '</div>';
-    var ombre = '';
-    return '<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;' + echelle + '">' + pastille + rond + ombre + '</div>';
+      + '</div>' : '';
+    var echelle = a.selectionne ? 'transform:scale(1.3);transform-origin:50% ' + (enCluster[m.id] ? TAILLE / 2 : TAILLE + 5) + 'px;z-index:5;' : '';
+    return '<div style="position:relative;width:' + TAILLE + 'px;height:' + TAILLE + 'px;margin:0 auto;cursor:pointer;' + echelle + '">' + rond + queue + badge + etiq + pastille + '</div>';
   }
   function dessiner() {
     couche.clearLayers();
@@ -227,31 +250,124 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
     var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
     var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
-    var procheMoi = function (p) { return !!moiPt && Math.hypot(p.x - moiPt.x, p.y - moiPt.y) < 70; };
-    var cand = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
-    var vus = [];
-    cand.forEach(function (a, i) {
-      if (vus[i]) return;
-      vus[i] = true;
-      var g = [a];
-      cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < 40) { vus[j] = true; g.push(b); } });
-      var pres = g.some(function (x) { return procheMoi(x.p); });
-      if (g.length < 2 && !pres) return;
-      var i0 = 0, anneau = 0;
-      while (i0 < g.length) {
-        var r = (pres ? 58 : 26) + anneau * 30;
-        var cap = Math.max(2, Math.floor(2 * Math.PI * r / 42));
-        var n = Math.min(cap, g.length - i0);
+    // GRAPPES (choix du 22/10/2026) : des boutiques très proches les unes des autres (moins de 200 m, mesurés sur la carte, donc
+    // indépendamment du zoom) forment une grappe : leurs ronds se serrent en couronne, collés, autour du centre du groupe (autour du
+    // point bleu « Vous êtes ici » quand il est dans le groupe), avec un halo vert doux. Tous les ronds ont la MÊME taille à tous les
+    // zooms et la couronne a toujours la même forme ; seule la grappe entière suit la carte. Une boutique isolée reste une icône
+    // à pointe exactement sur sa position. Entre groupes qui se recouvriraient à l'écran, le moins prioritaire est masqué et signalé
+    // par « +N » (comme Google Maps) jusqu'à un zoom où la place le permet.
+    spread = {};
+    piles = {};
+    enCluster = {};
+    var D = TAILLE + 1, RAYON_GRAPPE = 200;
+    var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
+      .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
+      .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
+    var centres = {}, afficher = {}, grappes = [];
+    var moiAff = moiPt;
+    var pris = {}, moiPris = false, entites = [];
+    aPlacer.forEach(function (a) {
+      if (pris[a.m.id]) return;
+      pris[a.m.id] = true;
+      var membres = [a];
+      aPlacer.forEach(function (b) { if (!pris[b.m.id] && carte.distance([a.m.lat, a.m.lng], [b.m.lat, b.m.lng]) < RAYON_GRAPPE) { pris[b.m.id] = true; membres.push(b); } });
+      var avecMoi = false;
+      if (moiMarq && !moiPris && carte.distance([a.m.lat, a.m.lng], [moiMarq.lat, moiMarq.lng]) < RAYON_GRAPPE) { avecMoi = true; moiPris = true; }
+      entites.push({ membres: membres, avecMoi: avecMoi, selection: membres.some(function (x) { return x.m.avatar.selectionne; }) });
+    });
+    function couronnes(k, centreOccupe) {
+      var pos = [], reste = k, i = 0;
+      var cap0 = centreOccupe ? Math.min(k, 8) : Math.min(k, 7);
+      var r0 = Math.max(centreOccupe ? D : 0, D / (2 * Math.sin(Math.PI / Math.max(cap0, 2))));
+      var r = r0;
+      while (reste > 0) {
+        r = r0 + i * D;
+        var n = i === 0 ? cap0 : Math.min(reste, Math.max(1, Math.floor(2 * Math.PI * r / D)));
         for (var t = 0; t < n; t++) {
-          var ang = 2 * Math.PI * t / n + (anneau % 2 ? Math.PI / n : 0);
-          spread[g[i0 + t].m.id] = { dx: Math.cos(ang) * r, dy: Math.sin(ang) * r };
+          var ang = -Math.PI / 2 + 2 * Math.PI * t / n + (i % 2 ? Math.PI / n : 0);
+          pos.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
         }
-        i0 += n; anneau++;
+        reste -= n; i++;
+      }
+      return { pos: pos, rayon: r + D / 2 };
+    }
+    entites.forEach(function (e) {
+      var k = e.membres.length;
+      var sx = 0, sy = 0;
+      e.membres.forEach(function (x) { sx += x.p.x; sy += x.p.y; });
+      e.cx = sx / k; e.cy = sy / k;
+      e.grappe = k > 1 || e.avecMoi;
+      if (e.grappe) {
+        var c = couronnes(k, e.avecMoi);
+        e.pos = c.pos; e.R = c.rayon;
+      } else {
+        e.cx = e.membres[0].p.x; e.cy = e.membres[0].p.y - (TAILLE / 2 + 5); e.R = TAILLE / 2;
       }
     });
-    // Jamais d'écartement à un zoom faible : 26 à 58 px représenteraient des kilomètres et poseraient des boutiques en mer.
-    // À ces zooms, les boutiques qui se recouvrent sont regroupées en pastille (regrouper) au lieu d'être déplacées.
-    if (carte.getZoom() < 15) spread = {};
+    entites.sort(function (u, v) { return ((v.selection || v.avecMoi) ? 1 : 0) - ((u.selection || u.avecMoi) ? 1 : 0) || v.membres.length - u.membres.length || (String(u.membres[0].m.id) < String(v.membres[0].m.id) ? -1 : 1); });
+    var montres = [];
+    entites.forEach(function (e) {
+      var bloque = null;
+      for (var q = 0; q < montres.length && !bloque; q++) if (Math.hypot(montres[q].cx - e.cx, montres[q].cy - e.cy) < montres[q].R + e.R) bloque = montres[q];
+      if (bloque && !e.selection && !e.avecMoi) {
+        // masquée : signalée par « +N » sur le premier rond de l'entité qui la couvre
+        var cible = bloque.membres[0].m.id;
+        piles[cible] = (piles[cible] || []).concat(e.membres.map(function (x) { return x.m; }));
+        return;
+      }
+      montres.push(e);
+      e.membres.forEach(function (x, t) {
+        afficher[x.m.id] = true;
+        if (e.grappe) {
+          var cible2 = { x: e.cx + e.pos[t].x, y: e.cy + e.pos[t].y };
+          centres[x.m.id] = cible2;
+          enCluster[x.m.id] = true;
+          spread[x.m.id] = { dx: cible2.x - x.p.x, dy: cible2.y - x.p.y };
+        } else {
+          centres[x.m.id] = { x: e.cx, y: e.cy };
+        }
+      });
+      if (e.avecMoi && moiPt) {
+        spread[moiMarq.id] = { dx: e.cx - moiPt.x, dy: e.cy - moiPt.y };
+        moiAff = { x: e.cx, y: e.cy };
+      }
+      if (e.grappe) grappes.push(e);
+    });
+    // halo vert doux derrière chaque grappe affichée
+    grappes.forEach(function (e) {
+      var S = Math.round(2 * (e.R + 18));
+      var centreHalo = carte.containerPointToLatLng(L.point(e.cx, e.cy));
+      var icHalo = L.divIcon({ className: 'bulle-regroupement', html: '<div style="width:' + S + 'px;height:' + S + 'px;border-radius:9999px;background:radial-gradient(circle, rgba(16,185,129,.42) 0%, rgba(16,185,129,.26) 55%, rgba(16,185,129,0) 72%);pointer-events:none"></div>', iconSize: [S, S], iconAnchor: [S / 2, S / 2] });
+      L.marker(centreHalo, { icon: icHalo, interactive: false, keyboard: false, zIndexOffset: 100 }).addTo(couche);
+    });
+    // Noms (comme Google Maps) : à partir du zoom 14, chacun prend le premier côté libre (droite, gauche, dessous, dessus) ;
+    // s'il n'y en a aucun, le nom est masqué, jamais le rond.
+    etiquettes = {};
+    var rects = [];
+    var croise = function (u, v) { return u.x1 < v.x2 && u.x2 > v.x1 && u.y1 < v.y2 && u.y2 > v.y1; };
+    aPlacer.forEach(function (it) { if (!afficher[it.m.id]) return; var c = centres[it.m.id]; rects.push({ x1: c.x - TAILLE / 2, y1: c.y - TAILLE / 2, x2: c.x + TAILLE / 2, y2: c.y + TAILLE / 2 }); });
+    if (moiAff) rects.push({ x1: moiAff.x - 14, y1: moiAff.y - 14, x2: moiAff.x + 14, y2: moiAff.y + 14 });
+    if (carte.getZoom() >= 14) {
+      aPlacer.forEach(function (it) {
+        var m = it.m, c = centres[m.id];
+        if (!afficher[m.id] || !m.libelle || m.avatar.selectionne) return;
+        var w = Math.min(LARGEUR_ETIQ, 6.3 * String(m.libelle).length + 4), h = 14, g = TAILLE / 2 + 4;
+        var essais = [
+          ['d', { x1: c.x + g, y1: c.y - h / 2, x2: c.x + g + w, y2: c.y + h / 2 }],
+          ['g', { x1: c.x - g - w, y1: c.y - h / 2, x2: c.x - g, y2: c.y + h / 2 }],
+          ['b', { x1: c.x - w / 2, y1: c.y + g - 2, x2: c.x + w / 2, y2: c.y + g - 2 + h }],
+          ['h', { x1: c.x - w / 2, y1: c.y - g + 2 - h, x2: c.x + w / 2, y2: c.y - g + 2 }]
+        ];
+        for (var e = 0; e < essais.length; e++) {
+          var libreCote = true;
+          for (var q = 0; q < rects.length; q++) {
+            // le rond du marqueur lui-même ne compte pas : seuls les autres ronds et noms déjà posés gênent
+            if (croise(essais[e][1], rects[q])) { libreCote = false; break; }
+          }
+          if (libreCote) { etiquettes[m.id] = essais[e][0]; rects.push(essais[e][1]); break; }
+        }
+      });
+    }
     libres.forEach(function (m) {
       if (m.compteur) {
         var taille = m.compteur >= 50 ? 58 : m.compteur >= 10 ? 50 : 42;
@@ -266,12 +382,21 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
         return;
       }
       if (m.avatar) {
+        if (!m.avatar.moi && !afficher[m.id]) return;
         if (m.avatar.moi) {
           L.circle([m.lat, m.lng], { radius: 180, color: '#38BDF8', weight: 0, fillColor: '#38BDF8', fillOpacity: .16, interactive: false }).addTo(couche);
         }
-        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 100], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 19 : (m.avatar.selectionne ? 64 : 38)) - (spread[m.id] ? spread[m.id].dy : 0)] });
+        var ia = L.divIcon({ className: 'marqueur-avatar', html: htmlAvatar(m), iconSize: [140, 44], iconAnchor: [70 - (m.avatar.dx || 0) - (spread[m.id] ? spread[m.id].dx : 0), (m.avatar.moi ? 14 : (enCluster[m.id] ? TAILLE / 2 : TAILLE + 5)) - (spread[m.id] ? spread[m.id].dy : 0)] });
         var ma = L.marker([m.lat, m.lng], { icon: ia, zIndexOffset: m.avatar.moi ? 250 : (m.avatar.selectionne ? 560 : 300), keyboard: false, title: m.libelle || '' }).addTo(couche);
-        ma.on('click', function () { envoyer(m.id); });
+        ma.on('click', function () {
+          var pl2 = piles[m.id];
+          if (pl2 && pl2.length && !m.avatar.selectionne) {
+            // Rond qui en cache d'autres : on zoome sur eux pour qu'ils se séparent (Google Maps fait de même).
+            var bornes = L.latLngBounds([[m.lat, m.lng]].concat(pl2.map(function (x) { return [x.lat, x.lng]; })));
+            if (bornes.getSouthWest().equals(bornes.getNorthEast()) || carte.getZoom() >= 18) envoyer(m.id);
+            else carte.fitBounds(bornes, { padding: [80, 80], maxZoom: 18, animate: true });
+          } else envoyer(m.id);
+        });
         return;
       }
       if (m.halo) {
@@ -291,14 +416,45 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     popupCourant.options.offset = L.point(decalagePopup());
     popupCourant._updatePosition();
   }
-  carte.on('zoomend', function () { dessiner(); suivrePopup(); });
+  // Boutiques HORS DE LA VUE : un petit rond sur le bord de l'ecran, du cote ou elles se trouvent ; un appui les ouvre.
+  var bord = document.createElement('div');
+  bord.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:800;overflow:hidden';
+  carte.getContainer().appendChild(bord);
+  function majBords() {
+    bord.innerHTML = '';
+    if (focusId) return;
+    var t = carte.getSize();
+    var haut = MARGE_H + 18, bas = t.y - MARGE_B - 18;
+    if (bas <= haut) return;
+    dernier.forEach(function (m) {
+      if (!m.avatar || m.avatar.moi || m.compteur) return;
+      var p = carte.latLngToContainerPoint([m.lat, m.lng]);
+      if (p.x >= 14 && p.x <= t.x - 14 && p.y >= MARGE_H && p.y <= t.y - MARGE_B) return;
+      var x = Math.min(Math.max(p.x, 22), t.x - 22), y = Math.min(Math.max(p.y, haut), bas);
+      var a = m.avatar, src = a.photo || a.uri;
+      var el = document.createElement('div');
+      el.style.cssText = 'position:absolute;left:' + (x - 15) + 'px;top:' + (y - 15) + 'px;width:30px;height:30px;border-radius:9999px;box-sizing:border-box;border:2.5px solid ' + a.bordure + ';background:#111827;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.5);opacity:.92;pointer-events:auto;cursor:pointer';
+      el.innerHTML = src ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover" />' : '<span style="font-size:13px;line-height:1;color:#fff;font-weight:800">' + esc(a.emoji || '') + '</span>';
+      el.title = m.libelle || '';
+      el.addEventListener('click', function (e) { e.stopPropagation(); envoyer(m.id); });
+      bord.appendChild(el);
+    });
+  }
+  carte.on('move', majBords);
+  carte.on('zoomend', function () { dessiner(); suivrePopup(); majBords(); });
   window.majMarqueurs = function (liste, ajuster, focus) {
     dernier = liste;
     focusId = focus || null;
     dessiner();
-    var points = (focusId ? liste.filter(function (m) { return m.id === focusId; }) : liste).map(function (m) { return [m.lat, m.lng]; });
-    if (ajuster && points.length > 1) carte.fitBounds(points, { padding: [36, 36], maxZoom: 16 });
+    // Cadrage : PLUSIEURS boutiques (par exemple celles qui vendent le produit cherché) = vue d'ensemble de toutes, sans zoomer
+    // sur l'une d'elles (zoom plafonné à 13) ; une SEULE boutique = on peut zoomer dessus. Toujours dans la bande visible entre
+    // les bandeaux du haut et du bas.
+    var boutiquesAff = liste.filter(function (m) { return m.avatar && !m.avatar.moi && !m.compteur; });
+    var points = (focusId ? liste.filter(function (m) { return m.id === focusId; }) : (boutiquesAff.length > 1 ? boutiquesAff : liste)).map(function (m) { return [m.lat, m.lng]; });
+    var plafond = !focusId && boutiquesAff.length > 1 ? 13 : 16;
+    if (ajuster && points.length > 1) carte.fitBounds(points, { paddingTopLeft: [36, MARGE_H + 24], paddingBottomRight: [36, MARGE_B + 24], maxZoom: plafond });
     else if (ajuster && points.length === 1) carte.setView(points[0], Math.max(carte.getZoom(), 14));
+    majBords();
   };
   // decalage : fraction de la hauteur dont le point est remonté à l'écran (laisse la place d'un aperçu en bas).
   window.centrer = function (lat, lng, z, decalage) {
@@ -354,6 +510,9 @@ export default function CarteLeaflet({
   interactive = true,
   regrouper = false,
   regions = false,
+  margeHaut = 0,
+  margeBas = 0,
+  satellite = false,
   onMarqueur,
   commandes,
   focus = null,
@@ -367,6 +526,11 @@ export default function CarteLeaflet({
   /** Cadre la carte sur l'ensemble des marqueurs à chaque mise à jour. */
   ajuster?: boolean;
   sombre?: boolean;
+  /** Hauteur (px) des bandeaux posés EN HAUT / EN BAS de la carte : les repères de boutiques hors vue restent entre les deux. */
+  margeHaut?: number;
+  margeBas?: number;
+  /** Vue satellite (photo aérienne + noms de lieux), comme Google Maps. */
+  satellite?: boolean;
   interactive?: boolean;
   /** Regroupe en pastilles à compteur les marqueurs qui se recouvrent. */
   regrouper?: boolean;
@@ -390,9 +554,9 @@ export default function CarteLeaflet({
   // Le document ne dépend que de la configuration initiale : changer de
   // marqueurs ne le régénère pas (voir plus haut).
   const html = useMemo(
-    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions),
+    () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions, margeHaut, margeBas, satellite),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sombre, interactive, regrouper, regions]
+    [sombre, interactive, regrouper, regions, margeHaut, margeBas, satellite]
   );
 
   const executer = useCallback((script: string) => {

@@ -56,8 +56,10 @@ export default function AutourDeMoiScreen() {
     if (ongletParam === 'articles' || ongletParam === 'boutiques') setOnglet(ongletParam);
   }
   const [filtre, setFiltre] = useState<Filtre>('tous');
-  // Carte sombre (défaut) ou claire : bouton lune des commandes de carte.
-  const [sombre, setSombre] = useState(true);
+  // Plan clair (défaut, comme Google Maps) ou sombre : bouton soleil / lune des commandes de carte.
+  const [sombre, setSombre] = useState(false);
+  // Vue satellite façon Google Maps : photo aérienne et noms de lieux.
+  const [satellite, setSatellite] = useState(false);
   const champRecherche = useRef<TextInput>(null);
   const [saisie, setSaisie] = useState('');
   const [recherche, setRecherche] = useState('');
@@ -66,6 +68,24 @@ export default function AutourDeMoiScreen() {
   // ref, pour pouvoir les lire dans les gestionnaires posés pendant le rendu.
   const [carte, setCarte] = useState<CommandesCarte | null>(null);
   const { articles } = useMarketplaceArticles(null, recherche, position);
+  // Recherche d'un produit : TOUS les articles correspondants de la plateforme (pas seulement les 40 premiers), pour que
+  // toutes les boutiques qui le vendent apparaissent sur la carte et dans le carrousel.
+  const [trouvesRecherche, setTrouvesRecherche] = useState<{ q: string; liste: ArticleMarketplace[] } | null>(null);
+  useEffect(() => {
+    const q = recherche.trim();
+    if (!q) return;
+    let annule = false;
+    chargerArticles({ texte: q, limite: 500 })
+      .then((liste) => {
+        if (!annule) setTrouvesRecherche({ q, liste });
+      })
+      .catch(() => {
+        if (!annule) setTrouvesRecherche({ q, liste: [] });
+      });
+    return () => {
+      annule = true;
+    };
+  }, [recherche]);
 
   // La position est demandée à l'ouverture : l'écran n'a pas de sens sans elle.
   useEffect(() => {
@@ -91,11 +111,13 @@ export default function AutourDeMoiScreen() {
   const photosRecherche = useMemo(() => {
     const m = new Map<string, string>();
     if (!recherche.trim()) return m;
-    (articles ?? []).forEach((a) => {
+    const q = recherche.trim();
+    const sources = [...(trouvesRecherche?.q === q ? trouvesRecherche.liste : []), ...(articles ?? [])];
+    sources.forEach((a) => {
       if (a.boutiqueId && !m.has(a.boutiqueId)) m.set(a.boutiqueId, a.photos[0] ?? '');
     });
     return m;
-  }, [articles, recherche]);
+  }, [articles, recherche, trouvesRecherche]);
 
   const visibles = useMemo(() => {
     const q = recherche.trim();
@@ -292,7 +314,12 @@ export default function AutourDeMoiScreen() {
     };
   }, [boutiqueSel, articlesSel]);
 
-  const lancerRecherche = () => setRecherche(saisie);
+  // Une recherche affiche tout de suite le carrousel des boutiques trouvées (moins de clics).
+  const lancerRecherche = () => {
+    setRecherche(saisie);
+    setSelection(null);
+    if (saisie.trim()) setOnglet('boutiques');
+  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: '#1b2330' }}>
@@ -300,9 +327,11 @@ export default function AutourDeMoiScreen() {
         centre={centre}
         zoom={13}
         marqueurs={marqueurs}
-        sombre={sombre}
+        sombre={sombre && !satellite}
+        satellite={satellite}
         regions
-        regrouper
+        margeHaut={insets.top + 215}
+        margeBas={290}
         ajuster={!selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={popup}
@@ -319,10 +348,10 @@ export default function AutourDeMoiScreen() {
             <Ionicons name="person" size={20} color="#fff" />
           </View>
           <View className="flex-1 min-w-0">
-            <Text className="text-[17px] font-black text-white">Autour de moi</Text>
+            <Text className="text-[17px] font-black" style={{ color: sombre || satellite ? '#fff' : '#0F172A' }}>Autour de moi</Text>
             <View className="flex-row items-center gap-1.5">
               <View className="rounded-full" style={{ width: 7, height: 7, backgroundColor: VERT }} />
-              <Text className="text-[12px] font-semibold" style={{ color: '#6EE7C9' }}>
+              <Text className="text-[12px] font-semibold" style={{ color: sombre || satellite ? '#6EE7C9' : '#047857' }}>
                 {boutiques === null ? 'Chargement…' : `${boutiques.length} ${boutiques.length > 1 ? 'membres & boutiques' : 'membre & boutique'}`}
               </Text>
             </View>
@@ -331,7 +360,7 @@ export default function AutourDeMoiScreen() {
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
             accessibilityLabel="Fermer"
             className="items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.14)' }}>
+            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.72)' }}>
             <Ionicons name="close" size={20} color="#fff" />
           </Pressable>
         </View>
@@ -423,7 +452,8 @@ export default function AutourDeMoiScreen() {
       <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
-          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => setSombre((v) => !v), couleur: '#FBBF24' },
+          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
+          { icone: 'layers' as const, nom: satellite ? 'Plan' : 'Satellite', action: () => setSatellite((v) => !v), couleur: satellite ? '#34D399' : '#fff' },
           { icone: 'add' as const, nom: 'Zoom avant', action: () => carte?.zoomer(1), couleur: '#fff' },
           { icone: 'remove' as const, nom: 'Zoom arrière', action: () => carte?.zoomer(-1), couleur: '#fff' },
         ].map((c) => (
@@ -459,7 +489,9 @@ export default function AutourDeMoiScreen() {
           <Text className="text-[12px] font-extrabold text-white" numberOfLines={1}>
             {boutiqueSel
               ? `${boutiqueSel.nom} est ouvert à ${boutiqueSel.quartier || 'Dakar'}`
-              : `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} vérifiée${visibles.length > 1 ? 's' : ''} prête${visibles.length > 1 ? 's' : ''} à vous servir au Sénégal`}
+              : recherche.trim()
+                ? `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} ${visibles.length > 1 ? 'proposent' : 'propose'} « ${recherche.trim()} »`
+                : `${visibles.length} boutique${visibles.length > 1 ? 's' : ''} vérifiée${visibles.length > 1 ? 's' : ''} prête${visibles.length > 1 ? 's' : ''} à vous servir au Sénégal`}
           </Text>
         </View>
         <View className="flex-row self-center rounded-full p-1" style={{ backgroundColor: 'rgba(20,24,33,0.9)' }}>

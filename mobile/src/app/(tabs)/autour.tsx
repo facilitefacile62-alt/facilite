@@ -74,7 +74,9 @@ export default function AutourFaciliteScreen() {
   const [saisie, setSaisie] = useState('');
   const [recherche, setRecherche] = useState('');
   // Carte sombre (défaut) ou claire : bouton lune des commandes de carte, comme dans Locaux.
-  const [sombre, setSombre] = useState(true);
+  const [sombre, setSombre] = useState(false);
+  // Vue satellite façon Google Maps : photo aérienne et noms de lieux.
+  const [satellite, setSatellite] = useState(false);
   // Carrousel du bas : entreprises (une pastille par entreprise) ou offres (une carte par offre).
   const [onglet, setOnglet] = useState<'entreprises' | 'offres'>('entreprises');
 
@@ -253,8 +255,11 @@ export default function AutourFaciliteScreen() {
       <CarteLeaflet
         centre={{ lat: origine.latitude, lng: origine.longitude }}
         zoom={7}
-        sombre={sombre}
+        sombre={sombre && !satellite}
+        satellite={satellite}
         regions
+        margeHaut={insets.top + 215}
+        margeBas={290}
         marqueurs={marqueurs}
         ajuster={!selection && cleListe !== cleAjustee}
         focus={selection}
@@ -277,10 +282,10 @@ export default function AutourFaciliteScreen() {
             <Ionicons name="person" size={20} color="#fff" />
           </View>
           <View className="flex-1 min-w-0">
-            <Text className="text-[17px] font-black text-white">Autour de moi</Text>
+            <Text className="text-[17px] font-black" style={{ color: sombre || satellite ? '#fff' : '#0F172A' }}>Autour de moi</Text>
             <View className="flex-row items-center gap-1.5">
               <View className="rounded-full" style={{ width: 7, height: 7, backgroundColor: VERT }} />
-              <Text className="text-[12px] font-semibold" style={{ color: '#6EE7C9' }} numberOfLines={1}>
+              <Text className="text-[12px] font-semibold" style={{ color: sombre || satellite ? '#6EE7C9' : '#047857' }} numberOfLines={1}>
                 {resultat === null
                   ? erreur
                     ? 'Impossible de charger les offres.'
@@ -293,7 +298,7 @@ export default function AutourFaciliteScreen() {
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
             accessibilityLabel="Fermer"
             className="items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.14)' }}>
+            style={{ width: 44, height: 44, backgroundColor: 'rgba(20,24,33,0.72)' }}>
             <Ionicons name="close" size={20} color="#fff" />
           </Pressable>
         </View>
@@ -356,7 +361,8 @@ export default function AutourFaciliteScreen() {
       <View style={{ position: 'absolute', right: 14, top: insets.top + 196, gap: 10 }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
-          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => setSombre((v) => !v), couleur: '#FBBF24' },
+          { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
+          { icone: 'layers' as const, nom: satellite ? 'Plan' : 'Satellite', action: () => setSatellite((v) => !v), couleur: satellite ? '#34D399' : '#fff' },
           { icone: 'add' as const, nom: 'Zoom avant', action: () => carte?.zoomer(1), couleur: '#fff' },
           { icone: 'remove' as const, nom: 'Zoom arrière', action: () => carte?.zoomer(-1), couleur: '#fff' },
         ].map((c) => (
