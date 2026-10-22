@@ -234,28 +234,34 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     // (rayon plus grand), pour qu'aucune ne soit cachée par le rond ou par l'étiquette.
     var moiMarq = libres.filter(function (m) { return m.avatar && m.avatar.moi; })[0];
     var moiPt = moiMarq ? carte.latLngToContainerPoint([moiMarq.lat, moiMarq.lng]) : null;
-    // Aucune boutique n'est associée ni cachée : celles qui se recouvrent sont rangées CÔTE À CÔTE, à taille fixe, 5 par rangée
-    // (rangées empilées vers le haut), centrées sur leur position. Chaque rond est RELIÉ par un trait fin à un point posé sur la
-    // vraie position de la boutique : ce point ne bouge jamais ; la disposition des ronds est la même à tous les zooms.
+    // Aucune boutique n'est associée ni cachée : chaque rond (taille FIXE) garde sa place exacte s'il est libre ; sinon il prend la
+    // place libre la plus proche (anneaux autour de sa position, en commençant par le haut), de sorte qu'AUCUN rond n'en
+    // recouvre un autre, ni « Vous êtes ici ». Un trait fin le relie alors à un point posé sur la vraie position de la boutique
+    // (ce point ne bouge jamais). Ordre de placement stable (par identifiant) : la disposition ne saute pas d'un zoom à l'autre.
     spread = {};
     piles = {};
-    var D = 38;
-    var cand = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; }).map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; });
-    var vus = [];
-    cand.forEach(function (a, i) {
-      if (vus[i]) return;
-      vus[i] = true;
-      var g = [a];
-      cand.forEach(function (b, j) { if (!vus[j] && Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y) < D) { vus[j] = true; g.push(b); } });
-      var pres = g.some(function (x) { return !!moiPt && Math.hypot(x.p.x - moiPt.x, x.p.y - moiPt.y) < D + 8; });
-      if (g.length < 2 && !pres) return;
-      var pas = D + 2, parLigne = 5;
-      g.forEach(function (x, t) {
-        var ligne = Math.floor(t / parLigne);
-        var dansLigne = Math.min(parLigne, g.length - ligne * parLigne);
-        var col = t - ligne * parLigne;
-        spread[x.m.id] = { dx: (col - (dansLigne - 1) / 2) * pas, dy: -((pres ? 1 : 0) + ligne) * pas };
-      });
+    var D = 38, PAS = D + 3;
+    var occupes = [];
+    if (moiPt) occupes.push({ x: moiPt.x, y: moiPt.y });
+    var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
+      .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
+      .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
+    var libreEn = function (x, y) { return occupes.every(function (o) { return Math.hypot(o.x - x, o.y - y) >= D + 2; }); };
+    aPlacer.forEach(function (it) {
+      var cx = it.p.x, cy = it.p.y - 19, off = { dx: 0, dy: 0 };
+      if (!libreEn(cx, cy)) {
+        var trouve = false;
+        for (var r = 1; r <= 10 && !trouve; r++) {
+          var n = 6 * r;
+          for (var t = 0; t < n && !trouve; t++) {
+            var ang = -Math.PI / 2 + 2 * Math.PI * t / n;
+            var dx = Math.cos(ang) * PAS * r, dy = Math.sin(ang) * PAS * r;
+            if (libreEn(cx + dx, cy + dy)) { off = { dx: dx, dy: dy }; trouve = true; }
+          }
+        }
+      }
+      occupes.push({ x: cx + off.dx, y: cy + off.dy });
+      if (off.dx || off.dy) spread[it.m.id] = off;
     });
     libres.forEach(function (m) {
       if (m.compteur) {
