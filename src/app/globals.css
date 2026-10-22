@@ -337,11 +337,13 @@ html.dark .bg-whatsapp-chat {
     transform: translateY(-3px);
   }
 }
+/* 21/10/2026 : plus d'animation ni de transition sur les marqueurs de boutiques — un marqueur reste immobile sur ses coordonnées
+   (l'ancienne « respiration » le faisait monter et descendre de 3 px en permanence). */
 .avatar-boutique-zoom-scale {
-  transition: transform 0.15s ease-out;
+  transition: none;
 }
 .avatar-boutique-anime {
-  animation: avatar-boutique-respire 2s ease-in-out infinite;
+  animation: none;
 }
 
 /* Marqueurs dissociés de l'Explorer (voir src/lib/dissociationMarqueurs.js
@@ -439,4 +441,20 @@ html.dark .bg-whatsapp-chat {
    (.carte-focus-boutique), donc la fenêtre ne recouvre plus rien d'utile. */
 .carte-focus-boutique .leaflet-popup-pane {
   z-index: 700 !important;
+}
+
+/* Épingles de boutiques façon Google Maps (voir src/lib/epingleCarte.js). Seul le pin reçoit les clics : la boîte de 140 × 90 px
+   qui le porte est transparente aux clics pour ne pas bloquer les voisins ni le déplacement de la carte. Les noms n'apparaissent
+   qu'à partir d'un certain zoom (classe posée par brancherDensiteNoms) et se masquent quand ils se chevauchent. */
+.carte-boutiques-avatar-icon {
+  pointer-events: none !important;
+}
+.epingle-nom {
+  display: none;
+}
+.carte-noms-visibles .epingle-nom {
+  display: block;
+}
+.epingle-nom-masque {
+  visibility: hidden;
 }

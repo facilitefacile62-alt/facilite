@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { echapperHtml, calculerStatutOuverture, urlPhoto } from "@/lib/marketplaceData";
 import { brancherEchelleZoomAvatars, dataUriAvatarBoutique, svgAvatarBoutique, echelleAvatarPourZoom } from "@/lib/avatarBoutique";
+import { brancherDensiteNoms, htmlEpingle, typeEpingle, EPINGLE } from "@/lib/epingleCarte";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { selectionnerBoutiquesVisibles } from "@/lib/dissociationMarqueurs";
 
@@ -776,31 +777,20 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
             }
           }
 
-          const marqueur = b.avatar_config
-            ? L.marker(b.position, {
-                icon: L.divIcon({
-                  className: "carte-boutiques-avatar-icon",
-                  html: `
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                      <div class="avatar-boutique-zoom-scale" style="position:relative;">
-                        <div class="avatar-boutique-anime" style="width:28px;height:28px;border-radius:9999px;border:2.5px solid ${couleur};overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.35);background:#fff;">${svgAvatarBoutique(b.avatar_config, 28)}</div>
-                        ${pointAlarmeBadgeHtml}
-                        ${premiumBadgeHtml}
-                      </div>
-                      <span style="display:flex;align-items:center;max-width:96px;padding:1px 6px;background:rgba(17,24,39,0.92);color:#fff;font-size:9px;font-weight:800;border-radius:9999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${pointStatutHtml}${echapperHtml(b.nom)}</span>
-                    </div>
-                  `,
-                  iconSize: [96, 46],
-                  iconAnchor: [48, 14],
-                }),
-              }).addTo(groupe)
-            : L.circleMarker(b.position, {
-                radius: 9,
-                color: couleur,
-                weight: 3,
-                fillColor: couleur,
-                fillOpacity: 0.85,
-              }).addTo(groupe);
+          // Épingle façon Google Maps (voir src/lib/epingleCarte.js) : taille fixe, pointe sur la coordonnée, nom à droite.
+          const marqueur = L.marker(b.position, {
+            icon: L.divIcon({
+              className: "carte-boutiques-avatar-icon",
+              html: htmlEpingle({
+                couleur,
+                type: typeEpingle(b),
+                nom: echapperHtml(b.nom || ""),
+                contenuHtml: b.avatar_config ? svgAvatarBoutique(b.avatar_config, 26) : null,
+              }),
+              iconSize: [EPINGLE.boite.l, EPINGLE.boite.h],
+              iconAnchor: EPINGLE.ancre,
+            }),
+          }).addTo(groupe);
 
           marqueursCreesParId.set(b.id, { marqueur, ligne: null, decalageBas: false });
 
@@ -1088,6 +1078,7 @@ export default function CarteBoutiques({ articles, boutiquesSansArticles = [], s
         }
 
         nettoyages.push(brancherEchelleZoomAvatars(carte));
+        nettoyages.push(brancherDensiteNoms(carte));
 
         // Recalcul à chaque pan/zoom (l'écart en pixels dépend du niveau de
         // zoom courant). Différé via setTimeout(...,0) : "moveend" peut se
