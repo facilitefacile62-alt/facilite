@@ -1,16 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import BoutonAction from '@/components/BoutonAction';
+import BoutonAudioOffre from '@/components/BoutonAudioOffre';
 import { resoudreActionOffre } from '@/lib/actionOffre';
 import CandidatureRapide from '@/components/CandidatureRapide';
 import { useOffreDetail } from '@/lib/useOffreDetail';
 import OfferMediaView from '@/components/OfferMediaView';
+
+// Fiche offre — maquette « Fil d'actualité Android » du 22/10/2026 : fond crème #F2F0EA, boutons ronds / cases / étiquette sur
+// #e3dbcc (couleur de la barre de navigation), barre d'actions FIXE au-dessus de la barre du bas.
+const FOND = '#F2F0EA';
+const BEIGE = '#e3dbcc';
+const TEXTE = '#111111';
+const TEXTE_DOUX = 'rgba(0,0,0,0.5)';
+
+// Description sans les marques de mise en forme du site (**gras**, lignes de tirets ou de tirets bas).
+function descriptionLisible(texte: string): string {
+  return String(texte ?? '')
+    .replace(/\*\*/g, '')
+    .split(/\r?\n/)
+    .filter((ligne) => !/^\s*[_\-=]{3,}\s*$/.test(ligne))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 export default function FicheOffreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,7 +99,7 @@ export default function FicheOffreScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#0B0D10]">
+    <View className="flex-1" style={{ backgroundColor: FOND }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         {offre === null && !erreur ? (
           <View className="flex-1 items-center justify-center">
@@ -89,132 +107,141 @@ export default function FicheOffreScreen() {
           </View>
         ) : erreur || !offre ? (
           <View className="flex-1 items-center justify-center px-8">
-            <Text className="text-[13px] text-[#F5F6F7]/50 font-medium text-center">
+            <Text className="text-[13px] font-medium text-center" style={{ color: TEXTE_DOUX }}>
               Impossible de charger cette offre pour le moment.
             </Text>
-            <Pressable onPress={() => router.back()} className="mt-4 px-5 py-2.5 rounded-full bg-[#15181D]">
-              <Text className="text-[#F5F6F7] text-[12.5px] font-bold">Retour</Text>
+            <Pressable onPress={() => router.back()} className="mt-4 px-5 py-2.5 rounded-full" style={{ backgroundColor: BEIGE }}>
+              <Text className="text-[12.5px] font-bold" style={{ color: TEXTE }}>Retour</Text>
             </Pressable>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-36">
-            {/* Header barre navigation */}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-28">
+            {/* En-tête : retour à gauche, signet à droite, ronds #e3dbcc */}
             <View className="flex-row items-center justify-between px-4 pt-2">
               <Pressable
-                onPress={() => router.back()}
-                className="w-[38px] h-[38px] rounded-full bg-[#15181D] items-center justify-center">
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/offres'))}
+                accessibilityLabel="Retour"
+                className="items-center justify-center rounded-full"
+                style={{ width: 44, height: 44, backgroundColor: BEIGE }}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                  <Path d="M15 5L8 12L15 19" stroke="#F5F6F7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                  <Path d="M15 5L8 12L15 19" stroke={TEXTE} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                 </Svg>
               </Pressable>
-              <View className="flex-row items-center gap-2">
-                <Pressable
-                  onPress={() => partager()}
-                  className="w-[38px] h-[38px] rounded-full bg-[#15181D] items-center justify-center">
-                  <Ionicons name="share-social-outline" size={18} color="#F5F6F7" />
-                </Pressable>
-                <Pressable
-                  onPress={basculerSauvegarde}
-                  className="w-[38px] h-[38px] rounded-full bg-[#15181D] items-center justify-center">
-                  <Svg width={18} height={18} viewBox="0 0 24 24">
-                    <Path
-                      d="M6 3.5H18V21L12 16.5L6 21V3.5Z"
-                      stroke={sauvegarde ? '#10B981' : '#F5F6F7'}
-                      strokeWidth={1.8}
-                      fill={sauvegarde ? '#10B981' : 'none'}
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </Pressable>
-              </View>
+              <Pressable
+                onPress={basculerSauvegarde}
+                accessibilityLabel={sauvegarde ? "Retirer l'offre des enregistrées" : "Enregistrer l'offre"}
+                className="items-center justify-center rounded-full"
+                style={{ width: 44, height: 44, backgroundColor: BEIGE }}>
+                <Svg width={20} height={20} viewBox="0 0 24 24">
+                  <Path
+                    d="M6 3.5H18V21L12 16.5L6 21V3.5Z"
+                    stroke={sauvegarde ? '#10B981' : 'rgba(0,0,0,0.6)'}
+                    strokeWidth={1.8}
+                    fill={sauvegarde ? '#10B981' : 'none'}
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </Pressable>
             </View>
 
-            {/* En-tête Entreprise & Titre */}
+            {/* Bloc entreprise : tuile, titre, entreprise en vert, étiquette du contrat */}
             <View className="px-5 pt-4 items-center">
-              {/* Tuile initiale de la maquette 07. L'image de l'offre est l'affiche
-                  (affichée en grand plus bas), pas un logo d'entreprise. */}
               <View className="w-16 h-16 rounded-[18px] items-center justify-center" style={{ backgroundColor: '#2563EB' }}>
-                <Text className="font-black text-[24px]" style={{ color: '#0B0D10' }}>
+                <Text className="font-black text-[24px]" style={{ color: TEXTE }}>
                   {offre.logo}
                 </Text>
               </View>
-              <Text className="text-[20px] font-extrabold text-[#F5F6F7] mt-3.5 text-center leading-7">
+              <Text className="text-[20px] font-extrabold mt-3.5 text-center leading-7" style={{ color: TEXTE }}>
                 {offre.titre}
               </Text>
-              <Text className="text-[14px] mt-1 text-center font-medium" style={{ color: '#10B981' }}>
+              <Text className="text-[14px] mt-1 text-center font-bold" style={{ color: '#047857' }}>
                 {offre.entreprise} · {offre.localisation}
               </Text>
               <View className="flex-row gap-1.5 mt-3">
-                <View className="px-3 py-1.5 rounded-full bg-white/[0.08]">
-                  <Text className="text-[12px] font-bold text-[#F5F6F7]">{offre.contrat}</Text>
+                <View className="px-3 py-1.5 rounded-full" style={{ backgroundColor: BEIGE }}>
+                  <Text className="text-[12px] font-black" style={{ color: TEXTE }}>{offre.contrat}</Text>
                 </View>
               </View>
             </View>
 
-            {/* Métriques Clés */}
+            {/* Trois cases : Salaire / Publiée / Candidats */}
             <View className="flex-row gap-2.5 px-5 pt-5">
-              <View className="flex-1 bg-[#15181D] rounded-2xl p-3 items-center border border-white/5">
-                <Text className="text-[13px] font-bold text-[#10B981]">{offre.salaire}</Text>
-                <Text className="text-[11px] text-[#F5F6F7]/45 mt-0.5">Salaire</Text>
+              <View className="flex-1 rounded-2xl p-3 items-center" style={{ backgroundColor: BEIGE }}>
+                <Text className="text-[13px] font-black text-center" style={{ color: '#047857' }}>{offre.salaire}</Text>
+                <Text className="text-[11px] mt-0.5" style={{ color: TEXTE_DOUX }}>Salaire</Text>
               </View>
-              <View className="flex-1 bg-[#15181D] rounded-2xl p-3 items-center border border-white/5">
-                <Text className="text-[13px] font-bold text-[#F5F6F7]">{offre.posted}</Text>
-                <Text className="text-[11px] text-[#F5F6F7]/45 mt-0.5">Publiée</Text>
+              <View className="flex-1 rounded-2xl p-3 items-center" style={{ backgroundColor: BEIGE }}>
+                <Text className="text-[13px] font-black" style={{ color: TEXTE }}>{offre.posted}</Text>
+                <Text className="text-[11px] mt-0.5" style={{ color: TEXTE_DOUX }}>Publiée</Text>
               </View>
-              <View className="flex-1 bg-[#15181D] rounded-2xl p-3 items-center border border-white/5">
-                <Text className="text-[13px] font-bold text-[#F5F6F7]">{offre.applicantsCount}</Text>
-                <Text className="text-[11px] text-[#F5F6F7]/45 mt-0.5">Candidats</Text>
+              <View className="flex-1 rounded-2xl p-3 items-center" style={{ backgroundColor: BEIGE }}>
+                <Text className="text-[13px] font-black" style={{ color: '#047857' }}>{offre.applicantsCount}</Text>
+                <Text className="text-[11px] mt-0.5" style={{ color: TEXTE_DOUX }}>Candidats</Text>
               </View>
             </View>
 
-            {/* Affiche réelle de l'offre */}
-            <View className="px-5">
-              <OfferMediaView
-                media={offre.rawImage || offre.posterUri}
-                borderRadius={18}
-                dark={true}
-              />
+            {/* Visuel de l'offre : « Agrandir » en haut à droite, « ffacilite.com » en bas */}
+            <View className="px-5 pt-5">
+              <OfferMediaView media={offre.rawImage || offre.posterUri} borderRadius={18} dark={false} />
             </View>
 
-            {/* Description */}
-            <Text className="px-5 pt-5 pb-1.5 text-[15px] font-bold text-[#F5F6F7]">Description</Text>
-            <Text className="px-5 text-[13.5px] leading-6 text-[#F5F6F7]/75 font-normal">{offre.description}</Text>
+            {/* Description complète */}
+            <Text className="px-5 pt-5 pb-1.5 text-[15px] font-black" style={{ color: TEXTE }}>Description</Text>
+            <Text className="px-5 text-[13.5px] leading-6 font-normal" style={{ color: 'rgba(0,0,0,0.75)' }}>{descriptionLisible(offre.description)}</Text>
           </ScrollView>
         )}
       </SafeAreaView>
 
-      {/* Barre d'action FIXE : le bouton Postuler reste visible pendant qu'on lit la description
-          (même principe que la barre du bas de la fiche article Marketplace). */}
+      {/* Barre d'actions FIXE, juste au-dessus de la barre de navigation du bas : Aide · Audio · Partager · Postuler. Elle reste en
+          place pendant qu'on fait défiler la description. */}
       {offre && !erreur && (
         <View
-          className="absolute left-0 right-0 bottom-0 flex-row items-center gap-3 px-4 pt-3 border-t border-white/10 bg-[#0B0D10]"
-          style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+          className="absolute left-0 right-0 bottom-0 flex-row items-center gap-2 px-4 py-2.5"
+          style={{ backgroundColor: BEIGE, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
+          {/* Aide (remplace « J'aime », décision du 13/10) : vidéo « comment postuler » */}
           <Pressable
-            onPress={basculerSauvegarde}
-            accessibilityLabel={sauvegarde ? "Retirer l'offre des enregistrées" : "Enregistrer l'offre"}
-            className="w-12 h-12 rounded-full bg-[#15181D] border border-white/10 items-center justify-center">
-            <Ionicons name={sauvegarde ? 'bookmark' : 'bookmark-outline'} size={20} color={sauvegarde ? '#10B981' : '#F5F6F7'} />
+            onPress={() =>
+              router.push(
+                `/aide-video?titre=${encodeURIComponent(offre.titre)}${offre.externalLink ? `&lien=${encodeURIComponent(offre.externalLink)}` : ''}` as Href
+              )
+            }
+            accessibilityLabel="Aide : comment postuler"
+            className="items-center justify-center rounded-full bg-white"
+            style={{ width: 44, height: 44, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)' }}>
+            <Ionicons name="help-circle-outline" size={21} color="rgba(0,0,0,0.55)" />
           </Pressable>
-          {action && action.type !== 'facilite' ? (
-            <Pressable
-              onPress={() => Linking.openURL(action.url).catch(() => {})}
-              className={`flex-1 h-12 rounded-full flex-row items-center justify-center gap-2 ${
-                action.type === 'whatsapp' ? 'bg-[#25D366]' : 'bg-blue-600 active:bg-blue-700'
-              }`}>
-              <Ionicons name={action.type === 'whatsapp' ? 'logo-whatsapp' : 'open-outline'} size={18} color="#FFFFFF" />
-              <Text className="text-white text-[15px] font-black">{action.libelle}</Text>
-            </Pressable>
-          ) : (
-            <View className="flex-1">
-              <BoutonAction
-                titre={postulee ? 'Candidature envoyée' : 'Postuler en 1 clic'}
-                sousTitre={postulee ? 'Merci, le recruteur a bien reçu votre dossier' : 'Candidature en un clic'}
-                icone={postulee ? 'checkmark-circle-outline' : 'briefcase-outline'}
-                onPress={() => setFeuilleOuverte(true)}
-                desactive={postulee}
-              />
-            </View>
-          )}
+          <BoutonAudioOffre url={offre.audioUrl} />
+          <Pressable
+            onPress={() => partager()}
+            accessibilityLabel="Partager"
+            className="items-center justify-center rounded-full bg-white"
+            style={{ width: 44, height: 44, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)' }}>
+            <Ionicons name="share-social-outline" size={19} color="rgba(0,0,0,0.55)" />
+          </Pressable>
+          <Pressable
+            onPress={() => (action && action.type !== 'facilite' ? Linking.openURL(action.url).catch(() => {}) : setFeuilleOuverte(true))}
+            disabled={postulee}
+            accessibilityRole="button"
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-full"
+            style={{
+              height: 44,
+              paddingHorizontal: 8,
+              backgroundColor: postulee ? '#D5F5E6' : action && action.type === 'whatsapp' ? '#25D366' : '#2563EB',
+            }}>
+            <Ionicons
+              name={postulee ? 'checkmark-circle' : action && action.type === 'whatsapp' ? 'logo-whatsapp' : action && action.type === 'externe' ? 'open-outline' : 'paper-plane'}
+              size={16}
+              color={postulee ? '#047857' : '#FFFFFF'}
+            />
+            <Text
+              className="text-[13.5px] font-black"
+              style={{ color: postulee ? '#047857' : '#FFFFFF', flexShrink: 1 }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}>
+              {postulee ? 'Candidature envoyée' : action && action.type !== 'facilite' ? action.libelle : 'Postuler via Facilité'}
+            </Text>
+          </Pressable>
         </View>
       )}
 
