@@ -196,14 +196,9 @@ export default function CarteOffre({
           <Ionicons name="help-circle-outline" size={20} color="rgba(0,0,0,0.55)" />
         </Pressable>
 
-        {/* Audio de l'offre : fichier enregistré si l'offre en a un (audio_url), sinon lecture à voix haute du texte. */}
+        {/* Audio de l'offre : vert et cliquable s'il y a un audio (audio_url), gris et non cliquable sinon. */}
         {/* Il ne concerne que les offres d'emploi (pas les concours, formations…). */}
-        {!offre.listingType || offre.listingType === 'offre_emploi' ? (
-          <BoutonAudioOffre
-            url={offre.audioUrl}
-            offre={{ titre: offre.titre, entreprise: offre.entreprise, localisation: offre.localisation, contrat: offre.contrat, description: offre.description }}
-          />
-        ) : null}
+        {!offre.listingType || offre.listingType === 'offre_emploi' ? <BoutonAudioOffre url={offre.audioUrl} /> : null}
 
         <Pressable
           onPress={partager}
