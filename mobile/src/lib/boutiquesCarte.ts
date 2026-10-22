@@ -23,12 +23,14 @@ export type BoutiqueCarte = {
   avatarConfig: Record<string, unknown> | null;
   /** Vrai si la boutique a au moins un article actif en stock (filtre « En stock (LIVE) »). */
   enStock: boolean;
+  /** Numéro WhatsApp / téléphone public de la boutique (carte du bas : Appeler, WhatsApp). */
+  telephone: string | null;
 };
 
 export async function chargerBoutiquesCarte(depuis: Position | null): Promise<BoutiqueCarte[]> {
   const { data, error } = await supabase
     .from('marketplace_stores')
-    .select('id, nom, quartier, ville, type_boutique, verifie, latitude, longitude, avatar_config')
+    .select('id, nom, quartier, ville, type_boutique, verifie, latitude, longitude, avatar_config, telephone_whatsapp')
     .eq('actif', true)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
@@ -51,6 +53,7 @@ export async function chargerBoutiquesCarte(depuis: Position | null): Promise<Bo
     distanceKm: depuis ? distanceKm(depuis, { latitude: b.latitude as number, longitude: b.longitude as number }) : null,
     avatarConfig: (b.avatar_config as Record<string, unknown> | null) ?? null,
     enStock: idsEnStock.has(b.id as string),
+    telephone: (b.telephone_whatsapp as string | null) ?? null,
   }));
   return liste.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
 }
