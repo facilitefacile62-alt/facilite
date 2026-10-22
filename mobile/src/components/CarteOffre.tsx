@@ -173,7 +173,7 @@ export default function CarteOffre({
 
       {/* 8. ACTIONS — maquette 01 : Aide (ex-« J'aime »), partager, puis le bouton bleu.
           Le signet n'y figure pas (il est sur la fiche offre, maquette 07). */}
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, alignItems: 'center', paddingRight: 44 }}>
         {/* Aide (remplace « J'aime », 13/10/2026) : ouvre la vidéo « comment postuler »,
             la même sous toutes les publications. */}
         <Pressable
@@ -184,32 +184,37 @@ export default function CarteOffre({
           }
           accessibilityLabel="Aide : comment postuler"
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: 'rgba(0,0,0,0.08)',
-            backgroundColor: '#F5F3EE',
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            borderWidth: 1.5,
+            borderColor: 'rgba(0,0,0,0.12)',
+            backgroundColor: '#FFFFFF',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
           <Ionicons name="help-circle-outline" size={20} color="rgba(0,0,0,0.55)" />
         </Pressable>
 
-        {/* Audio de l'offre (facultatif) : le bouton n'existe que si l'offre en a un. */}
-        {/* L'audio ne concerne que les offres d'emploi (pas les concours, formations…). */}
-        <BoutonAudioOffre url={!offre.listingType || offre.listingType === 'offre_emploi' ? offre.audioUrl : undefined} />
+        {/* Audio de l'offre : fichier enregistré si l'offre en a un (audio_url), sinon lecture à voix haute du texte. */}
+        {/* Il ne concerne que les offres d'emploi (pas les concours, formations…). */}
+        {!offre.listingType || offre.listingType === 'offre_emploi' ? (
+          <BoutonAudioOffre
+            url={offre.audioUrl}
+            offre={{ titre: offre.titre, entreprise: offre.entreprise, localisation: offre.localisation, contrat: offre.contrat, description: offre.description }}
+          />
+        ) : null}
 
         <Pressable
           onPress={partager}
           accessibilityLabel="Partager"
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: 'rgba(0,0,0,0.08)',
-            backgroundColor: '#F5F3EE',
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            borderWidth: 1.5,
+            borderColor: 'rgba(0,0,0,0.12)',
+            backgroundColor: '#FFFFFF',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
@@ -222,23 +227,23 @@ export default function CarteOffre({
           accessibilityState={{ disabled: expiree || postulee }}
           style={{
             flex: 1,
-            height: 42,
-            borderRadius: 12,
+            height: 44,
+            borderRadius: 22,
             // Expirée : même gabarit, grisé, comme sur le site (le bouton
             // « Postuler » y est remplacé par un état fermé).
             backgroundColor: expiree ? '#D4D0C4' : postulee ? '#D5F5E6' : action.type === 'whatsapp' ? '#25D366' : BLEU,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 7,
-            paddingHorizontal: 12,
+            gap: 6,
+            paddingHorizontal: 8,
           }}>
           <Ionicons
             name={expiree ? 'lock-closed' : postulee ? 'checkmark-circle' : action.type === 'whatsapp' ? 'logo-whatsapp' : action.type === 'externe' ? 'open-outline' : 'paper-plane'}
             size={16}
             color={expiree ? 'rgba(0,0,0,0.45)' : postulee ? '#047857' : '#FFFFFF'}
           />
-          <Text style={{ color: expiree ? 'rgba(0,0,0,0.5)' : postulee ? '#047857' : '#FFFFFF', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>
+          <Text style={{ color: expiree ? 'rgba(0,0,0,0.5)' : postulee ? '#047857' : '#FFFFFF', fontSize: 13, fontWeight: '800', flexShrink: 1 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
             {expiree ? 'Offre expirée' : postulee ? 'Candidature envoyée' : action.libelle}
           </Text>
         </Pressable>
