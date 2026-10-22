@@ -77,8 +77,8 @@ test.describe("Dissociation des marqueurs (calcul pur)", () => {
     }
   });
 
-  test("regroupement transitif : une chaîne de 4 boutiques espacées de 40 px forme un seul groupe", () => {
-    const points = [0, 1, 2, 3].map((i) => ({ id: `c${i}`, x: 100 + i * 40, y: 100 }));
+  test("regroupement transitif : une chaîne de 4 boutiques espacées de 24 px forme un seul groupe", () => {
+    const points = [0, 1, 2, 3].map((i) => ({ id: `c${i}`, x: 100 + i * 24, y: 100 }));
     const { groupes } = calculerDecalagesDissociation(points, { echelle: 1 });
     expect(groupes).toHaveLength(1);
     expect(groupes[0]).toHaveLength(4);

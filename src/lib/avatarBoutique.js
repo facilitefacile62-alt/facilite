@@ -300,8 +300,10 @@ export function dataUriAvatarBoutique(config, taille = 96) {
  * zoomant) utilise exactement la même formule, jamais une copie qui
  * pourrait diverger.
  */
-export function echelleAvatarPourZoom(zoom, { zoomReference = 14, pas = 0.08, min = 0.7, max = 1.4 } = {}) {
-  return Math.min(max, Math.max(min, 1 + (zoom - zoomReference) * pas));
+export function echelleAvatarPourZoom() {
+  // 21/10/2026 : la taille d'un marqueur de boutique est FIXE en pixels à tous les zooms (comme Google Maps). L'ancienne formule
+  // (de ×0,7 à ×1,4 selon le zoom) faisait varier les ronds ; on garde la fonction (et ses appelants) mais elle renvoie toujours 1.
+  return 1;
 }
 
 /**

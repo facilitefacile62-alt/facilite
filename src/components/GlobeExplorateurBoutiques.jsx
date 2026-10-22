@@ -1524,8 +1524,8 @@ export default function GlobeExplorateurBoutiques({
         <div class="marqueur-decale">
         ${htmlTraitRappel(70, 85)}
         <div class="marqueur-decale-contenu">
-        <div class="snap-marker-pin group flex flex-col items-center select-none cursor-pointer transform transition-all duration-300 hover:scale-115 ${
-          estSelectionne ? "scale-115 z-50" : "z-10"
+        <div class="snap-marker-pin group flex flex-col items-center select-none cursor-pointer ${
+          estSelectionne ? "z-50" : "z-10"
         }">
           <!-- Bulle Tooltip / Badge au-dessus de l'avatar -->
           <!-- pointer-events:none : l'étiquette d'une boutique recouvre souvent l'avatar de sa voisine ; elle captait les clics (retour utilisateur du 12/10/2026 : « je ne parviens pas à cliquer sur une des boutiques à cause du nom de l'autre »). -->
@@ -1540,7 +1540,7 @@ export default function GlobeExplorateurBoutiques({
                avatar-boutique-anime (respiration CSS, sur l'enfant) doivent
                rester deux éléments distincts — sinon l'animation qui tourne
                écrase le transform:scale() posé par le JS. -->
-          <div class="relative w-13 h-13 rounded-full p-[3px] shadow-2xl flex items-center justify-center avatar-boutique-zoom-scale" style="transform:scale(.8);transform-origin:50% 100%;margin-top:-10px;background: ${bordureCouleur}; box-shadow: 0 4px 14px ${bordureCouleur}60;">
+          <div class="relative ${estSelectionne ? "w-9 h-9" : "w-7 h-7"} rounded-full p-[2px] shadow-2xl flex items-center justify-center avatar-boutique-zoom-scale" style="margin-top:-10px;background: ${bordureCouleur}; box-shadow: 0 4px 14px ${bordureCouleur}60;">
             <div class="w-full h-full rounded-full overflow-hidden bg-gray-900 flex items-center justify-center border-2 border-white dark:border-gray-950 shadow-inner avatar-boutique-anime">
               ${contenuAvatar}
             </div>
