@@ -110,10 +110,10 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-nom { font: 900 15px system-ui, sans-serif; color: #111; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   .pb-lieu { font: 700 12px system-ui, sans-serif; color: #2563EB; margin-top: 2px; }
   .pb-x { width: 30px; height: 30px; border-radius: 9999px; background: #EFEDE7; color: #111; display: flex; align-items: center; justify-content: center; font: 700 15px system-ui, sans-serif; cursor: pointer; flex: none; }
-  .pb-liste { touch-action: pan-x; display: flex; gap: 10px; overflow-x: auto; padding: 4px 14px 14px; max-width: 280px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pb-liste { touch-action: pan-x; display: flex; gap: 10px; overflow-x: auto; padding: 2px 12px 10px; max-width: 250px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .pb-liste::-webkit-scrollbar { display: none; }
-  .pb-art { flex: none; width: 118px; cursor: pointer; }
-  .pb-photo { position: relative; width: 118px; height: 118px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
+  .pb-art { flex: none; width: 96px; cursor: pointer; }
+  .pb-photo { position: relative; width: 96px; height: 96px; border-radius: 14px; overflow: hidden; background: #E4DED2; }
   .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-prix { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -255,7 +255,11 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     spread = {};
     piles = {};
     enCluster = {};
-    var D = TAILLE + 1, RAYON_GRAPPE = 0;   // 22/10/2026 : plus aucune grappe ni masquage — chaque boutique reste affichée sur sa position exacte
+    var D = TAILLE + 1;
+    // Des boutiques qui se recouvrent À L'ÉCRAN forment une grappe en couronne (comme sur l'image de référence) : jamais de pin caché
+    // derrière un autre. En vue très éloignée (zoom < 12) rien ne bouge : un pixel y représente trop de mètres.
+    var grappesActives = carte.getZoom() >= 12;
+    var proche = function (u, v) { return grappesActives && Math.hypot(u.x - v.x, u.y - v.y) < D + 6; };
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
       .sort(function (u, v) { return String(u.m.id) < String(v.m.id) ? -1 : 1; });
@@ -266,9 +270,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       if (pris[a.m.id]) return;
       pris[a.m.id] = true;
       var membres = [a];
-      aPlacer.forEach(function (b) { if (!pris[b.m.id] && carte.distance([a.m.lat, a.m.lng], [b.m.lat, b.m.lng]) < RAYON_GRAPPE) { pris[b.m.id] = true; membres.push(b); } });
+      aPlacer.forEach(function (b) { if (!pris[b.m.id] && proche(a.p, b.p)) { pris[b.m.id] = true; membres.push(b); } });
       var avecMoi = false;
-      if (moiMarq && !moiPris && carte.distance([a.m.lat, a.m.lng], [moiMarq.lat, moiMarq.lng]) < RAYON_GRAPPE) { avecMoi = true; moiPris = true; }
+      if (moiMarq && !moiPris && moiPt && proche(a.p, moiPt)) { avecMoi = true; moiPris = true; }
       entites.push({ membres: membres, avecMoi: avecMoi, selection: membres.some(function (x) { return x.m.avatar.selectionne; }) });
     });
     function couronnes(k, centreOccupe) {
@@ -475,7 +479,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
     });
-    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: decalagePopup(), minWidth: 250, maxWidth: 300 })
+    popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: decalagePopup(), minWidth: 220, maxWidth: 260 })
       .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
   };
   var trace = null;
@@ -483,7 +487,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     if (trace) { carte.removeLayer(trace); trace = null; }
     if (!t || !t.points || t.points.length < 2) return;
     trace = L.polyline(t.points, { color: '#38BDF8', weight: 5, opacity: .95, dashArray: t.approximatif ? '9 9' : null, lineCap: 'round', interactive: false }).addTo(carte);
-    carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, 300], paddingBottomRight: [40, 330], maxZoom: 17, animate: false });
+    carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, MARGE_H + 30], paddingBottomRight: [40, MARGE_B + 30], maxZoom: 17, animate: false });
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');

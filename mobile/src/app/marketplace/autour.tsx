@@ -277,6 +277,8 @@ export default function AutourDeMoiScreen() {
         const arrivee = { latitude: b.latitude, longitude: b.longitude };
         setTrajet(ligneDroite(position, arrivee));
         calculerItineraire(position, arrivee).then(setTrajet);
+        // La bulle est fermée : tout le trajet reste visible entre la barre de recherche et le carrousel du bas.
+        setSelection(null);
         return;
       }
       if (id === 'boutique') {
@@ -348,8 +350,8 @@ export default function AutourDeMoiScreen() {
         sombre={sombre && !satellite}
         satellite={satellite}
         regions
-        margeHaut={insets.top + 150}
-        margeBas={150}
+        margeHaut={insets.top + 125}
+        margeBas={265}
         ajuster={!selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={popup}
