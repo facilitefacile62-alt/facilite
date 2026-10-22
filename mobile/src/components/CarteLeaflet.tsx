@@ -421,6 +421,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   carte.getContainer().appendChild(bord);
   function majBords() {
     bord.innerHTML = '';
+    // 22/10/2026 : plus de ronds collés au bord de l'écran pour les boutiques hors vue — ils glissaient le long du bord quand la carte
+    // bougeait, alors que tout marqueur doit rester fixe sur sa position. Le carrousel du bas liste toutes les boutiques.
+    if (true) return;
     if (focusId) return;
     var t = carte.getSize();
     var haut = MARGE_H + 18, bas = t.y - MARGE_B - 18;
