@@ -8,7 +8,15 @@
     "scheme": "facilite",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.ffacilite.mobile",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Facilité utilise l'appareil photo pour prendre une photo de votre document ou de votre article.",
+        "NSPhotoLibraryUsageDescription": "Facilité accède à vos photos pour importer un document, une photo de profil ou une photo d'article.",
+        "NSMicrophoneUsageDescription": "Facilité utilise le micro pour enregistrer vos messages vocaux."
+      }
     },
     "android": {
       "package": "com.ffacilite.mobile",
@@ -42,7 +50,19 @@
           "locationWhenInUsePermission": "Facilité utilise votre position pour afficher les articles du Marketplace près de vous."
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Facilité utilise le micro pour enregistrer vos messages vocaux."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Facilité accède à vos photos pour importer un document, une photo de profil ou une photo d'article.",
+          "cameraPermission": "Facilité utilise l'appareil photo pour prendre une photo de votre document ou de votre article."
+        }
+      ],
       "expo-asset",
       "expo-video"
     ],
