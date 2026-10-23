@@ -228,9 +228,6 @@ export default function MaBoutiqueScreen() {
   const [chargement, setChargement] = useState(true);
   const [aBoutique, setABoutique] = useState<boolean | undefined>(undefined); // undefined = chargement
   const [etapeCreation, setEtapeCreation] = useState<'identite' | 'boutique'>('identite');
-  // Depuis le bouton Profil : on arrive sur « Ma boutique » et c'est la personne qui choisit de devenir actif (le formulaire ne s'ouvre pas tout seul).
-  const [devenirChoisi, setDevenirChoisi] = useState(false);
-  const choixAFaire = Boolean(profil) && !devenirChoisi;
 
   async function recharger() {
     if (!user?.id) return;
@@ -257,10 +254,6 @@ export default function MaBoutiqueScreen() {
   );
 
   function retour() {
-    if (aBoutique === false && devenirChoisi && Boolean(profil) && etapeCreation === 'identite') {
-      setDevenirChoisi(false);
-      return;
-    }
     if (aBoutique === false && etapeCreation === 'boutique') {
       setEtapeCreation('identite');
       return;
@@ -273,8 +266,8 @@ export default function MaBoutiqueScreen() {
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
         <EnteteMarketplace
-          titre={choixAFaire ? 'Ma boutique' : 'Devenir actif'}
-          sousTitre={choixAFaire ? undefined : etapeCreation === 'identite' ? 'Étape 1 sur 2 · Identité' : 'Étape 2 sur 2 · Boutique'}
+          titre="Devenir actif"
+          sousTitre={etapeCreation === 'identite' ? 'Étape 1 sur 2 · Identité' : 'Étape 2 sur 2 · Boutique'}
           onRetour={retour}
         />
 
@@ -285,27 +278,6 @@ export default function MaBoutiqueScreen() {
         ) : !user?.id ? (
           <View className="flex-1 items-center justify-center px-8">
             <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour gérer votre boutique.</Text>
-          </View>
-        ) : choixAFaire ? (
-          <View className="px-4 pt-6 gap-4">
-            <Text className="text-[22px] font-black text-[#111]">Vous n&apos;avez pas encore de boutique</Text>
-            <Text className="text-[14.5px]" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 21 }}>
-              Devenez actif pour publier vos articles, services ou établissement. Ou restez visiteur pour simplement découvrir et acheter.
-            </Text>
-            <Pressable
-              onPress={() => setDevenirChoisi(true)}
-              accessibilityRole="button"
-              className="rounded-[16px] items-center justify-center bg-[#10B981]"
-              style={{ height: 56 }}>
-              <Text className="text-white text-[15px] font-bold">Devenir actif</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.replace('/marketplace')}
-              accessibilityRole="button"
-              className="rounded-[16px] items-center justify-center bg-white"
-              style={{ height: 56, borderWidth: 1.5, borderColor: '#0d3b34' }}>
-              <Text className="text-[15px] font-bold" style={{ color: '#0d3b34' }}>Rester visiteur</Text>
-            </Pressable>
           </View>
         ) : (
           <FormulaireCreationBoutique userId={user.id} onCree={recharger} etape={etapeCreation} setEtape={setEtapeCreation} onVisiteur={() => router.replace('/marketplace')} />
