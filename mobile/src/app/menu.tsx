@@ -248,7 +248,7 @@ export default function MenuScreen() {
 
       {/* « Paramètres de langue » et l'UNIQUE « Déconnexion » : FIXES, juste au-dessus de la barre de navigation */}
       <View className="flex-row px-4 pt-2 pb-2" style={{ gap: 12, backgroundColor: '#F2F0EA' }}>
-        <Pressable onPress={() => router.push('/mon-profil/parametres')} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
+        <Pressable onPress={() => router.push((chemin.startsWith('/marketplace') ? '/marketplace/langue' : '/mon-profil/langue') as Href)} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
           <Text className="text-[14px] font-black text-[#1A1A1A]">{t('⚙ Paramètres de langue')}</Text>
         </Pressable>
         <Pressable onPress={confirmerDeconnexion} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
