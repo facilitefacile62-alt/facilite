@@ -1,9 +1,11 @@
 import { useFonctionnalite } from '@/lib/featureFlags';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AvatarProfil from '@/components/AvatarProfil';
 import { LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
@@ -43,8 +45,10 @@ export default function ProfilMarketplaceScreen() {
 
   const nom = (profile?.full_name as string | undefined) || user?.email || 'Mon compte';
   const telephone = (profile?.phone as string | undefined) || '';
-  const initiale = nom.trim().charAt(0).toUpperCase() || '?';
   const estVendeur = Boolean(boutique);
+
+  // Vendeur : le bouton Profil ouvre directement « Ma boutique » (cette page-menu ne sert qu'aux visiteurs).
+  if (!chargement && userId && estVendeur) return <Redirect href="/marketplace/vendre/ma-boutique?profil=1" />;
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
@@ -63,11 +67,10 @@ export default function ProfilMarketplaceScreen() {
         ) : (
           <ScrollView contentContainerClassName="px-3 pt-3 pb-6 gap-3" showsVerticalScrollIndicator={false}>
             <Pressable
-              onPress={() => !estVendeur && router.push('/marketplace/mon-profil' as Href)}
+              onPress={() => router.push('/marketplace/mon-profil' as Href)}
               className="bg-white rounded-2xl p-4 flex-row items-center gap-3">
-              <View className="w-16 h-16 rounded-full bg-[#E4DED2] items-center justify-center">
-                <Text className="text-[22px] font-black text-[#1A1A1A]">{initiale}</Text>
-              </View>
+              {/* Profil de Locaux séparé de celui de Facilité : initiale du nom (le logo se règle sur la boutique, « Modifier infos »). */}
+              <AvatarProfil valeur={null} nom={nom} taille={64} />
               <View className="flex-1">
                 <View className="flex-row items-center gap-2 flex-wrap">
                   <Text className="text-[17px] font-black text-[#1A1A1A]" numberOfLines={1}>
@@ -99,7 +102,6 @@ export default function ProfilMarketplaceScreen() {
               />
               {estVendeur ? (
                 <>
-                  <LigneMenu emoji="📊" titre="Tableau de bord" onPress={() => router.push('/marketplace/vendre/tableau-de-bord')} />
                   {commandesOuvertes ? (
                     <LigneMenu
                       emoji="📦"

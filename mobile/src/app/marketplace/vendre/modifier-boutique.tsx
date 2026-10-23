@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -7,7 +8,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
-import { chargerMesBoutiques, modifierBoutique, type MaBoutique } from '@/lib/vendeur';
+import { urlPhoto } from '@/lib/marketplace';
+import {
+  chargerMesBoutiques,
+  choisirEtEnvoyerPhotoBoutique,
+  definirCouvertureBoutique,
+  definirLogoBoutique,
+  modifierBoutique,
+  type MaBoutique,
+} from '@/lib/vendeur';
 
 // « Boutique — Modifier le profil » — maquette 32 : logo, Prénom/Nom avec
 // compteur, WhatsApp, ville avec GPS verrouillé, relevé de position, date
@@ -49,6 +58,30 @@ export default function ModifierBoutiqueScreen() {
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
   const [chargement, setChargement] = useState(true);
   const [enregistrement, setEnregistrement] = useState(false);
+  const [envoiLogo, setEnvoiLogo] = useState(false);
+  const [envoiCouverture, setEnvoiCouverture] = useState(false);
+
+  // Logo (rond) et photo de couverture (bannière) : enregistrés tout de suite, visibles par les visiteurs de la boutique.
+  async function changerImage(type: 'logo' | 'couverture') {
+    if (!boutique || !userId || envoiLogo || envoiCouverture) return;
+    const setEnvoi = type === 'logo' ? setEnvoiLogo : setEnvoiCouverture;
+    setEnvoi(true);
+    try {
+      const chemin = await choisirEtEnvoyerPhotoBoutique(userId, type === 'logo' ? [1, 1] : [16, 7]);
+      if (!chemin) return;
+      if (type === 'logo') {
+        await definirLogoBoutique(boutique.id, chemin);
+        setBoutique({ ...boutique, logo_photo: chemin });
+      } else {
+        await definirCouvertureBoutique(boutique.id, chemin);
+        setBoutique({ ...boutique, cover_photo: chemin });
+      }
+    } catch (e) {
+      Alert.alert(type === 'logo' ? 'Logo impossible' : 'Couverture impossible', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    } finally {
+      setEnvoi(false);
+    }
+  }
 
   const charger = useCallback(() => {
     if (!userId) return;
@@ -140,19 +173,46 @@ export default function ModifierBoutiqueScreen() {
           </View>
         ) : (
           <ScrollView contentContainerClassName="px-4 py-5 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <View className="items-center mb-1">
+            {boutique ? (
               <Pressable
-                onPress={() =>
-                  Alert.alert('Logo de la boutique', "La personnalisation du logo arrive dans une prochaine mise à jour.")
-                }
-                className="w-[110px] h-[110px] rounded-full items-center justify-center"
-                style={{ borderWidth: 2, borderColor: '#A7E8D2', borderStyle: 'dashed', backgroundColor: '#E8E4DA' }}>
-                <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />
-                <Text className="text-[11px] text-black/40 mt-1">Logo</Text>
-                <View className="absolute bottom-1 right-1 w-7 h-7 rounded-full bg-white items-center justify-center">
-                  <Ionicons name="pencil" size={12} color="#1A1A1A" />
+                onPress={() => changerImage('couverture')}
+                disabled={envoiCouverture}
+                accessibilityLabel="Changer la photo de couverture de la boutique"
+                className="w-full rounded-[18px] items-center justify-center overflow-hidden"
+                style={{ height: 130, borderWidth: 2, borderColor: '#A7E8D2', borderStyle: 'dashed', backgroundColor: '#E8E4DA' }}>
+                {boutique.cover_photo ? (
+                  <Image source={{ uri: (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : undefined) ?? undefined }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />
+                    <Text className="text-[11px] text-black/40 mt-1">Photo de couverture</Text>
+                  </>
+                )}
+                <View className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white items-center justify-center">
+                  {envoiCouverture ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="pencil" size={13} color="#1A1A1A" />}
                 </View>
               </Pressable>
+            ) : null}
+
+            <View className="items-center mb-1">
+              <Pressable
+                onPress={() => changerImage('logo')}
+                disabled={envoiLogo || !boutique}
+                accessibilityLabel="Changer le logo de la boutique"
+                className="w-[110px] h-[110px] rounded-full items-center justify-center overflow-hidden"
+                style={{ borderWidth: 2, borderColor: '#A7E8D2', borderStyle: 'dashed', backgroundColor: '#E8E4DA' }}>
+                {boutique?.logo_photo ? (
+                  <Image source={{ uri: urlPhoto(boutique.logo_photo) ?? undefined }} alt="Logo de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />
+                    <Text className="text-[11px] text-black/40 mt-1">Logo</Text>
+                  </>
+                )}
+              </Pressable>
+              <View className="absolute w-7 h-7 rounded-full bg-white items-center justify-center" style={{ bottom: 4, right: '50%', marginRight: -50 }}>
+                {envoiLogo ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="pencil" size={12} color="#1A1A1A" />}
+              </View>
             </View>
 
             <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} />

@@ -26,13 +26,16 @@ export default function BandeauOnboarding({
   return (
     <View className="flex-1" style={{ backgroundColor: '#FAF6F1' }}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
-        <Image
-          alt=""
-          source={image}
-          contentFit="cover"
-          contentPosition={{ top: `${centrage}%`, left: '50%' }}
-          style={{ width: '100%', height: 250 }}
-        />
+        {/* L'illustration commence SOUS la barre d'état du téléphone (heure, Wi-Fi, batterie) : elle n'en fait pas partie. */}
+        <View style={{ paddingTop: insets.top, backgroundColor: '#FAF6F1' }}>
+          <Image
+            alt=""
+            source={image}
+            contentFit="cover"
+            contentPosition={{ top: `${centrage}%`, left: '50%' }}
+            style={{ width: '100%', height: 250 }}
+          />
+        </View>
         <View
           style={{
             flexGrow: 1,

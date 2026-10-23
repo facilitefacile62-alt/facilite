@@ -17,6 +17,7 @@ import {
   verifierCodeConfirmation,
   type ErreurConfirmation,
 } from '@/lib/confirmationCompte';
+import { marquerEtapeEmailVue } from '@/lib/preferencesConnexion';
 
 // « Confirmer mon compte » : étape imposée avant de postuler pour les personnes inscrites avec leur seul
 // numéro de téléphone (sans e-mail). Trois étapes — choix (Google ou e-mail), code reçu à 6 chiffres,
@@ -38,8 +39,10 @@ function initiales(nom: string): string {
 
 export default function ConfirmerCompteScreen() {
   const router = useRouter();
-  const { refreshProfile } = useAuth();
-  const { titre, entreprise, retour } = useLocalSearchParams<{ titre?: string; entreprise?: string; retour?: string }>();
+  const { refreshProfile, user } = useAuth();
+  const { titre, entreprise, retour, onboarding } = useLocalSearchParams<{ titre?: string; entreprise?: string; retour?: string; onboarding?: string }>();
+  // Même page que pour « postuler sur Facilité » ; depuis l'inscription (onboarding=1) on peut en plus la passer.
+  const dansInscription = onboarding === '1';
 
   const [etape, setEtape] = useState<Etape>('choix');
   const [email, setEmail] = useState('');
@@ -66,11 +69,21 @@ export default function ConfirmerCompteScreen() {
     }
   }, [erreurCode, restant]);
 
+  // Quitter l'étape d'inscription (passer ou terminer) : elle est notée et ne sera plus reproposée.
+  const sortir = async () => {
+    if (dansInscription && user?.id) await marquerEtapeEmailVue(user.id);
+    router.replace((retour as Href) || '/');
+  };
+
   const revenir = () => {
     if (etape === 'code') {
       setEtape('choix');
       setCode('');
       setErreurCode(null);
+      return;
+    }
+    if (dansInscription) {
+      sortir();
       return;
     }
     if (router.canGoBack()) router.back();
@@ -163,7 +176,7 @@ export default function ConfirmerCompteScreen() {
     }
   };
 
-  const terminer = () => router.replace((retour as Href) || '/');
+  const terminer = () => sortir();
 
   const saisieBloquee = erreurCode === 'essais';
   const casesRouges = erreurCode === 'incorrect' || erreurCode === 'expire';
@@ -301,6 +314,12 @@ export default function ConfirmerCompteScreen() {
                       <Text className="text-[16px] font-black" style={{ color: '#047857' }}>Continuer</Text>
                     )}
                   </Pressable>
+
+                  {dansInscription ? (
+                    <Pressable onPress={sortir} hitSlop={8} className="mt-5 self-center">
+                      <Text className="text-[15px] font-black" style={{ color: '#2563EB' }}>Passer cette étape</Text>
+                    </Pressable>
+                  ) : null}
 
                   <View className="flex-row items-center gap-2 mt-auto pt-8">
                     <Ionicons name="lock-closed" size={14} color="#D97706" />

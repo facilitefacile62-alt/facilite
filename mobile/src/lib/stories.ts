@@ -21,12 +21,19 @@ export type Story = {
 export async function chargerStories(): Promise<Story[]> {
   const { data, error } = await supabase
     .from('stories')
-    .select('id, titre, image_url, libelle_bouton, lien, bouton_visible, type, message_whatsapp, created_at')
+    .select('id, titre, image_url, libelle_bouton, lien, bouton_visible, type, message_whatsapp, created_at, date_debut, date_fin')
     .eq('actif', true)
     .order('ordre', { ascending: true })
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return data.map((s) => ({
+  // Seulement les stories ACTIVES et DANS LEUR PÉRIODE (date_debut / date_fin facultatives).
+  const maintenant = Date.now();
+  const dansLaPeriode = data.filter((s) => {
+    const debut = s.date_debut ? new Date(s.date_debut as string).getTime() : null;
+    const fin = s.date_fin ? new Date(s.date_fin as string).getTime() : null;
+    return (debut === null || debut <= maintenant) && (fin === null || fin >= maintenant);
+  });
+  return dansLaPeriode.map((s) => ({
     id: s.id as string,
     titre: s.titre as string,
     imageUrl: s.image_url as string,

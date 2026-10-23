@@ -1,14 +1,14 @@
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { usePathname, useRouter, type Href } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, Dimensions, Linking, PanResponder, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { contientSansAccent } from '@/lib/texte';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
-import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
+import { definirUserMode } from '@/lib/userMode';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 import { useT } from '@/lib/i18n';
 
@@ -42,7 +42,7 @@ const NB_ENTREPRISES = SPONTANEOUS_COMPANIES.length;
 
 const TUILES_FACILITE: Tuile[] = [
   { id: 'diagnostic', emoji: '🔍', teinte: '#DCE8FD', titre: 'Diagnostic CV', sous: 'Score ATS & mots-clés', tag: { texte: 'GRATUIT', fond: '#D1FAE5', couleur: '#047857' }, route: '/web/importer-cv', interrupteur: 'feat_diagnostic_cv' },
-  { id: 'fonctionnalites', emoji: '🛠️', teinte: '#EDE7FB', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E7E5E4', couleur: '#44403C' }, route: '/fonctionnalites', interrupteur: 'nav_plus_fonctionnalites' },
+  { id: 'fonctionnalites', emoji: '🛠️', teinte: '#EDE7FB', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E7E5E4', couleur: '#44403C' }, route: '/profil?onglet=fonctionnalites&retour=menu', interrupteur: 'nav_plus_fonctionnalites' },
   { id: 'candidature', emoji: '🏢', teinte: '#DCE8FD', titre: 'Candidature Spontanée', sous: 'Grandes entreprises', tag: { texte: `${NB_ENTREPRISES} ENTR.`, fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/candidature-spontanee', interrupteur: 'nav_plus_recrutement_spontane' },
   { id: 'depots', emoji: '📍', teinte: '#EDE7FB', titre: 'Dépôts Physiques', sous: 'Stations & Adresses', route: '/web/recrutement-journalier', interrupteur: 'nav_plus_depots' },
   { id: 'concours', emoji: '🏅', teinte: '#FDEEDC', titre: 'Concours', sous: 'Avis & Examens', tag: { texte: 'PUBLIC', fond: '#FDEEDC', couleur: '#9A3412' }, route: '/web/concours', interrupteur: 'nav_plus_concours' },
@@ -66,17 +66,23 @@ export default function MenuScreen() {
   const ouvert = useFonctionnalites();
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
-  // Mode affiché (Facilité | Locaux) : change les tuiles sans quitter la page ; le choix est mémorisé.
-  const [mode, setMode] = useState<'facilite' | 'locaux'>('facilite');
+  // Mode affiché (Facilité | Locaux) : on part de la plateforme où l'on se trouve (☰ ouvert depuis Locaux → Locaux, depuis Facilité →
+  // Facilité) ; la touche de bascule change ensuite les tuiles sans quitter la page.
+  const chemin = usePathname();
+  const [mode, setMode] = useState<'facilite' | 'locaux'>(chemin.startsWith('/marketplace') ? 'locaux' : 'facilite');
+
+  // Deux pages côte à côte (Facilité | Locaux), comme les onglets d'un fil : le contenu SUIT le doigt (on voit les deux pages pendant
+  // le glissé), la barre sous les onglets se déplace avec lui, et au relâchement la page se cale en douceur (ou revient si le
+  // glissé est trop court). Toucher un onglet fait le même déplacement animé.
+  const largeur = Dimensions.get('window').width;
+  const pageDepart = chemin.startsWith('/marketplace') ? 1 : 0;
+  const [position] = useState(() => new Animated.Value(pageDepart));
+  const pageCourante = useRef(pageDepart);
+  const [largeurOnglets, setLargeurOnglets] = useState(0);
   // « Vos espaces » : déplié à l'ouverture, replié quand on fait défiler vers le bas.
   const [espacesDeplies, setEspacesDeplies] = useState(true);
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
-
   const userId = user?.id;
-
-  useEffect(() => {
-    obtenirUserMode().then((m) => setMode(m === 'business' ? 'locaux' : 'facilite'));
-  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -91,14 +97,32 @@ export default function MenuScreen() {
     };
   }, [userId]);
 
+  function aller(index: 0 | 1) {
+    pageCourante.current = index;
+    setMode(index === 1 ? 'locaux' : 'facilite');
+    Animated.spring(position, { toValue: index, useNativeDriver: true, bounciness: 0, speed: 16 }).start();
+  }
+
+  const pager = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+        onPanResponderMove: (_e, g) => position.setValue(Math.max(-0.12, Math.min(1.12, pageCourante.current - g.dx / largeur))),
+        onPanResponderRelease: (_e, g) => {
+          let cible: 0 | 1 = pageCourante.current as 0 | 1;
+          if (g.dx <= -largeur * 0.2 || g.vx <= -0.4) cible = 1;
+          else if (g.dx >= largeur * 0.2 || g.vx >= 0.4) cible = 0;
+          aller(cible);
+        },
+        onPanResponderTerminate: () => aller(pageCourante.current as 0 | 1),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [position, largeur]
+  );
+
   function retour() {
     if (router.canGoBack()) router.back();
     else router.replace('/');
-  }
-
-  // Touche de bascule du haut : ne change que les raccourcis affichés, sans quitter la page.
-  function choisirMode(m: 'facilite' | 'locaux') {
-    setMode(m);
   }
 
   // Lignes de « Vos espaces » : y aller change d'univers (accueil Facilité ou fil Locaux).
@@ -127,7 +151,8 @@ export default function MenuScreen() {
   const q = terme.trim();
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
-  const tuiles = filtre(mode === 'facilite' ? TUILES_FACILITE : TUILES_LOCAUX);
+  const tuilesFacilite = filtre(TUILES_FACILITE);
+  const tuilesLocaux = filtre(TUILES_LOCAUX);
 
   // Espace vendeur (mode Locaux, compte avec boutique) : gestion de la boutique, tuiles de la même taille.
   const commandesOuvertes = ouvert('feat_marketplace_commandes');
@@ -243,26 +268,39 @@ export default function MenuScreen() {
           </View>
         )}
 
-        {/* Sélecteur FIXE Facilité | Locaux : il ne défile pas */}
+        {/* Sélecteur FIXE Facilité | Locaux (pastille d'origine) : le surlignage suit le glissé des pages */}
         <View className="flex-row items-center justify-between bg-white mx-4" style={{ borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 6 }}>
           <Pressable onPress={() => setEspacesDeplies((v) => !v)} accessibilityRole="button" className="flex-row items-center gap-1.5" hitSlop={8}>
             <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('VOS ESPACES')}</Text>
             <Ionicons name={espacesDeplies ? 'chevron-up' : 'chevron-down'} size={13} color="rgba(0,0,0,0.45)" />
           </Pressable>
-          <View className="flex-row" style={{ backgroundColor: '#EFEDE7', borderRadius: 20, padding: 3 }}>
+          <View className="flex-row" style={{ backgroundColor: '#EFEDE7', borderRadius: 20, padding: 3 }} onLayout={(e) => setLargeurOnglets(e.nativeEvent.layout.width - 6)}>
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: 3,
+                left: 3,
+                height: 34,
+                width: largeurOnglets / 2,
+                borderRadius: 17,
+                backgroundColor: mode === 'locaux' ? BLEU : VERT,
+                transform: [{ translateX: position.interpolate({ inputRange: [0, 1], outputRange: [0, largeurOnglets / 2] }) }],
+              }}
+            />
             {([
-              { id: 'facilite' as const, libelle: 'Facilité', couleur: VERT },
-              { id: 'locaux' as const, libelle: 'Locaux', couleur: BLEU },
+              { id: 0 as const, libelle: 'Facilité' },
+              { id: 1 as const, libelle: 'Locaux' },
             ]).map((o) => {
-              const actif = mode === o.id;
+              const actif = (mode === 'locaux' ? 1 : 0) === o.id;
               return (
                 <Pressable
                   key={o.id}
-                  onPress={() => choisirMode(o.id)}
+                  onPress={() => aller(o.id)}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: actif }}
                   className="items-center justify-center"
-                  style={{ paddingHorizontal: 16, height: 34, borderRadius: 17, backgroundColor: actif ? o.couleur : 'transparent' }}>
+                  style={{ paddingHorizontal: 16, height: 34, borderRadius: 17 }}>
                   <Text className="text-[13px] font-black" style={{ color: actif ? '#fff' : 'rgba(0,0,0,0.6)' }}>{t(o.libelle)}</Text>
                 </Pressable>
               );
@@ -271,58 +309,58 @@ export default function MenuScreen() {
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={32}
-        onScroll={(e) => {
-          // Replié seulement quand on fait défiler vers le bas ; on le rouvre à la main avec la flèche.
-          if (e.nativeEvent.contentOffset.y > 60) setEspacesDeplies(false);
-        }}>
-        {/* Vos espaces : comptes, Profil, Boutique */}
-        {espacesDeplies ? (
-          <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
-            {mode === 'facilite' ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
-            <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
-            <View className="flex-row items-center justify-between px-2.5 py-1.5">
-              <Pressable onPress={() => router.navigate('/profil')} className="flex-row items-center gap-2">
-                <Ionicons name="id-card-outline" size={18} color={VERT} />
-                <Text className="text-[15px] font-black" style={{ color: VERT }}>{t('Profil')}</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/marketplace/vendre' as Href)} className="flex-row items-center gap-2">
-                <Ionicons name="storefront" size={18} color={BLEU} />
-                <Text className="text-[15px] font-black" style={{ color: BLEU }}>{t('Boutique')}</Text>
-              </Pressable>
+      <View className="flex-1" style={{ overflow: 'hidden' }} {...pager.panHandlers}>
+        <Animated.View
+          style={{ flex: 1, width: largeur * 2, flexDirection: 'row', transform: [{ translateX: position.interpolate({ inputRange: [0, 1], outputRange: [0, -largeur] }) }] }}>
+          {[tuilesFacilite, tuilesLocaux].map((liste, page) => (
+            <View key={page} style={{ width: largeur }}>
+              <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+                {espacesDeplies ? (
+                  <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
+                    {page === 0 ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
+                    <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
+                    <View className="flex-row items-center justify-between px-2.5 py-1.5">
+                      <Pressable onPress={() => router.navigate('/profil')} className="flex-row items-center gap-2">
+                        <Ionicons name="id-card-outline" size={18} color={VERT} />
+                        <Text className="text-[15px] font-black" style={{ color: VERT }}>{t('Profil')}</Text>
+                      </Pressable>
+                      <Pressable onPress={() => router.push('/marketplace/vendre' as Href)} className="flex-row items-center gap-2">
+                        <Ionicons name="storefront" size={18} color={BLEU} />
+                        <Text className="text-[15px] font-black" style={{ color: BLEU }}>{t('Boutique')}</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
+
+                {page === 1 && tuilesVendeur.length > 0 ? (
+                  <>
+                    <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('ESPACE VENDEUR')}</Text>
+                    {grille(tuilesVendeur)}
+                  </>
+                ) : null}
+
+                <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
+                {liste.length === 0 ? (
+                  <Text className="text-center text-[13px] mt-6" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucun résultat.</Text>
+                ) : (
+                  grille(liste)
+                )}
+              </ScrollView>
             </View>
-          </View>
-        ) : null}
+          ))}
+        </Animated.View>
+      </View>
 
-        {tuilesVendeur.length > 0 ? (
-          <>
-            <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('ESPACE VENDEUR')}</Text>
-            {grille(tuilesVendeur)}
-          </>
-        ) : null}
-
-        <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
-        {tuiles.length === 0 ? (
-          <Text className="text-center text-[13px] mt-6" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucun résultat.</Text>
-        ) : (
-          grille(tuiles)
-        )}
-
-        {/* « Paramètres de langue » et l'UNIQUE « Déconnexion », côte à côte */}
-        <View className="flex-row mt-5" style={{ gap: 12 }}>
-          <Pressable onPress={() => router.push('/mon-profil/parametres')} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
-            <Text className="text-[14px] font-black text-[#1A1A1A]">{t('⚙ Paramètres de langue')}</Text>
-          </Pressable>
-          <Pressable onPress={confirmerDeconnexion} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
-            <Ionicons name="log-out-outline" size={17} color="#DC2626" />
-            <Text className="text-[14px] font-black" style={{ color: '#DC2626' }}>{t('Déconnexion')}</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
+      {/* « Paramètres de langue » et l'UNIQUE « Déconnexion » : FIXES, juste au-dessus de la barre de navigation */}
+      <View className="flex-row px-4 pt-2 pb-2" style={{ gap: 12, backgroundColor: '#F2F0EA' }}>
+        <Pressable onPress={() => router.push((chemin.startsWith('/marketplace') ? '/marketplace/langue' : '/mon-profil/langue') as Href)} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
+          <Text className="text-[14px] font-black text-[#1A1A1A]">{t('⚙ Paramètres de langue')}</Text>
+        </Pressable>
+        <Pressable onPress={confirmerDeconnexion} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
+          <Ionicons name="log-out-outline" size={17} color="#DC2626" />
+          <Text className="text-[14px] font-black" style={{ color: '#DC2626' }}>{t('Déconnexion')}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

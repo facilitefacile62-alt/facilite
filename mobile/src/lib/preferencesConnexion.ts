@@ -104,6 +104,65 @@ export async function marquerNomConfirme(userId: string): Promise<void> {
   await AsyncStorage.setItem(cleNom(userId), '1').catch(() => {});
 }
 
+// ---- Étape « Crée un mot de passe » : proposée une fois par compte, reprise là où la personne l'a quittée ----
+const cleMotDePasse = (userId: string) => `FACILITE_MDP_ETAPE_VUE_${userId}`;
+
+export async function etapeMotDePasseVue(userId: string): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(cleMotDePasse(userId))) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function marquerEtapeMotDePasseVue(userId: string): Promise<void> {
+  await AsyncStorage.setItem(cleMotDePasse(userId), '1').catch(() => {});
+}
+
+// ---- Étape « Lie ton adresse e-mail » : même principe, juste après le mot de passe ----
+const cleEmail = (userId: string) => `FACILITE_EMAIL_ETAPE_VUE_${userId}`;
+
+export async function etapeEmailVue(userId: string): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(cleEmail(userId))) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function marquerEtapeEmailVue(userId: string): Promise<void> {
+  await AsyncStorage.setItem(cleEmail(userId), '1').catch(() => {});
+}
+
+// ---- Inscription non terminée : l'écran où la personne s'est arrêtée est retenu et rouvert à sa prochaine connexion ----
+const cleEtapeInscription = (userId: string) => `FACILITE_ETAPE_INSCRIPTION_${userId}`;
+
+/** Écrans de l'inscription qu'on sait rouvrir tels quels (chemin sans paramètre, sauf « Confirmer mon compte »). */
+export const ETAPES_INSCRIPTION = [
+  '/nom-prenom',
+  '/onboarding/mot-de-passe',
+  '/onboarding/email',
+  '/confirmer-compte',
+  '/onboarding/bienvenue',
+  '/onboarding/role',
+  '/onboarding/profil-express',
+  '/onboarding/infos-vendeur',
+  '/onboarding/document',
+];
+
+export async function memoriserEtapeInscription(userId: string, href: string): Promise<void> {
+  await AsyncStorage.setItem(cleEtapeInscription(userId), href).catch(() => {});
+}
+
+export async function etapeInscriptionMemorisee(userId: string): Promise<string | null> {
+  try {
+    const href = await AsyncStorage.getItem(cleEtapeInscription(userId));
+    return href && ETAPES_INSCRIPTION.includes(href.split('?')[0]) ? href : null;
+  } catch {
+    return null;
+  }
+}
+
 function majuscule(mot: string): string {
   return mot ? mot.charAt(0).toUpperCase() + mot.slice(1).toLowerCase() : '';
 }

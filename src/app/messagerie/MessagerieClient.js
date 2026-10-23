@@ -11,6 +11,7 @@ import { classerConversationDirecte, repartirConversationsDirectes } from "@/lib
 import { construireBrouillonArticle } from "@/lib/discussionArticle";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
+import CarteArticleMessage, { articleDuMessage } from "@/components/CarteArticleMessage";
 import MarkdownLeger from "@/lib/markdownLeger";
 import CarteItineraire from "@/components/CarteItineraire";
 
@@ -204,6 +205,11 @@ const AI_PINNED_CHAT = {
 // Initialisation avec la discussion Support RH épinglée permanente
 const initialConversations = [AI_PINNED_CHAT];
 
+// Dernière liste de discussions lue, gardée en mémoire pendant la navigation dans le site : en revenant sur « Messagerie »,
+// elle s'affiche tout de suite et se met à jour en arrière-plan, au lieu de repartir d'un écran de chargement à chaque clic.
+// Jamais partagée entre comptes : elle porte l'identifiant de l'utilisateur et est vidée à la déconnexion.
+let cacheMessagerie = null; // { userId, conversations }
+
 function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -355,7 +361,10 @@ export default function MessagerieClient() {
   const [recruitmentCV, setRecruitmentCV] = useState(null);
 
   // Messaging States
-  const [conversations, setConversations] = useState(initialConversations);
+  const [conversations, setConversations] = useState(() => cacheMessagerie?.conversations ?? initialConversations);
+  // Faux tant que la liste réelle n'est pas lue : on affiche alors un chargement, pas « Aucun échange » ni « Discussions 0 ».
+  // Vrai d'emblée quand la liste est déjà en mémoire (retour sur la page) : elle est rafraîchie en arrière-plan.
+  const [conversationsChargees, setConversationsChargees] = useState(() => Boolean(cacheMessagerie));
   const [activeConvId, setActiveConvId] = useState(null);
   // Copie lisible depuis la souscription Realtime (créée une seule fois au montage, donc avec une closure périmée).
   const activeConvIdRef = useRef(null);
@@ -891,10 +900,17 @@ export default function MessagerieClient() {
     async function loadUserSessionAndMessages() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        cacheMessagerie = null;
         window.location.replace("/login");
         return;
       }
       if (!isActive) return;
+      if (cacheMessagerie && cacheMessagerie.userId !== session.user.id) {
+        // Liste en mémoire d'un autre compte : jamais affichée.
+        cacheMessagerie = null;
+        setConversations(initialConversations);
+        setConversationsChargees(false);
+      }
       setUserSession(session);
       loadAiMessagesFromSupabase(session.user.id);
 
@@ -1101,6 +1117,7 @@ export default function MessagerieClient() {
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
         if (!currentSession) {
+          cacheMessagerie = null;
           window.location.replace("/login");
         } else {
           setUserSession(currentSession);
@@ -1110,19 +1127,37 @@ export default function MessagerieClient() {
 
       // Charger uniquement les messages appartenant à cet utilisateur authentifié
       // (envoyés ou reçus — la RLS garantit déjà l'isolation côté base).
+      // Compte administrateur : les candidatures reçues pour les offres (type OFFRE) ne sont PAS affichées dans sa messagerie — elles
+      // restent en base et dans la boîte du recruteur concerné. L'admin ne gère ici que ses échanges, le support et les RH.
+      let estAdminCompte = false;
       try {
-        const { messages: formattedMsgs, error: messagesError } = await fetchConversationMessages(session.user.id);
+        // Les quatre lectures indépendantes partent EN MÊME TEMPS (avant : l'une après l'autre, autant d'allers-retours réseau à attendre).
+        const [resultatMessages, resultatCandidatures, resultatAdmin, resultatConversations, resultatRole] = await Promise.all([
+          fetchConversationMessages(session.user.id),
+          supabase
+            .from("candidatures")
+            .select("*, job_offers:job_offer_id(id, contact_email, company, title)")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: true }), // Du plus ancien au plus récent
+          supabase.rpc("resolve_admin_id"),
+          supabase
+            .from("conversations")
+            .select("id, user_1_id, user_2_id")
+            .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`),
+          supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle(),
+        ]);
+        estAdminCompte = resultatRole?.data?.role === "admin";
+        const { messages: messagesBruts, error: messagesError } = resultatMessages;
+        const formattedMsgs = estAdminCompte
+          ? messagesBruts.filter((m) => !(m.typeDiscussion === "OFFRE" && m.sender === "them"))
+          : messagesBruts;
 
         if (messagesError) {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
         }
 
         // Chargement des candidatures de l'utilisateur avec les données de l'offre
-        const { data: userCandidatures } = await supabase
-          .from("candidatures")
-          .select("*, job_offers:job_offer_id(id, contact_email, company, title)")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: true }); // Du plus ancien au plus récent
+        const { data: userCandidatures } = resultatCandidatures;
 
         // Regrouper les candidatures par offre ou par entreprise pour éviter tout doublon de carte
         const groupedCandidatures = new Map();
@@ -1204,11 +1239,8 @@ export default function MessagerieClient() {
         // ni OFFRE ni SUPPORT) retombaient tous dans le fil fusionné
         // "Support RH Facilité" ci-dessous, mélangés au vrai support
         // technique. Signalé par l'utilisateur (captures d'écran).
-        const { data: adminIdForExclusion } = await supabase.rpc("resolve_admin_id");
-        const { data: mesConversations } = await supabase
-          .from("conversations")
-          .select("id, user_1_id, user_2_id")
-          .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`);
+        const { data: adminIdForExclusion } = resultatAdmin;
+        const { data: mesConversations } = resultatConversations;
 
         // Conversation avec l'admin = fil Support, SAUF ses échanges tagués
         // MARKETPLACE (l'admin peut être client ou vendeur d'une boutique) : sans
@@ -1232,20 +1264,20 @@ export default function MessagerieClient() {
         let directCards = [];
         const idsAvecConversationDirecte = new Set();
         if (autresPartiesIds.length > 0) {
-          const [{ data: boutiques }, { data: recruteurs }, { data: profilsGeneraux }] = await Promise.all([
+          // Aussi en parallèle : le module d'avatar et les noms d'interlocuteurs (avant : deux attentes de plus, à la suite).
+          const [{ data: boutiques }, { data: recruteurs }, { data: profilsGeneraux }, modAvatar, { data: nomsInterlocuteurs }] = await Promise.all([
             supabase.from("marketplace_stores").select("owner_id, nom, avatar_config").in("owner_id", autresPartiesIds),
             supabase.from("recruiter_profiles").select("user_id, company_name, sector, logo_url").in("user_id", autresPartiesIds),
             supabase.from("profiles").select("id, full_name, avatar_url").in("id", autresPartiesIds),
+            import("@/lib/avatarBoutique").catch(() => ({ dataUriAvatarBoutique: null })),
+            // profiles est privée : le nom d'un acheteur n'y est pas lisible par le vendeur (il voyait « Utilisateur »).
+            // noms_interlocuteurs_marketplace ne renvoie que son prénom + initiale, et seulement pour les participants.
+            supabase.rpc("noms_interlocuteurs_marketplace", { p_conversation_ids: conversationsDirectes.map((c) => c.id) }),
           ]);
           const boutiqueParId = new Map((boutiques || []).map((b) => [b.owner_id, b]));
           const recruteurParId = new Map((recruteurs || []).map((r) => [r.user_id, r]));
           const profilParId = new Map((profilsGeneraux || []).map((p) => [p.id, p]));
-          const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique").catch(() => ({ dataUriAvatarBoutique: null }));
-          // profiles est privée : le nom d'un acheteur n'y est pas lisible par le vendeur (il voyait « Utilisateur »).
-          // noms_interlocuteurs_marketplace ne renvoie que son prénom + initiale, et seulement pour les participants.
-          const { data: nomsInterlocuteurs } = await supabase.rpc("noms_interlocuteurs_marketplace", {
-            p_conversation_ids: conversationsDirectes.map((c) => c.id),
-          });
+          const { dataUriAvatarBoutique } = modAvatar;
           const nomInterlocuteurParConv = new Map((nomsInterlocuteurs || []).map((n) => [n.conversation_id, n.nom]));
 
           directCards = conversationsDirectes.map((conv) => {
@@ -1319,6 +1351,8 @@ export default function MessagerieClient() {
               autrePartieId,
             };
           });
+          // Admin : une conversation qui ne contenait que des candidatures reçues n'a plus de message à montrer — pas de carte vide.
+          if (estAdminCompte) directCards = directCards.filter((c) => c.messages.length > 0);
         }
 
         // Les messages Support généraux : exclut les candidatures (OFFRE) ET
@@ -1407,6 +1441,7 @@ export default function MessagerieClient() {
         }
       }
 
+      if (isActive) setConversationsChargees(true);
       if (!isActive) return;
 
       // Écouter les nouveaux messages insérés en temps réel (ex: e-mails de recrutement synchronisés)
@@ -1427,6 +1462,7 @@ export default function MessagerieClient() {
             // /admin/messages, qui a une vraie liste de conversations) : ce
             // fil fusionné agrège volontairement TOUS les messages de
             // l'utilisateur, quel que soit leur conversation_id.
+            if (estAdminCompte && newRow.type_discussion === "OFFRE" && newRow.sender_id !== session.user.id) return;
             if (newRow.sender_id === session.user.id || newRow.receiver_id === session.user.id) {
               const formatted = formatMessageRow(newRow, session.user.id);
               // L'autre partie de l'échange : si une conversation directe
@@ -2300,6 +2336,11 @@ export default function MessagerieClient() {
   };
 
   // Filter conversations based on tab and query
+  const idUtilisateurCache = userSession?.user?.id;
+  useEffect(() => {
+    if (conversationsChargees && idUtilisateurCache) cacheMessagerie = { userId: idUtilisateurCache, conversations };
+  }, [conversations, conversationsChargees, idUtilisateurCache]);
+
   const filteredConversations = conversations.filter(c => {
     if (filterTab === "unread" && c.unreadCount === 0) return false;
     if (filterTab === "favorites" && !c.favorite) return false;
@@ -2334,6 +2375,13 @@ export default function MessagerieClient() {
     return sansAccent(c.name).includes(sansAccent(searchQuery)) ||
            sansAccent(c.company).includes(sansAccent(searchQuery)) ||
            sansAccent(c.title).includes(sansAccent(searchQuery));
+  }).sort((a, b) => {
+    // Les discussions les plus RÉCENTES en haut (date de leur dernier message) ; l'assistant épinglé reste tout en haut, les
+    // discussions sans message en bas.
+    if (a.id === AI_PINNED_CHAT.id) return -1;
+    if (b.id === AI_PINNED_CHAT.id) return 1;
+    const dernier = (c) => new Date(c.messages?.[c.messages.length - 1]?.createdAt || 0).getTime() || 0;
+    return dernier(b) - dernier(a);
   });
 
   const activeConversation = conversations.find(c => c.id === activeConvId) || null;
@@ -2379,9 +2427,11 @@ export default function MessagerieClient() {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center space-x-2">
                   <h2 className="text-lg font-black text-[#111B21] tracking-tight">Discussions</h2>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                    {filteredConversations.length}
-                  </span>
+                  {conversationsChargees && (
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                      {filteredConversations.length}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center space-x-1">
                   <button
@@ -2532,7 +2582,12 @@ export default function MessagerieClient() {
               )}
 
               {/* Autres discussions */}
-              {filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
+              {!conversationsChargees ? (
+                <div className="p-8 flex flex-col items-center gap-3 text-xs text-gray-400 font-semibold" role="status" aria-live="polite">
+                  <i className="fa-solid fa-spinner fa-spin text-lg text-emerald-500"></i>
+                  <p>Chargement de vos discussions…</p>
+                </div>
+              ) : filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
                 filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).map(conv => (
                   <div
                     key={conv.id}
@@ -2566,7 +2621,7 @@ export default function MessagerieClient() {
                       <div className="flex items-center justify-between gap-1">
                         <p className={`text-xs truncate flex items-center gap-1 ${conv.unreadCount > 0 ? "font-bold text-[#111B21]" : "text-[#667781]"}`}>
                           <i className="fa-solid fa-check-double text-[#53BDEB] text-[10px]"></i>
-                          <span>{conv.lastMessage}</span>
+                          <span>{articleDuMessage(conv.lastMessage) ? "🛍️ Article" : conv.lastMessage}</span>
                         </p>
                         {conv.unreadCount > 0 && (
                           <span className="bg-[#25D366] text-white text-[10px] font-black min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 shadow-2xs">
@@ -3206,7 +3261,10 @@ export default function MessagerieClient() {
                             )}
 
                             {/* Texte du message */}
-                            {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
+                            {/* Prise de contact sur un article : la carte (photo, nom, prix) remplace le texte, touchable pour rouvrir l'article. */}
+                            {msg.text && articleDuMessage(msg.text) && <CarteArticleMessage articleId={articleDuMessage(msg.text)} />}
+
+                            {msg.text && !articleDuMessage(msg.text) && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
                               // L'assistant répond en markdown : les **gras** et les
                               // listes s'affichaient auparavant avec leurs astérisques.
                               // MarkdownLeger rend des éléments React, jamais du HTML

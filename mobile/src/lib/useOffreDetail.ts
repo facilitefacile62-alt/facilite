@@ -15,6 +15,7 @@ export type OffreDetail = {
   logo: string;
   posterUri?: string;
   rawImage?: unknown;
+  audioUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   externalLink?: string;
@@ -66,7 +67,7 @@ export function useOffreDetail(id: string | undefined) {
         const [{ data, error }, compteur] = await Promise.all([
           supabase
             .from('job_offers')
-            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, created_at')
+            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, audio_url, created_at')
             .eq('id', id)
             .single(),
           // Compteur réel via la fonction du site : la RLS de candidatures
@@ -94,6 +95,7 @@ export function useOffreDetail(id: string | undefined) {
             logo: initiales(data.company || ''),
             posterUri: getPrimaryOfferImage(data.image_url),
             rawImage: data.image_url,
+            audioUrl: (data.audio_url as string | null) || undefined,
             contactEmail: data.contact_email || undefined,
             contactPhone: data.contact_phone || undefined,
             externalLink: data.external_link || undefined,

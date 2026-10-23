@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteMenu, GroupeCartes } from '@/components/CarteMenu';
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
 
 // « Modifier infos — À propos » — maquette 47 (version du 12/10/2026) : en-tête
@@ -30,25 +31,13 @@ export default function ProfilAProposScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteModifierInfos actif="apropos" />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 py-4">
-          <View className="bg-white rounded-2xl overflow-hidden">
-            {RUBRIQUES.map((r, i) => (
-              <Pressable
-                key={r.id}
-                onPress={() => router.push(r.route)}
-                className={`flex-row items-center gap-3.5 px-4 py-2 ${i > 0 ? 'border-t border-black/[0.05]' : ''}`}
-                style={{ minHeight: 60 }}>
-                <View className="items-center justify-center" style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6' }}>
-                  <Ionicons name={r.icone} size={17} color="rgba(0,0,0,0.6)" />
-                </View>
-                <View className="flex-1 min-w-0">
-                  <Text className="text-[14px] font-bold text-[#1A1A1A]">{r.label}</Text>
-                  <Text className="text-[11.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.45)' }}>{r.sous}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
-              </Pressable>
+        {/* Même DESIGN que les Réglages de Locaux : cartes séparées à icône verte (éléments propres à Facilité). */}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-4 pt-4 pb-7">
+          <GroupeCartes>
+            {RUBRIQUES.map((r) => (
+              <CarteMenu key={r.id} icone={r.icone} titre={r.label} sous={r.sous} onPress={() => router.push(r.route)} />
             ))}
-          </View>
+          </GroupeCartes>
         </ScrollView>
       </SafeAreaView>
     </View>

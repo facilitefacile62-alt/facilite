@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
+import AvatarProfil from '@/components/AvatarProfil';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 import { useAuth } from '@/context/AuthContext';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
@@ -59,8 +60,8 @@ export default function AProposMarketplaceScreen() {
             <View className="bg-white rounded-2xl overflow-hidden">
               <View className="h-[110px] bg-[#E6DFD0]" />
               <View className="px-4 pb-4 -mt-10 gap-1.5">
-                <View className="w-[72px] h-[72px] rounded-full bg-[#D9D2C3] border-4 border-white items-center justify-center">
-                  <Text className="text-[22px] font-black text-[#1A1A1A]">{nom.trim().charAt(0).toUpperCase() || '?'}</Text>
+                <View className="w-[72px] h-[72px] rounded-full border-4 border-white bg-white">
+                  <AvatarProfil valeur={null} nom={nom} taille={64} fond="#D9D2C3" />
                 </View>
                 <View className="flex-row items-center gap-2 flex-wrap">
                   <Text className="text-[17px] font-black text-[#1A1A1A]" numberOfLines={1}>

@@ -16,6 +16,8 @@ import { prixLisible, urlPhoto } from '@/lib/marketplace';
 import {
   chargerMesArticles,
   chargerMesBoutiques,
+  choisirEtEnvoyerPhotoBoutique,
+  definirCouvertureBoutique,
   definirDisponibiliteBoutique,
   definirLogoBoutique,
   definirVisibiliteBoutique,
@@ -58,6 +60,9 @@ export default function MaBoutiqueScreen() {
   const [onglet, setOnglet] = useState<Onglet>('article');
   const [basculeEnCours, setBasculeEnCours] = useState(false);
   const [envoiLogo, setEnvoiLogo] = useState(false);
+  // Couverture : bloc repliable. Replié, seule une barre avec l'icône photo est visible ; un toucher déplie la photo, un toucher sur la photo la replie.
+  const [couvertureOuverte, setCouvertureOuverte] = useState(false);
+  const [envoiCouverture, setEnvoiCouverture] = useState(false);
 
   const [editionMetier, setEditionMetier] = useState(false);
   const [metierSaisi, setMetierSaisi] = useState('');
@@ -158,6 +163,31 @@ export default function MaBoutiqueScreen() {
     }
   }
 
+  async function changerCouverture() {
+    if (!boutique || !userId || envoiCouverture) return;
+    setEnvoiCouverture(true);
+    try {
+      const chemin = await choisirEtEnvoyerPhotoBoutique(userId, [16, 7]);
+      if (!chemin) return;
+      await definirCouvertureBoutique(boutique.id, chemin);
+      setBoutique({ ...boutique, cover_photo: chemin });
+    } catch (e) {
+      Alert.alert('Couverture impossible', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    } finally {
+      setEnvoiCouverture(false);
+    }
+  }
+
+  async function retirerCouverture() {
+    if (!boutique || !boutique.cover_photo) return;
+    try {
+      await definirCouvertureBoutique(boutique.id, null);
+      setBoutique({ ...boutique, cover_photo: null });
+    } catch (e) {
+      Alert.alert('Couverture', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    }
+  }
+
   function ouvrirModification(a: MonArticle) {
     router.push(
       `/marketplace/vendre/modifier-article?${new URLSearchParams({
@@ -187,7 +217,7 @@ export default function MaBoutiqueScreen() {
     ]);
   }
 
-  const retour = () => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'));
+  const retour = () => (router.canGoBack() ? router.back() : router.replace('/marketplace'));
 
   if (boutique === undefined) {
     return (
@@ -247,9 +277,9 @@ export default function MaBoutiqueScreen() {
   );
 
   const interrupteur = (libelle: string) => (
-    <View className="flex-row items-center justify-between px-4 py-3.5" style={STYLE_CARTE}>
-      <View className="flex-1 pr-3">
-        <Text className="text-[13.5px] font-black text-[#111]">{libelle}</Text>
+    <View className="flex-row items-center justify-between px-3 py-3" style={STYLE_CARTE}>
+      <View className="flex-1 pr-2">
+        <Text className="text-[12.5px] font-black text-[#111]">{libelle}</Text>
         <Text className="text-[11.5px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }}>
           {boutique.actif ? 'Visible par les utilisateurs' : 'Masqué aux utilisateurs'}
         </Text>
@@ -264,29 +294,67 @@ export default function MaBoutiqueScreen() {
         <MarketplaceHeader />
       </SafeAreaView>
 
-      {/* Barre de la boutique (maquette) : retour · NOM DE LA BOUTIQUE · crayon, qui ouvre les Réglages de la boutique */}
-      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: FOND }}>
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil' as Href))}
-          accessibilityLabel="Retour"
-          className="items-center justify-center"
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
-          <Ionicons name="arrow-back" size={19} color="#2563EB" />
-        </Pressable>
-        <Text className="flex-1 text-center text-[15px] font-black tracking-widest text-[#1A1A1A]" numberOfLines={1}>{boutique.nom.toUpperCase()}</Text>
-        <Pressable
-          onPress={() => router.push('/marketplace/reglages' as Href)}
-          accessibilityRole="button"
-          accessibilityLabel="Réglages de la boutique"
-          className="items-center justify-center"
-          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
-          <Ionicons name="pencil" size={17} color="#1A1A1A" />
-        </Pressable>
-      </View>
+      {/* Bandeau de la boutique : la PHOTO DE COUVERTURE est l'arrière-plan de la barre retour · NOM · crayon (Réglages de la boutique).
+          Compact par défaut (les articles restent visibles dessous) ; l'icône photo, dans le bandeau, déplie la photo en grand, un
+          toucher sur la photo la replie. « Changer » / « Retirer » sont posés sur la photo dépliée. À défaut de couverture de boutique, */}
+      {(() => {
+        const uriCouverture = boutique.cover_photo ? urlPhoto(boutique.cover_photo) : null;
+        return (
+          <View style={couvertureOuverte ? { width: '100%', aspectRatio: 16 / 7, backgroundColor: '#E8E4DA' } : { width: '100%', height: 96, backgroundColor: '#E8E4DA' }}>
+            {uriCouverture ? (
+              <Image source={{ uri: uriCouverture }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+            ) : null}
+            <Pressable
+              onPress={() => setCouvertureOuverte((o) => !o)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: couvertureOuverte }}
+              accessibilityLabel={couvertureOuverte ? 'Replier la photo de couverture' : 'Afficher la photo de couverture en grand'}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+            <View className="flex-row items-center px-4 pt-3" pointerEvents="box-none">
+              <Pressable
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace' as Href))}
+                accessibilityLabel="Retour"
+                className="items-center justify-center"
+                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.9)' }}>
+                <Ionicons name="arrow-back" size={19} color="#FFFFFF" />
+              </Pressable>
+              <View className="flex-1 items-center px-2" pointerEvents="none">
+                <Text className="text-[14px] font-black tracking-widest text-white rounded-full px-3 py-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(17,17,17,0.9)' }} numberOfLines={1}>{boutique.nom.toUpperCase()}</Text>
+              </View>
+              <Pressable
+                onPress={() => router.push('/marketplace/reglages' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="Réglages de la boutique"
+                className="items-center justify-center"
+                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.9)' }}>
+                <Ionicons name="pencil" size={17} color="#FFFFFF" />
+              </Pressable>
+            </View>
+            <View className="absolute items-center justify-center rounded-full bg-white" style={{ right: 12, bottom: 6, width: 30, height: 30 }} pointerEvents="none">
+              <Ionicons name={couvertureOuverte ? 'chevron-up' : 'image'} size={16} color="#1A1A1A" />
+            </View>
+            {couvertureOuverte ? (
+              <View className="absolute flex-row items-center gap-2" style={{ left: 10, bottom: 8 }}>
+                <Pressable onPress={changerCouverture} disabled={envoiCouverture} className="flex-row items-center gap-1.5 rounded-full bg-white px-3" style={{ height: 34 }}>
+                  {envoiCouverture ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="camera" size={15} color="#047857" />}
+                  <Text className="text-[12.5px] font-black" style={{ color: '#047857' }}>{boutique.cover_photo ? 'Changer' : 'Ajouter'}</Text>
+                </Pressable>
+                {boutique.cover_photo ? (
+                  <Pressable onPress={retirerCouverture} className="flex-row items-center gap-1.5 rounded-full bg-white px-3" style={{ height: 34 }}>
+                    <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                    <Text className="text-[12.5px] font-black" style={{ color: '#DC2626' }}>Retirer</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        );
+      })()}
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
-        <View className="px-4 pt-4">
+        <View className="px-4 pt-3">
           <View className="flex-row items-center gap-3">
             <Pressable
               onPress={changerLogo}
@@ -333,7 +401,7 @@ export default function MaBoutiqueScreen() {
         </View>
 
         {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
-        <View className="flex-row gap-2.5 px-4 mt-4">
+        <View className="flex-row gap-2.5 px-4 mt-3">
           {(
             [
               { id: 'article' as const, label: 'Article', icone: 'pricetag-outline' as const },
@@ -362,15 +430,17 @@ export default function MaBoutiqueScreen() {
         <View className="px-4 mt-3 gap-3">
           {onglet === 'article' ? (
             <>
-              {interrupteur('Rendre mes articles visibles')}
-
-              <Pressable
-                onPress={() => router.push('/marketplace/vendre/publier' as Href)}
-                className="rounded-2xl py-3.5 items-center justify-center flex-row gap-2"
-                style={{ backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
-                <Ionicons name="add" size={16} color={BLEU} />
-                <Text className="text-[13.5px] font-bold" style={{ color: BLEU }}>Ajouter un article</Text>
-              </Pressable>
+              {/* Interrupteur de visibilité et « Ajouter un article » partagent la même ligne (gain de place). */}
+              <View className="flex-row gap-2.5">
+                <View style={{ flex: 1 }}>{interrupteur('Rendre mes articles visibles')}</View>
+                <Pressable
+                  onPress={() => router.push('/marketplace/vendre/publier' as Href)}
+                  className="rounded-2xl px-2 items-center justify-center flex-row gap-1.5"
+                  style={{ flex: 1, backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
+                  <Ionicons name="add" size={16} color={BLEU} />
+                  <Text className="text-[13.5px] font-bold" style={{ color: BLEU }}>Ajouter un article</Text>
+                </Pressable>
+              </View>
 
               {articles.length === 0 ? (
                 <View className="py-10 px-6 items-center">

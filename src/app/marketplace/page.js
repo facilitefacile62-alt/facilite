@@ -2,10 +2,65 @@ import { Suspense } from "react";
 import { canonicalMetadata } from "@/lib/staticPageMetadata";
 import MarketplaceClient from "./MarketplaceClient";
 
-export const metadata = canonicalMetadata("/marketplace", {
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith("http") ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
+const ID_ARTICLE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const metadataDeBase = {
+  ...canonicalMetadata("/marketplace"),
   title: "Marketplace — Petites Annonces & Ventes à Dakar & Sénégal | Facilité",
   description: "Découvrez la sélection du jour sur Facilité Marketplace : téléphones, véhicules, immobilier, mode et services à Dakar, Thiès et partout au Sénégal.",
-});
+};
+
+/** Lecture publique d'un article (policy « articles visibles de tous ») pour son aperçu de partage ; null si introuvable. */
+async function articlePourApercu(id) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const cle = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !cle || !ID_ARTICLE.test(id)) return null;
+  try {
+    const reponse = await fetch(`${url}/rest/v1/marketplace_items?id=eq.${id}&select=titre,prix_xof,photos&limit=1`, {
+      headers: { apikey: cle, Authorization: `Bearer ${cle}` },
+      next: { revalidate: 300 },
+    });
+    if (!reponse.ok) return null;
+    const [ligne] = await reponse.json();
+    if (!ligne?.titre) return null;
+    const brute = Array.isArray(ligne.photos) ? ligne.photos[0] : null;
+    const photo = !brute ? null : /^https?:/i.test(brute) ? brute : `${url}/storage/v1/object/public/marketplace-photos/${brute}`;
+    return { titre: ligne.titre, prix: Number(ligne.prix_xof) || 0, photo };
+  } catch {
+    return null;
+  }
+}
+
+// Aperçu de partage d'un article (WhatsApp, Facebook, SMS…) : quand le lien /marketplace?article=<id> est collé dans une conversation,
+// l'application de messagerie affiche une CARTE avec la photo, le nom et le prix de l'article (balises Open Graph), touchable pour
+// l'ouvrir. Sans article, ce sont les métadonnées habituelles de la page.
+export async function generateMetadata({ searchParams }) {
+  const { article } = (await searchParams) || {};
+  const id = Array.isArray(article) ? article[0] : article;
+  const donnees = id ? await articlePourApercu(id) : null;
+  if (!donnees) return metadataDeBase;
+
+  const prix = donnees.prix > 0 ? `${String(Math.round(donnees.prix)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA` : null;
+  const titre = prix ? `${donnees.titre} — ${prix}` : donnees.titre;
+  const description = prix ? `${prix} · Voir l'article sur Facilité Marketplace` : "Voir l'article sur Facilité Marketplace";
+  return {
+    ...metadataDeBase,
+    title: `${titre} | Facilité`,
+    description,
+    alternates: { canonical: `${SITE_URL}/marketplace?article=${id}` },
+    openGraph: {
+      type: "website",
+      siteName: "Facilité",
+      url: `${SITE_URL}/marketplace?article=${id}`,
+      title: titre,
+      description,
+      ...(donnees.photo ? { images: [{ url: donnees.photo, alt: donnees.titre }] } : {}),
+    },
+    twitter: { card: donnees.photo ? "summary_large_image" : "summary", title: titre, description, ...(donnees.photo ? { images: [donnees.photo] } : {}) },
+  };
+}
 
 export default function MarketplacePage() {
   return (

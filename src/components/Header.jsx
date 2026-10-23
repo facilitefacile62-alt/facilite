@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { useAuth } from "@/context/AuthContext";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -739,6 +741,9 @@ export default function Header() {
       channels.forEach((c) => supabase.removeChannel(c));
     };
   }, [authLoading, userSession, fetchDbNotifications, fetchJobOfferNotifs, normalizeDbNotification]);
+
+  // Messages non lus : même compteur (en direct) que les autres pages du site — pastille sur « Messagerie ».
+  const messagesNonLus = useUnreadMessagesBadge(userSession?.user?.id, { son: false });
 
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
@@ -1545,13 +1550,14 @@ export default function Header() {
             <Link
               href={isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie"}
               onClick={(e) => handleNavClick(e, isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie", "nav_messagerie", "Messagerie")}
-              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                 pathname === "/messagerie"
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
               <i className="fa-solid fa-comments text-base"></i>
+              <UnreadBadge count={messagesNonLus} className="!top-0 !-right-0.5" />
               <span className="text-[10px] font-bold tracking-tight">Messagerie</span>
             </Link>
           )}
@@ -2257,7 +2263,10 @@ export default function Header() {
                 pathname === "/messagerie" ? "text-emerald-700 font-extrabold" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
               }`}
             >
-              <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+              <div className="relative">
+                <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+                <UnreadBadge count={messagesNonLus} />
+              </div>
               <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
             </Link>
           )}

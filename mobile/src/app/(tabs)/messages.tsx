@@ -33,9 +33,9 @@ const PUCES: { id: FiltrePuce; label: string; cablee: boolean }[] = [
 
 export default function MessagesScreen() {
   const t = useT();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const router = useRouter();
-  const conversations = useConversationsReelles(user?.id);
+  const conversations = useConversationsReelles(user?.id, isAdmin);
   const [recherche, setRecherche] = useState('');
   const [puceActive, setPuceActive] = useState<FiltrePuce>('toutes');
   const [ouvertureSupportEnCours, setOuvertureSupportEnCours] = useState(false);

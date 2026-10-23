@@ -54,7 +54,9 @@ export type GroupeVille = {
   entreprises: number;
 };
 
-export type ResultatAutour = { groupes: GroupeVille[]; sansVille: number };
+/** `offresSansVille` : offres dont la localisation ne cite aucune ville connue (« Sénégal ») — pas de point sur la carte, mais
+ *  elles restent trouvables par la recherche et listées dans le carrousel. */
+export type ResultatAutour = { groupes: GroupeVille[]; sansVille: number; offresSansVille: OffreVille[] };
 
 function normaliser(t: string): string {
   return t
@@ -82,10 +84,12 @@ type LigneOffre = { id: string; title: string | null; company: string | null; lo
 export function regrouperParVille(lignes: LigneOffre[]): ResultatAutour {
   const parVille = new Map<string, GroupeVille>();
   let sansVille = 0;
+  const offresSansVille: OffreVille[] = [];
   for (const l of lignes) {
     const v = trouverVille(l.location);
     if (!v) {
       sansVille += 1;
+      offresSansVille.push({ id: l.id, titre: l.title || 'Offre', entreprise: l.company || 'Entreprise', affiche: getPrimaryOfferImage(l.image_url) });
       continue;
     }
     const g = parVille.get(v.nom) ?? { ville: v.nom, lat: v.lat, lng: v.lng, offres: [], entreprises: 0 };
@@ -94,7 +98,7 @@ export function regrouperParVille(lignes: LigneOffre[]): ResultatAutour {
   }
   const groupes = [...parVille.values()].map((g) => ({ ...g, entreprises: new Set(g.offres.map((o) => o.entreprise.toLowerCase())).size }));
   groupes.sort((a, b) => b.offres.length - a.offres.length);
-  return { groupes, sansVille };
+  return { groupes, sansVille, offresSansVille };
 }
 
 /** Offres approuvées, actives et non expirées. */

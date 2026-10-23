@@ -1,3 +1,4 @@
+import { articleDuMessage } from '@/components/CarteArticleMessage';
 import { supabase } from '@/lib/supabase';
 
 // Discussions de la plateforme Marketplace (acheteur <-> vendeur). Une
@@ -83,7 +84,7 @@ export async function chargerDiscussionsMarketplace(userId: string): Promise<Dis
         id: c.id,
         nom,
         initiale: initiale(nom),
-        dernierMessage: dernier?.content ?? '',
+        dernierMessage: articleDuMessage(dernier?.content) ? '🛍️ Article' : dernier?.content ?? '',
         date: dernier ? dateCourte(dernier.created_at) : '',
         nonLue: dernier?.nonLue ?? false,
         estBoutique: interlocuteur?.est_boutique ?? false,

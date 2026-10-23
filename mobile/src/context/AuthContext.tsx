@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { urlPhotoProfil } from '@/lib/photoProfil';
+import { urlPhotoCouverture, urlPhotoProfil } from '@/lib/photoProfil';
 import { supabase } from '@/lib/supabase';
 
 // Port de src/context/AuthContext.jsx (site web) : même logique de session/
@@ -17,6 +17,7 @@ export type Profile = {
   id: string;
   full_name?: string | null;
   avatar_url?: string | null;
+  cover_url?: string | null;
   bio?: string | null;
   badges?: string[];
   [key: string]: unknown;
@@ -101,6 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // La photo est un chemin du bucket privé « avatars » : on la remplace par une URL signée affichable.
       if (resolvedProfile.avatar_url) {
         resolvedProfile.avatar_url = await urlPhotoProfil(resolvedProfile.avatar_url);
+      }
+      // Idem pour la photo de couverture (bucket privé « covers »).
+      if (resolvedProfile.cover_url) {
+        resolvedProfile.cover_url = await urlPhotoCouverture(resolvedProfile.cover_url);
       }
       setProfile(resolvedProfile);
 

@@ -1,5 +1,5 @@
 import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useGlobalSearchParams, usePathname, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { fondSombre } from '@/components/themeSombre';
 import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
 import { LangueProvider } from '@/lib/i18n';
-import { bienvenueDejaVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
+import { bienvenueDejaVue, ETAPES_INSCRIPTION, etapeEmailVue, etapeInscriptionMemorisee, memoriserEtapeInscription, etapeMotDePasseVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
 
@@ -27,6 +27,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   const { session, profile, profilChargePour, loading, signOut } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
+  const { onboarding: paramOnboarding } = useGlobalSearchParams<{ onboarding?: string }>();
   // Compte pour lequel l'onboarding a déjà été examiné pendant cette
   // ouverture de l'app : il n'est proposé qu'à l'ouverture (ou à la
   // connexion), pas à chaque navigation — sinon le scan de document (écran
@@ -76,14 +78,22 @@ function AuthGate({ children }: { children: ReactNode }) {
       onboardingExamine.current = session.user.id;
       if (aOnboarding) {
         // Nouveau compte : « Nom et prénom » une seule fois, puis l'onboarding.
-        nomDejaConfirme(session.user.id).then((confirme) =>
-          router.replace((confirme ? '/onboarding/bienvenue' : '/nom-prenom') as Href)
+        // Reprise là où la personne s'était arrêtée : nom, mot de passe, e-mail, puis bienvenue — aucune étape sautée.
+        const emailAFaire = !session.user.email_confirmed_at;
+        // L'écran exact où l'on s'était arrêté (retenu à chaque étape) prime sur ce calcul.
+        Promise.all([nomDejaConfirme(session.user.id), etapeMotDePasseVue(session.user.id), etapeEmailVue(session.user.id), etapeInscriptionMemorisee(session.user.id)]).then(
+          ([confirme, mdpVu, emailVu, memorisee]) =>
+            router.replace(
+              (memorisee ??
+                (!confirme ? '/nom-prenom' : !mdpVu ? '/onboarding/mot-de-passe' : emailAFaire && !emailVu ? '/onboarding/email' : '/onboarding/bienvenue')) as Href
+            )
         );
         return;
       }
     }
     if (dansGroupeAuth && !surNomPrenom) router.replace('/');
-    if (!universRestaure.current && !surNomPrenom) {
+    // Pendant une inscription non terminée, on ne saute jamais à Locaux : l'étape retenue doit rester affichée.
+    if (!universRestaure.current && !surNomPrenom && !aOnboarding) {
       universRestaure.current = true;
       obtenirUserMode().then((m) => {
         universPret.current = true;
@@ -92,6 +102,18 @@ function AuthGate({ children }: { children: ReactNode }) {
       });
     }
   }, [session, profile, profilChargePour, loading, segments, router, signOut]);
+
+  // Inscription non terminée : on retient l'écran courant pour le rouvrir si l'app est quittée.
+  const idUtilisateur = session?.user.id;
+  const inscriptionEnCours = profile?.id === idUtilisateur && profile?.onboarding_done === false;
+  useEffect(() => {
+    if (!idUtilisateur || !inscriptionEnCours || !ETAPES_INSCRIPTION.includes(pathname)) return;
+    if (pathname === '/confirmer-compte') {
+      if (paramOnboarding === '1') memoriserEtapeInscription(idUtilisateur, '/onboarding/email');
+      return;
+    }
+    memoriserEtapeInscription(idUtilisateur, pathname);
+  }, [idUtilisateur, inscriptionEnCours, pathname, paramOnboarding]);
 
   const racineActuelle = segments[0] as string | undefined;
   useEffect(() => {
@@ -116,7 +138,10 @@ function AuthGate({ children }: { children: ReactNode }) {
 function BarreFaciliteHorsOnglets() {
   const segments = useSegments();
   const racine = segments[0];
+  const { onboarding } = useGlobalSearchParams<{ onboarding?: string }>();
   if (racine === undefined) return null;
+  // « Confirmer mon compte » ouvert depuis l'inscription : pas de barre du bas (on ne contourne pas l'inscription).
+  if ((racine as string) === 'confirmer-compte' && onboarding === '1') return null;
   if (racine === '(auth)' || racine === '(tabs)' || racine === 'marketplace' || racine === 'onboarding' || (racine as string) === 'nouveau-mot-de-passe') return null;
   return <FaciliteBottomBar />;
 }

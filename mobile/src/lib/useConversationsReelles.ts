@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { articleDuMessage } from '@/components/CarteArticleMessage';
 import { supabase } from '@/lib/supabase';
 import { idsConversationsMarketplace } from '@/lib/messagesMarketplace';
 
@@ -29,7 +30,7 @@ function heureRelative(iso: string): string {
   return jours === 1 ? 'Hier' : `${jours} j`;
 }
 
-export function useConversationsReelles(userId: string | undefined) {
+export function useConversationsReelles(userId: string | undefined, isAdmin = false) {
   const [conversations, setConversations] = useState<ConversationReelle[] | null>(null);
 
   useEffect(() => {
@@ -93,7 +94,20 @@ export function useConversationsReelles(userId: string | undefined) {
           nomParId[p.id] = p.full_name || 'Utilisateur Facilité';
         });
 
+        // Compte administrateur : une conversation qui ne contient que des candidatures reçues (type OFFRE) n'est pas affichée —
+        // elles passent par e-mail, pas par sa messagerie.
+        let idsAvecAutreChose: Set<string> | null = null;
+        if (isAdmin) {
+          const { data: horsCandidatures } = await supabase
+            .from('messages')
+            .select('conversation_id')
+            .in('conversation_id', idsConversations)
+            .or('type_discussion.is.null,type_discussion.neq.OFFRE');
+          idsAvecAutreChose = new Set((horsCandidatures || []).map((m) => m.conversation_id as string));
+        }
+
         const mapped = data_
+          .filter((c) => !idsAvecAutreChose || idsAvecAutreChose.has(c.id))
           .map((c) => {
             const autreId = c.user_1_id === userId ? c.user_2_id : c.user_1_id;
             return { c, autreId };
@@ -105,7 +119,7 @@ export function useConversationsReelles(userId: string | undefined) {
               id: c.id,
               name: nom,
               avatarLetter: initiale(nom),
-              lastText: c.last_message || '',
+              lastText: articleDuMessage(c.last_message) ? '🛍️ Article' : c.last_message || '',
               time: heureRelative(c.updated_at),
               nonLue: idsNonLus.has(c.id),
             };
@@ -122,7 +136,7 @@ export function useConversationsReelles(userId: string | undefined) {
     return () => {
       annule = true;
     };
-  }, [userId]);
+  }, [userId, isAdmin]);
 
   return conversations;
 }
