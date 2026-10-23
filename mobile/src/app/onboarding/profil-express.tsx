@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 
 import BandeauOnboarding from '@/components/BandeauOnboarding';
-import BoutonAction from '@/components/BoutonAction';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -48,9 +48,25 @@ export default function OnboardingProfilExpressScreen() {
       <TextInput value={prenom} onChangeText={setPrenom} placeholder="Votre prénom" placeholderTextColor="rgba(0,0,0,0.35)" style={champ} />
       <Text className="text-[13.5px] font-black text-[#111] mt-4 mb-1.5">Nom</Text>
       <TextInput value={nom} onChangeText={setNom} placeholder="Votre nom" placeholderTextColor="rgba(0,0,0,0.35)" style={champ} />
-      <View className="mt-4">
-        <BoutonAction titre="Accéder à la marketplace" sousTitre="Découvrir et acheter des articles" icone="cart-outline" onPress={continuer} chargement={enregistrement} />
-      </View>
+      {/* Même forme que les champs (58 px, coins 14), en vert plein pour bien se voir. */}
+      <Pressable
+        onPress={continuer}
+        disabled={enregistrement}
+        accessibilityRole="button"
+        className="flex-row items-center justify-center gap-3 mt-5"
+        style={{ height: 58, borderRadius: 14, backgroundColor: '#10B981', opacity: enregistrement ? 0.7 : 1 }}>
+        {enregistrement ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="cart-outline" size={22} color="#fff" />
+            <View>
+              <Text className="text-[16px] font-black text-white">Accéder à la marketplace</Text>
+              <Text className="text-[12px] text-white/85">Découvrir et acheter des articles</Text>
+            </View>
+          </>
+        )}
+      </Pressable>
     </BandeauOnboarding>
   );
 }
