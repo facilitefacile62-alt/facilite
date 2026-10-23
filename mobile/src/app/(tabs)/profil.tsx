@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -46,7 +46,9 @@ export default function ProfilScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
 
-  const [onglet, setOnglet] = useState<Onglet>('documents');
+  // Ouvert depuis le menu ☰ (tuile « Fonctionnalités ») : l'onglet Fonctionnalités s'affiche d'emblée, avec un bouton Retour vers là d'où l'on vient.
+  const { onglet: ongletDemande, retour: retourDemande } = useLocalSearchParams<{ onglet?: string; retour?: string }>();
+  const [onglet, setOnglet] = useState<Onglet>(ongletDemande === 'fonctionnalites' ? 'fonctionnalites' : 'documents');
   const [documents, setDocuments] = useState<DocumentProfil[] | null>(null);
   const [erreur, setErreur] = useState(false);
   const { ouvrir: importer, occupe: envoiEnCours, feuille: feuilleImport } = useImportDocument((nouveau) =>
@@ -134,6 +136,19 @@ export default function ProfilScreen() {
         <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+          {retourDemande === '1' ? (
+            <View className="px-4 pt-3">
+              <Pressable
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                accessibilityRole="button"
+                accessibilityLabel="Retour"
+                className="flex-row items-center gap-1.5 self-start rounded-full bg-white px-3.5"
+                style={{ height: 40 }}>
+                <Ionicons name="arrow-back" size={17} color="#1A1A1A" />
+                <Text className="text-[13.5px] font-black text-[#1A1A1A]">{t('Retour')}</Text>
+              </Pressable>
+            </View>
+          ) : null}
           {/* En-tête de profil : photo + « + », nom de la boutique, Modifier infos */}
           <View className="px-4 pt-4">
             <View className="flex-row items-center gap-3">
