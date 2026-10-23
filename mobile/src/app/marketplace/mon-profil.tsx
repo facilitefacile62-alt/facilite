@@ -1,16 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 
 import AvatarProfil from '@/components/AvatarProfil';
 import BoutonAction from '@/components/BoutonAction';
-import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import { useAuth } from '@/context/AuthContext';
-import { changerPhotoCouverture } from '@/lib/photoProfil';
 import { chargerMesBoutiques } from '@/lib/vendeur';
 
 // Profil visiteur détaillé (maquette 33) : on y arrive en touchant la carte
@@ -24,14 +21,13 @@ import { chargerMesBoutiques } from '@/lib/vendeur';
 export default function MonProfilVisiteurScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile } = useAuth();
 
   const nom = (profile?.full_name as string | undefined) || user?.email || 'Mon compte';
   const bio = (profile?.bio as string | undefined) || '';
-  const [feuillePhoto, setFeuillePhoto] = useState(false);
-  // Avatar et photo de couverture : modifiables UNIQUEMENT par un compte actif (qui a une boutique). Un visiteur les voit sans pouvoir les changer.
+  // Le profil de Locaux est SÉPARÉ de celui de Facilité : la photo et la couverture de Facilité n'apparaissent pas ici (initiale du nom
+  // seulement) ; un vendeur règle le logo et la couverture de sa BOUTIQUE depuis « Modifier infos » de Ma boutique.
   const [estActif, setEstActif] = useState(false);
-  const [envoiCouverture, setEnvoiCouverture] = useState(false);
   const userId = user?.id;
   useFocusEffect(
     useCallback(() => {
@@ -41,15 +37,6 @@ export default function MonProfilVisiteurScreen() {
         .catch(() => setEstActif(false));
     }, [userId])
   );
-
-  function changerCouverture() {
-    if (!userId || envoiCouverture) return;
-    setEnvoiCouverture(true);
-    changerPhotoCouverture(userId)
-      .then((fait) => (fait ? refreshProfile() : undefined))
-      .catch((e: Error) => Alert.alert('Photo de couverture', e.message))
-      .finally(() => setEnvoiCouverture(false));
-  }
 
   function retour() {
     if (router.canGoBack()) router.back();
@@ -66,25 +53,6 @@ export default function MonProfilVisiteurScreen() {
                 <Line key={i} x1={i * 26 - 130} y1={130} x2={i * 26} y2={0} stroke="#CFC8B8" strokeWidth={9} />
               ))}
             </Svg>
-            {profile?.cover_url ? (
-              <Image source={{ uri: profile.cover_url }} alt="Photo de couverture" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
-            ) : (
-              <>
-                <Ionicons name="image-outline" size={26} color="#8A8272" />
-                <Text className="text-[13px] font-black mt-1" style={{ color: '#7A7466' }}>Photo de couverture</Text>
-              </>
-            )}
-            {estActif ? (
-              <Pressable
-                onPress={changerCouverture}
-                disabled={envoiCouverture}
-                accessibilityLabel="Changer la photo de couverture"
-                className="absolute flex-row items-center gap-1.5 rounded-full bg-white px-3"
-                style={{ right: 10, bottom: 10, height: 34 }}>
-                {envoiCouverture ? <ActivityIndicator size="small" color="#10B981" /> : <Ionicons name="camera" size={15} color="#1A1A1A" />}
-                <Text className="text-[12px] font-black text-[#1A1A1A]">Couverture</Text>
-              </Pressable>
-            ) : null}
             <Pressable
               onPress={retour}
               accessibilityLabel="Retour"
@@ -95,20 +63,9 @@ export default function MonProfilVisiteurScreen() {
           </View>
 
           <View className="px-4 pb-4">
-            <Pressable
-              onPress={() => estActif && setFeuillePhoto(true)}
-              disabled={!estActif}
-              accessibilityLabel={estActif ? 'Changer ma photo' : 'Photo de profil'}
-              style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: '#FFFFFF', marginTop: -36, backgroundColor: '#fff' }}>
-              <AvatarProfil valeur={profile?.avatar_url} nom={nom} taille={70} />
-              {estActif ? (
-                <View
-                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
-                  style={{ backgroundColor: '#10B981' }}>
-                  <Ionicons name="camera" size={12} color="#fff" />
-                </View>
-              ) : null}
-            </Pressable>
+            <View style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: '#FFFFFF', marginTop: -36, backgroundColor: '#fff' }}>
+              <AvatarProfil valeur={null} nom={nom} taille={70} />
+            </View>
 
             <View className="flex-row items-center gap-2 flex-wrap mt-2">
               <Text className="text-[22px] font-black text-[#1A1A1A]">{nom}</Text>
@@ -164,7 +121,6 @@ export default function MonProfilVisiteurScreen() {
         </View>
         ) : null}
       </ScrollView>
-      <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
     </View>
   );
 }

@@ -7,7 +7,6 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AvatarProfil from '@/components/AvatarProfil';
 import BoutonAction from '@/components/BoutonAction';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -53,7 +52,7 @@ type Onglet = 'article' | 'service' | 'etablissement';
 export default function MaBoutiqueScreen() {
   const router = useRouter();
   const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const userId = user?.id;
   const [boutique, setBoutique] = useState<MaBoutique | null | undefined>(undefined); // undefined = chargement
   const [articles, setArticles] = useState<MonArticle[]>([]);
@@ -297,10 +296,9 @@ export default function MaBoutiqueScreen() {
 
       {/* Bandeau de la boutique : la PHOTO DE COUVERTURE est l'arrière-plan de la barre retour · NOM · crayon (Réglages de la boutique).
           Compact par défaut (les articles restent visibles dessous) ; l'icône photo, dans le bandeau, déplie la photo en grand, un
-          toucher sur la photo la replie. « Changer » / « Retirer » sont posés sur la photo dépliée. À défaut de couverture de boutique,
-          celle du profil du compte est utilisée. */}
+          toucher sur la photo la replie. « Changer » / « Retirer » sont posés sur la photo dépliée. À défaut de couverture de boutique, */}
       {(() => {
-        const uriCouverture = (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : profile?.cover_url) ?? null;
+        const uriCouverture = boutique.cover_photo ? urlPhoto(boutique.cover_photo) : null;
         return (
           <View style={couvertureOuverte ? { width: '100%', aspectRatio: 16 / 7, backgroundColor: '#E8E4DA' } : { width: '100%', height: 96, backgroundColor: '#E8E4DA' }}>
             {uriCouverture ? (
@@ -367,8 +365,6 @@ export default function MaBoutiqueScreen() {
                 <ActivityIndicator color={VERT} />
               ) : boutique.logo_photo ? (
                 <Image source={{ uri: urlPhoto(boutique.logo_photo) ?? undefined }} alt="Logo de la boutique" style={{ width: 72, height: 72, borderRadius: 36 }} contentFit="cover" />
-              ) : profile?.avatar_url ? (
-                <AvatarProfil valeur={profile.avatar_url} nom={boutique.nom} taille={72} fond="#E8E4DA" />
               ) : (
                 <Ionicons name="storefront" size={28} color="rgba(0,0,0,0.3)" />
               )}

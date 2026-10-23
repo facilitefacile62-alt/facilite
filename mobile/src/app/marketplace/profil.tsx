@@ -6,7 +6,6 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AvatarProfil from '@/components/AvatarProfil';
-import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import { LigneMenu } from '@/components/LigneMenu';
 import { useAuth } from '@/context/AuthContext';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
@@ -25,7 +24,6 @@ export default function ProfilMarketplaceScreen() {
   const userId = user?.id;
   const [chargement, setChargement] = useState(true);
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
-  const [feuillePhoto, setFeuillePhoto] = useState(false);
 
   const recharger = useCallback(async () => {
     if (!userId) return;
@@ -71,17 +69,8 @@ export default function ProfilMarketplaceScreen() {
             <Pressable
               onPress={() => router.push('/marketplace/mon-profil' as Href)}
               className="bg-white rounded-2xl p-4 flex-row items-center gap-3">
-              {/* Toucher le rond : avatar au choix, ou sa photo / le logo de son entreprise. */}
-              <Pressable onPress={() => estVendeur && setFeuillePhoto(true)} disabled={!estVendeur} accessibilityLabel={estVendeur ? 'Changer ma photo' : 'Photo de profil'} hitSlop={6}>
-                <AvatarProfil valeur={profile?.avatar_url} nom={nom} taille={64} />
-                {estVendeur ? (
-                  <View
-                    className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
-                    style={{ backgroundColor: '#10B981' }}>
-                    <Ionicons name="camera" size={12} color="#fff" />
-                  </View>
-                ) : null}
-              </Pressable>
+              {/* Profil de Locaux séparé de celui de Facilité : initiale du nom (le logo se règle sur la boutique, « Modifier infos »). */}
+              <AvatarProfil valeur={null} nom={nom} taille={64} />
               <View className="flex-1">
                 <View className="flex-row items-center gap-2 flex-wrap">
                   <Text className="text-[17px] font-black text-[#1A1A1A]" numberOfLines={1}>
@@ -147,7 +136,6 @@ export default function ProfilMarketplaceScreen() {
           </ScrollView>
         )}
       </SafeAreaView>
-      <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
     </View>
   );
 }
