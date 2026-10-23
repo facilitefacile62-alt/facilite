@@ -356,6 +356,8 @@ export default function MessagerieClient() {
 
   // Messaging States
   const [conversations, setConversations] = useState(initialConversations);
+  // Faux tant que la liste réelle n'est pas lue : on affiche alors un chargement, pas « Aucun échange » ni « Discussions 0 ».
+  const [conversationsChargees, setConversationsChargees] = useState(false);
   const [activeConvId, setActiveConvId] = useState(null);
   // Copie lisible depuis la souscription Realtime (créée une seule fois au montage, donc avec une closure périmée).
   const activeConvIdRef = useRef(null);
@@ -1407,6 +1409,7 @@ export default function MessagerieClient() {
         }
       }
 
+      if (isActive) setConversationsChargees(true);
       if (!isActive) return;
 
       // Écouter les nouveaux messages insérés en temps réel (ex: e-mails de recrutement synchronisés)
@@ -2379,9 +2382,11 @@ export default function MessagerieClient() {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center space-x-2">
                   <h2 className="text-lg font-black text-[#111B21] tracking-tight">Discussions</h2>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                    {filteredConversations.length}
-                  </span>
+                  {conversationsChargees && (
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                      {filteredConversations.length}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center space-x-1">
                   <button
@@ -2532,7 +2537,12 @@ export default function MessagerieClient() {
               )}
 
               {/* Autres discussions */}
-              {filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
+              {!conversationsChargees ? (
+                <div className="p-8 flex flex-col items-center gap-3 text-xs text-gray-400 font-semibold" role="status" aria-live="polite">
+                  <i className="fa-solid fa-spinner fa-spin text-lg text-emerald-500"></i>
+                  <p>Chargement de vos discussions…</p>
+                </div>
+              ) : filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).length > 0 ? (
                 filteredConversations.filter(c => c.id !== AI_PINNED_CHAT.id).map(conv => (
                   <div
                     key={conv.id}
