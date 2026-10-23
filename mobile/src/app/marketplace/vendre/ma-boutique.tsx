@@ -285,6 +285,9 @@ export default function MaBoutiqueScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {boutique.cover_photo ? (
+          <Image source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 130 }} contentFit="cover" />
+        ) : null}
         {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
         <View className="px-4 pt-4">
           <View className="flex-row items-center gap-3">

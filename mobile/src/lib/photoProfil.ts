@@ -29,8 +29,10 @@ export async function changerPhotoProfil(userId: string): Promise<boolean> {
   const reduite = await ImageManipulator.manipulateAsync(a.uri, [{ resize: { width: Math.min(640, a.width) } }], {
     compress: 0.85,
     format: ImageManipulator.SaveFormat.JPEG,
+    base64: true,
   });
-  const blob = await (await fetch(reduite.uri)).blob();
+  // Octets plutôt que Blob : sur Android le Blob d'un fichier local arrive typé « text/plain » et le bucket le refuse.
+  const blob = Uint8Array.from(atob(reduite.base64 ?? ''), (c) => c.charCodeAt(0));
   const chemin = `${userId}/avatar.jpg`;
   const { error } = await supabase.storage.from(BUCKET_AVATARS).upload(chemin, blob, { contentType: 'image/jpeg', upsert: true });
   if (error) throw new Error(`Envoi de la photo impossible : ${error.message}`);
@@ -62,8 +64,9 @@ export async function changerPhotoCouverture(userId: string): Promise<boolean> {
   const reduite = await ImageManipulator.manipulateAsync(a.uri, [{ resize: { width: Math.min(1280, a.width) } }], {
     compress: 0.8,
     format: ImageManipulator.SaveFormat.JPEG,
+    base64: true,
   });
-  const blob = await (await fetch(reduite.uri)).blob();
+  const blob = Uint8Array.from(atob(reduite.base64 ?? ''), (c) => c.charCodeAt(0));
   const chemin = `${userId}/cover.jpg`;
   const { error } = await supabase.storage.from(BUCKET_COUVERTURES).upload(chemin, blob, { contentType: 'image/jpeg', upsert: true });
   if (error) throw new Error(`Envoi de la couverture impossible : ${error.message}`);

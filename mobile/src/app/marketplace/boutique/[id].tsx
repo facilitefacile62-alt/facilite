@@ -149,6 +149,11 @@ export default function BoutiquePubliqueScreen() {
       {entete}
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
+        {/* Photo de couverture choisie par le vendeur (visible de tous les visiteurs de la boutique) */}
+        {boutique.cover_photo ? (
+          <Image source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 150 }} contentFit="cover" />
+        ) : null}
+
         {/* Retour */}
         <View className="px-4 pt-3">
           <Pressable onPress={retour} accessibilityLabel="Retour" className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8E4DA' }}>

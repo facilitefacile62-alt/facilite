@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { supabase } from '@/lib/supabase';
@@ -36,6 +37,8 @@ export type MaBoutique = {
   disponible_manuel: boolean;
   /** Chemin du logo dans le bucket marketplace-photos (voir definirLogoBoutique). */
   logo_photo: string | null;
+  /** Chemin de la photo de couverture dans le bucket marketplace-photos (voir definirCouvertureBoutique). */
+  cover_photo: string | null;
 };
 
 /** Une boutique vue par n'importe quel visiteur (page publique) : mêmes champs que MaBoutique + propriétaire et avatar. */
@@ -49,7 +52,7 @@ export async function chargerBoutiquePublique(id: string): Promise<BoutiquePubli
   const { data, error } = await supabase
     .from('marketplace_stores')
     .select(
-      'id, owner_id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, avatar_config'
+      'id, owner_id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, cover_photo, avatar_config'
     )
     .eq('id', id)
     .eq('actif', true)
@@ -90,7 +93,7 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
   const { data, error } = await supabase
     .from('marketplace_stores')
     .select(
-      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo'
+      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, cover_photo'
     )
     .eq('owner_id', userId)
     .order('created_at', { ascending: true });
@@ -192,6 +195,12 @@ export async function modifierBoutique(
 /** Enregistre (ou retire, avec null) le logo de la boutique : chemin renvoyé par envoyerPhotoArticle. */
 export async function definirLogoBoutique(storeId: string, chemin: string | null): Promise<void> {
   const { error } = await supabase.rpc('definir_logo_ma_boutique', { p_store_id: storeId, p_logo: chemin });
+  if (error) throw new Error(error.message);
+}
+
+/** Enregistre (ou retire, avec null) la photo de couverture de la boutique : chemin renvoyé par envoyerPhotoArticle. */
+export async function definirCouvertureBoutique(storeId: string, chemin: string | null): Promise<void> {
+  const { error } = await supabase.rpc('definir_couverture_ma_boutique', { p_store_id: storeId, p_cover: chemin });
   if (error) throw new Error(error.message);
 }
 
@@ -331,11 +340,12 @@ export async function envoyerPhotoArticle(
     });
   }
 
-  const reponse = await fetch(resultat.uri);
-  const blob = await reponse.blob();
+  // Octets décodés depuis le base64 déjà produit : un Blob lu depuis un fichier local arrive typé « text/plain » sur Android,
+  // ce que le bucket refuse (« mime type text/plain is not supported »).
+  const octets = Uint8Array.from(atob(resultat.base64 ?? ''), (c) => c.charCodeAt(0));
   const nom = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
 
-  const { error } = await supabase.storage.from(BUCKET_PHOTOS).upload(nom, blob, {
+  const { error } = await supabase.storage.from(BUCKET_PHOTOS).upload(nom, octets, {
     contentType: 'image/jpeg',
     upsert: false,
   });
@@ -371,3 +381,13 @@ export async function envoyerVideoArticle(uri: string, userId: string, extension
 }
 
 export { urlPhoto };
+
+/** Choisit une image dans la galerie (recadrée au format voulu) et l'envoie dans le bucket des photos. Renvoie le chemin, ou null si annulé. */
+export async function choisirEtEnvoyerPhotoBoutique(userId: string, aspect: [number, number]): Promise<string | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) throw new Error('Facilité a besoin d’accéder à vos photos pour choisir cette image.');
+  const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect });
+  if (choix.canceled) return null;
+  const a = choix.assets[0];
+  return envoyerPhotoArticle(a.uri, { width: a.width, height: a.height }, userId);
+}
