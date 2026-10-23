@@ -68,45 +68,41 @@ export default function MenuScreen() {
   const chemin = usePathname();
   const [mode, setMode] = useState<'facilite' | 'locaux'>(chemin.startsWith('/marketplace') ? 'locaux' : 'facilite');
 
-  // Glisser à gauche / à droite sur la page (les espaces vides comme le reste) bascule entre Locaux et Facilité, comme la touche du haut.
-  // Le contenu SUIT le doigt ; au relâchement il glisse hors de l'écran, l'autre mode entre depuis le côté opposé (pas de saut brusque) ;
-  // sous le seuil, il revient en place en douceur.
-  const [decalage] = useState(() => new Animated.Value(0));
-  const modeActuel = useRef(mode);
-  useEffect(() => {
-    modeActuel.current = mode;
-  }, [mode]);
-  const glisser = useMemo(() => {
-    const largeur = Dimensions.get('window').width;
-    // Facilité : seul le glissé vers la gauche mène à Locaux ; Locaux : seul le glissé vers la droite mène à Facilité.
-    const sensValide = (dx: number) => (modeActuel.current === 'facilite' ? dx < 0 : dx > 0);
-    return PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
-      onPanResponderMove: (_e, g) => decalage.setValue(sensValide(g.dx) ? g.dx : g.dx * 0.2),
-      onPanResponderRelease: (_e, g) => {
-        if (sensValide(g.dx) && Math.abs(g.dx) >= 80) {
-          const versLaGauche = g.dx < 0;
-          Animated.timing(decalage, { toValue: versLaGauche ? -largeur : largeur, duration: 140, useNativeDriver: true }).start(() => {
-            setMode(versLaGauche ? 'locaux' : 'facilite');
-            decalage.setValue(versLaGauche ? largeur : -largeur);
-            Animated.timing(decalage, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-          });
-        } else {
-          Animated.spring(decalage, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
-        }
-      },
-      onPanResponderTerminate: () => Animated.spring(decalage, { toValue: 0, useNativeDriver: true }).start(),
-    });
-  }, [decalage]);
+  // Deux pages côte à côte (Facilité | Locaux), comme les onglets d'un fil : le contenu SUIT le doigt (on voit les deux pages pendant
+  // le glissé), la barre sous les onglets se déplace avec lui, et au relâchement la page se cale en douceur (ou revient si le
+  // glissé est trop court). Toucher un onglet fait le même déplacement animé.
+  const largeur = Dimensions.get('window').width;
+  const pageDepart = chemin.startsWith('/marketplace') ? 1 : 0;
+  const [position] = useState(() => new Animated.Value(pageDepart));
+  const pageCourante = useRef(pageDepart);
+  const [largeurOnglets, setLargeurOnglets] = useState(0);
+
+  function aller(index: 0 | 1) {
+    pageCourante.current = index;
+    setMode(index === 1 ? 'locaux' : 'facilite');
+    Animated.spring(position, { toValue: index, useNativeDriver: true, bounciness: 0, speed: 16 }).start();
+  }
+
+  const pager = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+        onPanResponderMove: (_e, g) => position.setValue(Math.max(-0.12, Math.min(1.12, pageCourante.current - g.dx / largeur))),
+        onPanResponderRelease: (_e, g) => {
+          let cible: 0 | 1 = pageCourante.current as 0 | 1;
+          if (g.dx <= -largeur * 0.2 || g.vx <= -0.4) cible = 1;
+          else if (g.dx >= largeur * 0.2 || g.vx >= 0.4) cible = 0;
+          aller(cible);
+        },
+        onPanResponderTerminate: () => aller(pageCourante.current as 0 | 1),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [position, largeur]
+  );
 
   function retour() {
     if (router.canGoBack()) router.back();
     else router.replace('/');
-  }
-
-  // Touche de bascule du haut : ne change que les raccourcis affichés, sans quitter la page.
-  function choisirMode(m: 'facilite' | 'locaux') {
-    setMode(m);
   }
 
   function confirmerDeconnexion() {
@@ -125,7 +121,8 @@ export default function MenuScreen() {
   const q = terme.trim();
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
-  const tuiles = filtre(mode === 'facilite' ? TUILES_FACILITE : TUILES_LOCAUX);
+  const tuilesFacilite = filtre(TUILES_FACILITE);
+  const tuilesLocaux = filtre(TUILES_LOCAUX);
 
   const grille = (liste: Tuile[]) => (
     <View className="flex-row flex-wrap" style={{ gap: 12 }}>
@@ -196,47 +193,57 @@ export default function MenuScreen() {
           </View>
         )}
 
-        {/* Sélecteur FIXE Facilité | Locaux : il ne défile pas */}
-        <View className="flex-row items-center justify-between bg-white mx-4" style={{ borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 6 }}>
-          <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('MODE')}</Text>
-          <View className="flex-row" style={{ backgroundColor: '#EFEDE7', borderRadius: 20, padding: 3 }}>
+        {/* Onglets FIXES Facilité | Locaux, avec une barre qui suit le déplacement des pages */}
+        <View className="mx-4" style={{ marginBottom: 6 }} onLayout={(e) => setLargeurOnglets(e.nativeEvent.layout.width)}>
+          <View className="flex-row">
             {([
-              { id: 'facilite' as const, libelle: 'Facilité', couleur: VERT },
-              { id: 'locaux' as const, libelle: 'Locaux', couleur: BLEU },
+              { id: 0 as const, libelle: 'Facilité', couleur: VERT },
+              { id: 1 as const, libelle: 'Locaux', couleur: BLEU },
             ]).map((o) => {
-              const actif = mode === o.id;
+              const actif = (mode === 'locaux' ? 1 : 0) === o.id;
               return (
                 <Pressable
                   key={o.id}
-                  onPress={() => choisirMode(o.id)}
+                  onPress={() => aller(o.id)}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: actif }}
-                  className="items-center justify-center"
-                  style={{ paddingHorizontal: 16, height: 34, borderRadius: 17, backgroundColor: actif ? o.couleur : 'transparent' }}>
-                  <Text className="text-[13px] font-black" style={{ color: actif ? '#fff' : 'rgba(0,0,0,0.6)' }}>{t(o.libelle)}</Text>
+                  className="flex-1 items-center justify-center"
+                  style={{ height: 44 }}>
+                  <Text className="text-[15px] font-black" style={{ color: actif ? o.couleur : 'rgba(0,0,0,0.5)' }}>{t(o.libelle)}</Text>
                 </Pressable>
               );
             })}
           </View>
+          <View style={{ height: 3, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+            <Animated.View
+              style={{
+                width: largeurOnglets / 2,
+                height: 3,
+                borderRadius: 2,
+                backgroundColor: mode === 'locaux' ? BLEU : VERT,
+                transform: [{ translateX: position.interpolate({ inputRange: [0, 1], outputRange: [0, largeurOnglets / 2] }) }],
+              }}
+            />
+          </View>
         </View>
       </View>
 
-      <View className="flex-1" {...glisser.panHandlers}>
-      <Animated.View style={{ flex: 1, transform: [{ translateX: decalage }] }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-        showsVerticalScrollIndicator={false}
-        >
-        <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
-        {tuiles.length === 0 ? (
-          <Text className="text-center text-[13px] mt-6" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucun résultat.</Text>
-        ) : (
-          grille(tuiles)
-        )}
-
-      </ScrollView>
-      </Animated.View>
+      <View className="flex-1" style={{ overflow: 'hidden' }} {...pager.panHandlers}>
+        <Animated.View
+          style={{ flex: 1, width: largeur * 2, flexDirection: 'row', transform: [{ translateX: position.interpolate({ inputRange: [0, 1], outputRange: [0, -largeur] }) }] }}>
+          {[tuilesFacilite, tuilesLocaux].map((liste, page) => (
+            <View key={page} style={{ width: largeur }}>
+              <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+                <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
+                {liste.length === 0 ? (
+                  <Text className="text-center text-[13px] mt-6" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucun résultat.</Text>
+                ) : (
+                  grille(liste)
+                )}
+              </ScrollView>
+            </View>
+          ))}
+        </Animated.View>
       </View>
 
       {/* « Paramètres de langue » et l'UNIQUE « Déconnexion » : FIXES, juste au-dessus de la barre de navigation */}
