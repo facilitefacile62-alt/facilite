@@ -18,7 +18,8 @@ const APP_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_
  * - candidatures restées "pending" sans action du recruteur depuis
  *   PENDING_CANDIDATURE_REMINDER_DAYS jours ;
  * - brouillons de CV créés mais jamais finalisés (aucune commande "paid"
- *   associée) depuis ABANDONED_CV_DRAFT_REMINDER_DAYS jours.
+ *   associée) depuis ABANDONED_CV_DRAFT_REMINDER_DAYS jours ;
+ * - notifications « Joyeux anniversaire » (souhaiter_anniversaires).
  *
  * reminder_sent_at rend chaque relance strictement unique : une fois
  * envoyée, la ligne ne sera plus jamais reciblée par une exécution future
@@ -48,11 +49,16 @@ export async function GET(req) {
   const candidatureResult = await remindStalePendingCandidatures(admin);
   const cvDraftResult = await remindAbandonedCvDrafts(admin);
 
+  // Anniversaires du jour : notification « Joyeux anniversaire » (profiles.date_naissance), une seule par personne et par an.
+  const { data: anniversaires, error: anniversaireError } = await admin.rpc("souhaiter_anniversaires");
+  if (anniversaireError) console.error("[Cron Reminders] Anniversaires :", anniversaireError.message);
+
   return NextResponse.json({
     candidatureReminders: candidatureResult.sent,
     candidatureErrors: candidatureResult.errors,
     cvDraftReminders: cvDraftResult.sent,
     cvDraftErrors: cvDraftResult.errors,
+    anniversaires: anniversaireError ? 0 : anniversaires ?? 0,
   });
 }
 
