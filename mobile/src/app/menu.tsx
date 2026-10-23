@@ -1,8 +1,8 @@
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, Linking, PanResponder, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Alert, Animated, Dimensions, Linking, PanResponder, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
@@ -69,17 +69,33 @@ export default function MenuScreen() {
   const [mode, setMode] = useState<'facilite' | 'locaux'>(chemin.startsWith('/marketplace') ? 'locaux' : 'facilite');
 
   // Glisser à gauche / à droite sur la page (les espaces vides comme le reste) bascule entre Locaux et Facilité, comme la touche du haut.
-  const glisser = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
-        onPanResponderRelease: (_e, g) => {
-          if (g.dx <= -60) setMode('locaux');
-          else if (g.dx >= 60) setMode('facilite');
-        },
-      }),
-    []
-  );
+  // Le contenu SUIT le doigt ; au relâchement il glisse hors de l'écran, l'autre mode entre depuis le côté opposé (pas de saut brusque) ;
+  // sous le seuil, il revient en place en douceur.
+  const decalage = useRef(new Animated.Value(0)).current;
+  const modeActuel = useRef(mode);
+  modeActuel.current = mode;
+  const glisser = useMemo(() => {
+    const largeur = Dimensions.get('window').width;
+    // Facilité : seul le glissé vers la gauche mène à Locaux ; Locaux : seul le glissé vers la droite mène à Facilité.
+    const sensValide = (dx: number) => (modeActuel.current === 'facilite' ? dx < 0 : dx > 0);
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+      onPanResponderMove: (_e, g) => decalage.setValue(sensValide(g.dx) ? g.dx : g.dx * 0.2),
+      onPanResponderRelease: (_e, g) => {
+        if (sensValide(g.dx) && Math.abs(g.dx) >= 80) {
+          const versLaGauche = g.dx < 0;
+          Animated.timing(decalage, { toValue: versLaGauche ? -largeur : largeur, duration: 140, useNativeDriver: true }).start(() => {
+            setMode(versLaGauche ? 'locaux' : 'facilite');
+            decalage.setValue(versLaGauche ? largeur : -largeur);
+            Animated.timing(decalage, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+          });
+        } else {
+          Animated.spring(decalage, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
+        }
+      },
+      onPanResponderTerminate: () => Animated.spring(decalage, { toValue: 0, useNativeDriver: true }).start(),
+    });
+  }, [decalage]);
 
   function retour() {
     if (router.canGoBack()) router.back();
@@ -204,6 +220,7 @@ export default function MenuScreen() {
       </View>
 
       <View className="flex-1" {...glisser.panHandlers}>
+      <Animated.View style={{ flex: 1, transform: [{ translateX: decalage }] }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
@@ -217,6 +234,7 @@ export default function MenuScreen() {
         )}
 
       </ScrollView>
+      </Animated.View>
       </View>
 
       {/* « Paramètres de langue » et l'UNIQUE « Déconnexion » : FIXES, juste au-dessus de la barre de navigation */}
