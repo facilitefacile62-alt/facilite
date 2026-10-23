@@ -138,7 +138,7 @@ export default function ModifierBoutiqueScreen() {
       return;
     }
     if (naissance && !dateValide(naissance)) {
-      Alert.alert('Date de naissance', 'Complète le jour, le mois et l’année (par exemple 15 / 03 / 1990), ou laisse les trois cases vides.');
+      Alert.alert('Date de naissance', 'Choisis le jour, le mois et l’année, ou laisse les trois listes vides.');
       return;
     }
     setEnregistrement(true);
@@ -356,7 +356,7 @@ export default function ModifierBoutiqueScreen() {
 }
 
 /** Champ de la maquette : libellé vert posé sur la bordure, compteur à droite. */
-const MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Sept.', 'Octobre', 'Nov.', 'Déc.'];
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 /** « AAAA-MM-JJ » valide (mois 1-12, jour existant dans ce mois, année plausible). */
 function dateValide(iso: string): boolean {
@@ -367,108 +367,73 @@ function dateValide(iso: string): boolean {
   return jour <= new Date(annee, mois, 0).getDate();
 }
 
-/** Date de naissance en trois cases (jour, mois, année), pour bien voir ce qu'on écrit ; enregistrée sous la forme « AAAA-MM-JJ ». */
+/** Date de naissance en trois listes déroulantes (Jour, Mois, Année), comme sur Facebook ; enregistrée sous la forme « AAAA-MM-JJ ». */
 function ChampDateNaissance({ valeur, onChange, onFocus, onLayout }: { valeur: string; onChange: (v: string) => void; onFocus: () => void; onLayout?: (e: LayoutChangeEvent) => void }) {
   const [a0, m0, j0] = valeur ? valeur.split('-') : ['', '', ''];
-  const [jour, setJour] = useState(j0 ?? '');
-  const [mois, setMois] = useState(m0 ?? '');
-  const [annee, setAnnee] = useState(a0 ?? '');
-  const [listeMois, setListeMois] = useState(false);
-  const refMois = useRef<TextInput>(null);
-  const refAnnee = useRef<TextInput>(null);
+  const [jour, setJour] = useState(j0 ? String(Number(j0)) : '');
+  const [mois, setMois] = useState(m0 ? String(Number(m0)) : '');
+  const [annee, setAnnee] = useState(a0 && Number(a0) > 0 ? a0 : '');
+  const [ouvert, setOuvert] = useState<'jour' | 'mois' | 'annee' | null>(null);
 
   function maj(j: string, m: string, a: string) {
     setJour(j);
     setMois(m);
     setAnnee(a);
-    // Rien de saisi : valeur vide. Sinon la valeur composée (même incomplète : la validation à l'enregistrement la refuse).
-    onChange(!j && !m && !a ? '' : `${a.padStart(4, '0')}-${m.padStart(2, '0')}-${j.padStart(2, '0')}`);
+    // Rien de choisi : valeur vide. Sinon la valeur composée (même incomplète : la validation à l'enregistrement la refuse).
+    onChange(!j && !m && !a ? '' : `${(a || '0').padStart(4, '0')}-${(m || '0').padStart(2, '0')}-${(j || '0').padStart(2, '0')}`);
   }
-  const chiffres = (t: string, n: number) => t.replace(/\D/g, '').slice(0, n);
-  const caseStyle = { height: 50, borderRadius: 12, backgroundColor: '#F3F4F6', textAlign: 'center' as const, fontSize: 18, fontWeight: '800' as const, color: '#1A1A1A', padding: 0 };
+
+  const anneeCourante = new Date().getFullYear();
+  const choix: { cle: 'jour' | 'mois' | 'annee'; libelle: string; texte: string; flex: number; options: { valeur: string; texte: string }[] }[] = [
+    { cle: 'jour', libelle: 'Jour', texte: jour, flex: 2, options: Array.from({ length: 31 }, (_, i) => ({ valeur: String(i + 1), texte: String(i + 1) })) },
+    { cle: 'mois', libelle: 'Mois', texte: mois ? MOIS[Number(mois) - 1] : '', flex: 3, options: MOIS.map((nom, i) => ({ valeur: String(i + 1), texte: nom })) },
+    { cle: 'annee', libelle: 'Année', texte: annee, flex: 2.4, options: Array.from({ length: anneeCourante - 1899 }, (_, i) => ({ valeur: String(anneeCourante - i), texte: String(anneeCourante - i) })) },
+  ];
+  const liste = choix.find((c) => c.cle === ouvert);
 
   return (
     <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }} onLayout={onLayout}>
-      <View className="flex-row items-center justify-between">
-        <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Date de naissance</Text>
-        <Text className="text-[11px] text-black/35">jour · mois · année</Text>
-      </View>
+      <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Date de naissance</Text>
       <View className="flex-row gap-2.5 mt-2">
-        <View style={{ flex: 2 }}>
-          <TextInput
-            value={jour}
-            onChangeText={(t) => {
-              const v = chiffres(t, 2);
-              maj(v, mois, annee);
-              if (v.length === 2) refMois.current?.focus();
+        {choix.map((c) => (
+          <Pressable
+            key={c.cle}
+            onPress={() => {
+              setOuvert((o) => (o === c.cle ? null : c.cle));
+              onFocus();
             }}
-            onFocus={onFocus}
-            keyboardType="number-pad"
-            placeholder="JJ"
-            placeholderTextColor="rgba(0,0,0,0.3)"
-            maxLength={2}
-            accessibilityLabel="Jour de naissance"
-            style={caseStyle}
-          />
-          <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Jour</Text>
-        </View>
-        <View style={{ flex: 2 }}>
-          <TextInput
-            ref={refMois}
-            value={mois}
-            onChangeText={(t) => {
-              const v = chiffres(t, 2);
-              maj(jour, v, annee);
-              if (v.length === 2) refAnnee.current?.focus();
-            }}
-            onFocus={onFocus}
-            keyboardType="number-pad"
-            placeholder="MM"
-            placeholderTextColor="rgba(0,0,0,0.3)"
-            maxLength={2}
-            accessibilityLabel="Mois de naissance"
-            style={caseStyle}
-          />
-          <Pressable onPress={() => setListeMois((o) => !o)} accessibilityRole="button" accessibilityLabel="Choisir le mois dans la liste" hitSlop={6}>
-            <Text className="text-[10.5px] text-center mt-1 font-bold" style={{ color: '#047857' }}>Mois {listeMois ? '▴' : '▾'}</Text>
+            accessibilityRole="button"
+            accessibilityLabel={`${c.libelle} de naissance`}
+            className="flex-row items-center justify-between rounded-xl px-3"
+            style={{ flex: c.flex, height: 50, borderWidth: 1, borderColor: ouvert === c.cle ? '#1A1A1A' : 'rgba(0,0,0,0.15)', backgroundColor: '#fff' }}>
+            <Text numberOfLines={1} className="flex-1 text-[14.5px]" style={{ color: c.texte ? '#1A1A1A' : 'rgba(0,0,0,0.45)', fontWeight: c.texte ? '700' : '600' }}>
+              {c.texte || c.libelle}
+            </Text>
+            <Ionicons name={ouvert === c.cle ? 'chevron-up' : 'chevron-down'} size={18} color="#1A1A1A" />
           </Pressable>
-        </View>
-        <View style={{ flex: 3 }}>
-          <TextInput
-            ref={refAnnee}
-            value={annee}
-            onChangeText={(t) => maj(jour, mois, chiffres(t, 4))}
-            onFocus={onFocus}
-            keyboardType="number-pad"
-            placeholder="AAAA"
-            placeholderTextColor="rgba(0,0,0,0.3)"
-            maxLength={4}
-            accessibilityLabel="Année de naissance"
-            style={caseStyle}
-          />
-          <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Année</Text>
-        </View>
+        ))}
       </View>
-      {listeMois ? (
-        <View className="flex-row flex-wrap mt-3" style={{ gap: 8 }}>
-          {MOIS.map((nomMois, i) => {
-            const actif = Number(mois) === i + 1;
-            return (
-              <Pressable
-                key={nomMois}
-                onPress={() => {
-                  maj(jour, String(i + 1).padStart(2, '0'), annee);
-                  setListeMois(false);
-                  refAnnee.current?.focus();
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: actif }}
-                className="items-center justify-center rounded-xl"
-                style={{ width: '23%', height: 40, backgroundColor: actif ? '#10B981' : '#F3F4F6' }}>
-                <Text className="text-[12.5px] font-black" style={{ color: actif ? '#fff' : '#1A1A1A' }}>{nomMois}</Text>
-              </Pressable>
-            );
-          })}
+      {liste ? (
+        <View className="mt-2 rounded-xl overflow-hidden" style={{ maxHeight: 230, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', backgroundColor: '#fff' }}>
+          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+            {liste.options.map((o) => {
+              const actif = o.valeur === (liste.cle === 'jour' ? jour : liste.cle === 'mois' ? mois : annee);
+              return (
+                <Pressable
+                  key={o.valeur}
+                  onPress={() => {
+                    maj(liste.cle === 'jour' ? o.valeur : jour, liste.cle === 'mois' ? o.valeur : mois, liste.cle === 'annee' ? o.valeur : annee);
+                    setOuvert(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: actif }}
+                  className="px-4 justify-center"
+                  style={{ height: 46, backgroundColor: actif ? '#ECFDF5' : '#fff' }}>
+                  <Text className="text-[15px]" style={{ color: '#1A1A1A', fontWeight: actif ? '800' : '500' }}>{o.texte}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
       ) : null}
     </View>
