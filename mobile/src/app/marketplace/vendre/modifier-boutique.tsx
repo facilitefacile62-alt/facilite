@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Keyboard, Pressable, ScrollView, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 import { urlPhoto } from '@/lib/marketplace';
+import SelecteurDateNaissance, { dateValide } from '@/components/SelecteurDateNaissance';
+import { departementLePlusProche } from '@/lib/departements';
+import { VILLES } from '@/lib/offresParVille';
 import {
   chargerMesBoutiques,
   choisirEtEnvoyerPhotoBoutique,
@@ -53,12 +56,29 @@ export default function ModifierBoutiqueScreen() {
   const [nom, setNom] = useState(connu.nom);
   const [whatsapp, setWhatsapp] = useState('');
   const [ville, setVille] = useState('');
-  const [naissance, setNaissance] = useState(typeof profile?.birth_date === 'string' ? profile.birth_date : '');
+  const [naissance, setNaissance] = useState(typeof profile?.date_naissance === 'string' ? profile.date_naissance : '');
   const [sexe, setSexe] = useState(typeof profile?.gender === 'string' ? profile.gender : '');
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
   const [chargement, setChargement] = useState(true);
   const [enregistrement, setEnregistrement] = useState(false);
   const [envoiLogo, setEnvoiLogo] = useState(false);
+  // Clavier : hauteur suivie pour laisser assez de place sous le dernier champ, et chaque champ touché REMONTE au-dessus du clavier.
+  const defilement = useRef<ScrollView>(null);
+  const positions = useRef<Record<string, number>>({});
+  const [clavier, setClavier] = useState(0);
+  useEffect(() => {
+    const ouvre = Keyboard.addListener('keyboardDidShow', (e) => setClavier(e.endCoordinates.height));
+    const ferme = Keyboard.addListener('keyboardDidHide', () => setClavier(0));
+    return () => {
+      ouvre.remove();
+      ferme.remove();
+    };
+  }, []);
+  const suivre = (nom: string) => (e: LayoutChangeEvent) => {
+    positions.current[nom] = e.nativeEvent.layout.y;
+  };
+  const faireVoir = (nom: string) => () =>
+    setTimeout(() => defilement.current?.scrollTo({ y: Math.max(0, (positions.current[nom] ?? 0) - 90), animated: true }), 280);
   const [envoiCouverture, setEnvoiCouverture] = useState(false);
 
   // Logo (rond) et photo de couverture (bannière) : enregistrés tout de suite, visibles par les visiteurs de la boutique.
@@ -101,6 +121,16 @@ export default function ModifierBoutiqueScreen() {
   useFocusEffect(charger);
 
   const positionConnue = boutique?.latitude != null && boutique?.longitude != null;
+  // Département de la position verrouillée (centre de département le plus proche, même calcul que le site).
+  const departement = positionConnue && boutique ? departementLePlusProche(boutique.latitude, boutique.longitude) : null;
+  // Ville de la position verrouillée quand aucune ville n'est enregistrée : la plus proche parmi les villes connues de l'application.
+  const villeGps =
+    positionConnue && boutique
+      ? VILLES.reduce((meilleure, v) => {
+          const d = (v.lat - (boutique.latitude as number)) ** 2 + (v.lng - (boutique.longitude as number)) ** 2;
+          return d < meilleure.d ? { d, nom: v.nom } : meilleure;
+        }, { d: Infinity, nom: '' }).nom
+      : '';
 
   async function enregistrer() {
     if (!userId || enregistrement) return;
@@ -108,18 +138,23 @@ export default function ModifierBoutiqueScreen() {
       Alert.alert('Informations manquantes', 'Le prénom et le nom sont obligatoires.');
       return;
     }
+    if (naissance && !dateValide(naissance)) {
+      Alert.alert('Date de naissance', 'Choisis le jour, le mois et l’année, ou laisse les trois listes vides.');
+      return;
+    }
     setEnregistrement(true);
     try {
       await enregistrerChampsProfil(userId, {
         full_name: `${prenom.trim()} ${nom.trim()}`.trim(),
-        birth_date: naissance.trim() || null,
+        // La colonne s'appelle date_naissance (« birth_date » n'existe pas dans profiles : l'enregistrement échouait).
+        date_naissance: naissance.trim() || null,
         gender: sexe.trim() || null,
       });
       if (boutique) {
         await modifierBoutique(boutique.id, {
           nom: boutique.nom,
           quartier: boutique.quartier,
-          ville: ville.trim() || null,
+          ville: (ville.trim() || villeGps) || null,
           telephoneWhatsapp: whatsapp.trim() || null,
         });
       }
@@ -172,7 +207,12 @@ export default function ModifierBoutiqueScreen() {
             <ActivityIndicator color={VERT} />
           </View>
         ) : (
-          <ScrollView contentContainerClassName="px-4 py-5 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            ref={defilement}
+            contentContainerClassName="px-4 pt-5 gap-3"
+            contentContainerStyle={{ paddingBottom: clavier + 60 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
             {boutique ? (
               <Pressable
                 onPress={() => changerImage('couverture')}
@@ -215,26 +255,51 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} />
-            <ChampEncadre libelle="Nom*" valeur={nom} onChange={setNom} max={MAX_NOM} />
+            {/* Prénom et nom côte à côte */}
+            <View className="flex-row gap-2.5" onLayout={suivre('prenom')}>
+              <View style={{ flex: 1 }}>
+                <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} onFocus={faireVoir('prenom')} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ChampEncadre libelle="Nom*" valeur={nom} onChange={setNom} max={MAX_NOM} onFocus={faireVoir('prenom')} />
+              </View>
+            </View>
             <ChampEncadre
               libelle="Numéro WhatsApp*"
               valeur={whatsapp}
               onChange={setWhatsapp}
               indication="Contact direct"
               clavier="phone-pad"
+              onLayout={suivre('whatsapp')}
+              onFocus={faireVoir('whatsapp')}
             />
 
-            <View className="bg-white rounded-[14px] px-3.5 py-3.5 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+            <View className="bg-white rounded-[14px] px-3.5 py-3.5 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }} onLayout={suivre('ville')}>
               <Ionicons name="location" size={14} color="#EF4444" />
               <TextInput
-                value={ville}
+                value={ville || villeGps}
                 onChangeText={setVille}
+                onFocus={faireVoir('ville')}
+                editable={!positionConnue}
                 placeholder="Ville"
                 placeholderTextColor="rgba(0,0,0,0.3)"
-                className="flex-1 text-[14px] text-[#1A1A1A]"
+                className="flex-1 text-[14.5px] font-bold text-[#1A1A1A]"
               />
               {positionConnue ? (
+                <View className="bg-[#D1FAE5] rounded-full px-2.5 py-1">
+                  <Text className="text-[10.5px] font-bold text-[#047857]">GPS Verrouillé</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Département de la position verrouillée, affiché comme la ville */}
+            <View className="bg-white rounded-[14px] px-3.5 py-3 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+              <Ionicons name="map-outline" size={14} color="#047857" />
+              <View className="flex-1">
+                <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Département</Text>
+                <Text className="text-[14.5px] font-bold text-[#1A1A1A] mt-0.5">{departement || '—'}</Text>
+              </View>
+              {departement ? (
                 <View className="bg-[#D1FAE5] rounded-full px-2.5 py-1">
                   <Text className="text-[10.5px] font-bold text-[#047857]">GPS Verrouillé</Text>
                 </View>
@@ -263,8 +328,27 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <ChampEncadre libelle="Date de naissance" valeur={naissance} onChange={setNaissance} indication="aaaa-mm-jj" />
-            <ChampEncadre libelle="Sexe" valeur={sexe} onChange={setSexe} indication="Femme / Homme" />
+            <SelecteurDateNaissance valeur={naissance} onChange={setNaissance} onLayout={suivre('naissance')} onFocus={faireVoir('naissance')} />
+
+            <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+              <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Sexe</Text>
+              <View className="flex-row gap-2.5 mt-2">
+                {(['Femme', 'Homme'] as const).map((choix) => {
+                  const actif = sexe === choix;
+                  return (
+                    <Pressable
+                      key={choix}
+                      onPress={() => setSexe(actif ? '' : choix)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: actif }}
+                      className="flex-1 items-center justify-center rounded-xl"
+                      style={{ height: 46, backgroundColor: actif ? VERT : '#F3F4F6', borderWidth: 1, borderColor: actif ? VERT : 'rgba(0,0,0,0.08)' }}>
+                      <Text className="text-[15px] font-black" style={{ color: actif ? '#fff' : '#1A1A1A' }}>{choix}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           </ScrollView>
         )}
       </SafeAreaView>
@@ -280,7 +364,11 @@ function ChampEncadre({
   max,
   indication,
   clavier,
+  onFocus,
+  onLayout,
 }: {
+  onFocus?: () => void;
+  onLayout?: (e: LayoutChangeEvent) => void;
   libelle: string;
   valeur: string;
   onChange: (v: string) => void;
@@ -289,7 +377,7 @@ function ChampEncadre({
   clavier?: 'phone-pad' | 'default';
 }) {
   return (
-    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }} onLayout={onLayout}>
       <View className="flex-row items-center justify-between">
         <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>
           {libelle}
@@ -306,6 +394,7 @@ function ChampEncadre({
         value={valeur}
         onChangeText={(v) => onChange(max ? v.slice(0, max) : v)}
         keyboardType={clavier ?? 'default'}
+        onFocus={onFocus}
         className="text-[14.5px] text-[#1A1A1A] mt-1 p-0"
       />
     </View>

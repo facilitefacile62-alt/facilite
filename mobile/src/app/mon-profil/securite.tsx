@@ -19,7 +19,7 @@ import { SITE_URL } from '@/lib/webEcrans';
 // « A déjà un mot de passe » est décidé par le serveur (/api/auth/has-password), jamais deviné côté appareil.
 //
 // Les informations viennent du compte d'authentification (user.email,
-// user.phone, email_confirmed_at) et de `profiles` (birth_date, country —
+// user.phone, email_confirmed_at) et de `profiles` (date_naissance, country —
 // noms vérifiés dans 20260802060000_profiles_deny_by_default.sql) : rien
 // n'est affiché quand la valeur n'existe pas (« Non renseignée »), jamais
 // une valeur d'exemple.
@@ -130,7 +130,7 @@ export default function ProfilSecuriteScreen() {
     {
       cle: 'naissance',
       libelle: 'Date de naissance',
-      valeur: texteOuNonRenseigne(profile?.birth_date),
+      valeur: texteOuNonRenseigne(profile?.date_naissance),
       confirme: false,
     },
     {

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CarteLigne, ListeCartes, PASTILLE_CERTIFIE, PASTILLE_PRIVE, PASTILLE_PUBLIC } from '@/components/CarteProfil';
 import EnteteRubrique from '@/components/EnteteRubrique';
+import SelecteurDateNaissance, { dateValide } from '@/components/SelecteurDateNaissance';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 
@@ -27,7 +28,7 @@ import { enregistrerChampsProfil } from '@/lib/profilChamps';
 const SITE_URL = 'https://ffacilite.com';
 
 type Ligne = {
-  cle: 'city' | 'quartier' | 'country' | 'membre' | 'education_level' | 'gender';
+  cle: 'city' | 'quartier' | 'country' | 'membre' | 'education_level' | 'gender' | 'date_naissance';
   icone: keyof typeof Ionicons.glyphMap;
   /** Libellé affiché sous la valeur (maquette du 20/10/2026). */
   nom: string;
@@ -44,6 +45,7 @@ const LIGNES: Ligne[] = [
   { cle: 'membre', icone: 'business-outline', nom: 'Membre de', label: 'MEMBRE DE', aide: 'Organisation certifiée', modifiable: false },
   { cle: 'education_level', icone: 'school-outline', nom: "Niveau d'études", label: "NIVEAU D'ÉTUDES", aide: "Utilisé pour vérifier votre éligibilité aux offres d'emploi", modifiable: true },
   { cle: 'gender', icone: 'person-outline', nom: 'Genre', label: 'GENRE', aide: 'Genre du profil', modifiable: true },
+  { cle: 'date_naissance', icone: 'gift-outline', nom: 'Date de naissance', label: 'DATE DE NAISSANCE', aide: 'Gardée pour vous souhaiter bon anniversaire', modifiable: true },
 ];
 
 export default function ProfilInfosPersoScreen() {
@@ -59,19 +61,31 @@ export default function ProfilInfosPersoScreen() {
   function valeurDe(l: Ligne): string {
     if (l.cle === 'membre') return badges[0] ? String(badges[0]).replace(/_/g, ' ') : '';
     const v = profile?.[l.cle];
-    return typeof v === 'string' ? v.trim() : '';
+    const texte = typeof v === 'string' ? v.trim() : '';
+    // Date de naissance affichée en toutes lettres (« 15 octobre 1990 »), enregistrée en « AAAA-MM-JJ ».
+    if (l.cle === 'date_naissance' && /^\d{4}-\d{2}-\d{2}/.test(texte)) {
+      const [a, m, j] = texte.slice(0, 10).split('-');
+      const mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][Number(m) - 1];
+      return `${Number(j)} ${mois} ${a}`;
+    }
+    return texte;
   }
 
   function ouvrir(l: Ligne) {
-    setSaisie(valeurDe(l));
+    setSaisie(l.cle === 'date_naissance' ? (typeof profile?.date_naissance === 'string' ? profile.date_naissance.slice(0, 10) : '') : valeurDe(l));
     setEnEdition(l.cle);
   }
 
   async function enregistrer() {
     if (!user?.id || !enEdition) return;
+    if (enEdition === 'date_naissance' && saisie && !dateValide(saisie)) {
+      Alert.alert('Date de naissance', 'Choisis le jour, le mois et l’année, ou laisse les trois listes vides.');
+      return;
+    }
     setEnregistrement(true);
     try {
-      await enregistrerChampsProfil(user.id, { [enEdition]: saisie.trim() });
+      // La date de naissance est une vraie date en base : vide = null (jamais une chaîne vide).
+      await enregistrerChampsProfil(user.id, { [enEdition]: enEdition === 'date_naissance' ? saisie.trim() || null : saisie.trim() });
       await refreshProfile();
       setEnEdition(null);
     } catch {
@@ -118,14 +132,18 @@ export default function ProfilInfosPersoScreen() {
                   enfants={
                     enEdition === l.cle ? (
                       <View className="gap-2 mt-2">
-                        <TextInput
-                          value={saisie}
-                          onChangeText={setSaisie}
-                          autoFocus
-                          placeholder={l.aide}
-                          placeholderTextColor="rgba(0,0,0,0.35)"
-                          style={[{ height: 46, borderRadius: 12, borderWidth: 1.5, borderColor: '#0B3D2A', backgroundColor: '#fff', paddingHorizontal: 14, fontSize: 15, color: '#1A1A1A' }, { outlineStyle: 'none' } as object]}
-                        />
+                        {l.cle === 'date_naissance' ? (
+                          <SelecteurDateNaissance valeur={saisie} onChange={setSaisie} />
+                        ) : (
+                          <TextInput
+                            value={saisie}
+                            onChangeText={setSaisie}
+                            autoFocus
+                            placeholder={l.aide}
+                            placeholderTextColor="rgba(0,0,0,0.35)"
+                            style={[{ height: 46, borderRadius: 12, borderWidth: 1.5, borderColor: '#0B3D2A', backgroundColor: '#fff', paddingHorizontal: 14, fontSize: 15, color: '#1A1A1A' }, { outlineStyle: 'none' } as object]}
+                          />
+                        )}
                         <View className="flex-row gap-2">
                           <Pressable onPress={() => setEnEdition(null)} className="flex-1 items-center justify-center bg-white" style={{ height: 40, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' }}>
                             <Text className="text-[13px] font-black text-[#1A1A1A]">Annuler</Text>

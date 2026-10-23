@@ -4,6 +4,7 @@ import { Alert, Text, TextInput, View } from 'react-native';
 
 import { BoutonContinuer } from '@/components/CasesCode';
 import EcranConnexion, { CHAMP } from '@/components/EcranConnexion';
+import SelecteurDateNaissance, { dateValide } from '@/components/SelecteurDateNaissance';
 import { useAuth } from '@/context/AuthContext';
 import { marquerNomConfirme, nomPropose } from '@/lib/preferencesConnexion';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +32,8 @@ const champStyle = {
 export default function NomPrenomScreen() {
   const router = useRouter();
   const { user, signOut, refreshProfile } = useAuth();
+  // Date de naissance (facultative) : gardée pour souhaiter l'anniversaire.
+  const [naissance, setNaissance] = useState('');
   const propose = nomPropose(user);
   const [prenom, setPrenom] = useState(propose.prenom);
   const [nom, setNom] = useState(propose.nom);
@@ -40,10 +43,14 @@ export default function NomPrenomScreen() {
 
   async function continuer() {
     if (!valide || !user?.id || enregistrement) return;
+    if (naissance && !dateValide(naissance)) {
+      Alert.alert('Date de naissance', 'Choisis le jour, le mois et l’année, ou laisse les trois listes vides.');
+      return;
+    }
     setEnregistrement(true);
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: `${prenom.trim()} ${nom.trim()}`, updated_at: new Date().toISOString() })
+      .update({ full_name: `${prenom.trim()} ${nom.trim()}`, ...(naissance ? { date_naissance: naissance } : {}), updated_at: new Date().toISOString() })
       .eq('id', user.id);
     if (error) {
       setEnregistrement(false);
@@ -93,6 +100,11 @@ export default function NomPrenomScreen() {
         textContentType="familyName"
         style={champStyle}
       />
+
+      <View className="mt-4">
+        <SelecteurDateNaissance valeur={naissance} onChange={setNaissance} />
+        <Text className="text-[12.5px] mt-1.5 ml-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Facultatif — pour te souhaiter bon anniversaire.</Text>
+      </View>
 
       <View className="mt-5">
         <BoutonContinuer onPress={continuer} actif={valide} chargement={enregistrement} />
