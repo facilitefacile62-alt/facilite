@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import { compterMessagesNonLus, compterNotificationsNonLues } from '@/lib/notifications';
+import { supabase } from '@/lib/supabase';
 
 // Compteurs des pastilles rouges (charte §1.4).
 //
@@ -79,9 +80,19 @@ export function useCompteursNonLus(): Compteurs {
     };
     abonnes.add(majSiMonte);
     obtenir(userId).then(majSiMonte).catch(() => {});
+    // En direct : un message reçu, ou un message marqué lu, remet le compteur à jour tout de suite (sans attendre un changement
+    // d'écran ni la fin du cache de 30 s).
+    const canal = supabase
+      .channel(`compteurs-messages-${userId}-${Math.random().toString(36).slice(2, 8)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` }, () => {
+        invaliderCompteurs();
+        obtenir(userId).then(majSiMonte).catch(() => {});
+      })
+      .subscribe();
     return () => {
       monte = false;
       abonnes.delete(majSiMonte);
+      supabase.removeChannel(canal);
     };
   }, [userId, chemin]);
 

@@ -59,6 +59,7 @@ export default function MarketplaceBottomBar() {
   const t = useT();
   const router = useRouter();
   const chemin = usePathname();
+  const compteurs = useCompteursNonLus();
   const insets = useSafeAreaInsets();
   const [deplie, setDeplie] = useState(false);
   const [hauteur] = useState(() => new Animated.Value(0));
@@ -116,7 +117,10 @@ export default function MarketplaceBottomBar() {
               accessibilityRole="tab"
               accessibilityState={{ selected: estActif }}
               className="flex-1 items-center justify-center py-2 min-h-[52px]">
-              <Ionicons name={estActif ? e.iconeActive : e.icone} size={22} color={couleur} />
+              <View>
+                <Ionicons name={estActif ? e.iconeActive : e.icone} size={22} color={couleur} />
+                {e.id === 'messages' ? <PastilleCompteur valeur={compteurs.messages} /> : null}
+              </View>
               <Text className="text-[10.5px] font-bold mt-0.5" style={{ color: couleur }}>
                 {t(e.libelle)}
               </Text>
@@ -127,4 +131,6 @@ export default function MarketplaceBottomBar() {
     </View>
   );
 }
+import PastilleCompteur from '@/components/PastilleCompteur';
 import { useT } from '@/lib/i18n';
+import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
