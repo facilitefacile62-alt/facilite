@@ -1,8 +1,8 @@
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Linking, PanResponder, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
@@ -67,6 +67,19 @@ export default function MenuScreen() {
   // Facilité) ; la touche de bascule change ensuite les tuiles sans quitter la page.
   const chemin = usePathname();
   const [mode, setMode] = useState<'facilite' | 'locaux'>(chemin.startsWith('/marketplace') ? 'locaux' : 'facilite');
+
+  // Glisser à gauche / à droite sur la page (les espaces vides comme le reste) bascule entre Locaux et Facilité, comme la touche du haut.
+  const glisser = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6,
+        onPanResponderRelease: (_e, g) => {
+          if (g.dx <= -60) setMode('locaux');
+          else if (g.dx >= 60) setMode('facilite');
+        },
+      }),
+    []
+  );
 
   function retour() {
     if (router.canGoBack()) router.back();
@@ -190,6 +203,7 @@ export default function MenuScreen() {
         </View>
       </View>
 
+      <View className="flex-1" {...glisser.panHandlers}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
@@ -203,6 +217,7 @@ export default function MenuScreen() {
         )}
 
       </ScrollView>
+      </View>
 
       {/* « Paramètres de langue » et l'UNIQUE « Déconnexion » : FIXES, juste au-dessus de la barre de navigation */}
       <View className="flex-row px-4 pt-2 pb-2" style={{ gap: 12, backgroundColor: '#F2F0EA' }}>
