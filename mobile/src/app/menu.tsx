@@ -1,7 +1,7 @@
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter, type Href } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, Dimensions, Linking, PanResponder, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -71,9 +71,11 @@ export default function MenuScreen() {
   // Glisser à gauche / à droite sur la page (les espaces vides comme le reste) bascule entre Locaux et Facilité, comme la touche du haut.
   // Le contenu SUIT le doigt ; au relâchement il glisse hors de l'écran, l'autre mode entre depuis le côté opposé (pas de saut brusque) ;
   // sous le seuil, il revient en place en douceur.
-  const decalage = useRef(new Animated.Value(0)).current;
+  const [decalage] = useState(() => new Animated.Value(0));
   const modeActuel = useRef(mode);
-  modeActuel.current = mode;
+  useEffect(() => {
+    modeActuel.current = mode;
+  }, [mode]);
   const glisser = useMemo(() => {
     const largeur = Dimensions.get('window').width;
     // Facilité : seul le glissé vers la gauche mène à Locaux ; Locaux : seul le glissé vers la droite mène à Facilité.
