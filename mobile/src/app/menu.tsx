@@ -1,14 +1,13 @@
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { usePathname, useRouter, type Href } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import { contientSansAccent } from '@/lib/texte';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
-import { obtenirUserMode } from '@/lib/userMode';
 import { useT } from '@/lib/i18n';
 
 // Menu « ☰ » (maquettes 01 à 03 du dossier Menu et Publier) : une PAGE (la barre du bas reste visible, « ‹ Menu » revient à
@@ -64,12 +63,10 @@ export default function MenuScreen() {
   const ouvert = useFonctionnalites();
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
-  // Mode affiché (Facilité | Locaux) : change les tuiles sans quitter la page ; le choix est mémorisé.
-  const [mode, setMode] = useState<'facilite' | 'locaux'>('facilite');
-
-  useEffect(() => {
-    obtenirUserMode().then((m) => setMode(m === 'business' ? 'locaux' : 'facilite'));
-  }, []);
+  // Mode affiché (Facilité | Locaux) : on part de la plateforme où l'on se trouve (☰ ouvert depuis Locaux → Locaux, depuis Facilité →
+  // Facilité) ; la touche de bascule change ensuite les tuiles sans quitter la page.
+  const chemin = usePathname();
+  const [mode, setMode] = useState<'facilite' | 'locaux'>(chemin.startsWith('/marketplace') ? 'locaux' : 'facilite');
 
   function retour() {
     if (router.canGoBack()) router.back();
