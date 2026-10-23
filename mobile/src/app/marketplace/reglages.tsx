@@ -90,7 +90,6 @@ export default function ReglagesMarketplaceScreen() {
   const estVendeur = Boolean(boutique);
 
   if (userId && !chargement && estVendeur) {
-    const rubrique = (cle: string) => router.push(`/marketplace/rubrique/${cle}` as Href);
     return (
       <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
         <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
@@ -110,21 +109,12 @@ export default function ReglagesMarketplaceScreen() {
 
           <View className="px-4">
             <GroupeCartes>
-              <CarteMenu icone="rocket-outline" titre="Faire profit & Boost" sous="Mettre vos articles en avant" onPress={() => rubrique('boost')} />
-              <CarteMenu icone="people-outline" titre="Abonnés" sous="Les personnes qui suivent votre boutique" onPress={() => rubrique('abonnes')} />
-              <CarteMenu icone="star-outline" titre="Avis clients" sous="Ce que disent vos clients" onPress={() => rubrique('avis')} />
-            </GroupeCartes>
-            <GroupeCartes>
               <CarteMenu icone="id-card-outline" titre="Coordonnées" sous="Téléphone, e-mail et adresse" onPress={() => router.push('/mon-profil/coordonnees')} />
-              <CarteMenu icone="bicycle-outline" titre="Contact & Livraison" sous="Comment les clients vous joignent" onPress={() => rubrique('livraison')} />
               <CarteMenu icone="help-circle-outline" titre="Foire aux questions" sous="Les réponses à vos questions" onPress={() => router.push('/web/faq')} />
               <CarteMenu icone="language-outline" titre="Changer la langue" sous={libelleLangue(langue)} onPress={() => router.push('/mon-profil/langue' as Href)} />
             </GroupeCartes>
             <GroupeCartes>
               <CarteMenu icone="shield-checkmark-outline" titre="Confidentialité" sous="Vos données et votre visibilité" onPress={() => router.push('/mon-profil/confidentialite')} />
-              <CarteMenu icone="chatbubble-outline" titre="Désactiver le chat" sous="Bientôt disponible" pastille={{ texte: 'Actif', actif: true }} onPress={() => rubrique('chat')} />
-              <CarteMenu icone="chatbubbles-outline" titre="Désactiver les commentaires" sous="Bientôt disponible" pastille={{ texte: 'Actifs', actif: true }} onPress={() => rubrique('commentaires')} />
-              <CarteMenu icone="notifications-outline" titre="Gérer les notifications" sous="Choisir ce que vous recevez" onPress={() => rubrique('notifications')} />
             </GroupeCartes>
             <GroupeCartes>
               <CarteMenu icone="lock-closed-outline" titre="Sécurité & Connexion" sous="Mot de passe et appareils" onPress={() => router.push('/mon-profil/securite')} />
