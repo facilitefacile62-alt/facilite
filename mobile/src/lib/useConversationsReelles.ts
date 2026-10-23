@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { articleDuMessage } from '@/components/CarteArticleMessage';
 import { supabase } from '@/lib/supabase';
 import { idsConversationsMarketplace } from '@/lib/messagesMarketplace';
 
@@ -118,7 +119,7 @@ export function useConversationsReelles(userId: string | undefined, isAdmin = fa
               id: c.id,
               name: nom,
               avatarLetter: initiale(nom),
-              lastText: c.last_message || '',
+              lastText: articleDuMessage(c.last_message) ? '🛍️ Article' : c.last_message || '',
               time: heureRelative(c.updated_at),
               nonLue: idsNonLus.has(c.id),
             };

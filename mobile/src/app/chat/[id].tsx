@@ -34,6 +34,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ActionsMessage, { type ActionMessage } from '@/components/ActionsMessage';
+import CarteArticleMessage, { articleDuMessage } from '@/components/CarteArticleMessage';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useFavori } from '@/lib/favoris';
@@ -657,7 +658,7 @@ export default function ChatDetailScreen() {
             envoiEnCours={envoiEnCours || envoiFichierEnCours}
             onEnvoyer={handleEnvoyer}
             clavierOuvert={clavierOuvert}
-            paddingBas={marketplace ? Math.max(insets.bottom, 8) + 4 : 10}
+            paddingBas={4}
             menuJointOuvert={menuJointOuvert}
             onToggleJoint={() => {
               setEmojiOuvert(false);
@@ -1074,7 +1075,9 @@ function BulleMessage({
             estPdf={message.attachmentType === 'pdf'}
           />
         )}
-        {!aUnePieceJointe && message.text ? (
+        {/* Prise de contact sur un article : la carte (photo, nom, prix) remplace le texte, touchable pour rouvrir l'article. */}
+        {!aUnePieceJointe && articleDuMessage(message.text) ? <CarteArticleMessage articleId={articleDuMessage(message.text) as string} /> : null}
+        {!aUnePieceJointe && message.text && !articleDuMessage(message.text) ? (
           <Text style={{ fontSize: marketplace ? 15 : 16, lineHeight: marketplace ? 21 : 23, color: '#111827' }}>{message.text}</Text>
         ) : null}
         <View
