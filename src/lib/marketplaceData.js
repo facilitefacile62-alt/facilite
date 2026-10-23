@@ -481,11 +481,14 @@ export async function signalerAnnonce(itemId, motif, details) {
 }
 
 /** Lien de conversation pré-rempli, avec le titre de l'article. */
-export function lienWhatsapp(numero, titreArticle) {
+export function lienWhatsapp(numero, titreArticle, articleId) {
   const n = normaliserWhatsapp(numero);
   if (!n) return null;
+  // Avec l'identifiant de l'article, le message contient le LIEN de l'article : WhatsApp en affiche alors une carte (photo, nom, prix)
+  // grâce aux balises Open Graph de /marketplace?article=<id> (voir src/app/marketplace/page.js).
+  const lien = articleId ? `\nLien : https://ffacilite.com/marketplace?article=${articleId}` : "";
   const texte = encodeURIComponent(
-    `Bonjour, je vous contacte via Facilité au sujet de : ${titreArticle || "votre article"}. Est-il toujours disponible ?`
+    `Bonjour, je suis intéressé(e) par votre article « ${titreArticle || "votre article"} ».${lien}\nEst-il toujours disponible ?`
   );
   return `https://wa.me/${n.replace("+", "")}?text=${texte}`;
 }
@@ -827,7 +830,7 @@ export async function chargerTousLesArticles({
     boutique_owner_id: r.store?.owner_id || null,
     boutique_verifie: r.store?.verifie || false,
     whatsapp: r.store?.telephone_whatsapp,
-    whatsappUrl: lienWhatsapp(r.store?.telephone_whatsapp, r.titre),
+    whatsappUrl: lienWhatsapp(r.store?.telephone_whatsapp, r.titre, r.id),
     distance_km: null,
     distanceLisible: r.store?.ville
       ? r.store?.quartier
@@ -906,7 +909,7 @@ export async function obtenirArticleParId(itemId) {
       boutique_verifie: data.store?.verifie || false,
       telephone_whatsapp: data.store?.telephone_whatsapp,
       whatsapp: data.store?.telephone_whatsapp,
-      whatsappUrl: lienWhatsapp(data.store?.telephone_whatsapp, data.titre),
+      whatsappUrl: lienWhatsapp(data.store?.telephone_whatsapp, data.titre, data.id),
       distance_km: null,
       distanceLisible: data.store?.ville
         ? data.store?.quartier
@@ -953,7 +956,7 @@ export async function chercherAutourDeMoi({
   return (data || []).map((r) => ({
     ...r,
     photos: Array.isArray(r.photos) ? r.photos.map(urlPhoto) : [],
-    whatsappUrl: lienWhatsapp(r.whatsapp, r.titre),
+    whatsappUrl: lienWhatsapp(r.whatsapp, r.titre, r.id),
     distanceLisible: r.distance_km < 1 ? `${Math.round(r.distance_km * 1000)} m` : `${r.distance_km} km`,
   }));
 }
