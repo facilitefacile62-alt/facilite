@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -136,10 +136,10 @@ export default function ProfilScreen() {
         <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          {retourDemande === '1' ? (
+          {retourDemande ? (
             <View className="px-4 pt-3">
               <Pressable
-                onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                onPress={() => router.navigate('/menu' as Href)}
                 accessibilityRole="button"
                 accessibilityLabel="Retour"
                 className="flex-row items-center gap-1.5 self-start rounded-full bg-white px-3.5"
