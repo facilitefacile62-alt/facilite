@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { fondSombre } from '@/components/themeSombre';
 import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
 import { LangueProvider } from '@/lib/i18n';
-import { bienvenueDejaVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
+import { bienvenueDejaVue, etapeMotDePasseVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
 
@@ -76,8 +76,9 @@ function AuthGate({ children }: { children: ReactNode }) {
       onboardingExamine.current = session.user.id;
       if (aOnboarding) {
         // Nouveau compte : « Nom et prénom » une seule fois, puis l'onboarding.
-        nomDejaConfirme(session.user.id).then((confirme) =>
-          router.replace((confirme ? '/onboarding/bienvenue' : '/nom-prenom') as Href)
+        // Reprise là où la personne s'était arrêtée : nom, puis mot de passe, puis bienvenue — aucune étape sautée.
+        Promise.all([nomDejaConfirme(session.user.id), etapeMotDePasseVue(session.user.id)]).then(([confirme, mdpVu]) =>
+          router.replace((!confirme ? '/nom-prenom' : !mdpVu ? '/onboarding/mot-de-passe' : '/onboarding/bienvenue') as Href)
         );
         return;
       }

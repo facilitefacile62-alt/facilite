@@ -104,6 +104,21 @@ export async function marquerNomConfirme(userId: string): Promise<void> {
   await AsyncStorage.setItem(cleNom(userId), '1').catch(() => {});
 }
 
+// ---- Étape « Crée un mot de passe » : proposée une fois par compte, reprise là où la personne l'a quittée ----
+const cleMotDePasse = (userId: string) => `FACILITE_MDP_ETAPE_VUE_${userId}`;
+
+export async function etapeMotDePasseVue(userId: string): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(cleMotDePasse(userId))) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function marquerEtapeMotDePasseVue(userId: string): Promise<void> {
+  await AsyncStorage.setItem(cleMotDePasse(userId), '1').catch(() => {});
+}
+
 function majuscule(mot: string): string {
   return mot ? mot.charAt(0).toUpperCase() + mot.slice(1).toLowerCase() : '';
 }
