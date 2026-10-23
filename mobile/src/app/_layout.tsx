@@ -1,5 +1,5 @@
 import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useGlobalSearchParams, useRouter, useSegments, type Href } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useGlobalSearchParams, usePathname, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { fondSombre } from '@/components/themeSombre';
 import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
 import { LangueProvider } from '@/lib/i18n';
-import { bienvenueDejaVue, etapeEmailVue, etapeMotDePasseVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
+import { bienvenueDejaVue, ETAPES_INSCRIPTION, etapeEmailVue, etapeInscriptionMemorisee, memoriserEtapeInscription, etapeMotDePasseVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
 
@@ -27,6 +27,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   const { session, profile, profilChargePour, loading, signOut } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
+  const { onboarding: paramOnboarding } = useGlobalSearchParams<{ onboarding?: string }>();
   // Compte pour lequel l'onboarding a déjà été examiné pendant cette
   // ouverture de l'app : il n'est proposé qu'à l'ouverture (ou à la
   // connexion), pas à chaque navigation — sinon le scan de document (écran
@@ -78,10 +80,13 @@ function AuthGate({ children }: { children: ReactNode }) {
         // Nouveau compte : « Nom et prénom » une seule fois, puis l'onboarding.
         // Reprise là où la personne s'était arrêtée : nom, mot de passe, e-mail, puis bienvenue — aucune étape sautée.
         const emailAFaire = !session.user.email_confirmed_at;
-        Promise.all([nomDejaConfirme(session.user.id), etapeMotDePasseVue(session.user.id), etapeEmailVue(session.user.id)]).then(([confirme, mdpVu, emailVu]) =>
-          router.replace(
-            (!confirme ? '/nom-prenom' : !mdpVu ? '/onboarding/mot-de-passe' : emailAFaire && !emailVu ? '/onboarding/email' : '/onboarding/bienvenue') as Href
-          )
+        // L'écran exact où l'on s'était arrêté (retenu à chaque étape) prime sur ce calcul.
+        Promise.all([nomDejaConfirme(session.user.id), etapeMotDePasseVue(session.user.id), etapeEmailVue(session.user.id), etapeInscriptionMemorisee(session.user.id)]).then(
+          ([confirme, mdpVu, emailVu, memorisee]) =>
+            router.replace(
+              (memorisee ??
+                (!confirme ? '/nom-prenom' : !mdpVu ? '/onboarding/mot-de-passe' : emailAFaire && !emailVu ? '/onboarding/email' : '/onboarding/bienvenue')) as Href
+            )
         );
         return;
       }
@@ -96,6 +101,18 @@ function AuthGate({ children }: { children: ReactNode }) {
       });
     }
   }, [session, profile, profilChargePour, loading, segments, router, signOut]);
+
+  // Inscription non terminée : on retient l'écran courant pour le rouvrir si l'app est quittée.
+  const idUtilisateur = session?.user.id;
+  const inscriptionEnCours = profile?.id === idUtilisateur && profile?.onboarding_done === false;
+  useEffect(() => {
+    if (!idUtilisateur || !inscriptionEnCours || !ETAPES_INSCRIPTION.includes(pathname)) return;
+    if (pathname === '/confirmer-compte') {
+      if (paramOnboarding === '1') memoriserEtapeInscription(idUtilisateur, '/onboarding/email');
+      return;
+    }
+    memoriserEtapeInscription(idUtilisateur, pathname);
+  }, [idUtilisateur, inscriptionEnCours, pathname, paramOnboarding]);
 
   const racineActuelle = segments[0] as string | undefined;
   useEffect(() => {
