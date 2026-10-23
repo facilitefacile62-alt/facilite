@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import UnreadBadge from "@/components/UnreadBadge";
+import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { useAuth } from "@/context/AuthContext";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import RoleNavLink from "@/components/RoleNavLink";
@@ -740,32 +742,8 @@ export default function Header() {
     };
   }, [authLoading, userSession, fetchDbNotifications, fetchJobOfferNotifs, normalizeDbNotification]);
 
-  // Messages non lus (pastille rouge sur « Messagerie ») : compte au chargement, puis en direct à chaque message reçu ou lu.
-  const [messagesNonLus, setMessagesNonLus] = useState(0);
-  useEffect(() => {
-    const userId = userSession?.user?.id;
-    if (authLoading || !userId) return undefined;
-    let actif = true;
-    const compter = async () => {
-      const { count } = await supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("receiver_id", userId)
-        .eq("is_read", false);
-      if (actif) setMessagesNonLus(count || 0);
-    };
-    compter();
-    const canal = supabase
-      .channel(`header-messages-non-lus-${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${userId}` }, () => {
-        compter();
-      })
-      .subscribe();
-    return () => {
-      actif = false;
-      supabase.removeChannel(canal);
-    };
-  }, [authLoading, userSession?.user?.id]);
+  // Messages non lus : même compteur (en direct) que les autres pages du site — pastille sur « Messagerie ».
+  const messagesNonLus = useUnreadMessagesBadge(userSession?.user?.id);
 
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
@@ -1579,14 +1557,7 @@ export default function Header() {
               }`}
             >
               <i className="fa-solid fa-comments text-base"></i>
-              {userSession && messagesNonLus > 0 && (
-                <span
-                  className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-black leading-4 text-center"
-                  aria-label={`${messagesNonLus} message${messagesNonLus > 1 ? "s" : ""} non lu${messagesNonLus > 1 ? "s" : ""}`}
-                >
-                  {messagesNonLus > 9 ? "9+" : messagesNonLus}
-                </span>
-              )}
+              <UnreadBadge count={messagesNonLus} className="!top-0 !-right-0.5" />
               <span className="text-[10px] font-bold tracking-tight">Messagerie</span>
             </Link>
           )}
@@ -2292,7 +2263,10 @@ export default function Header() {
                 pathname === "/messagerie" ? "text-emerald-700 font-extrabold" : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
               }`}
             >
-              <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+              <div className="relative">
+                <i className="fa-regular fa-comments text-sm sm:text-base"></i>
+                <UnreadBadge count={messagesNonLus} />
+              </div>
               <span className="text-[9px] font-bold tracking-tight truncate w-full">Messages</span>
             </Link>
           )}
