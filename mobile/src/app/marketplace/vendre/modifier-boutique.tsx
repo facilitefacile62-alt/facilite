@@ -55,7 +55,7 @@ export default function ModifierBoutiqueScreen() {
   const [nom, setNom] = useState(connu.nom);
   const [whatsapp, setWhatsapp] = useState('');
   const [ville, setVille] = useState('');
-  const [naissance, setNaissance] = useState(typeof profile?.birth_date === 'string' ? profile.birth_date : '');
+  const [naissance, setNaissance] = useState(typeof profile?.date_naissance === 'string' ? profile.date_naissance : '');
   const [sexe, setSexe] = useState(typeof profile?.gender === 'string' ? profile.gender : '');
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -145,7 +145,8 @@ export default function ModifierBoutiqueScreen() {
     try {
       await enregistrerChampsProfil(userId, {
         full_name: `${prenom.trim()} ${nom.trim()}`.trim(),
-        birth_date: naissance.trim() || null,
+        // La colonne s'appelle date_naissance (« birth_date » n'existe pas dans profiles : l'enregistrement échouait).
+        date_naissance: naissance.trim() || null,
         gender: sexe.trim() || null,
       });
       if (boutique) {
@@ -355,6 +356,8 @@ export default function ModifierBoutiqueScreen() {
 }
 
 /** Champ de la maquette : libellé vert posé sur la bordure, compteur à droite. */
+const MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Sept.', 'Octobre', 'Nov.', 'Déc.'];
+
 /** « AAAA-MM-JJ » valide (mois 1-12, jour existant dans ce mois, année plausible). */
 function dateValide(iso: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -370,6 +373,7 @@ function ChampDateNaissance({ valeur, onChange, onFocus, onLayout }: { valeur: s
   const [jour, setJour] = useState(j0 ?? '');
   const [mois, setMois] = useState(m0 ?? '');
   const [annee, setAnnee] = useState(a0 ?? '');
+  const [listeMois, setListeMois] = useState(false);
   const refMois = useRef<TextInput>(null);
   const refAnnee = useRef<TextInput>(null);
 
@@ -425,7 +429,9 @@ function ChampDateNaissance({ valeur, onChange, onFocus, onLayout }: { valeur: s
             accessibilityLabel="Mois de naissance"
             style={caseStyle}
           />
-          <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Mois</Text>
+          <Pressable onPress={() => setListeMois((o) => !o)} accessibilityRole="button" accessibilityLabel="Choisir le mois dans la liste" hitSlop={6}>
+            <Text className="text-[10.5px] text-center mt-1 font-bold" style={{ color: '#047857' }}>Mois {listeMois ? '▴' : '▾'}</Text>
+          </Pressable>
         </View>
         <View style={{ flex: 3 }}>
           <TextInput
@@ -443,6 +449,28 @@ function ChampDateNaissance({ valeur, onChange, onFocus, onLayout }: { valeur: s
           <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Année</Text>
         </View>
       </View>
+      {listeMois ? (
+        <View className="flex-row flex-wrap mt-3" style={{ gap: 8 }}>
+          {MOIS.map((nomMois, i) => {
+            const actif = Number(mois) === i + 1;
+            return (
+              <Pressable
+                key={nomMois}
+                onPress={() => {
+                  maj(jour, String(i + 1).padStart(2, '0'), annee);
+                  setListeMois(false);
+                  refAnnee.current?.focus();
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: actif }}
+                className="items-center justify-center rounded-xl"
+                style={{ width: '23%', height: 40, backgroundColor: actif ? '#10B981' : '#F3F4F6' }}>
+                <Text className="text-[12.5px] font-black" style={{ color: actif ? '#fff' : '#1A1A1A' }}>{nomMois}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
