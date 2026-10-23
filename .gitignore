@@ -103,3 +103,13 @@ android/.gradle/
 AuthKey_*
 *.p12
 *.mobileprovision
+
+# Identifiants iOS (certificat de distribution, demande de signature, profil) : jamais dans le depot public
+*.key
+*.cer
+*.csr
+*.certSigningRequest
+*.pem
+*.p12
+*.mobileprovision
+credentials.json
