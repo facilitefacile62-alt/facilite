@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AvatarProfil from '@/components/AvatarProfil';
@@ -17,6 +17,8 @@ import { prixLisible, urlPhoto } from '@/lib/marketplace';
 import {
   chargerMesArticles,
   chargerMesBoutiques,
+  choisirEtEnvoyerPhotoBoutique,
+  definirCouvertureBoutique,
   definirDisponibiliteBoutique,
   definirLogoBoutique,
   definirVisibiliteBoutique,
@@ -59,6 +61,10 @@ export default function MaBoutiqueScreen() {
   const [onglet, setOnglet] = useState<Onglet>('article');
   const [basculeEnCours, setBasculeEnCours] = useState(false);
   const [envoiLogo, setEnvoiLogo] = useState(false);
+  // Couverture : menu déroulant (voir en entier / changer / retirer) et visionneuse plein écran.
+  const [menuCouverture, setMenuCouverture] = useState(false);
+  const [couvertureEntiere, setCouvertureEntiere] = useState(false);
+  const [envoiCouverture, setEnvoiCouverture] = useState(false);
 
   const [editionMetier, setEditionMetier] = useState(false);
   const [metierSaisi, setMetierSaisi] = useState('');
@@ -156,6 +162,33 @@ export default function MaBoutiqueScreen() {
       Alert.alert('Logo impossible', e instanceof Error ? e.message : 'Réessayez dans un instant.');
     } finally {
       setEnvoiLogo(false);
+    }
+  }
+
+  async function changerCouverture() {
+    setMenuCouverture(false);
+    if (!boutique || !userId || envoiCouverture) return;
+    setEnvoiCouverture(true);
+    try {
+      const chemin = await choisirEtEnvoyerPhotoBoutique(userId, [16, 7]);
+      if (!chemin) return;
+      await definirCouvertureBoutique(boutique.id, chemin);
+      setBoutique({ ...boutique, cover_photo: chemin });
+    } catch (e) {
+      Alert.alert('Couverture impossible', e instanceof Error ? e.message : 'Réessayez dans un instant.');
+    } finally {
+      setEnvoiCouverture(false);
+    }
+  }
+
+  async function retirerCouverture() {
+    setMenuCouverture(false);
+    if (!boutique || !boutique.cover_photo) return;
+    try {
+      await definirCouvertureBoutique(boutique.id, null);
+      setBoutique({ ...boutique, cover_photo: null });
+    } catch (e) {
+      Alert.alert('Couverture', e instanceof Error ? e.message : 'Réessayez dans un instant.');
     }
   }
 
@@ -286,10 +319,59 @@ export default function MaBoutiqueScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Couverture de la boutique ; à défaut, la couverture du profil du compte (déjà choisie par le vendeur). */}
-        {boutique.cover_photo || profile?.cover_url ? (
-          <Image source={{ uri: (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : profile?.cover_url) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 130 }} contentFit="cover" />
-        ) : null}
+        {/* Couverture de la boutique ; à défaut, la couverture du profil du compte. Le menu déroulant permet de la voir en entier,
+            de la changer ou de la retirer (visible par tous les visiteurs de la boutique). */}
+        {(() => {
+          const uriCouverture = (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : profile?.cover_url) ?? null;
+          return (
+            <View style={{ zIndex: 10 }}>
+              <Pressable
+                onPress={() => setMenuCouverture((o) => !o)}
+                accessibilityRole="button"
+                accessibilityLabel="Menu de la photo de couverture"
+                style={{ width: '100%', height: 130, backgroundColor: '#E8E4DA', alignItems: 'center', justifyContent: 'center' }}>
+                {uriCouverture ? (
+                  <Image source={{ uri: uriCouverture }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />
+                    <Text className="text-[12px] mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Ajouter une photo de couverture</Text>
+                  </>
+                )}
+                <View className="absolute flex-row items-center gap-1.5 rounded-full bg-white px-3" style={{ right: 10, bottom: 10, height: 34 }}>
+                  {envoiCouverture ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="camera" size={15} color="#1A1A1A" />}
+                  <Text className="text-[12px] font-black text-[#1A1A1A]">Couverture</Text>
+                  <Ionicons name={menuCouverture ? 'chevron-up' : 'chevron-down'} size={14} color="#1A1A1A" />
+                </View>
+              </Pressable>
+              {menuCouverture ? (
+                <View className="absolute rounded-2xl bg-white overflow-hidden" style={{ right: 10, bottom: 50, minWidth: 210, elevation: 8, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, zIndex: 20 }}>
+                  {uriCouverture ? (
+                    <Pressable onPress={() => { setMenuCouverture(false); setCouvertureEntiere(true); }} className="flex-row items-center gap-3 px-4" style={{ height: 48 }}>
+                      <Ionicons name="expand-outline" size={18} color="#1A1A1A" />
+                      <Text className="text-[14px] font-bold text-[#1A1A1A]">Voir en entier</Text>
+                    </Pressable>
+                  ) : null}
+                  <Pressable onPress={changerCouverture} className="flex-row items-center gap-3 px-4" style={{ height: 48 }}>
+                    <Ionicons name="image-outline" size={18} color="#1A1A1A" />
+                    <Text className="text-[14px] font-bold text-[#1A1A1A]">{boutique.cover_photo ? 'Changer la couverture' : 'Ajouter une couverture'}</Text>
+                  </Pressable>
+                  {boutique.cover_photo ? (
+                    <Pressable onPress={retirerCouverture} className="flex-row items-center gap-3 px-4" style={{ height: 48 }}>
+                      <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                      <Text className="text-[14px] font-bold" style={{ color: '#DC2626' }}>Retirer la couverture</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+              <Modal visible={couvertureEntiere} transparent animationType="fade" onRequestClose={() => setCouvertureEntiere(false)}>
+                <Pressable onPress={() => setCouvertureEntiere(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center' }} accessibilityLabel="Fermer">
+                  {uriCouverture ? <Image source={{ uri: uriCouverture }} alt="Couverture de la boutique" style={{ width: '100%', height: '60%' }} contentFit="contain" /> : null}
+                </Pressable>
+              </Modal>
+            </View>
+          );
+        })()}
         {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
         <View className="px-4 pt-4">
           <View className="flex-row items-center gap-3">
