@@ -57,9 +57,11 @@ function FormulaireCreationBoutique({
   onCree,
   etape,
   setEtape,
+  onVisiteur,
 }: {
   userId: string;
   onCree: () => void;
+  onVisiteur?: () => void;
   etape: 'identite' | 'boutique';
   setEtape: (e: 'identite' | 'boutique') => void;
 }) {
@@ -206,13 +208,22 @@ function FormulaireCreationBoutique({
           )}
         </Pressable>
       )}
+      {etape === 'identite' && onVisiteur ? (
+        <Pressable
+          onPress={onVisiteur}
+          accessibilityRole="button"
+          className="rounded-[16px] items-center justify-center bg-white"
+          style={{ height: 56, borderWidth: 1.5, borderColor: '#0d3b34' }}>
+          <Text className="text-[14.5px] font-bold" style={{ color: '#0d3b34' }}>Rester visiteur</Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
 
 export default function MaBoutiqueScreen() {
   const router = useRouter();
-  const { publier } = useLocalSearchParams<{ publier?: string }>();
+  const { publier, profil } = useLocalSearchParams<{ publier?: string; profil?: string }>();
   const { user } = useAuth();
   const [chargement, setChargement] = useState(true);
   const [aBoutique, setABoutique] = useState<boolean | undefined>(undefined); // undefined = chargement
@@ -227,7 +238,7 @@ export default function MaBoutiqueScreen() {
       // Une boutique existe : on ouvre « Ma boutique » (ARTICLE · SERVICE · ÉTABLISSEMENT).
       // Bouton « Publier » de la barre du bas (?publier=1) : directement « Comment voulez-vous vendre ? » (étape 1 de la
       // publication). Sans boutique, on reste sur « Devenir actif » ; les autres entrées ouvrent « Ma boutique ».
-      if (active) router.replace((publier ? `/marketplace/vendre/publier?storeId=${active.id}` : '/marketplace/vendre/ma-boutique') as Href);
+      if (active) router.replace((publier ? `/marketplace/vendre/publier?storeId=${active.id}` : `/marketplace/vendre/ma-boutique${profil ? '?profil=1' : ''}`) as Href);
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Chargement impossible.');
     } finally {
@@ -239,7 +250,7 @@ export default function MaBoutiqueScreen() {
     useCallback(() => {
       recharger();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, publier])
+    }, [user?.id, publier, profil])
   );
 
   function retour() {
@@ -269,7 +280,7 @@ export default function MaBoutiqueScreen() {
             <Text className="text-[13.5px] text-gray-500 text-center">Connectez-vous pour gérer votre boutique.</Text>
           </View>
         ) : (
-          <FormulaireCreationBoutique userId={user.id} onCree={recharger} etape={etapeCreation} setEtape={setEtapeCreation} />
+          <FormulaireCreationBoutique userId={user.id} onCree={recharger} etape={etapeCreation} setEtape={setEtapeCreation} onVisiteur={() => router.replace('/marketplace')} />
         )}
       </View>
     </View>

@@ -26,7 +26,7 @@ export default function MonProfilVisiteurScreen() {
 
   function retour() {
     if (router.canGoBack()) router.back();
-    else router.replace('/marketplace/profil' as Href);
+    else router.replace('/marketplace' as Href);
   }
 
   return (

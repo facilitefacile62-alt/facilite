@@ -187,7 +187,7 @@ export default function MaBoutiqueScreen() {
     ]);
   }
 
-  const retour = () => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'));
+  const retour = () => (router.canGoBack() ? router.back() : router.replace('/marketplace'));
 
   if (boutique === undefined) {
     return (
@@ -267,7 +267,7 @@ export default function MaBoutiqueScreen() {
       {/* Barre de la boutique (maquette) : retour · NOM DE LA BOUTIQUE · crayon, qui ouvre les Réglages de la boutique */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: FOND }}>
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil' as Href))}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace' as Href))}
           accessibilityLabel="Retour"
           className="items-center justify-center"
           style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8E4DA' }}>
