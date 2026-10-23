@@ -414,8 +414,16 @@ export async function POST(req) {
     // bloc try, provoquant un ReferenceError silencieux (avalé par le
     // try/catch du second bloc) à chaque candidature avec recruteur identifié.
     let conversationId = null;
+    // Seul un recruteur vérifié reçoit la candidature dans sa messagerie ; tout autre publieur (et l'administrateur) la reçoit
+    // uniquement par e-mail : ni conversation ni message ne sont créés (décision du 23/10/2026, voir la migration
+    // 20261023150000_publieur_recoit_candidatures.sql).
+    let publieurRecoitMessages = false;
+    if (offerRecruiterId) {
+      const { data: recoit } = await supabase.rpc("publieur_recoit_les_candidatures", { p_publieur_id: offerRecruiterId });
+      publieurRecoitMessages = recoit === true;
+    }
     try {
-      if (offerRecruiterId) {
+      if (publieurRecoitMessages) {
         conversationId = await findOrCreateConversationServer(supabase, user.id, offerRecruiterId);
 
         const primaryAttachment = allAttachments[0] || null;
@@ -580,7 +588,7 @@ export async function POST(req) {
     // (ni ici ni au point 4 ci-dessus) — l'ancien fallback sender_id :
     // offerRecruiterId || user.id envoyait un message du candidat à lui-même
     // dans ce cas, un bug que ce garde corrige.
-    if (offerRecruiterId) {
+    if (publieurRecoitMessages) {
       try {
         const emailContentText = `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`;
         const { error: confirmMsgError } = await supabase.from("messages").insert({
