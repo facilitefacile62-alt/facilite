@@ -198,7 +198,7 @@ export default function CarteOffre({
 
         {/* Audio de l'offre : vert et cliquable s'il y a un audio (audio_url), gris et non cliquable sinon. */}
         {/* Il ne concerne que les offres d'emploi (pas les concours, formations…). */}
-        {!offre.listingType || offre.listingType === 'offre_emploi' ? <BoutonAudioOffre url={offre.audioUrl} /> : null}
+        {!offre.listingType || offre.listingType === 'offre_emploi' ? <BoutonAudioOffre url={offre.audioUrl} offreId={offre.id} /> : null}
 
         <Pressable
           onPress={partager}

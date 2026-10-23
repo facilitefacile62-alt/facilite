@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { arreterAudioSiHorsEcran } from '@/components/BoutonAudioOffre';
 import CarteOffre from '@/components/CarteOffre';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import StoryViewer from '@/components/StoryViewer';
@@ -38,6 +39,10 @@ const TEXTE_DOUX = 'rgba(0,0,0,0.5)';
 // récentes, sans aucun moyen d'atteindre les autres (constaté par
 // l'utilisateur : "je ne vois pas les offres du site").
 const PAS_PAGINATION = 30;
+
+// L'audio d'une offre s'arrête dès que sa carte quitte l'écran.
+const CONFIG_VISIBILITE = { itemVisiblePercentThreshold: 10 };
+const surVisibles = ({ viewableItems }: { viewableItems: { key: string }[] }) => arreterAudioSiHorsEcran(viewableItems.map((v) => v.key));
 
 export default function AccueilScreen() {
   const { user } = useAuth();
@@ -125,6 +130,8 @@ export default function AccueilScreen() {
         ) : (
           <FlatList
             ref={listeRef}
+            onViewableItemsChanged={surVisibles}
+            viewabilityConfig={CONFIG_VISIBILITE}
             data={offres}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 40 }}

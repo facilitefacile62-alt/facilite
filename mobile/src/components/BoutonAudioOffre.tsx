@@ -13,6 +13,12 @@ import { ActivityIndicator, AppState, Pressable } from 'react-native';
 // fois ; la lecture s'arrête à la fin, en quittant l'écran et quand l'application passe en arrière-plan.
 const VERT = '#10B981';
 let arreterActif: (() => void) | null = null;
+let idActif: string | null = null;
+
+/** Arrête l'audio en cours si son offre n'est plus à l'écran (appelé par le défilement du fil). */
+export function arreterAudioSiHorsEcran(idsVisibles: string[]) {
+  if (idActif && !idsVisibles.includes(idActif)) arreterActif?.();
+}
 
 function styleBouton(actif: boolean) {
   return {
@@ -38,23 +44,32 @@ function useArretAutomatique(arreter: () => void) {
   }, [arreter]);
 }
 
-function LecteurActif({ url, onFin }: { url: string; onFin: () => void }) {
+function LecteurActif({ url, offreId, onFin }: { url: string; offreId?: string; onFin: () => void }) {
   const player = useAudioPlayer(url);
   const statut = useAudioPlayerStatus(player);
   const lance = useRef(false);
   const arreter = useCallback(() => player.pause(), [player]);
 
+  // Prend la main : l'audio d'une autre offre en cours est arrêté (son bouton redevient normal), puis celui-ci démarre.
+  const jouer = useCallback(() => {
+    if (arreterActif) arreterActif();
+    const moi = () => {
+      try {
+        player.pause();
+      } catch {}
+      onFin();
+    };
+    arreterActif = moi;
+    idActif = offreId ?? null;
+    player.play();
+  }, [player, offreId, onFin]);
+
   // Lecture dès l'appui : le lecteur vient d'être créé par l'appui de la personne.
   useEffect(() => {
     if (lance.current) return;
     lance.current = true;
-    if (arreterActif) arreterActif();
-    arreterActif = () => {
-      player.pause();
-      onFin();
-    };
-    player.play();
-  }, [player, onFin]);
+    jouer();
+  }, [jouer]);
   useEffect(() => {
     if (statut.didJustFinish) onFin();
   }, [statut.didJustFinish, onFin]);
@@ -67,12 +82,7 @@ function LecteurActif({ url, onFin }: { url: string; onFin: () => void }) {
       return;
     }
     if (statut.duration > 0 && statut.currentTime >= statut.duration - 0.05) player.seekTo(0);
-    if (arreterActif) arreterActif();
-    arreterActif = () => {
-      player.pause();
-      onFin();
-    };
-    player.play();
+    jouer();
   }
 
   return (
@@ -90,14 +100,15 @@ function LecteurActif({ url, onFin }: { url: string; onFin: () => void }) {
   );
 }
 
-export default function BoutonAudioOffre({ url }: { url?: string | null }) {
+export default function BoutonAudioOffre({ url, offreId }: { url?: string | null; offreId?: string }) {
   const [demande, setDemande] = useState(false);
   const fin = useCallback(() => setDemande(false), []);
 
   if (!url) {
     return (
+      // Pas `disabled` : un bouton désactivé laisse passer le toucher à la carte (qui ouvrirait l'offre). Ici le toucher est absorbé.
       <Pressable
-        disabled
+        onPress={() => {}}
         accessibilityRole="button"
         accessibilityState={{ disabled: true }}
         accessibilityLabel="Pas d'audio pour cette offre"
@@ -106,7 +117,7 @@ export default function BoutonAudioOffre({ url }: { url?: string | null }) {
       </Pressable>
     );
   }
-  if (demande) return <LecteurActif url={url} onFin={fin} />;
+  if (demande) return <LecteurActif url={url} offreId={offreId} onFin={fin} />;
   return (
     <Pressable onPress={() => setDemande(true)} accessibilityRole="button" accessibilityLabel="Écouter l'audio de l'offre" style={styleBouton(true)}>
       <Ionicons name="volume-high" size={21} color="#fff" />

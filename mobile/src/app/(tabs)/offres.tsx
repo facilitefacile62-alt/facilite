@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { arreterAudioSiHorsEcran } from '@/components/BoutonAudioOffre';
 import CarteOffre from '@/components/CarteOffre';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -23,6 +24,10 @@ import { compterOffres, useOffresReelles, type EtatOffres } from '@/lib/useOffre
 const FOND_PAGE = '#F2F0EA';
 const VERT = '#10B981';
 const PAS_PAGINATION = 15;
+
+// L'audio d'une offre s'arrête dès que sa carte quitte l'écran.
+const CONFIG_VISIBILITE = { itemVisiblePercentThreshold: 10 };
+const surVisibles = ({ viewableItems }: { viewableItems: { key: string }[] }) => arreterAudioSiHorsEcran(viewableItems.map((v) => v.key));
 
 export default function OffresScreen() {
   const router = useRouter();
@@ -58,6 +63,8 @@ export default function OffresScreen() {
 
         <FlatList
           data={offres ?? []}
+          onViewableItemsChanged={surVisibles}
+          viewabilityConfig={CONFIG_VISIBILITE}
           keyExtractor={(item) => item.id}
           removeClippedSubviews={false}
           contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 40 }}
