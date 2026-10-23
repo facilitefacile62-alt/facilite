@@ -28,20 +28,20 @@ let cacheLe = 0;
 let enVol: Promise<Compteurs> | null = null;
 const abonnes = new Set<(c: Compteurs) => void>();
 
-async function relire(userId: string): Promise<Compteurs> {
+async function relire(userId: string, isAdmin: boolean): Promise<Compteurs> {
   // Un compteur indisponible (réseau, session expirée) vaut 0 : une pastille
   // est une information en plus, jamais un motif de faire échouer un écran.
   const [notifications, messages] = await Promise.all([
     compterNotificationsNonLues().catch(() => 0),
-    compterMessagesNonLus(userId).catch(() => 0),
+    compterMessagesNonLus(userId, isAdmin).catch(() => 0),
   ]);
   return { notifications, messages };
 }
 
-function obtenir(userId: string): Promise<Compteurs> {
+function obtenir(userId: string, isAdmin: boolean): Promise<Compteurs> {
   if (Date.now() - cacheLe < DUREE_CACHE_MS) return Promise.resolve(cache);
   if (enVol) return enVol;
-  enVol = relire(userId)
+  enVol = relire(userId, isAdmin)
     .then((c) => {
       cache = c;
       cacheLe = Date.now();
@@ -60,7 +60,7 @@ export function invaliderCompteurs(): void {
 }
 
 export function useCompteursNonLus(): Compteurs {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const userId = user?.id;
   const chemin = usePathname();
   const [compteurs, setCompteurs] = useState<Compteurs>(cache);
@@ -79,14 +79,14 @@ export function useCompteursNonLus(): Compteurs {
       if (monte) setCompteurs(c);
     };
     abonnes.add(majSiMonte);
-    obtenir(userId).then(majSiMonte).catch(() => {});
+    obtenir(userId, isAdmin).then(majSiMonte).catch(() => {});
     // En direct : un message reçu, ou un message marqué lu, remet le compteur à jour tout de suite (sans attendre un changement
     // d'écran ni la fin du cache de 30 s).
     const canal = supabase
       .channel(`compteurs-messages-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` }, () => {
         invaliderCompteurs();
-        obtenir(userId).then(majSiMonte).catch(() => {});
+        obtenir(userId, isAdmin).then(majSiMonte).catch(() => {});
       })
       .subscribe();
     return () => {
@@ -94,7 +94,7 @@ export function useCompteursNonLus(): Compteurs {
       abonnes.delete(majSiMonte);
       supabase.removeChannel(canal);
     };
-  }, [userId, chemin]);
+  }, [userId, chemin, isAdmin]);
 
   return userId ? compteurs : VIDE;
 }

@@ -89,12 +89,14 @@ export async function marquerNotificationLue(id: string): Promise<void> {
 }
 
 /** Messages reçus non lus, pour la pastille de l'onglet Messages. */
-export async function compterMessagesNonLus(userId: string): Promise<number> {
-  const { count, error } = await supabase
+export async function compterMessagesNonLus(userId: string, sansCandidatures = false): Promise<number> {
+  const requete = supabase
     .from('messages')
     .select('id', { count: 'exact', head: true })
     .eq('receiver_id', userId)
     .eq('is_read', false);
+  // Compte administrateur : les candidatures reçues (type OFFRE) ne comptent pas — elles passent par e-mail, pas par sa messagerie.
+  const { count, error } = await (sansCandidatures ? requete.or('type_discussion.is.null,type_discussion.neq.OFFRE') : requete);
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
