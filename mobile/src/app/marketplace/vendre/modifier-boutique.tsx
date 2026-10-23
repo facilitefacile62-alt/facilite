@@ -9,6 +9,7 @@ import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 import { urlPhoto } from '@/lib/marketplace';
+import { departementLePlusProche } from '@/lib/departements';
 import { VILLES } from '@/lib/offresParVille';
 import {
   chargerMesBoutiques,
@@ -119,6 +120,8 @@ export default function ModifierBoutiqueScreen() {
   useFocusEffect(charger);
 
   const positionConnue = boutique?.latitude != null && boutique?.longitude != null;
+  // Département de la position verrouillée (centre de département le plus proche, même calcul que le site).
+  const departement = positionConnue && boutique ? departementLePlusProche(boutique.latitude, boutique.longitude) : null;
   // Ville de la position verrouillée quand aucune ville n'est enregistrée : la plus proche parmi les villes connues de l'application.
   const villeGps =
     positionConnue && boutique
@@ -274,6 +277,20 @@ export default function ModifierBoutiqueScreen() {
                 className="flex-1 text-[14.5px] font-bold text-[#1A1A1A]"
               />
               {positionConnue ? (
+                <View className="bg-[#D1FAE5] rounded-full px-2.5 py-1">
+                  <Text className="text-[10.5px] font-bold text-[#047857]">GPS Verrouillé</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Département de la position verrouillée, affiché comme la ville */}
+            <View className="bg-white rounded-[14px] px-3.5 py-3 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+              <Ionicons name="map-outline" size={14} color="#047857" />
+              <View className="flex-1">
+                <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Département</Text>
+                <Text className="text-[14.5px] font-bold text-[#1A1A1A] mt-0.5">{departement || '—'}</Text>
+              </View>
+              {departement ? (
                 <View className="bg-[#D1FAE5] rounded-full px-2.5 py-1">
                   <Text className="text-[10.5px] font-bold text-[#047857]">GPS Verrouillé</Text>
                 </View>
