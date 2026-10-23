@@ -318,19 +318,19 @@ export default function MaBoutiqueScreen() {
                 onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace' as Href))}
                 accessibilityLabel="Retour"
                 className="items-center justify-center"
-                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(232,228,218,0.95)' }}>
-                <Ionicons name="arrow-back" size={19} color="#2563EB" />
+                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.9)' }}>
+                <Ionicons name="arrow-back" size={19} color="#FFFFFF" />
               </Pressable>
               <View className="flex-1 items-center px-2" pointerEvents="none">
-                <Text className="text-[14px] font-black tracking-widest text-[#1A1A1A] rounded-full px-3 py-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(232,228,218,0.92)' }} numberOfLines={1}>{boutique.nom.toUpperCase()}</Text>
+                <Text className="text-[14px] font-black tracking-widest text-white rounded-full px-3 py-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(17,17,17,0.9)' }} numberOfLines={1}>{boutique.nom.toUpperCase()}</Text>
               </View>
               <Pressable
                 onPress={() => router.push('/marketplace/reglages' as Href)}
                 accessibilityRole="button"
                 accessibilityLabel="Réglages de la boutique"
                 className="items-center justify-center"
-                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(232,228,218,0.95)' }}>
-                <Ionicons name="pencil" size={17} color="#1A1A1A" />
+                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.9)' }}>
+                <Ionicons name="pencil" size={17} color="#FFFFFF" />
               </Pressable>
             </View>
             <View className="absolute items-center justify-center rounded-full bg-white" style={{ right: 12, bottom: 6, width: 30, height: 30 }} pointerEvents="none">
