@@ -70,9 +70,10 @@ export default function AccueilScreen() {
     const ordonnee = [...stories.filter((s) => !vues.has(s.id)), ...stories.filter((s) => vues.has(s.id))];
     queueMicrotask(() => setRangee(ordonnee));
   }, [stories, vues, storyOuverte]);
-  // Près du logo (prompt § 2 et 4) : UNIQUEMENT les stories non vues, anneau vert ; aucun cercle quand tout est vu.
-  // Un appui ouvre la première story non vue.
-  const nonVues = rangee.map((s, index) => ({ id: s.id, imageUrl: s.imageUrl, titre: s.titre, index })).filter((s) => !vues.has(s.id));
+  // Près du logo, au défilement : les stories dans l'ordre de la rangée (non vues d'abord), anneau VERT si non vue, GRIS si vue — elles
+  // se rangent même quand tout est vu (décision du 23/10/2026). Un appui ouvre la première non vue, sinon la première story.
+  const pourLogo = rangee.map((s, index) => ({ id: s.id, imageUrl: s.imageUrl, titre: s.titre, index, vue: vues.has(s.id) }));
+  const premiereNonVue = pourLogo.find((s) => !s.vue)?.index ?? 0;
   useEffect(() => {
     let annule = false;
     chargerStories().then((liste) => {
@@ -106,7 +107,7 @@ export default function AccueilScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: FOND_PAGE }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <FaciliteHeader accueil petitesStories={rangeeHors ? nonVues : []} onStory={() => setStoryOuverte(nonVues[0]?.index ?? 0)} />
+        <FaciliteHeader accueil petitesStories={rangeeHors ? pourLogo : []} onStory={() => setStoryOuverte(premiereNonVue)} />
 
         {offres === null && !erreur ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
