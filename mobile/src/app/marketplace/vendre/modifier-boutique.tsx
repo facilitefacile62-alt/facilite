@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MarketplaceHeader from '@/components/MarketplaceHeader';
@@ -59,6 +59,8 @@ export default function ModifierBoutiqueScreen() {
   const [chargement, setChargement] = useState(true);
   const [enregistrement, setEnregistrement] = useState(false);
   const [envoiLogo, setEnvoiLogo] = useState(false);
+  const defilement = useRef<ScrollView>(null);
+  const faireVoirLeBas = () => setTimeout(() => defilement.current?.scrollToEnd({ animated: true }), 250);
   const [envoiCouverture, setEnvoiCouverture] = useState(false);
 
   // Logo (rond) et photo de couverture (bannière) : enregistrés tout de suite, visibles par les visiteurs de la boutique.
@@ -106,6 +108,10 @@ export default function ModifierBoutiqueScreen() {
     if (!userId || enregistrement) return;
     if (!prenom.trim() || !nom.trim()) {
       Alert.alert('Informations manquantes', 'Le prénom et le nom sont obligatoires.');
+      return;
+    }
+    if (naissance && !dateValide(naissance)) {
+      Alert.alert('Date de naissance', 'Complète le jour, le mois et l’année (par exemple 15 / 03 / 1990), ou laisse les trois cases vides.');
       return;
     }
     setEnregistrement(true);
@@ -172,7 +178,8 @@ export default function ModifierBoutiqueScreen() {
             <ActivityIndicator color={VERT} />
           </View>
         ) : (
-          <ScrollView contentContainerClassName="px-4 py-5 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView ref={defilement} contentContainerClassName="px-4 pt-5 pb-48 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {boutique ? (
               <Pressable
                 onPress={() => changerImage('couverture')}
@@ -263,9 +270,29 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <ChampEncadre libelle="Date de naissance" valeur={naissance} onChange={setNaissance} indication="aaaa-mm-jj" />
-            <ChampEncadre libelle="Sexe" valeur={sexe} onChange={setSexe} indication="Femme / Homme" />
+            <ChampDateNaissance valeur={naissance} onChange={setNaissance} onFocus={faireVoirLeBas} />
+
+            <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+              <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Sexe</Text>
+              <View className="flex-row gap-2.5 mt-2">
+                {(['Femme', 'Homme'] as const).map((choix) => {
+                  const actif = sexe === choix;
+                  return (
+                    <Pressable
+                      key={choix}
+                      onPress={() => setSexe(actif ? '' : choix)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: actif }}
+                      className="flex-1 items-center justify-center rounded-xl"
+                      style={{ height: 46, backgroundColor: actif ? VERT : '#F3F4F6', borderWidth: 1, borderColor: actif ? VERT : 'rgba(0,0,0,0.08)' }}>
+                      <Text className="text-[15px] font-black" style={{ color: actif ? '#fff' : '#1A1A1A' }}>{choix}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           </ScrollView>
+          </KeyboardAvoidingView>
         )}
       </SafeAreaView>
     </View>
@@ -273,6 +300,98 @@ export default function ModifierBoutiqueScreen() {
 }
 
 /** Champ de la maquette : libellé vert posé sur la bordure, compteur à droite. */
+/** « AAAA-MM-JJ » valide (mois 1-12, jour existant dans ce mois, année plausible). */
+function dateValide(iso: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return false;
+  const [annee, mois, jour] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (annee < 1900 || annee > new Date().getFullYear() || mois < 1 || mois > 12 || jour < 1) return false;
+  return jour <= new Date(annee, mois, 0).getDate();
+}
+
+/** Date de naissance en trois cases (jour, mois, année), pour bien voir ce qu'on écrit ; enregistrée sous la forme « AAAA-MM-JJ ». */
+function ChampDateNaissance({ valeur, onChange, onFocus }: { valeur: string; onChange: (v: string) => void; onFocus: () => void }) {
+  const [a0, m0, j0] = valeur ? valeur.split('-') : ['', '', ''];
+  const [jour, setJour] = useState(j0 ?? '');
+  const [mois, setMois] = useState(m0 ?? '');
+  const [annee, setAnnee] = useState(a0 ?? '');
+  const refMois = useRef<TextInput>(null);
+  const refAnnee = useRef<TextInput>(null);
+
+  function maj(j: string, m: string, a: string) {
+    setJour(j);
+    setMois(m);
+    setAnnee(a);
+    // Rien de saisi : valeur vide. Sinon la valeur composée (même incomplète : la validation à l'enregistrement la refuse).
+    onChange(!j && !m && !a ? '' : `${a.padStart(4, '0')}-${m.padStart(2, '0')}-${j.padStart(2, '0')}`);
+  }
+  const chiffres = (t: string, n: number) => t.replace(/\D/g, '').slice(0, n);
+  const caseStyle = { height: 50, borderRadius: 12, backgroundColor: '#F3F4F6', textAlign: 'center' as const, fontSize: 18, fontWeight: '800' as const, color: '#1A1A1A', padding: 0 };
+
+  return (
+    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Date de naissance</Text>
+        <Text className="text-[11px] text-black/35">jour · mois · année</Text>
+      </View>
+      <View className="flex-row gap-2.5 mt-2">
+        <View style={{ flex: 2 }}>
+          <TextInput
+            value={jour}
+            onChangeText={(t) => {
+              const v = chiffres(t, 2);
+              maj(v, mois, annee);
+              if (v.length === 2) refMois.current?.focus();
+            }}
+            onFocus={onFocus}
+            keyboardType="number-pad"
+            placeholder="JJ"
+            placeholderTextColor="rgba(0,0,0,0.3)"
+            maxLength={2}
+            accessibilityLabel="Jour de naissance"
+            style={caseStyle}
+          />
+          <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Jour</Text>
+        </View>
+        <View style={{ flex: 2 }}>
+          <TextInput
+            ref={refMois}
+            value={mois}
+            onChangeText={(t) => {
+              const v = chiffres(t, 2);
+              maj(jour, v, annee);
+              if (v.length === 2) refAnnee.current?.focus();
+            }}
+            onFocus={onFocus}
+            keyboardType="number-pad"
+            placeholder="MM"
+            placeholderTextColor="rgba(0,0,0,0.3)"
+            maxLength={2}
+            accessibilityLabel="Mois de naissance"
+            style={caseStyle}
+          />
+          <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Mois</Text>
+        </View>
+        <View style={{ flex: 3 }}>
+          <TextInput
+            ref={refAnnee}
+            value={annee}
+            onChangeText={(t) => maj(jour, mois, chiffres(t, 4))}
+            onFocus={onFocus}
+            keyboardType="number-pad"
+            placeholder="AAAA"
+            placeholderTextColor="rgba(0,0,0,0.3)"
+            maxLength={4}
+            accessibilityLabel="Année de naissance"
+            style={caseStyle}
+          />
+          <Text className="text-[10.5px] text-center mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Année</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ChampEncadre({
   libelle,
   valeur,
