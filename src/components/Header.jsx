@@ -740,6 +740,33 @@ export default function Header() {
     };
   }, [authLoading, userSession, fetchDbNotifications, fetchJobOfferNotifs, normalizeDbNotification]);
 
+  // Messages non lus (pastille rouge sur « Messagerie ») : compte au chargement, puis en direct à chaque message reçu ou lu.
+  const [messagesNonLus, setMessagesNonLus] = useState(0);
+  useEffect(() => {
+    const userId = userSession?.user?.id;
+    if (authLoading || !userId) return undefined;
+    let actif = true;
+    const compter = async () => {
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("receiver_id", userId)
+        .eq("is_read", false);
+      if (actif) setMessagesNonLus(count || 0);
+    };
+    compter();
+    const canal = supabase
+      .channel(`header-messages-non-lus-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${userId}` }, () => {
+        compter();
+      })
+      .subscribe();
+    return () => {
+      actif = false;
+      supabase.removeChannel(canal);
+    };
+  }, [authLoading, userSession?.user?.id]);
+
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
     if (!query.trim()) {
@@ -1545,13 +1572,21 @@ export default function Header() {
             <Link
               href={isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie"}
               onClick={(e) => handleNavClick(e, isBusinessActive ? "/messagerie?contexte=marketplace" : "/messagerie", "nav_messagerie", "Messagerie")}
-              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 px-1.5 py-1 rounded-lg transition-colors cursor-pointer ${
                 pathname === "/messagerie"
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400"
               }`}
             >
               <i className="fa-solid fa-comments text-base"></i>
+              {userSession && messagesNonLus > 0 && (
+                <span
+                  className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-black leading-4 text-center"
+                  aria-label={`${messagesNonLus} message${messagesNonLus > 1 ? "s" : ""} non lu${messagesNonLus > 1 ? "s" : ""}`}
+                >
+                  {messagesNonLus > 9 ? "9+" : messagesNonLus}
+                </span>
+              )}
               <span className="text-[10px] font-bold tracking-tight">Messagerie</span>
             </Link>
           )}
