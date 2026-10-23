@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useGlobalSearchParams, usePathname, useRouter, type Href } from 'expo-router';
+import { usePathname, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,14 +32,12 @@ const ENTREES: Entree[] = [
   { id: 'autour', libelle: 'Autour de moi', icone: 'location-outline', iconeActive: 'location', cible: '/marketplace/autour' },
   { id: 'publier', libelle: 'Publier', icone: 'add-circle-outline', iconeActive: 'add-circle', cible: '/marketplace/vendre?publier=1' },
   { id: 'messages', libelle: 'Messages', icone: 'chatbubble-outline', iconeActive: 'chatbubble', cible: '/marketplace/messages' },
-  { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/marketplace/vendre?profil=1' },
+  { id: 'profil', libelle: 'Profil', icone: 'person-outline', iconeActive: 'person', cible: '/marketplace/profil' },
 ];
 
 // Quelle entrée est active pour un chemin donné. Les pages de détail rattachées
 // à une entrée (ex. /marketplace/[id] -> Accueil) gardent l'entrée parente active.
-function entreeActive(chemin: string, depuisProfil = false): Entree['id'] | null {
-  // « Profil » ouvre directement « Ma boutique » (/marketplace/vendre?profil=1) : l'entrée Profil reste allumée.
-  if (depuisProfil && chemin.startsWith('/marketplace/vendre')) return 'profil';
+function entreeActive(chemin: string): Entree['id'] | null {
   if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/mon-profil') || chemin.startsWith('/marketplace/a-propos')) return 'profil';
   if (chemin.startsWith('/marketplace/autour')) return 'autour';
   if (chemin.startsWith('/marketplace/recherche')) return 'accueil';
@@ -61,11 +59,10 @@ export default function MarketplaceBottomBar() {
   const t = useT();
   const router = useRouter();
   const chemin = usePathname();
-  const { profil: depuisProfil } = useGlobalSearchParams<{ profil?: string }>();
   const insets = useSafeAreaInsets();
   const [deplie, setDeplie] = useState(false);
   const [hauteur] = useState(() => new Animated.Value(0));
-  const active = deplie ? 'autour' : entreeActive(chemin, depuisProfil === '1');
+  const active = deplie ? 'autour' : entreeActive(chemin);
 
   useEffect(() => {
     Animated.timing(hauteur, {

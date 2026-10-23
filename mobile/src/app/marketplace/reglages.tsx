@@ -99,7 +99,7 @@ export default function ReglagesMarketplaceScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
           <View className="flex-row items-center px-4 py-3">
             <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace'))}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'))}
               accessibilityLabel="Retour"
               className="items-center justify-center"
               style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF' }}>
