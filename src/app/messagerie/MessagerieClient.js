@@ -1113,18 +1113,28 @@ export default function MessagerieClient() {
       // Charger uniquement les messages appartenant à cet utilisateur authentifié
       // (envoyés ou reçus — la RLS garantit déjà l'isolation côté base).
       try {
-        const { messages: formattedMsgs, error: messagesError } = await fetchConversationMessages(session.user.id);
+        // Les quatre lectures indépendantes partent EN MÊME TEMPS (avant : l'une après l'autre, autant d'allers-retours réseau à attendre).
+        const [resultatMessages, resultatCandidatures, resultatAdmin, resultatConversations] = await Promise.all([
+          fetchConversationMessages(session.user.id),
+          supabase
+            .from("candidatures")
+            .select("*, job_offers:job_offer_id(id, contact_email, company, title)")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: true }), // Du plus ancien au plus récent
+          supabase.rpc("resolve_admin_id"),
+          supabase
+            .from("conversations")
+            .select("id, user_1_id, user_2_id")
+            .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`),
+        ]);
+        const { messages: formattedMsgs, error: messagesError } = resultatMessages;
 
         if (messagesError) {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
         }
 
         // Chargement des candidatures de l'utilisateur avec les données de l'offre
-        const { data: userCandidatures } = await supabase
-          .from("candidatures")
-          .select("*, job_offers:job_offer_id(id, contact_email, company, title)")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: true }); // Du plus ancien au plus récent
+        const { data: userCandidatures } = resultatCandidatures;
 
         // Regrouper les candidatures par offre ou par entreprise pour éviter tout doublon de carte
         const groupedCandidatures = new Map();
@@ -1206,11 +1216,8 @@ export default function MessagerieClient() {
         // ni OFFRE ni SUPPORT) retombaient tous dans le fil fusionné
         // "Support RH Facilité" ci-dessous, mélangés au vrai support
         // technique. Signalé par l'utilisateur (captures d'écran).
-        const { data: adminIdForExclusion } = await supabase.rpc("resolve_admin_id");
-        const { data: mesConversations } = await supabase
-          .from("conversations")
-          .select("id, user_1_id, user_2_id")
-          .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`);
+        const { data: adminIdForExclusion } = resultatAdmin;
+        const { data: mesConversations } = resultatConversations;
 
         // Conversation avec l'admin = fil Support, SAUF ses échanges tagués
         // MARKETPLACE (l'admin peut être client ou vendeur d'une boutique) : sans
@@ -1234,20 +1241,20 @@ export default function MessagerieClient() {
         let directCards = [];
         const idsAvecConversationDirecte = new Set();
         if (autresPartiesIds.length > 0) {
-          const [{ data: boutiques }, { data: recruteurs }, { data: profilsGeneraux }] = await Promise.all([
+          // Aussi en parallèle : le module d'avatar et les noms d'interlocuteurs (avant : deux attentes de plus, à la suite).
+          const [{ data: boutiques }, { data: recruteurs }, { data: profilsGeneraux }, modAvatar, { data: nomsInterlocuteurs }] = await Promise.all([
             supabase.from("marketplace_stores").select("owner_id, nom, avatar_config").in("owner_id", autresPartiesIds),
             supabase.from("recruiter_profiles").select("user_id, company_name, sector, logo_url").in("user_id", autresPartiesIds),
             supabase.from("profiles").select("id, full_name, avatar_url").in("id", autresPartiesIds),
+            import("@/lib/avatarBoutique").catch(() => ({ dataUriAvatarBoutique: null })),
+            // profiles est privée : le nom d'un acheteur n'y est pas lisible par le vendeur (il voyait « Utilisateur »).
+            // noms_interlocuteurs_marketplace ne renvoie que son prénom + initiale, et seulement pour les participants.
+            supabase.rpc("noms_interlocuteurs_marketplace", { p_conversation_ids: conversationsDirectes.map((c) => c.id) }),
           ]);
           const boutiqueParId = new Map((boutiques || []).map((b) => [b.owner_id, b]));
           const recruteurParId = new Map((recruteurs || []).map((r) => [r.user_id, r]));
           const profilParId = new Map((profilsGeneraux || []).map((p) => [p.id, p]));
-          const { dataUriAvatarBoutique } = await import("@/lib/avatarBoutique").catch(() => ({ dataUriAvatarBoutique: null }));
-          // profiles est privée : le nom d'un acheteur n'y est pas lisible par le vendeur (il voyait « Utilisateur »).
-          // noms_interlocuteurs_marketplace ne renvoie que son prénom + initiale, et seulement pour les participants.
-          const { data: nomsInterlocuteurs } = await supabase.rpc("noms_interlocuteurs_marketplace", {
-            p_conversation_ids: conversationsDirectes.map((c) => c.id),
-          });
+          const { dataUriAvatarBoutique } = modAvatar;
           const nomInterlocuteurParConv = new Map((nomsInterlocuteurs || []).map((n) => [n.conversation_id, n.nom]));
 
           directCards = conversationsDirectes.map((conv) => {
