@@ -1,41 +1,99 @@
-import { Alert, ScrollView, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteMenu, GroupeCartes } from '@/components/CarteMenu';
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
-import ReglagesCartes from '@/components/ReglagesCartes';
-import { useAuth } from '@/context/AuthContext';
-import { chargerMesBoutiques } from '@/lib/vendeur';
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useThemeApp } from '@/context/ThemeApp';
+import { lireLangue, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
+import { useT } from '@/lib/i18n';
 
-// « Modifier infos » > Paramètres : la MÊME page de réglages que Locaux (décision du 23/10/2026 : une seule page de réglages pour les deux
-// plateformes ; voir components/ReglagesCartes.tsx). L'en-tête « Modifier infos » et ses onglets restent ceux de Facilité.
+// « Modifier infos » > Paramètres : les ÉLÉMENTS de Facilité (Thème, Langue de l'application, Confidentialité et informations juridiques,
+// Sécurité & Connexion) présentés dans le DESIGN des réglages de Locaux (cartes séparées à icône verte, comme « À propos » et les
+// Réglages de Locaux) — décision du 23/10/2026 : même forme, éléments propres à chaque plateforme.
 export default function ParametresScreen() {
-  const { user, signOut } = useAuth();
-  const userId = user?.id;
-  const [estVendeur, setEstVendeur] = useState(false);
+  const t = useT();
+  const router = useRouter();
+  const [langue, setLangue] = useState<CodeLangue>('fr');
+  const { theme, appliquer } = useThemeApp();
   useFocusEffect(
     useCallback(() => {
-      if (!userId) return;
-      chargerMesBoutiques(userId)
-        .then((liste) => setEstVendeur(liste.length > 0))
-        .catch(() => setEstVendeur(false));
-    }, [userId])
+      lireLangue().then(setLangue);
+    }, [])
   );
-
-  function deconnexion() {
-    Alert.alert('Se déconnecter ?', 'Vous devrez vous reconnecter pour accéder à votre compte.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Se déconnecter', style: 'destructive', onPress: () => signOut() },
-    ]);
-  }
-
+  // Le thème s'applique tout de suite à toute l'application (clair, sombre, ou automatique = celui du téléphone).
+  const choisirTheme = (choix: ThemeChoisi) => {
+    appliquer(choix);
+  };
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteModifierInfos actif="parametres" />
+
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 16, paddingBottom: 28 }}>
-          <ReglagesCartes plateforme="facilite" estVendeur={estVendeur} deconnexion={deconnexion} />
+          <View className="px-4 mb-4">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-[22px] font-black text-[#1A1A1A]">{t('Paramètres')}</Text>
+              <Ionicons name="chevron-down" size={15} color="#1A1A1A" />
+            </View>
+            <Text className="text-[14px] mt-1.5" style={{ color: 'rgba(0,0,0,0.5)' }}>
+              {t('Personnalisez votre expérience visuelle et vos préférences.')}
+            </Text>
+          </View>
+
+          <View className="px-4">
+            <GroupeCartes>
+              <CarteMenu
+                icone="contrast-outline"
+                titre={t('Thème')}
+                sous={t('Apparence de Facilité')}
+                onPress={() => {}}
+                droite={
+                  <View className="flex-row items-center" style={{ backgroundColor: '#F0EEE8', borderRadius: 22, padding: 4, gap: 2 }}>
+                    {([
+                      { id: 'clair' as const, icone: 'sunny-outline' as const, nom: 'Thème clair' },
+                      { id: 'auto' as const, icone: 'settings-outline' as const, nom: 'Thème automatique' },
+                      { id: 'sombre' as const, icone: 'moon-outline' as const, nom: 'Thème sombre' },
+                    ]).map((o) => (
+                      <Pressable
+                        key={o.id}
+                        onPress={() => choisirTheme(o.id)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: theme === o.id }}
+                        accessibilityLabel={o.nom}
+                        className="items-center justify-center"
+                        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: theme === o.id ? '#fff' : 'transparent' }}>
+                        <Ionicons name={o.icone} size={17} color={theme === o.id ? '#1A1A1A' : 'rgba(0,0,0,0.5)'} />
+                      </Pressable>
+                    ))}
+                  </View>
+                }
+              />
+              <CarteMenu
+                icone="language-outline"
+                titre={t("Langue de l'application")}
+                sous={libelleLangue(langue)}
+                onPress={() => router.push('/mon-profil/langue' as Href)}
+              />
+            </GroupeCartes>
+
+            <GroupeCartes>
+              <CarteMenu
+                icone="shield-checkmark-outline"
+                titre={t('Confidentialité et informations juridiques')}
+                sous={t('Visibilité du profil, pages légales')}
+                onPress={() => router.push('/mon-profil/confidentialite' as Href)}
+              />
+              <CarteMenu
+                icone="lock-closed-outline"
+                titre={t('Sécurité & Connexion')}
+                sous={t('Mot de passe, appareils')}
+                onPress={() => router.push('/mon-profil/securite' as Href)}
+              />
+            </GroupeCartes>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
