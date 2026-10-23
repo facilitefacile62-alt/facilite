@@ -1,14 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Keyboard, Pressable, ScrollView, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 import { urlPhoto } from '@/lib/marketplace';
+import { VILLES } from '@/lib/offresParVille';
 import {
   chargerMesBoutiques,
   choisirEtEnvoyerPhotoBoutique,
@@ -59,8 +60,23 @@ export default function ModifierBoutiqueScreen() {
   const [chargement, setChargement] = useState(true);
   const [enregistrement, setEnregistrement] = useState(false);
   const [envoiLogo, setEnvoiLogo] = useState(false);
+  // Clavier : hauteur suivie pour laisser assez de place sous le dernier champ, et chaque champ touché REMONTE au-dessus du clavier.
   const defilement = useRef<ScrollView>(null);
-  const faireVoirLeBas = () => setTimeout(() => defilement.current?.scrollToEnd({ animated: true }), 250);
+  const positions = useRef<Record<string, number>>({});
+  const [clavier, setClavier] = useState(0);
+  useEffect(() => {
+    const ouvre = Keyboard.addListener('keyboardDidShow', (e) => setClavier(e.endCoordinates.height));
+    const ferme = Keyboard.addListener('keyboardDidHide', () => setClavier(0));
+    return () => {
+      ouvre.remove();
+      ferme.remove();
+    };
+  }, []);
+  const suivre = (nom: string) => (e: LayoutChangeEvent) => {
+    positions.current[nom] = e.nativeEvent.layout.y;
+  };
+  const faireVoir = (nom: string) => () =>
+    setTimeout(() => defilement.current?.scrollTo({ y: Math.max(0, (positions.current[nom] ?? 0) - 90), animated: true }), 280);
   const [envoiCouverture, setEnvoiCouverture] = useState(false);
 
   // Logo (rond) et photo de couverture (bannière) : enregistrés tout de suite, visibles par les visiteurs de la boutique.
@@ -103,6 +119,14 @@ export default function ModifierBoutiqueScreen() {
   useFocusEffect(charger);
 
   const positionConnue = boutique?.latitude != null && boutique?.longitude != null;
+  // Ville de la position verrouillée quand aucune ville n'est enregistrée : la plus proche parmi les villes connues de l'application.
+  const villeGps =
+    positionConnue && boutique
+      ? VILLES.reduce((meilleure, v) => {
+          const d = (v.lat - (boutique.latitude as number)) ** 2 + (v.lng - (boutique.longitude as number)) ** 2;
+          return d < meilleure.d ? { d, nom: v.nom } : meilleure;
+        }, { d: Infinity, nom: '' }).nom
+      : '';
 
   async function enregistrer() {
     if (!userId || enregistrement) return;
@@ -125,7 +149,7 @@ export default function ModifierBoutiqueScreen() {
         await modifierBoutique(boutique.id, {
           nom: boutique.nom,
           quartier: boutique.quartier,
-          ville: ville.trim() || null,
+          ville: (ville.trim() || villeGps) || null,
           telephoneWhatsapp: whatsapp.trim() || null,
         });
       }
@@ -178,8 +202,12 @@ export default function ModifierBoutiqueScreen() {
             <ActivityIndicator color={VERT} />
           </View>
         ) : (
-          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView ref={defilement} contentContainerClassName="px-4 pt-5 pb-48 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            ref={defilement}
+            contentContainerClassName="px-4 pt-5 gap-3"
+            contentContainerStyle={{ paddingBottom: clavier + 60 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
             {boutique ? (
               <Pressable
                 onPress={() => changerImage('couverture')}
@@ -222,24 +250,28 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} />
-            <ChampEncadre libelle="Nom*" valeur={nom} onChange={setNom} max={MAX_NOM} />
+            <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} onLayout={suivre('prenom')} onFocus={faireVoir('prenom')} />
+            <ChampEncadre libelle="Nom*" valeur={nom} onChange={setNom} max={MAX_NOM} onLayout={suivre('nom')} onFocus={faireVoir('nom')} />
             <ChampEncadre
               libelle="Numéro WhatsApp*"
               valeur={whatsapp}
               onChange={setWhatsapp}
               indication="Contact direct"
               clavier="phone-pad"
+              onLayout={suivre('whatsapp')}
+              onFocus={faireVoir('whatsapp')}
             />
 
-            <View className="bg-white rounded-[14px] px-3.5 py-3.5 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+            <View className="bg-white rounded-[14px] px-3.5 py-3.5 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }} onLayout={suivre('ville')}>
               <Ionicons name="location" size={14} color="#EF4444" />
               <TextInput
-                value={ville}
+                value={ville || villeGps}
                 onChangeText={setVille}
+                onFocus={faireVoir('ville')}
+                editable={!positionConnue}
                 placeholder="Ville"
                 placeholderTextColor="rgba(0,0,0,0.3)"
-                className="flex-1 text-[14px] text-[#1A1A1A]"
+                className="flex-1 text-[14.5px] font-bold text-[#1A1A1A]"
               />
               {positionConnue ? (
                 <View className="bg-[#D1FAE5] rounded-full px-2.5 py-1">
@@ -270,7 +302,7 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <ChampDateNaissance valeur={naissance} onChange={setNaissance} onFocus={faireVoirLeBas} />
+            <ChampDateNaissance valeur={naissance} onChange={setNaissance} onLayout={suivre('naissance')} onFocus={faireVoir('naissance')} />
 
             <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
               <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Sexe</Text>
@@ -292,7 +324,6 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
           </ScrollView>
-          </KeyboardAvoidingView>
         )}
       </SafeAreaView>
     </View>
@@ -310,7 +341,7 @@ function dateValide(iso: string): boolean {
 }
 
 /** Date de naissance en trois cases (jour, mois, année), pour bien voir ce qu'on écrit ; enregistrée sous la forme « AAAA-MM-JJ ». */
-function ChampDateNaissance({ valeur, onChange, onFocus }: { valeur: string; onChange: (v: string) => void; onFocus: () => void }) {
+function ChampDateNaissance({ valeur, onChange, onFocus, onLayout }: { valeur: string; onChange: (v: string) => void; onFocus: () => void; onLayout?: (e: LayoutChangeEvent) => void }) {
   const [a0, m0, j0] = valeur ? valeur.split('-') : ['', '', ''];
   const [jour, setJour] = useState(j0 ?? '');
   const [mois, setMois] = useState(m0 ?? '');
@@ -329,7 +360,7 @@ function ChampDateNaissance({ valeur, onChange, onFocus }: { valeur: string; onC
   const caseStyle = { height: 50, borderRadius: 12, backgroundColor: '#F3F4F6', textAlign: 'center' as const, fontSize: 18, fontWeight: '800' as const, color: '#1A1A1A', padding: 0 };
 
   return (
-    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }} onLayout={onLayout}>
       <View className="flex-row items-center justify-between">
         <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Date de naissance</Text>
         <Text className="text-[11px] text-black/35">jour · mois · année</Text>
@@ -399,7 +430,11 @@ function ChampEncadre({
   max,
   indication,
   clavier,
+  onFocus,
+  onLayout,
 }: {
+  onFocus?: () => void;
+  onLayout?: (e: LayoutChangeEvent) => void;
   libelle: string;
   valeur: string;
   onChange: (v: string) => void;
@@ -408,7 +443,7 @@ function ChampEncadre({
   clavier?: 'phone-pad' | 'default';
 }) {
   return (
-    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+    <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }} onLayout={onLayout}>
       <View className="flex-row items-center justify-between">
         <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>
           {libelle}
@@ -425,6 +460,7 @@ function ChampEncadre({
         value={valeur}
         onChangeText={(v) => onChange(max ? v.slice(0, max) : v)}
         keyboardType={clavier ?? 'default'}
+        onFocus={onFocus}
         className="text-[14.5px] text-[#1A1A1A] mt-1 p-0"
       />
     </View>
