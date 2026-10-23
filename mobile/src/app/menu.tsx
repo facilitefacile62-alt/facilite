@@ -8,8 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { contientSansAccent } from '@/lib/texte';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
-import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
-import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
+import { obtenirUserMode } from '@/lib/userMode';
 import { useT } from '@/lib/i18n';
 
 // Menu « ☰ » (maquettes 01 à 03 du dossier Menu et Publier) : une PAGE (la barre du bas reste visible, « ‹ Menu » revient à
@@ -61,34 +60,16 @@ export default function MenuScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, profile, signOut } = useAuth();
+  const { signOut } = useAuth();
   const ouvert = useFonctionnalites();
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
   // Mode affiché (Facilité | Locaux) : change les tuiles sans quitter la page ; le choix est mémorisé.
   const [mode, setMode] = useState<'facilite' | 'locaux'>('facilite');
-  // « Vos espaces » : déplié à l'ouverture, replié quand on fait défiler vers le bas.
-  const [espacesDeplies, setEspacesDeplies] = useState(true);
-  const [boutique, setBoutique] = useState<MaBoutique | null>(null);
-
-  const userId = user?.id;
 
   useEffect(() => {
     obtenirUserMode().then((m) => setMode(m === 'business' ? 'locaux' : 'facilite'));
   }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    let annule = false;
-    chargerMesBoutiques(userId)
-      .then((l) => {
-        if (!annule) setBoutique(l[0] ?? null);
-      })
-      .catch(() => {});
-    return () => {
-      annule = true;
-    };
-  }, [userId]);
 
   function retour() {
     if (router.canGoBack()) router.back();
@@ -98,13 +79,6 @@ export default function MenuScreen() {
   // Touche de bascule du haut : ne change que les raccourcis affichés, sans quitter la page.
   function choisirMode(m: 'facilite' | 'locaux') {
     setMode(m);
-  }
-
-  // Lignes de « Vos espaces » : y aller change d'univers (accueil Facilité ou fil Locaux).
-  function allerEspace(m: 'facilite' | 'locaux') {
-    setMode(m);
-    definirUserMode(m === 'locaux' ? 'business' : 'facilite').catch(() => {});
-    router.replace((m === 'locaux' ? '/marketplace' : '/') as Href);
   }
 
   function confirmerDeconnexion() {
@@ -119,46 +93,11 @@ export default function MenuScreen() {
     else if (tu.route) router.push(tu.route as Href);
   }
 
-  const nom = (profile?.full_name as string | undefined) || 'Mon compte';
-  const initiales = nom.slice(0, 2).toUpperCase();
-
   // Tuiles du mode, filtrées par les interrupteurs puis par la recherche.
   const q = terme.trim();
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
   const tuiles = filtre(mode === 'facilite' ? TUILES_FACILITE : TUILES_LOCAUX);
-
-  // L'espace où l'on se trouve est toujours en haut, l'autre en dessous.
-  const ligneFacilite = (
-    <Pressable
-      onPress={() => allerEspace('facilite')}
-      className="flex-row items-center gap-3"
-      style={{ backgroundColor: mode === 'facilite' ? '#F7F5F0' : 'transparent', borderRadius: 14, padding: 10 }}>
-      <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
-        <Text className="text-[14px] font-extrabold" style={{ color: 'rgba(0,0,0,0.35)' }}>{initiales}</Text>
-      </View>
-      <View className="flex-1 min-w-0">
-        <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{nom}</Text>
-        <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Candidat & CV')}</Text>
-      </View>
-      {mode === 'facilite' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('Basculer →')}</Text>}
-    </Pressable>
-  );
-  const ligneLocaux = (
-    <Pressable
-      onPress={() => allerEspace('locaux')}
-      className="flex-row items-center gap-3"
-      style={{ backgroundColor: mode === 'locaux' ? '#F7F5F0' : 'transparent', borderRadius: 14, padding: 10 }}>
-      <View className="items-center justify-center" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#EFEDE7' }}>
-        <Ionicons name="storefront-outline" size={19} color="rgba(0,0,0,0.35)" />
-      </View>
-      <View className="flex-1 min-w-0">
-        <Text className="text-[16px] font-black text-[#1A1A1A]" numberOfLines={1}>{t('Locaux')}</Text>
-        <Text className="text-[12.5px]" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={1}>{t('Espace Vendeur & Locaux')}</Text>
-      </View>
-      {mode === 'locaux' ? <Ionicons name="checkmark-circle-outline" size={22} color={VERT} /> : <Text className="text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>{t('↻ Basculer →')}</Text>}
-    </Pressable>
-  );
 
   const grille = (liste: Tuile[]) => (
     <View className="flex-row flex-wrap" style={{ gap: 12 }}>
@@ -231,14 +170,7 @@ export default function MenuScreen() {
 
         {/* Sélecteur FIXE Facilité | Locaux : il ne défile pas */}
         <View className="flex-row items-center justify-between bg-white mx-4" style={{ borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 6 }}>
-          {mode === 'facilite' ? (
-            <Pressable onPress={() => setEspacesDeplies((v) => !v)} accessibilityRole="button" className="flex-row items-center gap-1.5" hitSlop={8}>
-              <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('VOS ESPACES')}</Text>
-              <Ionicons name={espacesDeplies ? 'chevron-up' : 'chevron-down'} size={13} color="rgba(0,0,0,0.45)" />
-            </Pressable>
-          ) : (
-            <View />
-          )}
+          <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('MODE')}</Text>
           <View className="flex-row" style={{ backgroundColor: '#EFEDE7', borderRadius: 20, padding: 3 }}>
             {([
               { id: 'facilite' as const, libelle: 'Facilité', couleur: VERT },
@@ -265,29 +197,7 @@ export default function MenuScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
-        scrollEventThrottle={32}
-        onScroll={(e) => {
-          // Replié seulement quand on fait défiler vers le bas ; on le rouvre à la main avec la flèche.
-          if (e.nativeEvent.contentOffset.y > 60) setEspacesDeplies(false);
-        }}>
-        {/* Vos espaces : comptes, Profil, Boutique */}
-        {mode === 'facilite' && espacesDeplies ? (
-          <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
-            {mode === 'facilite' ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
-            <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
-            <View className="flex-row items-center justify-between px-2.5 py-1.5">
-              <Pressable onPress={() => router.navigate('/profil')} className="flex-row items-center gap-2">
-                <Ionicons name="id-card-outline" size={18} color={VERT} />
-                <Text className="text-[15px] font-black" style={{ color: VERT }}>{t('Profil')}</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/marketplace/vendre' as Href)} className="flex-row items-center gap-2">
-                <Ionicons name="storefront" size={18} color={BLEU} />
-                <Text className="text-[15px] font-black" style={{ color: BLEU }}>{t('Boutique')}</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
-
+        >
         <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
         {tuiles.length === 0 ? (
           <Text className="text-center text-[13px] mt-6" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucun résultat.</Text>
@@ -295,17 +205,18 @@ export default function MenuScreen() {
           grille(tuiles)
         )}
 
-        {/* « Paramètres de langue » et l'UNIQUE « Déconnexion », côte à côte */}
-        <View className="flex-row mt-5" style={{ gap: 12 }}>
-          <Pressable onPress={() => router.push('/mon-profil/parametres')} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
-            <Text className="text-[14px] font-black text-[#1A1A1A]">{t('⚙ Paramètres de langue')}</Text>
-          </Pressable>
-          <Pressable onPress={confirmerDeconnexion} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
-            <Ionicons name="log-out-outline" size={17} color="#DC2626" />
-            <Text className="text-[14px] font-black" style={{ color: '#DC2626' }}>{t('Déconnexion')}</Text>
-          </Pressable>
-        </View>
       </ScrollView>
+
+      {/* « Paramètres de langue » et l'UNIQUE « Déconnexion » : FIXES, juste au-dessus de la barre de navigation */}
+      <View className="flex-row px-4 pt-2 pb-2" style={{ gap: 12, backgroundColor: '#F2F0EA' }}>
+        <Pressable onPress={() => router.push('/mon-profil/parametres')} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
+          <Text className="text-[14px] font-black text-[#1A1A1A]">{t('⚙ Paramètres de langue')}</Text>
+        </Pressable>
+        <Pressable onPress={confirmerDeconnexion} className="flex-1 bg-white flex-row items-center justify-center gap-2" style={{ borderRadius: 16, paddingVertical: 15 }}>
+          <Ionicons name="log-out-outline" size={17} color="#DC2626" />
+          <Text className="text-[14px] font-black" style={{ color: '#DC2626' }}>{t('Déconnexion')}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
