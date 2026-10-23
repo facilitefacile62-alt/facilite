@@ -12,7 +12,7 @@ const DUREE_URL_SIGNEE_S = 3600;
 /** URL consultable d'une photo de profil : une URL complète est gardée, un chemin est signé. */
 export async function urlPhotoProfil(valeur: string | null | undefined): Promise<string | null> {
   if (!valeur) return null;
-  if (/^(https?:|data:)/.test(valeur)) return valeur;
+  if (/^(https?:|data:|avatar:)/.test(valeur)) return valeur;
   const { data, error } = await supabase.storage.from(BUCKET_AVATARS).createSignedUrl(valeur, DUREE_URL_SIGNEE_S);
   return error || !data?.signedUrl ? null : data.signedUrl;
 }

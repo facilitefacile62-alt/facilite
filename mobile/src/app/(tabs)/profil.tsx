@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ApercuDocument from '@/components/ApercuDocument';
+import AvatarProfil from '@/components/AvatarProfil';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import { useImportDocument } from '@/components/FeuilleImportDocument';
+import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import LigneOutil from '@/components/LigneOutil';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -19,7 +20,6 @@ import {
   type DocumentProfil,
 } from '@/lib/documents';
 import { OUTILS } from '@/lib/outils';
-import { changerPhotoProfil } from '@/lib/photoProfil';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 import { useT } from '@/lib/i18n';
 
@@ -114,16 +114,9 @@ export default function ProfilScreen() {
     ]);
   };
 
-  // Toucher la photo : choisir une image dans la galerie, l'enregistrer, puis recharger le profil.
-  const [envoiPhoto, setEnvoiPhoto] = useState(false);
-  const changerPhoto = () => {
-    if (!userId || envoiPhoto) return;
-    setEnvoiPhoto(true);
-    changerPhotoProfil(userId)
-      .then((fait) => (fait ? refreshProfile() : undefined))
-      .catch((e: Error) => Alert.alert('Photo impossible', e.message))
-      .finally(() => setEnvoiPhoto(false));
-  };
+  // Toucher la photo : feuille « Ma photo » (avatar au choix, ou photo / logo depuis la galerie).
+  const [feuillePhoto, setFeuillePhoto] = useState(false);
+  const changerPhoto = () => setFeuillePhoto(true);
 
   const nomAffiche = boutique?.nom || profile?.full_name || 'Mon profil';
   // Sous le nom : la description de la boutique, sinon le titre professionnel ou la bio
@@ -138,6 +131,7 @@ export default function ProfilScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <FaciliteHeader />
         {feuilleImport}
+        <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
           {/* En-tête de profil : photo + « + », nom de la boutique, Modifier infos */}
@@ -147,16 +141,7 @@ export default function ProfilScreen() {
                 onPress={changerPhoto}
                 accessibilityLabel="Photo de profil"
                 className="w-[72px] h-[72px] rounded-full bg-[#E8E4DA] items-center justify-center">
-                {profile?.avatar_url ? (
-                  <Image
-                    source={{ uri: profile.avatar_url }}
-                    alt="Photo de profil"
-                    style={{ width: 72, height: 72, borderRadius: 36 }}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <Ionicons name="person" size={30} color="rgba(0,0,0,0.3)" />
-                )}
+                <AvatarProfil valeur={profile?.avatar_url} nom={String(profile?.full_name ?? '')} taille={72} fond="#E8E4DA" />
                 <View
                   className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full items-center justify-center border-2 border-[#F2F0EA]"
                   style={{ backgroundColor: VERT }}>

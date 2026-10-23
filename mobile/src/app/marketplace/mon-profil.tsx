@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 
+import AvatarProfil from '@/components/AvatarProfil';
 import BoutonAction from '@/components/BoutonAction';
+import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import { useAuth } from '@/context/AuthContext';
 
 // Profil visiteur détaillé (maquette 33) : on y arrive en touchant la carte
@@ -22,7 +25,7 @@ export default function MonProfilVisiteurScreen() {
 
   const nom = (profile?.full_name as string | undefined) || user?.email || 'Mon compte';
   const bio = (profile?.bio as string | undefined) || '';
-  const initiale = nom.trim().charAt(0).toUpperCase() || '?';
+  const [feuillePhoto, setFeuillePhoto] = useState(false);
 
   function retour() {
     if (router.canGoBack()) router.back();
@@ -51,11 +54,17 @@ export default function MonProfilVisiteurScreen() {
           </View>
 
           <View className="px-4 pb-4">
-            <View
-              className="items-center justify-center"
-              style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: '#E4DED2', borderWidth: 4, borderColor: '#FFFFFF', marginTop: -36 }}>
-              <Text className="text-[26px] font-black text-[#1A1A1A]">{initiale}</Text>
-            </View>
+            <Pressable
+              onPress={() => setFeuillePhoto(true)}
+              accessibilityLabel="Changer ma photo"
+              style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: '#FFFFFF', marginTop: -36, backgroundColor: '#fff' }}>
+              <AvatarProfil valeur={profile?.avatar_url} nom={nom} taille={70} />
+              <View
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
+                style={{ backgroundColor: '#10B981' }}>
+                <Ionicons name="camera" size={12} color="#fff" />
+              </View>
+            </Pressable>
 
             <View className="flex-row items-center gap-2 flex-wrap mt-2">
               <Text className="text-[22px] font-black text-[#1A1A1A]">{nom}</Text>
@@ -109,6 +118,7 @@ export default function MonProfilVisiteurScreen() {
           </View>
         </View>
       </ScrollView>
+      <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
     </View>
   );
 }
