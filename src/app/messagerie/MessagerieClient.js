@@ -11,6 +11,7 @@ import { classerConversationDirecte, repartirConversationsDirectes } from "@/lib
 import { construireBrouillonArticle } from "@/lib/discussionArticle";
 import { uploadChatAttachment, validateChatFile } from "@/lib/chatAttachments";
 import ChatAttachmentUrl from "@/components/ChatAttachmentUrl";
+import CarteArticleMessage, { articleDuMessage } from "@/components/CarteArticleMessage";
 import MarkdownLeger from "@/lib/markdownLeger";
 import CarteItineraire from "@/components/CarteItineraire";
 
@@ -2374,6 +2375,13 @@ export default function MessagerieClient() {
     return sansAccent(c.name).includes(sansAccent(searchQuery)) ||
            sansAccent(c.company).includes(sansAccent(searchQuery)) ||
            sansAccent(c.title).includes(sansAccent(searchQuery));
+  }).sort((a, b) => {
+    // Les discussions les plus RÉCENTES en haut (date de leur dernier message) ; l'assistant épinglé reste tout en haut, les
+    // discussions sans message en bas.
+    if (a.id === AI_PINNED_CHAT.id) return -1;
+    if (b.id === AI_PINNED_CHAT.id) return 1;
+    const dernier = (c) => new Date(c.messages?.[c.messages.length - 1]?.createdAt || 0).getTime() || 0;
+    return dernier(b) - dernier(a);
   });
 
   const activeConversation = conversations.find(c => c.id === activeConvId) || null;
@@ -2613,7 +2621,7 @@ export default function MessagerieClient() {
                       <div className="flex items-center justify-between gap-1">
                         <p className={`text-xs truncate flex items-center gap-1 ${conv.unreadCount > 0 ? "font-bold text-[#111B21]" : "text-[#667781]"}`}>
                           <i className="fa-solid fa-check-double text-[#53BDEB] text-[10px]"></i>
-                          <span>{conv.lastMessage}</span>
+                          <span>{articleDuMessage(conv.lastMessage) ? "🛍️ Article" : conv.lastMessage}</span>
                         </p>
                         {conv.unreadCount > 0 && (
                           <span className="bg-[#25D366] text-white text-[10px] font-black min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center flex-shrink-0 shadow-2xs">
@@ -3253,7 +3261,10 @@ export default function MessagerieClient() {
                             )}
 
                             {/* Texte du message */}
-                            {msg.text && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
+                            {/* Prise de contact sur un article : la carte (photo, nom, prix) remplace le texte, touchable pour rouvrir l'article. */}
+                            {msg.text && articleDuMessage(msg.text) && <CarteArticleMessage articleId={articleDuMessage(msg.text)} />}
+
+                            {msg.text && !articleDuMessage(msg.text) && !(msg.attachment_url && msg.attachment_type !== "audio" && msg.text.startsWith("📎")) && (
                               // L'assistant répond en markdown : les **gras** et les
                               // listes s'affichaient auparavant avec leurs astérisques.
                               // MarkdownLeger rend des éléments React, jamais du HTML
