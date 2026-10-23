@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase, executeSupabaseWithRetry } from "./supabase";
 import { playNotificationSound } from "./notificationSound";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * Compteur de messages non lus pour la barre de navigation (badge + alerte
@@ -21,6 +22,8 @@ import { playNotificationSound } from "./notificationSound";
  */
 export function useUnreadMessagesBadge(userId, { son = true } = {}) {
   const [unreadCount, setUnreadCount] = useState(0);
+  // Compte administrateur : les candidatures reçues (type OFFRE) ne comptent pas — elles ne sont pas dans sa messagerie.
+  const { isAdmin } = useAuth();
   const idInstance = useRef(Math.random().toString(36).slice(2, 8));
   // Évite de jouer le son sur la salve de messages déjà non lus chargée à
   // l'ouverture de la page : seuls les messages qui arrivent APRÈS le montage
@@ -44,13 +47,14 @@ export function useUnreadMessagesBadge(userId, { son = true } = {}) {
 
     async function loadInitialCount() {
       try {
-        const { count, error } = await executeSupabaseWithRetry(() =>
-          supabase
+        const { count, error } = await executeSupabaseWithRetry(() => {
+          const requete = supabase
             .from("messages")
             .select("id", { count: "exact", head: true })
             .eq("receiver_id", userId)
-            .eq("is_read", false)
-        );
+            .eq("is_read", false);
+          return isAdmin ? requete.or("type_discussion.is.null,type_discussion.neq.OFFRE") : requete;
+        });
 
         if (cancelled) return;
         if (error) {
@@ -75,6 +79,7 @@ export function useUnreadMessagesBadge(userId, { son = true } = {}) {
         { event: "INSERT", schema: "public", table: "messages", filter: `receiver_id=eq.${userId}` },
         (payload) => {
           if (payload.new?.is_read) return;
+          if (isAdmin && payload.new?.type_discussion === "OFFRE") return;
           setUnreadCount((prev) => prev + 1);
           if (son && readyForAlertsRef.current) {
             playNotificationSound();
@@ -103,7 +108,7 @@ export function useUnreadMessagesBadge(userId, { son = true } = {}) {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [userId, son]);
+  }, [userId, son, isAdmin]);
 
   return unreadCount;
 }

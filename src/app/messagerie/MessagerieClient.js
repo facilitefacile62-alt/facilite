@@ -1126,9 +1126,12 @@ export default function MessagerieClient() {
 
       // Charger uniquement les messages appartenant à cet utilisateur authentifié
       // (envoyés ou reçus — la RLS garantit déjà l'isolation côté base).
+      // Compte administrateur : les candidatures reçues pour les offres (type OFFRE) ne sont PAS affichées dans sa messagerie — elles
+      // restent en base et dans la boîte du recruteur concerné. L'admin ne gère ici que ses échanges, le support et les RH.
+      let estAdminCompte = false;
       try {
         // Les quatre lectures indépendantes partent EN MÊME TEMPS (avant : l'une après l'autre, autant d'allers-retours réseau à attendre).
-        const [resultatMessages, resultatCandidatures, resultatAdmin, resultatConversations] = await Promise.all([
+        const [resultatMessages, resultatCandidatures, resultatAdmin, resultatConversations, resultatRole] = await Promise.all([
           fetchConversationMessages(session.user.id),
           supabase
             .from("candidatures")
@@ -1140,8 +1143,13 @@ export default function MessagerieClient() {
             .from("conversations")
             .select("id, user_1_id, user_2_id")
             .or(`user_1_id.eq.${session.user.id},user_2_id.eq.${session.user.id}`),
+          supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle(),
         ]);
-        const { messages: formattedMsgs, error: messagesError } = resultatMessages;
+        estAdminCompte = resultatRole?.data?.role === "admin";
+        const { messages: messagesBruts, error: messagesError } = resultatMessages;
+        const formattedMsgs = estAdminCompte
+          ? messagesBruts.filter((m) => !(m.typeDiscussion === "OFFRE" && m.sender === "them"))
+          : messagesBruts;
 
         if (messagesError) {
           triggerToast("Erreur de chargement de la discussion", "fa-triangle-exclamation");
@@ -1342,6 +1350,8 @@ export default function MessagerieClient() {
               autrePartieId,
             };
           });
+          // Admin : une conversation qui ne contenait que des candidatures reçues n'a plus de message à montrer — pas de carte vide.
+          if (estAdminCompte) directCards = directCards.filter((c) => c.messages.length > 0);
         }
 
         // Les messages Support généraux : exclut les candidatures (OFFRE) ET
@@ -1451,6 +1461,7 @@ export default function MessagerieClient() {
             // /admin/messages, qui a une vraie liste de conversations) : ce
             // fil fusionné agrège volontairement TOUS les messages de
             // l'utilisateur, quel que soit leur conversation_id.
+            if (estAdminCompte && newRow.type_discussion === "OFFRE" && newRow.sender_id !== session.user.id) return;
             if (newRow.sender_id === session.user.id || newRow.receiver_id === session.user.id) {
               const formatted = formatMessageRow(newRow, session.user.id);
               // L'autre partie de l'échange : si une conversation directe
