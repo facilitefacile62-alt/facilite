@@ -253,8 +253,15 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} onLayout={suivre('prenom')} onFocus={faireVoir('prenom')} />
-            <ChampEncadre libelle="Nom*" valeur={nom} onChange={setNom} max={MAX_NOM} onLayout={suivre('nom')} onFocus={faireVoir('nom')} />
+            {/* Prénom et nom côte à côte */}
+            <View className="flex-row gap-2.5" onLayout={suivre('prenom')}>
+              <View style={{ flex: 1 }}>
+                <ChampEncadre libelle="Prénom*" valeur={prenom} onChange={setPrenom} max={MAX_NOM} onFocus={faireVoir('prenom')} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ChampEncadre libelle="Nom*" valeur={nom} onChange={setNom} max={MAX_NOM} onFocus={faireVoir('prenom')} />
+              </View>
+            </View>
             <ChampEncadre
               libelle="Numéro WhatsApp*"
               valeur={whatsapp}
