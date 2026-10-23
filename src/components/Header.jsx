@@ -743,7 +743,7 @@ export default function Header() {
   }, [authLoading, userSession, fetchDbNotifications, fetchJobOfferNotifs, normalizeDbNotification]);
 
   // Messages non lus : même compteur (en direct) que les autres pages du site — pastille sur « Messagerie ».
-  const messagesNonLus = useUnreadMessagesBadge(userSession?.user?.id);
+  const messagesNonLus = useUnreadMessagesBadge(userSession?.user?.id, { son: false });
 
   // 2. Debounce de 300ms pour éviter d'inonder le backend FastAPI
   useEffect(() => {
