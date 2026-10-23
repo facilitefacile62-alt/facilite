@@ -316,63 +316,49 @@ export default function MaBoutiqueScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Couverture de la boutique ; à défaut, la couverture du profil du compte. Bloc repliable : toucher la barre (icône photo)
-            déplie la photo, toucher la photo la replie. « Changer » et « Retirer » sont sur la photo dépliée. */}
+        {/* Couverture de la boutique ; à défaut, la couverture du profil du compte. Bandeau COMPACT par défaut (pour que les articles
+            restent visibles dessous), avec l'icône photo À L'INTÉRIEUR : l'icône (ou un toucher) déplie la photo en grand, un toucher sur
+            la photo dépliée la replie. « Changer » et « Retirer » sont posés sur la photo dépliée. */}
         {(() => {
           const uriCouverture = (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : profile?.cover_url) ?? null;
           return (
-            <View className="px-3 pt-3">
-              {!couvertureOuverte ? (
+            <View className="px-3 pt-2">
+              <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#E8E4DA' }}>
                 <Pressable
-                  onPress={() => setCouvertureOuverte(true)}
+                  onPress={() => setCouvertureOuverte((o) => !o)}
                   accessibilityRole="button"
-                  accessibilityState={{ expanded: false }}
-                  accessibilityLabel="Afficher la photo de couverture"
-                  className="flex-row items-center gap-3 rounded-2xl bg-white px-4"
-                  style={{ height: 52 }}>
-                  <Ionicons name="image-outline" size={22} color="#1A1A1A" />
-                  <Text className="flex-1 text-[14px] font-black text-[#1A1A1A]">Photo de couverture</Text>
-                  <Ionicons name="chevron-down" size={18} color="#1A1A1A" />
-                </Pressable>
-              ) : (
-                <View className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#E8E4DA' }}>
-                  <Pressable
-                    onPress={() => setCouvertureOuverte(false)}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: true }}
-                    accessibilityLabel="Replier la photo de couverture"
-                    style={{ width: '100%', aspectRatio: 16 / 7, alignItems: 'center', justifyContent: 'center' }}>
-                    {uriCouverture ? (
-                      <Image source={{ uri: uriCouverture }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
-                    ) : (
-                      <>
-                        <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />
-                        <Text className="text-[12px] mt-1" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucune photo de couverture</Text>
-                      </>
-                    )}
-                    <View className="absolute items-center justify-center rounded-full bg-white" style={{ top: 8, right: 8, width: 32, height: 32 }}>
-                      <Ionicons name="chevron-up" size={17} color="#1A1A1A" />
-                    </View>
-                  </Pressable>
-                  <View className="flex-row items-center gap-2 px-3 py-2" style={{ backgroundColor: '#fff' }}>
-                    <Pressable onPress={changerCouverture} disabled={envoiCouverture} className="flex-row items-center gap-1.5 rounded-full px-3" style={{ height: 36, backgroundColor: '#ECFDF5' }}>
-                      {envoiCouverture ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="camera" size={15} color="#047857" />}
-                      <Text className="text-[12.5px] font-black" style={{ color: '#047857' }}>{boutique.cover_photo ? 'Changer' : 'Ajouter'}</Text>
-                    </Pressable>
-                    {boutique.cover_photo ? (
-                      <Pressable onPress={retirerCouverture} className="flex-row items-center gap-1.5 rounded-full px-3" style={{ height: 36, backgroundColor: '#FEF2F2' }}>
-                        <Ionicons name="trash-outline" size={15} color="#DC2626" />
-                        <Text className="text-[12.5px] font-black" style={{ color: '#DC2626' }}>Retirer</Text>
-                      </Pressable>
-                    ) : null}
+                  accessibilityState={{ expanded: couvertureOuverte }}
+                  accessibilityLabel={couvertureOuverte ? 'Replier la photo de couverture' : 'Afficher la photo de couverture en grand'}
+                  style={couvertureOuverte ? { width: '100%', aspectRatio: 16 / 7, alignItems: 'center', justifyContent: 'center' } : { width: '100%', height: 76, alignItems: 'center', justifyContent: 'center' }}>
+                  {uriCouverture ? (
+                    <Image source={{ uri: uriCouverture }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+                  ) : (
+                    <Text className="text-[12px]" style={{ color: 'rgba(0,0,0,0.45)' }}>Aucune photo de couverture</Text>
+                  )}
+                  <View className="absolute items-center justify-center rounded-full bg-white" style={{ top: 8, right: 8, width: 34, height: 34 }}>
+                    <Ionicons name={couvertureOuverte ? 'chevron-up' : 'image'} size={17} color="#1A1A1A" />
                   </View>
-                </View>
-              )}
+                  {couvertureOuverte ? (
+                    <View className="absolute flex-row items-center gap-2" style={{ left: 8, bottom: 8 }}>
+                      <Pressable onPress={changerCouverture} disabled={envoiCouverture} className="flex-row items-center gap-1.5 rounded-full bg-white px-3" style={{ height: 34 }}>
+                        {envoiCouverture ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="camera" size={15} color="#047857" />}
+                        <Text className="text-[12.5px] font-black" style={{ color: '#047857' }}>{boutique.cover_photo ? 'Changer' : 'Ajouter'}</Text>
+                      </Pressable>
+                      {boutique.cover_photo ? (
+                        <Pressable onPress={retirerCouverture} className="flex-row items-center gap-1.5 rounded-full bg-white px-3" style={{ height: 34 }}>
+                          <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                          <Text className="text-[12.5px] font-black" style={{ color: '#DC2626' }}>Retirer</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </Pressable>
+              </View>
             </View>
           );
         })()}
         {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
-        <View className="px-4 pt-4">
+        <View className="px-4 pt-3">
           <View className="flex-row items-center gap-3">
             <Pressable
               onPress={changerLogo}
@@ -421,7 +407,7 @@ export default function MaBoutiqueScreen() {
         </View>
 
         {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
-        <View className="flex-row gap-2.5 px-4 mt-4">
+        <View className="flex-row gap-2.5 px-4 mt-3">
           {(
             [
               { id: 'article' as const, label: 'Article', icone: 'pricetag-outline' as const },
