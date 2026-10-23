@@ -56,6 +56,7 @@ export default function ModifierBoutiqueScreen() {
   const [nom, setNom] = useState(connu.nom);
   const [whatsapp, setWhatsapp] = useState('');
   const [ville, setVille] = useState('');
+  const dateFixee = typeof profile?.date_naissance === 'string' && profile.date_naissance.length > 0;
   const [naissance, setNaissance] = useState(typeof profile?.date_naissance === 'string' ? profile.date_naissance : '');
   const [sexe, setSexe] = useState(typeof profile?.gender === 'string' ? profile.gender : '');
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
@@ -146,8 +147,9 @@ export default function ModifierBoutiqueScreen() {
     try {
       await enregistrerChampsProfil(userId, {
         full_name: `${prenom.trim()} ${nom.trim()}`.trim(),
-        // La colonne s'appelle date_naissance (« birth_date » n'existe pas dans profiles : l'enregistrement échouait).
-        date_naissance: naissance.trim() || null,
+        // La colonne s'appelle date_naissance (« birth_date » n'existe pas dans profiles : l'enregistrement échouait). Une date déjà
+        // renseignée ne change jamais (la base la verrouille) : on ne la renvoie pas.
+        ...(dateFixee ? {} : { date_naissance: naissance.trim() || null }),
         gender: sexe.trim() || null,
       });
       if (boutique) {
@@ -328,7 +330,21 @@ export default function ModifierBoutiqueScreen() {
               </View>
             </View>
 
-            <SelecteurDateNaissance valeur={naissance} onChange={setNaissance} onLayout={suivre('naissance')} onFocus={faireVoir('naissance')} />
+            {dateFixee ? (
+              <View className="bg-white rounded-[14px] px-3.5 py-3 flex-row items-center gap-2" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
+                <Ionicons name="gift-outline" size={15} color="#047857" />
+                <View className="flex-1">
+                  <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Date de naissance</Text>
+                  <Text className="text-[14.5px] font-bold text-[#1A1A1A] mt-0.5">{(() => { const [a, m, j] = naissance.slice(0, 10).split('-'); return `${Number(j)} ${['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][Number(m) - 1]} ${a}`; })()}</Text>
+                </View>
+                <View className="bg-[#E5E7EB] rounded-full px-2.5 py-1 flex-row items-center gap-1">
+                  <Ionicons name="lock-closed" size={11} color="#4B5563" />
+                  <Text className="text-[10.5px] font-bold" style={{ color: '#4B5563' }}>Non modifiable</Text>
+                </View>
+              </View>
+            ) : (
+              <SelecteurDateNaissance valeur={naissance} onChange={setNaissance} onLayout={suivre('naissance')} onFocus={faireVoir('naissance')} />
+            )}
 
             <View className="bg-white rounded-[14px] px-3.5 pt-2.5 pb-3" style={{ borderWidth: 1.5, borderColor: '#0B3D2A' }}>
               <Text className="text-[11px] font-bold" style={{ color: '#047857' }}>Sexe</Text>

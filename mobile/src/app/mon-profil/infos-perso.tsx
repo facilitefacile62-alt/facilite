@@ -71,6 +71,9 @@ export default function ProfilInfosPersoScreen() {
     return texte;
   }
 
+  // La date de naissance ne change jamais une fois renseignée (verrou en base) : plus de crayon dès qu'elle existe.
+  const peutModifier = (l: Ligne) => (l.cle === 'date_naissance' ? !profile?.date_naissance : l.modifiable);
+
   function ouvrir(l: Ligne) {
     setSaisie(l.cle === 'date_naissance' ? (typeof profile?.date_naissance === 'string' ? profile.date_naissance.slice(0, 10) : '') : valeurDe(l));
     setEnEdition(l.cle);
@@ -125,10 +128,10 @@ export default function ProfilInfosPersoScreen() {
                   titre={valeur || 'Non renseigné'}
                   sous={enEdition === l.cle ? undefined : l.nom}
                   pastille={enEdition === l.cle ? null : pastille}
-                  fleche={l.modifiable && enEdition !== l.cle}
+                  fleche={peutModifier(l) && enEdition !== l.cle}
                   alignHaut={enEdition === l.cle}
-                  accessibilityLabel={l.modifiable ? `Modifier ${l.nom.toLowerCase()}` : undefined}
-                  onPress={l.modifiable && enEdition !== l.cle ? () => ouvrir(l) : undefined}
+                  accessibilityLabel={peutModifier(l) ? `Modifier ${l.nom.toLowerCase()}` : undefined}
+                  onPress={peutModifier(l) && enEdition !== l.cle ? () => ouvrir(l) : undefined}
                   enfants={
                     enEdition === l.cle ? (
                       <View className="gap-2 mt-2">

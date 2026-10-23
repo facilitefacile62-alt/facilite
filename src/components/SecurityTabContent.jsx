@@ -1292,8 +1292,9 @@ export default function SecurityTabContent({ userSession, intentCandidature = fa
           <div>
             <button
               type="button"
-              onClick={() => toggleRow("birthdate")}
-              className="w-full flex items-center justify-between gap-3 px-5 py-4 min-h-[48px] text-left hover:bg-gray-50 transition cursor-pointer"
+              onClick={() => !profileBirthDate && toggleRow("birthdate")}
+              disabled={Boolean(profileBirthDate)}
+              className={`w-full flex items-center justify-between gap-3 px-5 py-4 min-h-[48px] text-left transition ${profileBirthDate ? "cursor-default" : "hover:bg-gray-50 cursor-pointer"}`}
             >
               <div className="min-w-0">
                 <p className="text-xs font-bold text-gray-700">Date de naissance</p>
@@ -1301,10 +1302,16 @@ export default function SecurityTabContent({ userSession, intentCandidature = fa
                   {formatBirthDateDisplay(profileBirthDate) || <span className="text-gray-400 italic font-normal">Non renseignée</span>}
                 </p>
               </div>
-              <i className={`fa-solid fa-chevron-${expandedRow === "birthdate" ? "up" : "down"} text-gray-300 text-xs shrink-0`}></i>
+              {profileBirthDate ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-gray-400 shrink-0" title="La date de naissance ne change jamais une fois renseignée">
+                  <i className="fa-solid fa-lock text-xs"></i> Non modifiable
+                </span>
+              ) : (
+                <i className={`fa-solid fa-chevron-${expandedRow === "birthdate" ? "up" : "down"} text-gray-300 text-xs shrink-0`}></i>
+              )}
             </button>
 
-            {expandedRow === "birthdate" && (
+            {expandedRow === "birthdate" && !profileBirthDate && (
               <div className="px-5 pb-5 space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <select
