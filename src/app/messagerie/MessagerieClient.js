@@ -204,6 +204,11 @@ const AI_PINNED_CHAT = {
 // Initialisation avec la discussion Support RH épinglée permanente
 const initialConversations = [AI_PINNED_CHAT];
 
+// Dernière liste de discussions lue, gardée en mémoire pendant la navigation dans le site : en revenant sur « Messagerie »,
+// elle s'affiche tout de suite et se met à jour en arrière-plan, au lieu de repartir d'un écran de chargement à chaque clic.
+// Jamais partagée entre comptes : elle porte l'identifiant de l'utilisateur et est vidée à la déconnexion.
+let cacheMessagerie = null; // { userId, conversations }
+
 function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -355,9 +360,10 @@ export default function MessagerieClient() {
   const [recruitmentCV, setRecruitmentCV] = useState(null);
 
   // Messaging States
-  const [conversations, setConversations] = useState(initialConversations);
+  const [conversations, setConversations] = useState(() => cacheMessagerie?.conversations ?? initialConversations);
   // Faux tant que la liste réelle n'est pas lue : on affiche alors un chargement, pas « Aucun échange » ni « Discussions 0 ».
-  const [conversationsChargees, setConversationsChargees] = useState(false);
+  // Vrai d'emblée quand la liste est déjà en mémoire (retour sur la page) : elle est rafraîchie en arrière-plan.
+  const [conversationsChargees, setConversationsChargees] = useState(() => Boolean(cacheMessagerie));
   const [activeConvId, setActiveConvId] = useState(null);
   // Copie lisible depuis la souscription Realtime (créée une seule fois au montage, donc avec une closure périmée).
   const activeConvIdRef = useRef(null);
@@ -893,10 +899,17 @@ export default function MessagerieClient() {
     async function loadUserSessionAndMessages() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        cacheMessagerie = null;
         window.location.replace("/login");
         return;
       }
       if (!isActive) return;
+      if (cacheMessagerie && cacheMessagerie.userId !== session.user.id) {
+        // Liste en mémoire d'un autre compte : jamais affichée.
+        cacheMessagerie = null;
+        setConversations(initialConversations);
+        setConversationsChargees(false);
+      }
       setUserSession(session);
       loadAiMessagesFromSupabase(session.user.id);
 
@@ -1103,6 +1116,7 @@ export default function MessagerieClient() {
       // Écouter également les changements de session en temps réel
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
         if (!currentSession) {
+          cacheMessagerie = null;
           window.location.replace("/login");
         } else {
           setUserSession(currentSession);
@@ -2310,6 +2324,11 @@ export default function MessagerieClient() {
   };
 
   // Filter conversations based on tab and query
+  const idUtilisateurCache = userSession?.user?.id;
+  useEffect(() => {
+    if (conversationsChargees && idUtilisateurCache) cacheMessagerie = { userId: idUtilisateurCache, conversations };
+  }, [conversations, conversationsChargees, idUtilisateurCache]);
+
   const filteredConversations = conversations.filter(c => {
     if (filterTab === "unread" && c.unreadCount === 0) return false;
     if (filterTab === "favorites" && !c.favorite) return false;
