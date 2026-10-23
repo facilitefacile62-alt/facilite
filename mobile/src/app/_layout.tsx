@@ -1,5 +1,5 @@
 import { definirUserMode, obtenirUserMode } from '@/lib/userMode';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments, type Href } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useGlobalSearchParams, useRouter, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -120,7 +120,10 @@ function AuthGate({ children }: { children: ReactNode }) {
 function BarreFaciliteHorsOnglets() {
   const segments = useSegments();
   const racine = segments[0];
+  const { onboarding } = useGlobalSearchParams<{ onboarding?: string }>();
   if (racine === undefined) return null;
+  // « Confirmer mon compte » ouvert depuis l'inscription : pas de barre du bas (on ne contourne pas l'inscription).
+  if ((racine as string) === 'confirmer-compte' && onboarding === '1') return null;
   if (racine === '(auth)' || racine === '(tabs)' || racine === 'marketplace' || racine === 'onboarding' || (racine as string) === 'nouveau-mot-de-passe') return null;
   return <FaciliteBottomBar />;
 }
