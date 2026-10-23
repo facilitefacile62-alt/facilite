@@ -92,7 +92,8 @@ function AuthGate({ children }: { children: ReactNode }) {
       }
     }
     if (dansGroupeAuth && !surNomPrenom) router.replace('/');
-    if (!universRestaure.current && !surNomPrenom) {
+    // Pendant une inscription non terminée, on ne saute jamais à Locaux : l'étape retenue doit rester affichée.
+    if (!universRestaure.current && !surNomPrenom && !aOnboarding) {
       universRestaure.current = true;
       obtenirUserMode().then((m) => {
         universPret.current = true;
