@@ -66,16 +66,18 @@ export default function ProfilMarketplaceScreen() {
         ) : (
           <ScrollView contentContainerClassName="px-3 pt-3 pb-6 gap-3" showsVerticalScrollIndicator={false}>
             <Pressable
-              onPress={() => !estVendeur && router.push('/marketplace/mon-profil' as Href)}
+              onPress={() => router.push('/marketplace/mon-profil' as Href)}
               className="bg-white rounded-2xl p-4 flex-row items-center gap-3">
               {/* Toucher le rond : avatar au choix, ou sa photo / le logo de son entreprise. */}
-              <Pressable onPress={() => setFeuillePhoto(true)} accessibilityLabel="Changer ma photo" hitSlop={6}>
+              <Pressable onPress={() => estVendeur && setFeuillePhoto(true)} disabled={!estVendeur} accessibilityLabel={estVendeur ? 'Changer ma photo' : 'Photo de profil'} hitSlop={6}>
                 <AvatarProfil valeur={profile?.avatar_url} nom={nom} taille={64} />
-                <View
-                  className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
-                  style={{ backgroundColor: '#10B981' }}>
-                  <Ionicons name="camera" size={12} color="#fff" />
-                </View>
+                {estVendeur ? (
+                  <View
+                    className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
+                    style={{ backgroundColor: '#10B981' }}>
+                    <Ionicons name="camera" size={12} color="#fff" />
+                  </View>
+                ) : null}
               </Pressable>
               <View className="flex-1">
                 <View className="flex-row items-center gap-2 flex-wrap">

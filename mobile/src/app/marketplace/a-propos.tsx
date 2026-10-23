@@ -63,15 +63,18 @@ export default function AProposMarketplaceScreen() {
               <View className="h-[110px] bg-[#E6DFD0]" />
               <View className="px-4 pb-4 -mt-10 gap-1.5">
                 <Pressable
-                  onPress={() => setFeuillePhoto(true)}
-                  accessibilityLabel="Changer ma photo"
+                  onPress={() => estVendeur && setFeuillePhoto(true)}
+                  disabled={!estVendeur}
+                  accessibilityLabel={estVendeur ? 'Changer ma photo' : 'Photo de profil'}
                   className="w-[72px] h-[72px] rounded-full border-4 border-white bg-white">
                   <AvatarProfil valeur={profile?.avatar_url} nom={nom} taille={64} fond="#D9D2C3" />
-                  <View
-                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
-                    style={{ backgroundColor: '#10B981' }}>
-                    <Ionicons name="camera" size={12} color="#fff" />
-                  </View>
+                  {estVendeur ? (
+                    <View
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
+                      style={{ backgroundColor: '#10B981' }}>
+                      <Ionicons name="camera" size={12} color="#fff" />
+                    </View>
+                  ) : null}
                 </Pressable>
                 <View className="flex-row items-center gap-2 flex-wrap">
                   <Text className="text-[17px] font-black text-[#1A1A1A]" numberOfLines={1}>

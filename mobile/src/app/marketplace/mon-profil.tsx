@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { Image } from 'expo-image';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 
@@ -9,6 +10,8 @@ import AvatarProfil from '@/components/AvatarProfil';
 import BoutonAction from '@/components/BoutonAction';
 import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import { useAuth } from '@/context/AuthContext';
+import { changerPhotoCouverture } from '@/lib/photoProfil';
+import { chargerMesBoutiques } from '@/lib/vendeur';
 
 // Profil visiteur détaillé (maquette 33) : on y arrive en touchant la carte
 // d'identité du profil Marketplace (59). Couverture et photo restent des
@@ -21,11 +24,32 @@ import { useAuth } from '@/context/AuthContext';
 export default function MonProfilVisiteurScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
 
   const nom = (profile?.full_name as string | undefined) || user?.email || 'Mon compte';
   const bio = (profile?.bio as string | undefined) || '';
   const [feuillePhoto, setFeuillePhoto] = useState(false);
+  // Avatar et photo de couverture : modifiables UNIQUEMENT par un compte actif (qui a une boutique). Un visiteur les voit sans pouvoir les changer.
+  const [estActif, setEstActif] = useState(false);
+  const [envoiCouverture, setEnvoiCouverture] = useState(false);
+  const userId = user?.id;
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      chargerMesBoutiques(userId)
+        .then((liste) => setEstActif(liste.length > 0))
+        .catch(() => setEstActif(false));
+    }, [userId])
+  );
+
+  function changerCouverture() {
+    if (!userId || envoiCouverture) return;
+    setEnvoiCouverture(true);
+    changerPhotoCouverture(userId)
+      .then((fait) => (fait ? refreshProfile() : undefined))
+      .catch((e: Error) => Alert.alert('Photo de couverture', e.message))
+      .finally(() => setEnvoiCouverture(false));
+  }
 
   function retour() {
     if (router.canGoBack()) router.back();
@@ -42,8 +66,25 @@ export default function MonProfilVisiteurScreen() {
                 <Line key={i} x1={i * 26 - 130} y1={130} x2={i * 26} y2={0} stroke="#CFC8B8" strokeWidth={9} />
               ))}
             </Svg>
-            <Ionicons name="image-outline" size={26} color="#8A8272" />
-            <Text className="text-[13px] font-black mt-1" style={{ color: '#7A7466' }}>Photo de couverture</Text>
+            {profile?.cover_url ? (
+              <Image source={{ uri: profile.cover_url }} alt="Photo de couverture" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={26} color="#8A8272" />
+                <Text className="text-[13px] font-black mt-1" style={{ color: '#7A7466' }}>Photo de couverture</Text>
+              </>
+            )}
+            {estActif ? (
+              <Pressable
+                onPress={changerCouverture}
+                disabled={envoiCouverture}
+                accessibilityLabel="Changer la photo de couverture"
+                className="absolute flex-row items-center gap-1.5 rounded-full bg-white px-3"
+                style={{ right: 10, bottom: 10, height: 34 }}>
+                {envoiCouverture ? <ActivityIndicator size="small" color="#10B981" /> : <Ionicons name="camera" size={15} color="#1A1A1A" />}
+                <Text className="text-[12px] font-black text-[#1A1A1A]">Couverture</Text>
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={retour}
               accessibilityLabel="Retour"
@@ -55,21 +96,24 @@ export default function MonProfilVisiteurScreen() {
 
           <View className="px-4 pb-4">
             <Pressable
-              onPress={() => setFeuillePhoto(true)}
-              accessibilityLabel="Changer ma photo"
+              onPress={() => estActif && setFeuillePhoto(true)}
+              disabled={!estActif}
+              accessibilityLabel={estActif ? 'Changer ma photo' : 'Photo de profil'}
               style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: '#FFFFFF', marginTop: -36, backgroundColor: '#fff' }}>
               <AvatarProfil valeur={profile?.avatar_url} nom={nom} taille={70} />
-              <View
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
-                style={{ backgroundColor: '#10B981' }}>
-                <Ionicons name="camera" size={12} color="#fff" />
-              </View>
+              {estActif ? (
+                <View
+                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center border-2 border-white"
+                  style={{ backgroundColor: '#10B981' }}>
+                  <Ionicons name="camera" size={12} color="#fff" />
+                </View>
+              ) : null}
             </Pressable>
 
             <View className="flex-row items-center gap-2 flex-wrap mt-2">
               <Text className="text-[22px] font-black text-[#1A1A1A]">{nom}</Text>
-              <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#F5D68A' }}>
-                <Text className="text-[11px] font-black tracking-wide text-[#B45309]">VISITEUR</Text>
+              <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: estActif ? '#D1FAE5' : '#FEF3C7', borderWidth: 1, borderColor: estActif ? '#A7F3D0' : '#F5D68A' }}>
+                <Text className="text-[11px] font-black tracking-wide" style={{ color: estActif ? '#047857' : '#B45309' }}>{estActif ? 'BOUTIQUE' : 'VISITEUR'}</Text>
               </View>
             </View>
             {bio ? <Text className="text-[13.5px] mt-1.5" style={{ color: 'rgba(0,0,0,0.55)' }}>{bio}</Text> : null}
@@ -90,7 +134,7 @@ export default function MonProfilVisiteurScreen() {
               className="flex-row items-center gap-3"
               style={{ backgroundColor: '#ECFDF5', borderRadius: 14, borderWidth: 1, borderColor: '#A7F3D0', padding: 14 }}>
               <Ionicons name="storefront" size={18} color="#047857" />
-              <Text className="text-[15px] font-black" style={{ color: '#047857' }}>Devenir actif</Text>
+              <Text className="text-[15px] font-black" style={{ color: '#047857' }}>{estActif ? 'Ma boutique' : 'Devenir actif'}</Text>
             </Pressable>
             <Pressable onPress={() => router.push('/web/faq' as Href)} className="flex-row items-center gap-3" style={{ padding: 14 }}>
               <Ionicons name="help-circle-outline" size={20} color="#1A1A1A" />
@@ -103,6 +147,7 @@ export default function MonProfilVisiteurScreen() {
           </View>
         </View>
 
+        {!estActif ? (
         <View className="bg-white items-center" style={{ borderRadius: 22, padding: 22 }}>
           <View className="items-center justify-center" style={{ width: 58, height: 58, borderRadius: 18, backgroundColor: '#ECFDF5' }}>
             <Ionicons name="storefront" size={26} color="#047857" />
@@ -117,6 +162,7 @@ export default function MonProfilVisiteurScreen() {
             <BoutonAction titre="Devenir actif" sousTitre="Créer ma boutique" icone="storefront-outline" onPress={() => router.push('/marketplace/vendre' as Href)} />
           </View>
         </View>
+        ) : null}
       </ScrollView>
       <FeuillePhotoProfil visible={feuillePhoto} onClose={() => setFeuillePhoto(false)} aUneImage={Boolean(profile?.avatar_url)} />
     </View>
