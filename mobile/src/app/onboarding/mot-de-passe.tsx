@@ -62,7 +62,7 @@ export default function MotDePasseFacultatifScreen() {
   // L'étape est notée dès qu'on la quitte (continuer ou passer) : en revenant plus tard, elle n'est plus reproposée.
   const suite = async () => {
     if (user?.id) await marquerEtapeMotDePasseVue(user.id);
-    router.replace('/onboarding/bienvenue' as Href);
+    router.replace('/onboarding/email' as Href);
   };
   const assezLong = motDePasse.length >= LONGUEUR_MIN_MOT_DE_PASSE;
   const valide = assezLong && motDePasse === confirmation;

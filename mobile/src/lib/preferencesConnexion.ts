@@ -119,6 +119,21 @@ export async function marquerEtapeMotDePasseVue(userId: string): Promise<void> {
   await AsyncStorage.setItem(cleMotDePasse(userId), '1').catch(() => {});
 }
 
+// ---- Étape « Lie ton adresse e-mail » : même principe, juste après le mot de passe ----
+const cleEmail = (userId: string) => `FACILITE_EMAIL_ETAPE_VUE_${userId}`;
+
+export async function etapeEmailVue(userId: string): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(cleEmail(userId))) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function marquerEtapeEmailVue(userId: string): Promise<void> {
+  await AsyncStorage.setItem(cleEmail(userId), '1').catch(() => {});
+}
+
 function majuscule(mot: string): string {
   return mot ? mot.charAt(0).toUpperCase() + mot.slice(1).toLowerCase() : '';
 }
