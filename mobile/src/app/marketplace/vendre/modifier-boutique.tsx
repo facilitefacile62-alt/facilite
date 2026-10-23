@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AvatarProfil from '@/components/AvatarProfil';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
@@ -180,8 +181,8 @@ export default function ModifierBoutiqueScreen() {
                 accessibilityLabel="Changer la photo de couverture de la boutique"
                 className="w-full rounded-[18px] items-center justify-center overflow-hidden"
                 style={{ height: 130, borderWidth: 2, borderColor: '#A7E8D2', borderStyle: 'dashed', backgroundColor: '#E8E4DA' }}>
-                {boutique.cover_photo ? (
-                  <Image source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+                {boutique.cover_photo || profile?.cover_url ? (
+                  <Image source={{ uri: (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : profile?.cover_url) ?? undefined }} alt="Couverture de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
                 ) : (
                   <>
                     <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />
@@ -203,6 +204,8 @@ export default function ModifierBoutiqueScreen() {
                 style={{ borderWidth: 2, borderColor: '#A7E8D2', borderStyle: 'dashed', backgroundColor: '#E8E4DA' }}>
                 {boutique?.logo_photo ? (
                   <Image source={{ uri: urlPhoto(boutique.logo_photo) ?? undefined }} alt="Logo de la boutique" style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+                ) : profile?.avatar_url ? (
+                  <AvatarProfil valeur={profile.avatar_url} nom={boutique?.nom ?? ''} taille={106} fond="#E8E4DA" />
                 ) : (
                   <>
                     <Ionicons name="image-outline" size={26} color="rgba(0,0,0,0.3)" />

@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AvatarProfil from '@/components/AvatarProfil';
 import BoutonAction from '@/components/BoutonAction';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -50,7 +51,7 @@ type Onglet = 'article' | 'service' | 'etablissement';
 export default function MaBoutiqueScreen() {
   const router = useRouter();
   const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const userId = user?.id;
   const [boutique, setBoutique] = useState<MaBoutique | null | undefined>(undefined); // undefined = chargement
   const [articles, setArticles] = useState<MonArticle[]>([]);
@@ -285,8 +286,9 @@ export default function MaBoutiqueScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {boutique.cover_photo ? (
-          <Image source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 130 }} contentFit="cover" />
+        {/* Couverture de la boutique ; à défaut, la couverture du profil du compte (déjà choisie par le vendeur). */}
+        {boutique.cover_photo || profile?.cover_url ? (
+          <Image source={{ uri: (boutique.cover_photo ? urlPhoto(boutique.cover_photo) : profile?.cover_url) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 130 }} contentFit="cover" />
         ) : null}
         {/* En-tête : photo ronde + « + », nom, lieu, Modifier infos — comme l'onglet Profil */}
         <View className="px-4 pt-4">
@@ -300,6 +302,8 @@ export default function MaBoutiqueScreen() {
                 <ActivityIndicator color={VERT} />
               ) : boutique.logo_photo ? (
                 <Image source={{ uri: urlPhoto(boutique.logo_photo) ?? undefined }} alt="Logo de la boutique" style={{ width: 72, height: 72, borderRadius: 36 }} contentFit="cover" />
+              ) : profile?.avatar_url ? (
+                <AvatarProfil valeur={profile.avatar_url} nom={boutique.nom} taille={72} fond="#E8E4DA" />
               ) : (
                 <Ionicons name="storefront" size={28} color="rgba(0,0,0,0.3)" />
               )}
