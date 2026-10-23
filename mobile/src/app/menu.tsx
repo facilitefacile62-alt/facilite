@@ -52,10 +52,9 @@ const TUILES_FACILITE: Tuile[] = [
   { id: 'faq', emoji: '❓', teinte: '#D7F2EA', titre: 'FAQ & Centre d’aide', sous: 'Questions fréquentes', route: '/web/faq' },
 ];
 
+// Menu Locaux (décision du 23/10/2026) : uniquement « Réglages » — plus de Marketplace, Mon activité, Établissements ouverts, ni d'espace vendeur.
 const TUILES_LOCAUX: Tuile[] = [
-  { id: 'marketplace', emoji: '🏬', teinte: '#DCE8FD', titre: 'Marketplace', sous: 'Sélection du jour & Ventes', tag: { texte: 'NOUVEAU', fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/marketplace', interrupteur: 'nav_marketplace' },
-  { id: 'activite', emoji: '💧', teinte: '#D7F2EA', titre: 'Mon activité', sous: 'Point Wave, pharmacie, clinique', tag: { texte: 'NOUVEAU', fond: '#D7F2EA', couleur: '#0d3b34' }, route: '/web/mon-activite', interrupteur: 'nav_marketplace' },
-  { id: 'etablissements', emoji: '🏥', teinte: '#DCE8FD', titre: 'Établissements ouverts', sous: 'Points Wave, pharmacies, cliniques', tag: { texte: 'NOUVEAU', fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/web/etablissements', interrupteur: 'nav_marketplace' },
+  { id: 'reglages', emoji: '⚙️', teinte: '#EDEBE6', titre: 'Réglages', sous: 'Boutique & compte', route: '/marketplace/reglages' },
 ];
 
 export default function MenuScreen() {
@@ -128,19 +127,6 @@ export default function MenuScreen() {
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
   const tuiles = filtre(mode === 'facilite' ? TUILES_FACILITE : TUILES_LOCAUX);
-
-  // Espace vendeur (mode Locaux, compte avec boutique) : gestion de la boutique, tuiles de la même taille.
-  const commandesOuvertes = ouvert('feat_marketplace_commandes');
-  const livraisonOuverte = ouvert('nav_marketplace_livreur');
-  const tuilesVendeur: Tuile[] =
-    mode === 'locaux' && boutique
-      ? [
-          { id: 'annonces', emoji: '🏷️', teinte: '#DCE8FD', titre: 'Mes annonces', sous: 'Articles en vente', route: '/marketplace/vendre/annonces' },
-          ...(commandesOuvertes ? [{ id: 'commandes', emoji: '📦', teinte: '#FDEEDC', titre: 'Commandes reçues', sous: 'À préparer & envoyer', route: `/marketplace/vendre/commandes-recues?storeId=${boutique.id}` }] : []),
-          ...(livraisonOuverte ? [{ id: 'livraisons', emoji: '🛵', teinte: '#D7F2EA', titre: 'Mes livraisons', sous: 'Courses en cours', route: '/marketplace/livraisons' }] : []),
-          { id: 'reglages', emoji: '⚙️', teinte: '#EDEBE6', titre: 'Réglages', sous: 'Boutique & compte', route: '/marketplace/reglages' },
-        ].filter((tu) => !q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q))
-      : [];
 
   // L'espace où l'on se trouve est toujours en haut, l'autre en dessous.
   const ligneFacilite = (
@@ -245,10 +231,14 @@ export default function MenuScreen() {
 
         {/* Sélecteur FIXE Facilité | Locaux : il ne défile pas */}
         <View className="flex-row items-center justify-between bg-white mx-4" style={{ borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 6 }}>
-          <Pressable onPress={() => setEspacesDeplies((v) => !v)} accessibilityRole="button" className="flex-row items-center gap-1.5" hitSlop={8}>
-            <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('VOS ESPACES')}</Text>
-            <Ionicons name={espacesDeplies ? 'chevron-up' : 'chevron-down'} size={13} color="rgba(0,0,0,0.45)" />
-          </Pressable>
+          {mode === 'facilite' ? (
+            <Pressable onPress={() => setEspacesDeplies((v) => !v)} accessibilityRole="button" className="flex-row items-center gap-1.5" hitSlop={8}>
+              <Text className="text-[11.5px] font-extrabold" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('VOS ESPACES')}</Text>
+              <Ionicons name={espacesDeplies ? 'chevron-up' : 'chevron-down'} size={13} color="rgba(0,0,0,0.45)" />
+            </Pressable>
+          ) : (
+            <View />
+          )}
           <View className="flex-row" style={{ backgroundColor: '#EFEDE7', borderRadius: 20, padding: 3 }}>
             {([
               { id: 'facilite' as const, libelle: 'Facilité', couleur: VERT },
@@ -281,7 +271,7 @@ export default function MenuScreen() {
           if (e.nativeEvent.contentOffset.y > 60) setEspacesDeplies(false);
         }}>
         {/* Vos espaces : comptes, Profil, Boutique */}
-        {espacesDeplies ? (
+        {mode === 'facilite' && espacesDeplies ? (
           <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
             {mode === 'facilite' ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
@@ -296,13 +286,6 @@ export default function MenuScreen() {
               </Pressable>
             </View>
           </View>
-        ) : null}
-
-        {tuilesVendeur.length > 0 ? (
-          <>
-            <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('ESPACE VENDEUR')}</Text>
-            {grille(tuilesVendeur)}
-          </>
         ) : null}
 
         <Text className="text-[12px] font-extrabold mt-5 mb-3 ml-1" style={{ color: 'rgba(0,0,0,0.45)', letterSpacing: 0.6 }}>{t('TOUS LES RACCOURCIS')}</Text>
