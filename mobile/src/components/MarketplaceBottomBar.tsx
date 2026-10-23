@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { usePathname, useRouter, type Href } from 'expo-router';
+import { useGlobalSearchParams, usePathname, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +37,9 @@ const ENTREES: Entree[] = [
 
 // Quelle entrée est active pour un chemin donné. Les pages de détail rattachées
 // à une entrée (ex. /marketplace/[id] -> Accueil) gardent l'entrée parente active.
-function entreeActive(chemin: string): Entree['id'] | null {
+function entreeActive(chemin: string, depuisProfil = false): Entree['id'] | null {
+  // Vendeur : « Profil » ouvre directement « Ma boutique » (?profil=1) : l'entrée Profil reste allumée.
+  if (depuisProfil && chemin.startsWith('/marketplace/vendre')) return 'profil';
   if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/mon-profil') || chemin.startsWith('/marketplace/a-propos')) return 'profil';
   if (chemin.startsWith('/marketplace/autour')) return 'autour';
   if (chemin.startsWith('/marketplace/recherche')) return 'accueil';
@@ -59,11 +61,12 @@ export default function MarketplaceBottomBar() {
   const t = useT();
   const router = useRouter();
   const chemin = usePathname();
+  const { profil: depuisProfil } = useGlobalSearchParams<{ profil?: string }>();
   const compteurs = useCompteursNonLus();
   const insets = useSafeAreaInsets();
   const [deplie, setDeplie] = useState(false);
   const [hauteur] = useState(() => new Animated.Value(0));
-  const active = deplie ? 'autour' : entreeActive(chemin);
+  const active = deplie ? 'autour' : entreeActive(chemin, depuisProfil === '1');
 
   useEffect(() => {
     Animated.timing(hauteur, {

@@ -1,6 +1,6 @@
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,6 +48,9 @@ export default function ProfilMarketplaceScreen() {
   const nom = (profile?.full_name as string | undefined) || user?.email || 'Mon compte';
   const telephone = (profile?.phone as string | undefined) || '';
   const estVendeur = Boolean(boutique);
+
+  // Vendeur : le bouton Profil ouvre directement « Ma boutique » (cette page-menu ne sert qu'aux visiteurs).
+  if (!chargement && userId && estVendeur) return <Redirect href="/marketplace/vendre/ma-boutique?profil=1" />;
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
@@ -110,7 +113,6 @@ export default function ProfilMarketplaceScreen() {
               />
               {estVendeur ? (
                 <>
-                  <LigneMenu emoji="📊" titre="Tableau de bord" onPress={() => router.push('/marketplace/vendre/tableau-de-bord')} />
                   {commandesOuvertes ? (
                     <LigneMenu
                       emoji="📦"
