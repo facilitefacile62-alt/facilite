@@ -3,9 +3,9 @@ const React = require("react");
 const { renderToStaticMarkup } = require("react-dom/server");
 
 /**
- * Test de RENDU du composant d'attente de paiement (commun aux jetons et à la formation CV), en mode téléphone : le QR est VISIBLE tant que le
- * paiement n'est ni confirmé ni expiré, avec les boutons « Ouvrir MAXIT » / « Ouvrir Orange Money » et la phrase pour un autre téléphone ;
- * il disparaît au paiement confirmé (la page affiche « Paiement confirmé » à la place du composant) et à l'expiration des 5 minutes.
+ * Test de RENDU du composant d'attente de paiement (commun aux jetons et à la formation CV). Téléphone : « Ouvrir MAXIT », puis juste dessous le QR
+ * (visible tant que le paiement n'est ni confirmé ni expiré) avec la phrase pour un autre téléphone, puis le lien Orange Money ; ordinateur inchangé ;
+ * le QR disparaît au paiement confirmé (la page affiche « Paiement confirmé » à la place du composant) et à l'expiration des 5 minutes.
  */
 // Chargement du composant : Playwright transforme le JSX en objets de test de composants (« __pw_type »), inutilisables pour un rendu serveur.
 // On transpile donc nous-mêmes le composant et sa dépendance avec TypeScript (JSX → React.createElement, ES → CommonJS), puis on l'exécute.
@@ -52,34 +52,52 @@ async function rendre(props) {
   );
 }
 
-test.describe("rendu sur téléphone : le QR reste visible pendant l'attente", () => {
-  test("après la création : image du QR présente, phrase « autre téléphone », boutons MAXIT et Orange Money, temps restant", async () => {
+test.describe("rendu sur téléphone : bouton, puis QR visible juste dessous", () => {
+  test("après la création : bouton « Ouvrir MAXIT », QR, phrase « autre téléphone », lien Orange Money, temps restant", async () => {
     const html = await rendre({});
+    expect(html).toContain('data-testid="ouvrir-maxit"');
     expect(html).toContain('data-testid="qr-paiement"');
     expect(html).toContain("data:image/png;base64,AAAA");
     expect(html).toContain("Un autre téléphone ? Scannez ce code avec Max it");
-    expect(html).toContain("Ouvrir MAXIT");
-    expect(html).toContain("Ouvrir Orange Money");
+    expect(html).toContain('data-testid="ouvrir-orange-money"');
     expect(html).toContain('href="https://sugu.orange-sonatel.com/mp/123456789"');
     expect(html).toContain("valable 5 minutes");
     expect(html).toContain("il reste 4:47");
+    expect(html).toContain("10 jetons · 1000 FCFA");
     expect(html).toContain("En attente de confirmation du paiement");
     expect(html).not.toContain("Le temps est écoulé");
   });
 
-  test("le QR est AU-DESSUS des boutons (visible sans défiler sous eux), « Ouvrir MAXIT » avant « Ouvrir Orange Money »", async () => {
+  test("ordre : bouton « Ouvrir MAXIT » → QR → phrase → lien « Ouvrir Orange Money » → état d'attente", async () => {
     const html = await rendre({});
+    const maxit = html.indexOf('data-testid="ouvrir-maxit"');
     const qr = html.indexOf('data-testid="qr-paiement"');
     const phrase = html.indexOf("Un autre téléphone");
-    const maxit = html.indexOf("Ouvrir MAXIT");
-    const om = html.indexOf("Ouvrir Orange Money");
-    expect(qr).toBeGreaterThan(-1);
+    const om = html.indexOf('data-testid="ouvrir-orange-money"');
+    const attente = html.indexOf("En attente de confirmation");
+    for (const i of [maxit, qr, phrase, om, attente]) expect(i).toBeGreaterThan(-1);
+    expect(maxit).toBeLessThan(qr);
     expect(qr).toBeLessThan(phrase);
-    expect(phrase).toBeLessThan(maxit);
-    expect(html.slice(html.lastIndexOf("<a", maxit), maxit)).toContain("order-first"); // MAXIT au premier plan sur téléphone
-    expect(om).toBeGreaterThan(-1);
-    // Aucun « order-N » CSS ne déplace le QR sous les boutons sur téléphone (c'était le cas avant : QR en order-2, boutons en order-1).
-    expect(html).not.toMatch(/order-[1-9]|sm:order-/);
+    expect(phrase).toBeLessThan(om);
+    expect(om).toBeLessThan(attente);
+    // Le QR suit DIRECTEMENT le bouton : rien d'autre entre les deux (ils tiennent ensemble à l'écran).
+    const entre = html.slice(html.indexOf("</a>", maxit) + 4, qr);
+    expect(entre).not.toMatch(/<p/);
+    // Pas d'« order-N » CSS qui déplacerait le QR (c'était le cas avant : QR sous les boutons).
+    expect(html).not.toMatch(/order-[1-9]|sm:order-|order-first/);
+  });
+
+  test("compact : bouton « Ouvrir MAXIT » plein largeur, QR un peu plus petit que sur ordinateur (160 px au lieu de 192 px), lien Orange Money discret", async () => {
+    const html = await rendre({});
+    const bouton = html.slice(html.indexOf('<a href="https://sugu.orange-sonatel.com/mp/123456789"'), html.indexOf("Ouvrir MAXIT"));
+    expect(bouton).toContain("w-full");
+    expect(bouton).toContain("bg-orange-500");
+    const image = html.slice(html.indexOf("<img"), html.indexOf(">", html.indexOf("<img")));
+    expect(image).toContain("w-40 h-40");
+    expect(image).not.toContain("w-48");
+    const lien = html.slice(html.lastIndexOf("<a ", html.indexOf('data-testid="ouvrir-orange-money"')), html.indexOf("Ouvrir Orange Money"));
+    expect(lien).toContain("underline");
+    expect(lien).not.toContain("bg-");
   });
 
   test("après le délai de 5 minutes : QR masqué (aucune image), phrase de fin, bouton prêt", async () => {
@@ -92,11 +110,23 @@ test.describe("rendu sur téléphone : le QR reste visible pendant l'attente", (
     expect(html).toContain('data-testid="bouton-recommencer"');
   });
 
-  test("sur ordinateur : QR visible aussi, texte « Scannez ce QR code », phrase de fin avec le bouton habituel", async () => {
-    const html = await rendre({ estMobile: false });
+  test("sans lien MAXIT : le QR reste affiché (rien ne dépend du bouton)", async () => {
+    const html = await rendre({ paiement: { ...PAIEMENT, deepLinkMaxit: null } });
     expect(html).toContain('data-testid="qr-paiement"');
+    expect(html).not.toContain("Ouvrir MAXIT");
+    expect(html).not.toContain("MAXIT s&#x27;ouvre tout seul");
+  });
+
+  test("ordinateur : INCHANGÉ — QR en premier (192 px), « Scannez ce QR code », boutons Orange Money puis MAXIT, phrase de fin avec le bouton habituel", async () => {
+    const html = await rendre({ estMobile: false });
+    expect(html.indexOf('data-testid="qr-paiement"')).toBeLessThan(html.indexOf("Scannez ce QR code"));
+    expect(html).toContain("w-48 h-48");
+    expect(html).not.toContain("w-40");
     expect(html).toContain("Scannez ce QR code avec Orange Money ou MAXIT");
     expect(html).not.toContain("Un autre téléphone");
+    expect(html).not.toContain('data-testid="ouvrir-maxit"');
+    expect(html.indexOf("Ouvrir Orange Money")).toBeLessThan(html.indexOf("Ouvrir MAXIT"));
+    expect(html).toContain("sm:flex-row"); // boutons côte à côte
     const expire = await rendre({ estMobile: false, qrExpire: true });
     expect(expire).toContain("Touchez « Générer mon QR de paiement Orange Money » pour recommencer.");
     expect(expire).not.toContain("<img");
