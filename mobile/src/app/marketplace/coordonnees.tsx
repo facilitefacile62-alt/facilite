@@ -1,3 +1,7 @@
-// Coordonnées ouvert depuis Locaux : même écran que celui de Facilité (mon-profil/coordonnees), mais rattaché à la plateforme Locaux pour garder
-// la barre du bas et l'en-tête de Locaux (règle : jamais de mélange entre les deux plateformes).
-export { default } from '../mon-profil/coordonnees';
+import EcranCoordonnees from '@/components/EcranCoordonnees';
+
+// Coordonnées ouvertes depuis Locaux : écran complet (téléphone, WhatsApp, e-mail, ville verrouillée, pays), rattaché à la plateforme Locaux
+// pour garder son en-tête et sa barre du bas (jamais de mélange entre les deux plateformes).
+export default function CoordonneesLocauxScreen() {
+  return <EcranCoordonnees variante="locaux" />;
+}

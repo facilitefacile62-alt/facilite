@@ -87,6 +87,12 @@ export default function ParametresScreen() {
                 onPress={() => router.push('/mon-profil/confidentialite' as Href)}
               />
               <CarteMenu
+                icone="call-outline"
+                titre={t('Coordonnées')}
+                sous={t('Téléphone et e-mail du compte')}
+                onPress={() => router.push('/mon-profil/coordonnees' as Href)}
+              />
+              <CarteMenu
                 icone="lock-closed-outline"
                 titre={t('Sécurité & Connexion')}
                 sous={t('Mot de passe, appareils')}

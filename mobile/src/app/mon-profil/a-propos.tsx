@@ -20,7 +20,7 @@ const RUBRIQUES: { id: string; icone: keyof typeof Ionicons.glyphMap; label: str
   { id: 'formation', icone: 'school-outline', label: 'Formation', sous: 'Diplômes et écoles', route: '/mon-profil/formation' as Href },
   { id: 'competences', icone: 'bulb-outline', label: 'Compétences', sous: 'Vos savoir-faire', route: '/mon-profil/competences' as Href },
   { id: 'interets', icone: 'shield-outline', label: "Centres d'intérêt", sous: 'Loisirs et engagements', route: '/mon-profil/centres-interet' as Href },
-  { id: 'coordonnees', icone: 'call-outline', label: 'Coordonnées', sous: 'Téléphone, e-mail et ville', route: '/mon-profil/coordonnees' as Href },
+  { id: 'coordonnees', icone: 'call-outline', label: 'Coordonnées', sous: 'Téléphone, e-mail et ville de votre CV', route: '/mon-profil/coordonnees-cv' as Href },
 ];
 
 export default function ProfilAProposScreen() {
