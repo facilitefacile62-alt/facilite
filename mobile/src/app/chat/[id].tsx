@@ -226,6 +226,8 @@ export default function ChatDetailScreen() {
         ]);
         break;
       case 'supprimer':
+        // Locaux : aucun message n'est supprimable (le menu ne l'affiche pas) ; garde-fou si l'action arrivait quand même.
+        if (marketplace) break;
         Alert.alert('Supprimer ce message ?', 'Il disparaît de votre écran. Il reste visible pour l’autre personne.', [
           { text: 'Annuler', style: 'cancel' },
           { text: 'Supprimer', style: 'destructive', onPress: () => basculerMarque('masques', cible.id) },
@@ -474,7 +476,7 @@ export default function ChatDetailScreen() {
                     important={marques.importants.includes(item.id)}
                     reaction={marques.reactions[item.id]}
                     selectionne={Boolean(selection?.includes(item.id))}
-                    onLongPress={marketplace ? undefined : (y) => !selection && setActions({ message: item, y })}
+                    onLongPress={(y) => !selection && setActions({ message: item, y })}
                     onPress={
                       selection
                         ? () => setSelection((l) => (l ?? []).includes(item.id) ? (l ?? []).filter((x) => x !== item.id) : [...(l ?? []), item.id])
@@ -635,6 +637,7 @@ export default function ChatDetailScreen() {
             }}
             onAction={agirSurMessage}
             onFermer={() => setActions(null)}
+            sansSuppression={marketplace}
           />
 
           <ZoneSaisie
