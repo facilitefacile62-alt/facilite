@@ -57,7 +57,25 @@ export default function ProfilSecuriteScreen() {
   const [actuel, setActuel] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [enCours, setEnCours] = useState(false);
+  // Ancien mot de passe vérifié (changement seulement) : tant qu'il ne l'est pas, « nouveau » et « confirmer » restent grisés.
+  const [actuelVerifie, setActuelVerifie] = useState(false);
+  const [verification, setVerification] = useState(false);
+  const [actuelFaux, setActuelFaux] = useState(false);
   const defilement = useRef<ScrollView>(null);
+
+  async function verifierActuel() {
+    if (!actuel || verification || actuelVerifie) return;
+    setVerification(true);
+    setActuelFaux(false);
+    try {
+      const identifiant = user?.email ? { email: user.email, password: actuel } : { phone: user?.phone ?? '', password: actuel };
+      const { error } = await supabase.auth.signInWithPassword(identifiant);
+      if (error) setActuelFaux(true);
+      else setActuelVerifie(true);
+    } finally {
+      setVerification(false);
+    }
+  }
   // Un champ du formulaire reçoit le focus : on descend jusqu'au bas de la page, pour voir le champ ET le bouton « Changer le mot de passe »
   // au-dessus du clavier (la page est arrêtée au-dessus du clavier, voir ConteneurClavier).
   const versLeBas = () => setTimeout(() => defilement.current?.scrollToEnd({ animated: true }), 250);
@@ -104,7 +122,7 @@ export default function ProfilSecuriteScreen() {
 
   const assezLong = motDePasse.length >= LONGUEUR_MIN;
   // Changement : ancien + nouveau + confirmation remplis ; création : nouveau assez long.
-  const peutEnregistrer = aUnMotDePasse === true ? Boolean(actuel) && assezLong && confirmation === motDePasse : assezLong;
+  const peutEnregistrer = aUnMotDePasse === true ? actuelVerifie && assezLong && confirmation === motDePasse : assezLong;
 
   async function definirMotDePasse() {
     if (enCours) return;
@@ -278,14 +296,37 @@ export default function ProfilSecuriteScreen() {
             {aUnMotDePasse === true ? (
               <>
                 <Text className="text-[12px] font-bold text-black/55 mt-3.5">Mot de passe actuel</Text>
-                <ChampMotDePasse valeur={actuel} onChange={setActuel} onFocus={versLeBas} />
+                <ChampMotDePasse
+                  valeur={actuel}
+                  onChange={(t) => {
+                    setActuel(t);
+                    setActuelVerifie(false);
+                    setActuelFaux(false);
+                  }}
+                  onFocus={versLeBas}
+                  onSubmit={verifierActuel}
+                />
+                {actuelVerifie ? (
+                  <Critere ok texte="Mot de passe actuel correct" />
+                ) : (
+                  <>
+                    {actuelFaux ? <Text className="text-[12px] font-bold text-[#B91C1C] mt-2">Mot de passe actuel incorrect.</Text> : null}
+                    <Pressable
+                      onPress={verifierActuel}
+                      disabled={!actuel || verification}
+                      className="self-start rounded-full px-5 py-2.5 mt-2.5"
+                      style={{ backgroundColor: '#047857', opacity: !actuel || verification ? 0.45 : 1 }}>
+                      <Text className="text-[13px] font-bold text-white">{verification ? 'Vérification…' : 'Vérifier'}</Text>
+                    </Pressable>
+                  </>
+                )}
               </>
             ) : null}
 
             {typeof aUnMotDePasse === 'boolean' ? (
               <>
                 <Text className="text-[12px] font-bold text-black/55 mt-3.5">Nouveau mot de passe</Text>
-                <ChampMotDePasse valeur={motDePasse} onChange={setMotDePasse} nouveau onFocus={versLeBas} />
+                <ChampMotDePasse valeur={motDePasse} onChange={setMotDePasse} nouveau onFocus={versLeBas} desactive={aUnMotDePasse === true && !actuelVerifie} />
                 <View className="mt-2 gap-1">
                   <Critere ok={assezLong} texte={`${LONGUEUR_MIN} caractères minimum`} />
                   <Critere ok={/[A-Za-z]/.test(motDePasse)} texte="Au moins une lettre (conseillé)" />
@@ -295,7 +336,7 @@ export default function ProfilSecuriteScreen() {
                 {aUnMotDePasse === true ? (
                   <>
                     <Text className="text-[12px] font-bold text-black/55 mt-3.5">Confirmer le nouveau mot de passe</Text>
-                    <ChampMotDePasse valeur={confirmation} onChange={setConfirmation} nouveau onFocus={versLeBas} />
+                    <ChampMotDePasse valeur={confirmation} onChange={setConfirmation} nouveau onFocus={versLeBas} desactive={!actuelVerifie} />
                     {confirmation ? <Critere ok={confirmation === motDePasse} texte={confirmation === motDePasse ? 'Les deux mots de passe sont identiques' : 'Les deux mots de passe sont différents'} /> : null}
                   </>
                 ) : null}
