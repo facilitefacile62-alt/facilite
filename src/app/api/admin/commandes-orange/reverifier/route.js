@@ -6,11 +6,12 @@ import { isCallerAdmin } from "@/lib/rbac";
 import { rechercherTransactionOrange, evaluerConfirmationOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { appliquerConfirmationAchat } from "@/lib/jetonsPaiement";
 import { appliquerConfirmationInscription, MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
+import { appliquerConfirmationAchatCv } from "@/lib/cvAchatPaiement";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 export const runtime = "nodejs";
 
-const corpsSchema = z.object({ type: z.enum(["jetons", "formation"]), id: z.string().uuid() });
+const corpsSchema = z.object({ type: z.enum(["jetons", "formation", "cv"]), id: z.string().uuid() });
 
 /**
  * Relance MANUELLE (admin) de la vérification d'une commande Orange. Exactement les mêmes conditions que le webhook et le rattrapage :
@@ -47,6 +48,13 @@ export async function POST(req) {
       }
       commande = data;
       montantXof = data.montant_xof;
+    } else if (type === "cv") {
+      const { data, error } = await admin.from("cv_achats").select("*").eq("id", id).maybeSingle();
+      if (error) return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
+      if (!data) return NextResponse.json({ error: "Commande introuvable." }, { status: 404 });
+      if (data.status === "success") return NextResponse.json({ resultat: "deja_traite" });
+      commande = data;
+      montantXof = data.montant_xof;
     } else {
       const { data, error } = await admin.from("formation_redaction_cv_inscriptions").select("*").eq("id", id).maybeSingle();
       if (error) return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
@@ -72,7 +80,9 @@ export async function POST(req) {
     const { resultat } =
       type === "jetons"
         ? await appliquerConfirmationAchat(admin, commande, confirmation, reponse?.transactionId)
-        : await appliquerConfirmationInscription(admin, commande, confirmation, reponse?.transactionId);
+        : type === "cv"
+          ? await appliquerConfirmationAchatCv(admin, commande, confirmation, reponse?.transactionId)
+          : await appliquerConfirmationInscription(admin, commande, confirmation, reponse?.transactionId);
     return NextResponse.json({ resultat });
   } catch (err) {
     console.error("[Admin Reverifier Orange Error]", err);

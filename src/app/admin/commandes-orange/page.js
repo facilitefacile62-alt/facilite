@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
-// Suivi des commandes Orange Money en attente ou échouées (jetons Marketplace, formation CV). Le bouton « Revérifier » interroge Orange
+// Suivi des commandes Orange Money en attente ou échouées (jetons Marketplace, formation CV, modèles de CV). Le bouton « Revérifier » interroge Orange
 // pour UNE commande : elle n'est créditée que si Orange confirme un paiement réussi (même contrôle que le webhook et le rattrapage).
+const PRODUITS = { jetons: "Jetons", formation: "Formation CV", cv: "Modèle de CV" };
 const RESULTATS = {
   credite: "Paiement confirmé par Orange : commande créditée.",
   deja_traite: "Cette commande est déjà traitée.",
@@ -37,6 +38,7 @@ function TableauDoubles({ lignes, enCours, onRembourse }) {
             <thead className="bg-red-50 dark:bg-red-950/30 text-left text-xs uppercase tracking-wide text-red-800">
               <tr>
                 <th className="px-3 py-2">Reçu</th>
+                <th className="px-3 py-2">Produit</th>
                 <th className="px-3 py-2">Commande (référence)</th>
                 <th className="px-3 py-2">Montant à rembourser</th>
                 <th className="px-3 py-2">Transaction en double</th>
@@ -48,6 +50,7 @@ function TableauDoubles({ lignes, enCours, onRembourse }) {
               {lignes.map((l) => (
                 <tr key={l.evenementId} className="border-t border-red-100 dark:border-red-900">
                   <td className="px-3 py-2 whitespace-nowrap tabular-nums">{formaterDate(l.recuLe)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap text-xs font-bold">{PRODUITS[l.type] ?? l.type}</td>
                   <td className="px-3 py-2 font-mono text-xs break-all">{l.reference}</td>
                   <td className="px-3 py-2 whitespace-nowrap tabular-nums font-bold">{l.montantXof ? `${l.montantXof.toLocaleString("fr-FR")} FCFA` : "—"}</td>
                   <td className="px-3 py-2 font-mono text-xs font-bold">{l.transactionEnDouble || "—"}</td>
@@ -201,6 +204,7 @@ export default function AdminCommandesOrangePage() {
         <>
           <TableauDoubles lignes={donnees.doubles ?? []} enCours={enCours} onRembourse={rembourse} />
           <Tableau titre="Achats de jetons" type="jetons" lignes={donnees.jetons} enCours={enCours} onReverifier={reverifier} />
+          <Tableau titre="Achats de modèles de CV" type="cv" lignes={donnees.achatsCv ?? []} enCours={enCours} onReverifier={reverifier} />
           <Tableau titre="Formation rédaction de CV" type="formation" lignes={donnees.formations} enCours={enCours} onReverifier={reverifier} />
         </>
       )}

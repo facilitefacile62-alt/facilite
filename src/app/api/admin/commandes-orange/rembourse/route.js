@@ -7,8 +7,8 @@ import { STATUT_DOUBLE_REMBOURSE, STATUT_PAIEMENT_EN_DOUBLE } from "@/lib/webhoo
 
 export const runtime = "nodejs";
 
-const corpsSchema = z.object({ type: z.enum(["jetons", "formation"]), evenementId: z.string().uuid() });
-const TABLES = { jetons: "jetons_webhook_events", formation: "formation_redaction_cv_webhook_events" };
+const corpsSchema = z.object({ type: z.enum(["jetons", "formation", "cv"]), evenementId: z.string().uuid() });
+const TABLES = { jetons: "jetons_webhook_events", formation: "formation_redaction_cv_webhook_events", cv: "cv_achat_webhook_events" };
 
 /**
  * Marque un paiement EN DOUBLE comme remboursé (il disparaît de la liste « à rembourser »). Aucun mouvement d'argent ici : le

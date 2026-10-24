@@ -215,6 +215,13 @@ test.describe("Invariants de sécurité", () => {
       // propriétaire) et vérifiés par confirmer_whatsapp_boutique() (SECURITY DEFINER). Voir
       // 20261024120000_coordonnees_cv_et_confirmation_whatsapp.sql.
       "whatsapp_confirmations",
+      // Catalogue des modèles de CV à vendre (« Achat de CV ») : aucun GRANT ni policy pour les clients — les chemins des PDF d'origine
+      // et des aperçus ne doivent jamais quitter le serveur. Lu uniquement par lister_modeles_cv() (SECURITY DEFINER, sans aucun chemin
+      // de fichier) et par les routes serveur (service_role). Voir 20261024220000_achat_de_cv_catalogue.sql.
+      "cv_modeles",
+      // Journal d'idempotence des notifications Orange des achats de CV : lu et écrit par le webhook commun (service_role) seulement,
+      // comme jetons_webhook_events. Voir 20261025100000_achat_cv_paiement.sql.
+      "cv_achat_webhook_events",
       // Tarif de livraison (une seule ligne) : aucun GRANT ni policy, lu uniquement par
       // lire_tarif_livraison() et modifié uniquement par definir_tarif_livraison() (administrateur,
       // SECURITY DEFINER). Une policy de lecture « pour tous » serait tautologique (invariant 7).
@@ -425,6 +432,10 @@ test.describe("Invariants de sécurité", () => {
       // dans les journaux. Voir src/lib/webhookOrange.js. Aucun faux marqueur d'autorisation ajouté pour faire taire ce test.
       "src/app/api/pay/jetons-webhook/route.js",
       "src/app/api/pay/formation-cv-webhook/route.js",
+      // Webhook des achats de modèles de CV — 25/10/2026 : simple adaptateur (src/lib/cvAchatPaiement.js) du même traitement commun
+      // src/lib/webhookOrange.js, donc exactement les mêmes protections que les deux webhooks ci-dessus (jeton propre à la commande ou
+      // secret global, journal d'idempotence, confirmation d'Orange de la référence ET du montant avant tout achat). Aucune session à exiger.
+      "src/app/api/pay/cv-achat-webhook/route.js",
     ]);
 
     const unprotected = [...serverActionFiles, ...routeHandlerFiles].filter((f) => {
@@ -480,6 +491,10 @@ test.describe("Invariants de sécurité", () => {
       // n'est crédité sur la foi d'une donnée locale : chaque achat n'est crédité que si Orange confirme statut,
       // référence et montant (evaluerConfirmationOrange), via la même transition atomique que le webhook.
       "src/app/api/cron/rattrapage-achats-jetons/route.js",
+      // Rattrapage planifié (cron, CRON_SECRET / RATTRAPAGE_CRON_SECRET) des achats de modèles de CV — 25/10/2026. Même nature que le
+      // rattrapage des jetons : opération système sur TOUS les achats en attente, aucun utilisateur précis à filtrer ; chaque achat n'est
+      // validé que si Orange confirme statut, référence et montant, par la même transition atomique que le webhook.
+      "src/app/api/cron/rattrapage-achats-cv/route.js",
       // Webhook d'achat de jetons — 19/10/2026. Le crédit du solde (qui portait le marqueur store_id) est passé dans
       // src/lib/jetonsPaiement.js, partagé avec le rattrapage. Le webhook agit sur UNE seule commande, identifiée par la
       // référence de la notification et authentifiée par signature, jeton propre à la commande ou secret de callback ;

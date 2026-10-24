@@ -27,7 +27,7 @@ export async function GET(req) {
       return NextResponse.json({ error: "Réservé aux administrateurs." }, { status: 403 });
     }
 
-    const [achats, formations] = await Promise.all([
+    const [achats, formations, achatsCv] = await Promise.all([
       admin
         .from("jetons_transactions")
         .select("id, store_id, montant, montant_xof, status, provider_reference, created_at")
@@ -42,29 +42,46 @@ export async function GET(req) {
         .not("callback_token_hash", "is", null)
         .order("updated_at", { ascending: false })
         .limit(LOT_MAX),
+      // Achats de modèles de CV non aboutis : en attente, ou « failed » avec un QR créé (un paiement tardif peut encore arriver).
+      admin
+        .from("cv_achats")
+        .select("id, user_id, modele_id, montant_xof, status, provider_reference, created_at")
+        .in("status", ["pending", "failed"])
+        .not("provider_reference", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(LOT_MAX),
     ]);
     // Paiements EN DOUBLE (même QR payé deux fois) : événements SUCCESS confirmés par Orange pour une commande déjà créditée par une autre
     // transaction (statut DOUBLE_PAIEMENT, voir webhookOrange). À rembourser ; la commande, elle, n'a été créditée qu'une fois.
-    const [doublesJetons, doublesFormation] = await Promise.all([
+    const [doublesJetons, doublesFormation, doublesCv] = await Promise.all([
       admin.from("jetons_webhook_events").select("id, reference, orange_transaction_id, jetons_transaction_id, received_at").eq("status", STATUT_PAIEMENT_EN_DOUBLE).order("received_at", { ascending: false }).limit(LOT_MAX),
       admin.from("formation_redaction_cv_webhook_events").select("id, reference, orange_transaction_id, inscription_id, received_at").eq("status", STATUT_PAIEMENT_EN_DOUBLE).order("received_at", { ascending: false }).limit(LOT_MAX),
+      admin.from("cv_achat_webhook_events").select("id, reference, orange_transaction_id, achat_id, received_at").eq("status", STATUT_PAIEMENT_EN_DOUBLE).order("received_at", { ascending: false }).limit(LOT_MAX),
     ]);
-    if (doublesJetons.error || doublesFormation.error) {
-      console.error("[Admin Commandes Orange] Lecture des doubles impossible :", doublesJetons.error?.message || doublesFormation.error?.message);
+    if (doublesJetons.error || doublesFormation.error || doublesCv.error) {
+      console.error("[Admin Commandes Orange] Lecture des doubles impossible :", doublesJetons.error?.message || doublesFormation.error?.message || doublesCv.error?.message);
       return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
     }
     const idsJetons = [...new Set(doublesJetons.data.map((e) => e.jetons_transaction_id).filter(Boolean))];
     const idsFormation = [...new Set(doublesFormation.data.map((e) => e.inscription_id).filter(Boolean))];
-    const [commandesDoubles, inscriptionsDoubles] = await Promise.all([
+    const idsCv = [...new Set(doublesCv.data.map((e) => e.achat_id).filter(Boolean))];
+    const [commandesDoubles, inscriptionsDoubles, achatsDoubles] = await Promise.all([
       idsJetons.length ? admin.from("jetons_transactions").select("id, montant_xof, provider_reference").in("id", idsJetons) : { data: [], error: null },
       idsFormation.length ? admin.from("formation_redaction_cv_inscriptions").select("id, orange_transaction_id").in("id", idsFormation) : { data: [], error: null },
+      idsCv.length ? admin.from("cv_achats").select("id, user_id, modele_id, montant_xof").in("id", idsCv) : { data: [], error: null },
     ]);
     const parId = (liste) => Object.fromEntries((liste.data ?? []).map((l) => [l.id, l]));
     const jetonsParId = parId(commandesDoubles);
     const formationParId = parId(inscriptionsDoubles);
+    const cvParId = parId(achatsDoubles);
+    // Transaction Orange qui a validé le modèle (achat « success » du même compte et du même modèle) : c'est l'AUTRE qui est à rembourser.
+    const succesCv = idsCv.length
+      ? await admin.from("cv_achats").select("user_id, modele_id, provider_reference").eq("status", "success").in("user_id", [...new Set(achatsDoubles.data.map((a) => a.user_id))])
+      : { data: [] };
+    const transactionValideeCv = (achat) => succesCv.data?.find((s) => s.user_id === achat?.user_id && s.modele_id === achat?.modele_id)?.provider_reference ?? null;
 
-    if (achats.error || formations.error) {
-      console.error("[Admin Commandes Orange] Lecture impossible :", achats.error?.message || formations.error?.message);
+    if (achats.error || formations.error || achatsCv.error) {
+      console.error("[Admin Commandes Orange] Lecture impossible :", achats.error?.message || formations.error?.message || achatsCv.error?.message);
       return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
     }
 
@@ -88,6 +105,15 @@ export async function GET(req) {
           montantXof: MONTANT_FORMATION_CV_XOF,
           recuLe: e.received_at,
         })),
+        ...doublesCv.data.map((e) => ({
+          type: "cv",
+          evenementId: e.id,
+          reference: e.reference,
+          transactionEnDouble: e.orange_transaction_id,
+          transactionCreditee: transactionValideeCv(cvParId[e.achat_id]),
+          montantXof: cvParId[e.achat_id]?.montant_xof ?? null,
+          recuLe: e.received_at,
+        })),
       ].sort((a, b) => String(b.recuLe).localeCompare(String(a.recuLe))),
       jetons: achats.data.map((c) => ({
         id: c.id,
@@ -97,6 +123,15 @@ export async function GET(req) {
         transactionOrange: c.provider_reference ?? null,
         creeLe: c.created_at,
         magasin: c.store_id,
+      })),
+      achatsCv: achatsCv.data.map((c) => ({
+        id: c.id,
+        etat: c.status,
+        montantXof: c.montant_xof ?? null,
+        transactionOrange: c.provider_reference ?? null,
+        creeLe: c.created_at,
+        utilisateur: c.user_id,
+        modele: c.modele_id,
       })),
       formations: formations.data.map((c) => ({
         id: c.id,
