@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
+import { formeLien } from "@/lib/ouvertureAppPaiement";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
@@ -144,6 +145,9 @@ export async function POST(req) {
       // Détail technique dans les journaux ci-dessus ; l'utilisateur ne voit qu'une phrase claire.
       return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
+
+    // Forme des liens d'application renvoyés par Orange (schéma, hôte, longueur — jamais le chemin ni les paramètres) : lien web https ou lien d'application ?
+    console.info("[Jetons Checkout] Liens d'application Orange : MAXIT =", formeLien(qrCode.deepLinkMaxit), "· OM =", formeLien(qrCode.deepLinkOm), "· générique =", formeLien(qrCode.deepLink));
 
     // Rôle serveur : le client n'a plus aucun droit d'écriture sur jetons_transactions.
     await getSupabaseAdmin().from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);

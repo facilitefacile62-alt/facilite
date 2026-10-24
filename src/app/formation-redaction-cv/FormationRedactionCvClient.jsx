@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
+import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { estDansAppPlay } from "@/lib/contextePlay";
@@ -51,6 +53,7 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
   const [statutAchat, setStatutAchat] = useState("inactif"); // inactif | chargement | attente | succes | echec
   const [erreurAchat, setErreurAchat] = useState("");
   const intervalRef = useRef(null);
+  const interrogerRef = useRef(null);
 
   const chargerTout = useCallback(async () => {
     if (!user?.id) {
@@ -78,7 +81,14 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    interrogerRef.current = null;
   }, []);
+
+  // Ouverture automatique de MAXIT sur téléphone (une seule fois par commande) et interrogation immédiate du statut au retour dans le navigateur.
+  const { estMobile, tenterAuto } = useOuvertureAppPaiement({
+    actif: statutAchat === "attente" && Boolean(paiement),
+    interroger: () => interrogerRef.current?.(),
+  });
 
   useEffect(() => () => arreterSondage(), [arreterSondage]);
 
@@ -107,7 +117,7 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
       setStatutAchat("attente");
 
       arreterSondage();
-      intervalRef.current = setInterval(async () => {
+      const interroger = async () => {
         try {
           const statusRes = await fetch("/api/pay/formation-cv-checkout", {
             headers: { Authorization: `Bearer ${session.access_token}` },
@@ -123,7 +133,11 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
           // Panne réseau passagère du sondage : ne casse pas l'affichage,
           // la prochaine tentative reprendra normalement.
         }
-      }, POLL_INTERVAL_MS);
+      };
+      interrogerRef.current = interroger;
+      intervalRef.current = setInterval(interroger, POLL_INTERVAL_MS);
+      // Une seule tentative automatique par commande ; le QR et les boutons restent affichés si l'application ne s'ouvre pas.
+      tenterAuto(data.qrId, { deepLinkMaxit: data.deepLinkMaxit, deepLinkOm: data.deepLinkOm, deepLink: data.deepLink });
     } catch (err) {
       console.error("Erreur génération paiement formation CV :", err);
       setErreurAchat("Une erreur réseau est survenue. Vérifiez votre connexion et réessayez.");
@@ -255,7 +269,7 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                       {paiement.deepLinkOm && (
                         <a
                           href={paiement.deepLinkOm}
-                          className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 text-white font-extrabold text-sm hover:bg-orange-600 transition-colors"
+                          className={`flex-1 py-3 px-4 rounded-2xl text-white font-extrabold text-sm transition-colors ${estMobile ? "bg-gray-900 hover:bg-black" : "bg-orange-500 hover:bg-orange-600"}`}
                         >
                           Ouvrir Orange Money
                         </a>
@@ -263,12 +277,17 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                       {paiement.deepLinkMaxit && (
                         <a
                           href={paiement.deepLinkMaxit}
-                          className="flex-1 py-3 px-4 rounded-2xl bg-gray-900 text-white font-extrabold text-sm hover:bg-black transition-colors"
+                          className={`flex-1 px-4 rounded-2xl text-white font-extrabold transition-colors ${estMobile ? "order-first py-4 text-base bg-orange-500 hover:bg-orange-600" : "py-3 text-sm bg-gray-900 hover:bg-black"}`}
                         >
                           Ouvrir MAXIT
                         </a>
                       )}
                     </div>
+                    {estMobile && paiement.deepLinkMaxit && (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2">
+                        MAXIT s&apos;ouvre tout seul. Sinon, touchez « Ouvrir MAXIT ».
+                      </p>
+                    )}
                     <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-4 flex items-center justify-center gap-2">
                       <span className="w-3 h-3 border-2 border-gray-300 dark:border-gray-700 border-t-transparent rounded-full animate-spin"></span>
                       En attente de confirmation du paiement…
@@ -298,8 +317,11 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                       ) : (
                         <i className="fa-solid fa-qrcode"></i>
                       )}
-                      Payer {MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money
+                      {libelleBoutonPaiement(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)}
                     </button>
+                    {aideBoutonPaiement(estMobile) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+                    )}
                     {erreurAchat && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">{erreurAchat}</p>
                     )}
