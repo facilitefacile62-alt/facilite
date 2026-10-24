@@ -9,7 +9,7 @@ import { captureCriticalPaymentError } from "@/lib/sentryAlert";
  * touchent jamais la commande. L'idempotence tient à la transition atomique pending → success (UPDATE … WHERE
  * status = 'pending') : une commande déjà créditée ne l'est jamais deux fois, quel que soit l'appelant.
  *
- * Retourne { resultat } : "credite" | "echec_enregistre" | "deja_traite" | "erreur".
+ * Retourne { resultat } : "credite" | "echec_enregistre" | "deja_traite" | "doublon_transaction" | "erreur".
  */
 export async function appliquerConfirmationAchat(supabaseAdmin, transaction, confirmation, orangeTransactionId) {
   try {
@@ -31,6 +31,12 @@ export async function appliquerConfirmationAchat(supabaseAdmin, transaction, con
       .select();
 
     if (updateError) {
+      // Contrainte d'unicité (migration 20261023200000) : un même transactionId Orange ne peut créditer QU'UNE commande.
+      if (updateError.code === "23505") {
+        console.error("[Jetons Paiement] transactionId Orange déjà utilisé par une autre commande — aucun crédit.");
+        captureCriticalPaymentError("[Jetons Paiement] transactionId Orange en double", { transactionId: transaction.id });
+        return { resultat: "doublon_transaction" };
+      }
       console.error("[Jetons Paiement] Échec mise à jour de la transaction :", updateError.message);
       captureCriticalPaymentError("[Jetons Paiement] Échec mise à jour de la transaction", { message: updateError.message, transactionId: transaction.id });
       return { resultat: "erreur" };
