@@ -115,3 +115,27 @@ export function tenterOuvertureAuto({ commandeId, liens, appareil, stockage = st
 export function doitInterroger(maintenant, derniere, minimumMs = 1500) {
   return !derniere || maintenant - derniere >= minimumMs;
 }
+
+// ------------------------------------------------------------------------------------------------------------------------------
+// Textes du bouton de paiement : sur téléphone, une seule touche crée le paiement ET ouvre MAXIT ; sur ordinateur, le client scanne le QR.
+// ------------------------------------------------------------------------------------------------------------------------------
+export const TEXTE_BOUTON_MAXIT = "Payer avec MAXIT";
+export const AIDE_BOUTON_MAXIT = "Touchez le bouton : MAXIT s'ouvre pour payer.";
+
+/** Texte du bouton « générer le paiement » : « Payer avec MAXIT » sur téléphone, le texte habituel sur ordinateur. */
+export const libelleBoutonPaiement = (estMobile, libelleOrdinateur) => (estMobile ? TEXTE_BOUTON_MAXIT : libelleOrdinateur);
+
+/** Phrase d'aide sous le bouton, sur téléphone seulement (sans le mot « QR »). */
+export const aideBoutonPaiement = (estMobile) => (estMobile ? AIDE_BOUTON_MAXIT : null);
+
+/**
+ * FORME d'un lien d'application, sans rien de sensible : schéma (https, maxit…), hôte et longueur — jamais le chemin ni les paramètres, qui
+ * pourraient contenir un identifiant de paiement. Sert à savoir, dans les journaux, si Orange renvoie un lien web (https) ou un lien
+ * d'application.
+ */
+export function formeLien(url) {
+  if (typeof url !== "string" || !url.trim()) return "absent";
+  const m = /^([a-z][a-z0-9+.-]*):\/\/([^/?#\s]*)/i.exec(url.trim());
+  if (!m) return `forme inconnue (${url.trim().length} car.)`;
+  return `${m[1].toLowerCase()}://${m[2].slice(0, 60)} (${url.trim().length} car.)`;
+}

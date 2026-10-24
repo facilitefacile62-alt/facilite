@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { estDansAppPlay } from "@/lib/contextePlay";
@@ -316,8 +317,11 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                       ) : (
                         <i className="fa-solid fa-qrcode"></i>
                       )}
-                      Payer {MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money
+                      {libelleBoutonPaiement(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)}
                     </button>
+                    {aideBoutonPaiement(estMobile) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+                    )}
                     {erreurAchat && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">{erreurAchat}</p>
                     )}

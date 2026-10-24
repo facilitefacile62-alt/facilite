@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { estDansAppPlay } from "@/lib/contextePlay";
@@ -470,8 +471,11 @@ export default function PremiumClient({ orangeActif = false }) {
                       ) : (
                         <i className="fa-solid fa-qrcode"></i>
                       )}
-                      Générer mon QR de paiement Orange Money
+                      {libelleBoutonPaiement(estMobile, "Générer mon QR de paiement Orange Money")}
                     </button>
+                    {aideBoutonPaiement(estMobile) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+                    )}
                     {statutAchat === "echec" && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">
                         Le paiement n&apos;a pas abouti. Vous pouvez réessayer.

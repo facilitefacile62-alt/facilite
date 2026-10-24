@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
+import { formeLien } from "@/lib/ouvertureAppPaiement";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
@@ -119,6 +120,9 @@ export async function POST(req) {
       // Détail technique dans les journaux ci-dessus ; l'utilisateur ne voit qu'une phrase claire.
       return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
+
+    // Forme des liens d'application renvoyés par Orange (schéma, hôte, longueur — jamais le chemin ni les paramètres) : lien web https ou lien d'application ?
+    console.info("[Formation CV Checkout] Liens d'application Orange : MAXIT =", formeLien(qrCode.deepLinkMaxit), "· OM =", formeLien(qrCode.deepLinkOm), "· générique =", formeLien(qrCode.deepLink));
 
     await getSupabaseAdmin()
       .from("formation_redaction_cv_inscriptions")

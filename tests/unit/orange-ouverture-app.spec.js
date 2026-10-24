@@ -194,3 +194,61 @@ test.describe("les deux pages de paiement utilisent cette logique, sans toucher 
     expect(hook).not.toMatch(/fetch\(|montant|prix|webhook/i);
   });
 });
+
+test.describe("bouton « Payer avec MAXIT » (téléphone) et texte d'aide", () => {
+  test("téléphone : « Payer avec MAXIT » et une phrase d'aide sans le mot « QR » ; ordinateur : texte habituel, pas d'aide", async () => {
+    const { libelleBoutonPaiement, aideBoutonPaiement, TEXTE_BOUTON_MAXIT, AIDE_BOUTON_MAXIT } = await charger();
+    expect(TEXTE_BOUTON_MAXIT).toBe("Payer avec MAXIT");
+    expect(libelleBoutonPaiement(true, "Générer mon QR de paiement Orange Money")).toBe("Payer avec MAXIT");
+    expect(libelleBoutonPaiement(false, "Générer mon QR de paiement Orange Money")).toBe("Générer mon QR de paiement Orange Money");
+    expect(libelleBoutonPaiement(false, "Payer 15 000 FCFA avec Orange Money")).toBe("Payer 15 000 FCFA avec Orange Money");
+    expect(aideBoutonPaiement(true)).toBe("Touchez le bouton : MAXIT s'ouvre pour payer.");
+    expect(aideBoutonPaiement(false)).toBeNull();
+    expect(AIDE_BOUTON_MAXIT).not.toMatch(/qr/i);
+    expect(AIDE_BOUTON_MAXIT.split(/[.!?]/).filter(Boolean)).toHaveLength(1); // une phrase courte
+    expect(AIDE_BOUTON_MAXIT.length).toBeLessThanOrEqual(60);
+  });
+
+  test("le texte suit la détection : le même appareil donne « Payer avec MAXIT » sur téléphone et le texte habituel sur ordinateur", async () => {
+    const { libelleBoutonPaiement, estTelephone } = await charger();
+    const habituel = "Générer mon QR de paiement Orange Money";
+    expect(libelleBoutonPaiement(estTelephone({ userAgent: UA.androidChrome }), habituel)).toBe("Payer avec MAXIT");
+    expect(libelleBoutonPaiement(estTelephone({ userAgent: UA.iphone }), habituel)).toBe("Payer avec MAXIT");
+    expect(libelleBoutonPaiement(estTelephone({ userAgent: UA.windows }), habituel)).toBe(habituel);
+    expect(libelleBoutonPaiement(estTelephone({ userAgent: UA.mac }), habituel)).toBe(habituel);
+  });
+
+  test("les deux pages utilisent ces textes, et gardent le texte d'ordinateur", () => {
+    const lire = (p) => fs.readFileSync(path.join(__dirname, "../..", p), "utf8");
+    const premium = lire("src/app/premium/PremiumClient.jsx");
+    const formation = lire("src/app/formation-redaction-cv/FormationRedactionCvClient.jsx");
+    expect(premium).toContain('libelleBoutonPaiement(estMobile, "Générer mon QR de paiement Orange Money")');
+    expect(formation).toContain('libelleBoutonPaiement(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)');
+    for (const s of [premium, formation]) {
+      expect(s).toContain("aideBoutonPaiement(estMobile)");
+      expect(s).toContain("fa-qrcode"); // même icône
+    }
+  });
+});
+
+test.describe("forme d'un lien d'application pour les journaux (sans chemin ni paramètres)", () => {
+  test("https, schéma d'application, absent, inconnu", async () => {
+    const { formeLien } = await charger();
+    expect(formeLien("https://maxit.sn/pay/SECRET123?id=SECRET456")).toBe("https://maxit.sn (43 car.)");
+    expect(formeLien("maxit://pay?payment=SECRET789")).toBe("maxit://pay (29 car.)");
+    expect(formeLien(null)).toBe("absent");
+    expect(formeLien("")).toBe("absent");
+    expect(formeLien("n'importe quoi")).toMatch(/^forme inconnue/);
+    for (const brut of ["https://maxit.sn/pay/SECRET123?id=SECRET456", "maxit://pay?payment=SECRET789"]) expect(formeLien(brut)).not.toMatch(/SECRET/);
+  });
+
+  test("les routes journalisent seulement la forme, jamais le lien brut", () => {
+    const lire = (p) => fs.readFileSync(path.join(__dirname, "../..", p), "utf8");
+    for (const f of ["src/app/api/pay/jetons-checkout/route.js", "src/app/api/pay/formation-cv-checkout/route.js"]) {
+      const s = lire(f);
+      expect(s).toContain("formeLien(qrCode.deepLinkMaxit)");
+      const sansFormes = s.replace(/formeLien\([^)]*\)/g, "");
+      expect(sansFormes).not.toMatch(/console\.\w+\([^;]*qrCode\.deepLink/);
+    }
+  });
+});
