@@ -6,6 +6,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { genererJetonCallback, genererQrCodePaiement, nomQrJetons, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
+import { aLePrixTest, prixJetonFcfa } from "@/lib/prixTestOrange";
 import { z } from "zod";
 
 // Achat de jetons Marketplace — remplace l'ancien abonnement générique
@@ -91,7 +92,10 @@ export async function POST(req) {
       return NextResponse.json({ error: "Le tarif des jetons n'est pas configuré." }, { status: 503 });
     }
 
-    const montantXof = quantiteJetons * config.cout_jeton_fcfa;
+    // Prix de test (1 FCFA par jeton) SEULEMENT pour les comptes listés dans ORANGE_TEST_PRIX_USER_IDS, comparés à l'utilisateur authentifié
+    // côté serveur ; rien ne vient du navigateur. Le montant enregistré dans la commande est celui-ci : le webhook vérifie le même montant.
+    const montantXof = quantiteJetons * prixJetonFcfa({ userId: user.id, tarifConfigureFcfa: config.cout_jeton_fcfa });
+    if (aLePrixTest(user.id)) console.info("[Jetons Checkout] Prix de test appliqué à un compte autorisé.");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
 
     // Jeton secret propre à cette commande, placé dans l'URL de callback ; seule son empreinte est stockée. La ligne est
