@@ -5,6 +5,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import ConteneurClavier, { useClavierOuvert } from '@/components/ConteneurClavier';
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { fondSombre } from '@/components/themeSombre';
@@ -148,6 +149,7 @@ function BarreFaciliteHorsOnglets() {
 
 /** Contenu racine : navigation et écrans, aux couleurs du thème choisi (clair, sombre ou automatique). */
 function ContenuRacine() {
+  const clavierOuvert = useClavierOuvert();
   const { sombre } = useThemeApp();
   const fond = sombre ? fondSombre('#F2F0EA') : '#F2F0EA';
   return (
@@ -156,10 +158,11 @@ function ContenuRacine() {
       <ThemeFrontiere>
         <AuthGate>
           <View style={{ flex: 1 }}>
-            <View style={{ flex: 1 }}>
+            {/* Clavier ouvert : la page s'arrête au-dessus du clavier et le champ en cours de saisie reste visible (toute l'application). */}
+            <ConteneurClavier>
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: fond } }} />
-            </View>
-            <BarreFaciliteHorsOnglets />
+            </ConteneurClavier>
+            {clavierOuvert ? null : <BarreFaciliteHorsOnglets />}
           </View>
         </AuthGate>
       </ThemeFrontiere>

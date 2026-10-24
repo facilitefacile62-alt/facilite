@@ -21,7 +21,6 @@ import {
   Alert,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Linking,
   Modal,
   Pressable,
@@ -34,6 +33,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ActionsMessage, { type ActionMessage } from '@/components/ActionsMessage';
+import ConteneurClavier from '@/components/ConteneurClavier';
 import CarteArticleMessage, { articleDuMessage } from '@/components/CarteArticleMessage';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -327,7 +327,7 @@ export default function ChatDetailScreen() {
         </View>
       ) : null}
       <SafeAreaView style={{ flex: 1 }} edges={marketplace ? [] : ['top']}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <ConteneurClavier>
           {/* En-tête */}
           <View
             style={{
@@ -463,6 +463,8 @@ export default function ChatDetailScreen() {
                 contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 12, gap: 6, flexGrow: 1, justifyContent: 'flex-end' }}
                 keyboardShouldPersistTaps="handled"
                 onContentSizeChange={() => listeRef.current?.scrollToEnd({ animated: false })}
+                // La discussion se raccourcit quand le clavier, le menu de pièces jointes ou les émojis s'ouvrent : on garde le dernier message en vue.
+                onLayout={() => listeRef.current?.scrollToEnd({ animated: false })}
                 extraData={[marques, selection]}
                 renderItem={({ item }) => (
                   <BulleMessage
@@ -488,68 +490,53 @@ export default function ChatDetailScreen() {
               />
             )}
 
-            {/* Menu pièce jointe : feuille du bas, icônes en cercle (même famille visuelle que WhatsApp) */}
-            {menuJointOuvert && (
-              <Pressable onPress={() => setMenuJointOuvert(false)} style={{ position: 'absolute', inset: 0 }}>
-                <Pressable
-                  onPress={() => {}}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: '#FFFFFF',
-                    borderTopLeftRadius: 22,
-                    borderTopRightRadius: 22,
-                    paddingTop: 20,
-                    paddingBottom: 26,
-                    paddingHorizontal: 16,
-                    flexDirection: 'row',
-                    justifyContent: 'space-around',
-                    shadowColor: '#000',
-                    shadowOpacity: 0.15,
-                    shadowRadius: 16,
-                    shadowOffset: { width: 0, height: -4 },
-                    elevation: 10,
-                  }}>
-                  <OptionJointe icone="document-outline" couleur="#7C3AED" fond="#EDE7FB" label="Document" onPress={choisirDocument} />
-                  <OptionJointe icone="camera-outline" couleur="#DC2626" fond="#FBE7E7" label="Appareil photo" onPress={prendrePhoto} />
-                  <OptionJointe icone="images-outline" couleur="#2563EB" fond="#E1EAFB" label="Galerie" onPress={choisirDansGalerie} />
-                </Pressable>
-              </Pressable>
-            )}
-
-            {/* Clavier d'émojis (équivalent léger aux autocollants) */}
-            {emojiOuvert && (
-              <View
-                style={{
-                  position: 'absolute',
-                  left: 8,
-                  right: 8,
-                  bottom: 68,
-                  height: 210,
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 18,
-                  padding: 10,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 6,
-                }}>
-                <ScrollView contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-                  {EMOJIS.map((e, i) => (
-                    <Pressable
-                      key={`${e}-${i}`}
-                      onPress={() => inserer(e)}
-                      style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
-                      <Text style={{ fontSize: 22 }}>{e}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
           </View>
+
+          {/* Menu pièce jointe : feuille du bas posée DANS la page, entre la discussion et la saisie — la discussion se raccourcit au lieu d'être recouverte. */}
+          {menuJointOuvert && (
+            <View
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderTopLeftRadius: 22,
+                borderTopRightRadius: 22,
+                paddingTop: 18,
+                paddingBottom: 14,
+                paddingHorizontal: 16,
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+                borderTopWidth: 1,
+                borderColor: 'rgba(0,0,0,0.06)',
+              }}>
+              <OptionJointe icone="document-outline" couleur="#7C3AED" fond="#EDE7FB" label="Document" onPress={choisirDocument} />
+              <OptionJointe icone="camera-outline" couleur="#DC2626" fond="#FBE7E7" label="Appareil photo" onPress={prendrePhoto} />
+              <OptionJointe icone="images-outline" couleur="#2563EB" fond="#E1EAFB" label="Galerie" onPress={choisirDansGalerie} />
+            </View>
+          )}
+
+        {/* Clavier d'émojis (équivalent léger aux autocollants), lui aussi dans la page */}
+          {emojiOuvert && (
+            <View
+              style={{
+                height: 210,
+                backgroundColor: '#FFFFFF',
+                borderTopLeftRadius: 18,
+                borderTopRightRadius: 18,
+                padding: 10,
+                borderTopWidth: 1,
+                borderColor: 'rgba(0,0,0,0.06)',
+              }}>
+              <ScrollView contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                {EMOJIS.map((e, i) => (
+                  <Pressable
+                    key={`${e}-${i}`}
+                    onPress={() => inserer(e)}
+                    style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <Text style={{ fontSize: 22 }}>{e}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {menuOuvert && !marketplace ? (
             <Pressable onPress={() => setMenuOuvert(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -672,7 +659,7 @@ export default function ChatDetailScreen() {
             onEnvoyerFichier={envoyerFichierChoisi}
             userId={user?.id}
           />
-        </KeyboardAvoidingView>
+        </ConteneurClavier>
       </SafeAreaView>
     </View>
   );
