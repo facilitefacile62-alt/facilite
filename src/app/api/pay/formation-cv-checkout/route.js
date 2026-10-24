@@ -4,7 +4,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
-import { genererJetonCallback, genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { genererJetonCallback, genererQrCodePaiement, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 // Paiement de la formation "Rédaction de CV" (15 000 FCFA, accès permanent)
@@ -106,8 +106,9 @@ export async function POST(req) {
         montantXof: MONTANT_XOF,
         nom: "Formation Rédaction de CV Facilité",
         validiteSecondes: QR_VALIDITY_SECONDS,
-        callbackSuccessUrl: `${appUrl}/formation-redaction-cv?statut=succes`,
-        callbackCancelUrl: `${appUrl}/formation-redaction-cv?statut=annule`,
+        // Retour sur le site avec l'identifiant de l'inscription : la page lit l'état, elle ne valide JAMAIS le paiement sur la seule foi de ce retour.
+        callbackSuccessUrl: `${appUrl}/formation-redaction-cv?statut=succes&commande=${inscriptionId}`,
+        callbackCancelUrl: `${appUrl}/formation-redaction-cv?statut=annule&commande=${inscriptionId}`,
         callbackUrl: `${appUrl}/api/pay/formation-cv-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {
@@ -175,7 +176,7 @@ export async function GET(req) {
     }
 
     try {
-      const statutOrange = await obtenirStatutTransaction(inscription.provider_reference);
+      const statutOrange = await rechercherTransactionOrange({ reference: inscription.id });
       return NextResponse.json({ status: "pending", orangeStatus: statutOrange.status || null });
     } catch (orangeError) {
       console.error("[Formation CV Status] Échec lecture statut :", orangeError.message);

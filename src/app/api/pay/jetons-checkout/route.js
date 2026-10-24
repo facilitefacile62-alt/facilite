@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { genererJetonCallback, genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { genererJetonCallback, genererQrCodePaiement, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 import { z } from "zod";
 
@@ -123,8 +123,10 @@ export async function POST(req) {
         montantXof,
         nom: `Achat de ${quantiteJetons} jeton${quantiteJetons > 1 ? "s" : ""} Facilité Marketplace`,
         validiteSecondes: QR_VALIDITY_SECONDS,
-        callbackSuccessUrl: `${appUrl}/premium?statut=succes`,
-        callbackCancelUrl: `${appUrl}/premium?statut=annule`,
+        // Retour du client sur le site avec l'identifiant de commande : la page lit l'état de la commande, elle ne crédite JAMAIS sur la
+        // seule foi de ce retour (seule la confirmation auprès d'Orange, côté serveur, crédite).
+        callbackSuccessUrl: `${appUrl}/premium?statut=succes&commande=${transaction.id}`,
+        callbackCancelUrl: `${appUrl}/premium?statut=annule&commande=${transaction.id}`,
         callbackUrl: `${appUrl}/api/pay/jetons-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {
@@ -217,8 +219,10 @@ export async function GET(req) {
     }
 
     try {
-      const statutOrange = await obtenirStatutTransaction(transaction.provider_reference);
-      return NextResponse.json({ status: transaction.status, orangeStatus: statutOrange.status || null });
+      // provider_reference contient le qrId, pas le transactionId Orange (le statut s'interroge par transactionId) : on cherche par
+      // NOTRE référence. Lecture seule, à titre indicatif : seule la confirmation du webhook / du rattrapage crédite.
+      const reponseOrange = await rechercherTransactionOrange({ reference: transaction.id });
+      return NextResponse.json({ status: transaction.status, orangeStatus: reponseOrange.status || null });
     } catch (orangeError) {
       console.error("[Jetons Status] Échec lecture statut :", orangeError.message);
       // Ne bloque jamais l'affichage : la page continue de montrer "pending".

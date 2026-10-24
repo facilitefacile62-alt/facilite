@@ -8,7 +8,8 @@ import { bearerValide } from "@/lib/cronAuth";
 export const runtime = "nodejs";
 
 // Une commande « pending » n'est reprise qu'après ce délai (le QR code vit 15 minutes et la notification d'Orange arrive
-// normalement dans la minute qui suit le paiement), et plus au-delà de 24 h (statut final garanti par Orange sous 24 h).
+// normalement dans la minute qui suit le paiement). Orange garantit un statut final sous 24 h : au-delà, une commande que ni la
+// recherche ni l'API de statut ne donnent comme payée est marquée « failed » (expirée) — jamais laissée « pending » indéfiniment.
 const DELAI_MIN_MINUTES = 20;
 const FENETRE_MAX_HEURES = 24;
 const LOT_MAX = 50;
@@ -44,7 +45,7 @@ export async function GET(req) {
 
   const maintenant = Date.now();
   const avant = new Date(maintenant - DELAI_MIN_MINUTES * 60_000).toISOString();
-  const apres = new Date(maintenant - FENETRE_MAX_HEURES * 3_600_000).toISOString();
+  const limiteExpiration = maintenant - FENETRE_MAX_HEURES * 3_600_000;
 
   const { data: commandes, error } = await admin
     .from("jetons_transactions")
@@ -52,7 +53,6 @@ export async function GET(req) {
     .eq("type", "achat")
     .eq("status", "pending")
     .lt("created_at", avant)
-    .gt("created_at", apres)
     .order("created_at", { ascending: true })
     .limit(LOT_MAX);
   if (error) {
@@ -60,7 +60,7 @@ export async function GET(req) {
     return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
   }
 
-  const bilan = { examinees: commandes.length, creditees: 0, echecs: 0, en_attente: 0, incoherentes: 0, sans_montant: 0, erreurs: 0 };
+  const bilan = { examinees: commandes.length, creditees: 0, echecs: 0, en_attente: 0, expirees: 0, incoherentes: 0, sans_montant: 0, erreurs: 0 };
   for (const commande of commandes) {
     // Commande d'avant la migration : pas de montant figé, donc pas de contrôle possible — jamais créditée par ici.
     if (!commande.montant_xof) {
@@ -68,10 +68,18 @@ export async function GET(req) {
       continue;
     }
     try {
-      const reponse = await rechercherTransactionOrange({ reference: commande.id, qrId: commande.provider_reference });
+      // Recherche par NOTRE référence (GET /transactions?reference=…), puis API de statut sur le transactionId trouvé : mêmes
+      // conditions que le webhook. Aucun repli sur la notification ici (il n'y en a pas) : sans recherche autorisée, pas de crédit.
+      const reponse = await rechercherTransactionOrange({ reference: commande.id });
       const confirmation = evaluerConfirmationOrange(reponse, { reference: commande.id, montantXof: commande.montant_xof });
       if (confirmation.etat === "attente") {
-        bilan.en_attente += 1;
+        if (new Date(commande.created_at).getTime() < limiteExpiration) {
+          // Plus de 24 h sans paiement abouti : commande expirée (jamais créditée), le client peut en créer une nouvelle.
+          await admin.from("jetons_transactions").update({ status: "failed" }).eq("id", commande.id).eq("status", "pending");
+          bilan.expirees += 1;
+        } else {
+          bilan.en_attente += 1;
+        }
       } else if (confirmation.etat === "incoherent") {
         bilan.incoherentes += 1;
         captureCriticalPaymentError("[Cron Rattrapage Jetons] Confirmation incohérente avec la commande", { reference: commande.id, motif: confirmation.raison });
