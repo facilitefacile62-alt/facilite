@@ -400,6 +400,17 @@ export default function MaBoutiqueScreen() {
           </View>
         </View>
 
+        {/* Page de facturation : jetons et mise en avant (Premium) de la boutique */}
+        <View className="px-4 mt-3">
+          <BoutonAction
+            titre="Page de facturation"
+            sousTitre="Jetons et mise en avant de la boutique"
+            icone="ribbon-outline"
+            iconeCouronne
+            onPress={() => router.push('/marketplace/vendre/facturation' as Href)}
+          />
+        </View>
+
         {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
         <View className="flex-row gap-2.5 px-4 mt-3">
           {(
