@@ -102,6 +102,7 @@ const NAV_SECTIONS = [
       { type: "link", href: "/admin/scraping", icon: "🤖", label: "Agrégation & Scraping" },
       { type: "tab", id: "dashboard", icon: "📊", label: "Statistiques" },
       { type: "link", href: "/admin/sessions", icon: "🕒", label: "Fréquentation du site web" },
+      { type: "link", href: "/admin/commandes-orange", icon: "🧾", label: "Commandes Orange Money" },
     ],
   },
 ];
