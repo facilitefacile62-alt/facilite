@@ -1,105 +1,145 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CarteMenu, FOND_CARTES } from '@/components/CarteMenu';
 import EnteteRubrique from '@/components/EnteteRubrique';
+import SelecteurPays from '@/components/SelecteurPays';
 import { useAuth } from '@/context/AuthContext';
+import { VILLES } from '@/lib/offresParVille';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
+import { chargerMesBoutiques } from '@/lib/vendeur';
 
-// Coordonnées — maquette 54 (version du 12/10/2026) : quatre lignes —
-// Téléphone, WhatsApp, E-mail, Ville — avec le libellé en petites capitales
-// grises, la valeur en gras et un chevron. Un appui sur une ligne l'ouvre en
-// modification ; « OK » enregistre cette ligne seule (plus de bouton
-// « Enregistrer » global, absent de la maquette).
-// Colonnes réelles de `profiles` (mêmes noms que le site) : phone,
-// contact_whatsapp, contact_email, city. L'e-mail du compte (auth) n'est
-// pas modifiable ici — c'est l'écran Sécurité & Connexion qui s'en charge.
-const CHAMPS = [
-  { cle: 'phone', libelle: 'TÉLÉPHONE', placeholder: '+221 77 000 00 00', clavier: 'phone-pad' },
-  { cle: 'contact_whatsapp', libelle: 'WHATSAPP', placeholder: '+221 77 000 00 00', clavier: 'phone-pad' },
-  { cle: 'contact_email', libelle: 'E-MAIL', placeholder: 'nom@exemple.com', clavier: 'email-address' },
-  { cle: 'city', libelle: 'VILLE', placeholder: 'Dakar, Sénégal', clavier: 'default' },
-] as const;
+// Coordonnées — mêmes cartes que les autres réglages. Téléphone, e-mail et WhatsApp affichent ce qui a été CONFIRMÉ (numéro vérifié par SMS,
+// adresse confirmée par e-mail, WhatsApp de la boutique) et ne se modifient pas ici. La ville est celle VERROUILLÉE de la boutique (position
+// relevée une seule fois à la création) ; sans boutique, celle du profil. Seul le pays se choisit, en menu déroulant (profiles.country).
+function Pastille({ texte, vert }: { texte: string; vert?: boolean }) {
+  return (
+    <View className="flex-row items-center gap-1 rounded-full px-2 py-1" style={{ backgroundColor: vert ? '#D1FAE5' : '#F0EEE8' }}>
+      <Ionicons name={vert ? 'checkmark-circle' : 'lock-closed'} size={12} color={vert ? '#047857' : 'rgba(0,0,0,0.45)'} />
+      <Text className="text-[10.5px] font-bold" style={{ color: vert ? '#047857' : 'rgba(0,0,0,0.5)' }}>{texte}</Text>
+    </View>
+  );
+}
 
 export default function ProfilCoordonneesScreen() {
   const { user, profile, refreshProfile } = useAuth();
-  const [edition, setEdition] = useState<string | null>(null);
-  const [saisie, setSaisie] = useState('');
+  const [whatsappBoutique, setWhatsappBoutique] = useState('');
+  const [villeBoutique, setVilleBoutique] = useState('');
+  const [chargement, setChargement] = useState(true);
+  const [editionPays, setEditionPays] = useState(false);
+  const [pays, setPays] = useState('');
   const [enCours, setEnCours] = useState(false);
 
-  const valeur = (cle: string) => {
-    const v = profile?.[cle];
-    return typeof v === 'string' ? v : '';
-  };
+  useEffect(() => {
+    if (!user?.id) return;
+    chargerMesBoutiques(user.id)
+      .then((liste) => {
+        const b = liste[0];
+        if (!b) return;
+        setWhatsappBoutique(b.telephone_whatsapp ?? '');
+        if (b.ville) setVilleBoutique(b.ville);
+        else if (b.latitude != null && b.longitude != null) {
+          // Ville de la position verrouillée : la plus proche parmi les villes connues de l'application.
+          const proche = VILLES.reduce((m, v) => {
+            const d = (v.lat - (b.latitude as number)) ** 2 + (v.lng - (b.longitude as number)) ** 2;
+            return d < m.d ? { d, nom: v.nom } : m;
+          }, { d: Infinity, nom: '' });
+          setVilleBoutique(proche.nom);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setChargement(false));
+  }, [user?.id]);
 
-  async function enregistrer(cle: string) {
+  const texte = (cle: string) => {
+    const v = profile?.[cle];
+    return typeof v === 'string' ? v.trim() : '';
+  };
+  const telephone = user?.phone || texte('phone');
+  const email = user?.email || texte('contact_email');
+  const whatsapp = whatsappBoutique || texte('contact_whatsapp');
+  const ville = villeBoutique || texte('city');
+  const paysEnregistre = texte('country');
+
+  async function enregistrerPays() {
     if (!user?.id || enCours) return;
     setEnCours(true);
     try {
-      await enregistrerChampsProfil(user.id, { [cle]: saisie.trim() || null });
+      await enregistrerChampsProfil(user.id, { country: pays.trim() || null });
       await refreshProfile();
-      setEdition(null);
+      setEditionPays(false);
     } catch {
-      Alert.alert('Erreur', "Impossible d'enregistrer pour le moment.");
+      Alert.alert('Erreur', "Impossible d'enregistrer le pays pour le moment.");
     } finally {
       setEnCours(false);
     }
   }
 
   return (
-    <View className="flex-1 bg-[#F2F0EA]">
+    <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Coordonnées" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <View className="bg-white rounded-2xl px-4 py-1">
-            {CHAMPS.map((c, i) => {
-              const enEdition = edition === c.cle;
-              return (
-                <View key={c.cle} className={i > 0 ? 'border-t border-black/[0.06]' : ''}>
-                  {enEdition ? (
-                    <View className="py-3">
-                      <Text className="text-[10.5px] font-bold text-black/40 tracking-wider">{c.libelle}</Text>
-                      <View className="flex-row items-center gap-2 mt-1">
-                        <TextInput
-                          value={saisie}
-                          onChangeText={setSaisie}
-                          autoFocus
-                          placeholder={c.placeholder}
-                          placeholderTextColor="rgba(0,0,0,0.3)"
-                          keyboardType={c.clavier}
-                          autoCapitalize={c.cle === 'contact_email' ? 'none' : 'sentences'}
-                          onSubmitEditing={() => enregistrer(c.cle)}
-                          className="flex-1 text-[14px] font-bold text-[#1A1A1A]"
-                          style={{ paddingVertical: 4, outlineStyle: 'none' } as object}
-                        />
-                        <Pressable onPress={() => enregistrer(c.cle)} disabled={enCours} accessibilityLabel="Enregistrer" hitSlop={8} className="items-center justify-center rounded-full" style={{ width: 34, height: 34, backgroundColor: '#D7F2EA' }}>
-                          {enCours ? <ActivityIndicator color="#047857" size="small" /> : <Ionicons name="checkmark" size={18} color="#047857" />}
-                        </Pressable>
-                      </View>
-                    </View>
-                  ) : (
-                    <Pressable
-                      onPress={() => {
-                        setSaisie(valeur(c.cle));
-                        setEdition(c.cle);
-                      }}
-                      className="flex-row items-center py-3"
-                      accessibilityRole="button">
-                      <View className="flex-1">
-                        <Text className="text-[10.5px] font-bold text-black/40 tracking-wider">{c.libelle}</Text>
-                        <Text className="text-[14px] font-bold mt-0.5" style={{ color: valeur(c.cle) ? '#1A1A1A' : 'rgba(0,0,0,0.3)' }}>
-                          {valeur(c.cle) || c.placeholder}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={15} color="rgba(0,0,0,0.3)" />
-                    </Pressable>
-                  )}
-                </View>
-              );
-            })}
-          </View>
+        <ScrollView contentContainerClassName="px-5 pb-8 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {chargement ? <ActivityIndicator style={{ marginTop: 8 }} color="#047857" /> : null}
+
+          <CarteMenu
+            icone="call-outline"
+            titre="Téléphone"
+            sous={telephone || 'Aucun numéro confirmé'}
+            sansFleche
+            droite={telephone && user?.phone ? <Pastille texte="Confirmé" vert /> : undefined}
+            onPress={() => {}}
+          />
+          <CarteMenu
+            icone="logo-whatsapp"
+            titre="WhatsApp"
+            sous={whatsapp || 'Aucun numéro WhatsApp'}
+            sansFleche
+            droite={whatsapp ? <Pastille texte="Confirmé" vert /> : undefined}
+            onPress={() => {}}
+          />
+          <CarteMenu
+            icone="mail-outline"
+            titre="E-mail"
+            sous={email || 'Aucune adresse'}
+            sansFleche
+            droite={email && user?.email_confirmed_at ? <Pastille texte="Confirmé" vert /> : undefined}
+            onPress={() => {}}
+          />
+          <CarteMenu
+            icone="location-outline"
+            titre="Ville"
+            sous={ville || 'Non renseignée'}
+            sansFleche
+            droite={ville ? <Pastille texte="Verrouillée" /> : undefined}
+            onPress={() => {}}
+          />
+
+          <CarteMenu
+            icone="earth-outline"
+            titre="Pays"
+            sous={paysEnregistre || 'Choisir un pays'}
+            droite={<Ionicons name={editionPays ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(0,0,0,0.45)" />}
+            onPress={() => {
+              setPays(paysEnregistre);
+              setEditionPays((v) => !v);
+            }}
+          />
+          {editionPays ? (
+            <View className="bg-white rounded-2xl p-3.5 gap-3">
+              <SelecteurPays valeur={pays} onChange={setPays} />
+              <Pressable
+                onPress={enregistrerPays}
+                disabled={enCours}
+                className="self-start rounded-full px-5 py-2.5"
+                style={{ backgroundColor: '#047857', opacity: enCours ? 0.5 : 1 }}>
+                <Text className="text-[13px] font-bold text-white">{enCours ? 'Enregistrement…' : 'Enregistrer'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
