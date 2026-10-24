@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,6 +57,10 @@ export default function ProfilSecuriteScreen() {
   const [actuel, setActuel] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [enCours, setEnCours] = useState(false);
+  const defilement = useRef<ScrollView>(null);
+  // Un champ du formulaire reçoit le focus : on descend jusqu'au bas de la page, pour voir le champ ET le bouton « Changer le mot de passe »
+  // au-dessus du clavier (la page est arrêtée au-dessus du clavier, voir ConteneurClavier).
+  const versLeBas = () => setTimeout(() => defilement.current?.scrollToEnd({ animated: true }), 250);
   // Pays : modifiable ici (profiles.country) par un menu déroulant.
   const [editionPays, setEditionPays] = useState(false);
   const [pays, setPays] = useState('');
@@ -177,7 +181,7 @@ export default function ProfilSecuriteScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Sécurité & Connexion" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView ref={defilement} contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View className="bg-white rounded-2xl p-3.5">
             <View className="flex-row items-center gap-2">
               <Ionicons name="card-outline" size={15} color="#2563EB" />
@@ -274,14 +278,14 @@ export default function ProfilSecuriteScreen() {
             {aUnMotDePasse === true ? (
               <>
                 <Text className="text-[12px] font-bold text-black/55 mt-3.5">Mot de passe actuel</Text>
-                <ChampMotDePasse valeur={actuel} onChange={setActuel} />
+                <ChampMotDePasse valeur={actuel} onChange={setActuel} onFocus={versLeBas} />
               </>
             ) : null}
 
             {typeof aUnMotDePasse === 'boolean' ? (
               <>
                 <Text className="text-[12px] font-bold text-black/55 mt-3.5">Nouveau mot de passe</Text>
-                <ChampMotDePasse valeur={motDePasse} onChange={setMotDePasse} nouveau />
+                <ChampMotDePasse valeur={motDePasse} onChange={setMotDePasse} nouveau onFocus={versLeBas} />
                 <View className="mt-2 gap-1">
                   <Critere ok={assezLong} texte={`${LONGUEUR_MIN} caractères minimum`} />
                   <Critere ok={/[A-Za-z]/.test(motDePasse)} texte="Au moins une lettre (conseillé)" />
@@ -291,7 +295,7 @@ export default function ProfilSecuriteScreen() {
                 {aUnMotDePasse === true ? (
                   <>
                     <Text className="text-[12px] font-bold text-black/55 mt-3.5">Confirmer le nouveau mot de passe</Text>
-                    <ChampMotDePasse valeur={confirmation} onChange={setConfirmation} nouveau />
+                    <ChampMotDePasse valeur={confirmation} onChange={setConfirmation} nouveau onFocus={versLeBas} />
                     {confirmation ? <Critere ok={confirmation === motDePasse} texte={confirmation === motDePasse ? 'Les deux mots de passe sont identiques' : 'Les deux mots de passe sont différents'} /> : null}
                   </>
                 ) : null}

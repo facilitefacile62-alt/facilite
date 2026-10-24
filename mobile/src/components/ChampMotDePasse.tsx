@@ -8,18 +8,21 @@ export default function ChampMotDePasse({
   onChange,
   placeholder = '••••••••',
   nouveau,
+  onFocus,
 }: {
   valeur: string;
   onChange: (t: string) => void;
   placeholder?: string;
   /** Mot de passe à créer (et non à saisir) : indique au clavier de proposer un mot de passe fort. */
   nouveau?: boolean;
+  onFocus?: () => void;
 }) {
   const [visible, setVisible] = useState(false);
   return (
     <View className="flex-row items-center border-[1.5px] border-[#0B3D2A] rounded-[14px] mt-2">
       <TextInput
         value={valeur}
+        onFocus={onFocus}
         onChangeText={onChange}
         placeholder={placeholder}
         placeholderTextColor="rgba(0,0,0,0.3)"
