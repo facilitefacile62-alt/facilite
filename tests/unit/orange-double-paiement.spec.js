@@ -222,28 +222,36 @@ test.describe("validité du QR : 5 minutes, une seule constante", () => {
     expect(phraseTempsEcoule(false, "Générer mon QR de paiement Orange Money")).toBe("Le temps est écoulé. Touchez « Générer mon QR de paiement Orange Money » pour recommencer.");
   });
 
-  for (const [nom, fichier] of [
-    ["jetons", "src/app/premium/PremiumClient.jsx"],
-    ["formation CV", "src/app/formation-redaction-cv/FormationRedactionCvClient.jsx"],
-  ]) {
-    test(`${nom} : QR masqué à l'expiration (jamais scannable), bouton prêt, interrogation du statut qui continue`, () => {
-      const s = lire(fichier);
-      const composant = lire("src/components/AttentePaiementQr.jsx");
-      expect(composant).toContain("texteValidite(paiement.validForSeconds)");
-      expect(composant).toContain("phraseTempsEcoule(");
-      expect(s).toContain("<AttentePaiementQr");
-      expect(s).toContain("qrExpire={qrExpire}");
-      expect(s).toContain("boutonRecommencer={renderBoutonGenerer()}");
-      // Écran « temps écoulé » du composant : plus de QR à l'écran
-      const debut = composant.indexOf("if (qrExpire) {");
-      const fin = composant.indexOf('data-testid="paiement-en-attente"', debut);
-      const ecranTempsEcoule = composant.slice(debut, fin);
-      expect(ecranTempsEcoule).toContain("boutonRecommencer");
-      expect(ecranTempsEcoule).not.toMatch(/qrCodeBase64|<img|data:image/);
-      expect(s).toContain("setInterval(interroger, POLL_INTERVAL_MS)"); // le suivi du paiement ne s'arrête pas à l'expiration
-      expect(s).not.toMatch(/setQrExpire\(true\)[^;]*arreterSondage/); // l'expiration n'arrête pas le suivi
-    });
-  }
+  test("formation CV : QR masqué à l'expiration (jamais scannable), bouton prêt, interrogation du statut qui continue", () => {
+    const s = lire("src/app/formation-redaction-cv/FormationRedactionCvClient.jsx");
+    const composant = lire("src/components/AttentePaiementQr.jsx");
+    expect(composant).toContain("texteValidite(paiement.validForSeconds)");
+    expect(composant).toContain("phraseTempsEcoule(");
+    expect(s).toContain("<AttentePaiementQr");
+    expect(s).toContain("qrExpire={qrExpire}");
+    expect(s).toContain("boutonRecommencer={renderBoutonGenerer()}");
+    // Écran « temps écoulé » du composant : plus de QR à l'écran
+    const debut = composant.indexOf("if (qrExpire) {");
+    const fin = composant.indexOf('data-testid="paiement-en-attente"', debut);
+    const ecranTempsEcoule = composant.slice(debut, fin);
+    expect(ecranTempsEcoule).toContain("boutonRecommencer");
+    expect(ecranTempsEcoule).not.toMatch(/qrCodeBase64|<img|data:image/);
+    expect(s).toContain("setInterval(interroger, POLL_INTERVAL_MS)"); // le suivi du paiement ne s'arrête pas à l'expiration
+    expect(s).not.toMatch(/setQrExpire\(true\)[^;]*arreterSondage/); // l'expiration n'arrête pas le suivi
+  });
+
+  test("jetons : à l'expiration le QR et la barre fixe disparaissent (seuls le message « temps écoulé » et le bouton restent), le suivi continue", () => {
+    const s = lire("src/app/premium/PremiumClient.jsx");
+    expect(s).toContain('const enAttenteQr = statutAchat === "attente" && Boolean(paiement) && !qrExpire;');
+    expect(s).toContain('{statutAchat === "attente" && paiement && !qrExpire ? (');
+    expect(s).toContain("<QrPaiementCarte paiement={paiement} />");
+    expect(s).toContain("{enAttenteQr && <BarrePaiementFixe");
+    expect(s).toContain('phraseTempsEcoule(estMobile, "Générer mon QR de paiement Orange Money")');
+    // le bouton pour recommencer est celui du formulaire, affiché dès que le QR est masqué
+    expect(s).toContain("{renderBoutonGenerer()}");
+    expect(s).toContain("setInterval(interroger, POLL_INTERVAL_MS)");
+    expect(s).not.toMatch(/setQrExpire\(true\)[^;]*arreterSondage/);
+  });
 });
 
 test.describe("réduire le risque de double paiement", () => {
