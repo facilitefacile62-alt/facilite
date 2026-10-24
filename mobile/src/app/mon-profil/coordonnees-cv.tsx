@@ -8,7 +8,7 @@ import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 
-// Coordonnées DU CV (« Modifier infos » > À propos) : téléphone, e-mail et ville que le candidat choisit de mettre sur son CV, pour que les
+// Contact DU CV (« Modifier infos » > À propos) : téléphone, e-mail et ville que le candidat choisit de mettre sur son CV, pour que les
 // recruteurs sachent comment le joindre. Colonnes À PART du profil (cv_telephone, cv_email, cv_ville, migration 20261024120000) : elles restent
 // VIDES tant que la personne ne les remplit pas — rien n'est repris du numéro ou de l'e-mail du compte.
 const CHAMPS = [
@@ -50,11 +50,11 @@ export default function ProfilCoordonneesCvScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
       <SafeAreaView className="flex-1" edges={['top']}>
-        <EnteteRubrique titre="Coordonnées du CV" />
+        <EnteteRubrique titre="Contact" />
 
         <ScrollView contentContainerClassName="px-5 pb-8 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Text className="text-[12.5px] leading-[18px]" style={{ color: 'rgba(0,0,0,0.55)' }}>
-            Ce sont les coordonnées de votre CV, pour que les recruteurs sachent comment vous joindre. Elles restent vides tant que vous ne les remplissez pas.
+            Ce sont les informations de contact de votre CV, pour que les recruteurs sachent comment vous joindre. Elles restent vides tant que vous ne les remplissez pas.
           </Text>
 
           {CHAMPS.map((c) => {
