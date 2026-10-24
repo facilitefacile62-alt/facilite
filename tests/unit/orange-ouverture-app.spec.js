@@ -176,7 +176,7 @@ test.describe("les deux pages de paiement utilisent cette logique, sans toucher 
     ["formation CV", "src/app/formation-redaction-cv/FormationRedactionCvClient.jsx"],
   ]) {
     test(`${nom} : ouverture automatique une fois, retour interrogé tout de suite, interrogation toutes les 4 s, boutons et QR conservés`, () => {
-      const s = lire(fichier);
+      const s = lire(fichier) + lire("src/components/AttentePaiementQr.jsx");
       expect(s).toContain("useOuvertureAppPaiement");
       expect(s).toContain("tenterAuto(");
       expect(s).toContain("interrogerRef.current = interroger");
@@ -185,7 +185,7 @@ test.describe("les deux pages de paiement utilisent cette logique, sans toucher 
       expect(s).toContain("Ouvrir MAXIT");
       expect(s).toContain("Ouvrir Orange Money");
       expect(s).toContain("data:image/png;base64");
-      expect(s).toContain("order-first"); // « Ouvrir MAXIT » au premier plan sur téléphone
+      expect(s).toContain('data-testid="ouvrir-maxit"'); // « Ouvrir MAXIT » au premier plan sur téléphone (voir les tests de rendu)
     });
   }
 
