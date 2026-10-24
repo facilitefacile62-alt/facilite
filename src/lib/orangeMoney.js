@@ -419,8 +419,17 @@ export function evaluerConfirmationOrange(reponse, { reference, montantXof }) {
   if (STATUTS_ECHEC.has(statut)) return { etat: "echec", raison: `statut ${statut}` };
   if (statut !== "SUCCESS") return { etat: "attente", raison: `statut ${statut || "absent"}` };
 
-  if (!reference || String(reponse?.reference ?? "") !== String(reference)) {
-    return { etat: "incoherent", raison: "référence absente ou différente" };
+  if (!reference) return { etat: "incoherent", raison: "référence de commande absente" };
+  // Référence ABSENTE de la réponse : la recherche n'a pas (encore) retrouvé la transaction — constaté en production le 24/10/2026, la
+  // notification arrivant moins d'une seconde après le paiement, avant que la recherche ne la liste. Ce n'est pas un rejet : jamais de crédit,
+  // mais « pas encore confirmable » (le webhook répond 503 pour qu'Orange renvoie, le rattrapage et la page continuent). Une référence
+  // PRÉSENTE mais différente reste « incohérent ».
+  const referenceRecue = reponse?.reference;
+  if (referenceRecue === null || referenceRecue === undefined || String(referenceRecue) === "") {
+    return { etat: "attente", raison: "transaction pas encore retrouvée par la recherche" };
+  }
+  if (String(referenceRecue) !== String(reference)) {
+    return { etat: "incoherent", raison: "référence différente" };
   }
   const brut = reponse?.amount;
   const valeur = Number(typeof brut === "object" && brut !== null ? brut.value : brut);

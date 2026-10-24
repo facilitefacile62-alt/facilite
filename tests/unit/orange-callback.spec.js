@@ -63,7 +63,7 @@ test.describe("confirmation Orange face à la commande", () => {
     expect(evaluerConfirmationOrange({ ...ok, amount: { value: 50, unit: "XOF" } }, cmd).etat).toBe("incoherent");
     expect(evaluerConfirmationOrange({ ...ok, reference: "autre" }, cmd).etat).toBe("incoherent");
     expect(evaluerConfirmationOrange({ ...ok, amount: { value: 5000, unit: "EUR" } }, cmd).etat).toBe("incoherent");
-    expect(evaluerConfirmationOrange({ status: "SUCCESS" }, cmd).etat).toBe("incoherent");
+    expect(evaluerConfirmationOrange({ status: "SUCCESS" }, cmd).etat).toBe("attente");
     expect(evaluerConfirmationOrange(ok, { reference: REF, montantXof: null }).etat).toBe("incoherent");
   });
 
