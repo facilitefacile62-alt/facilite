@@ -1,131 +1,176 @@
-// Changement du code PIN du compte marchand Orange Money (API « Mobile Money Account » / changePinCode).
+// Changement du code PIN d'un compte Orange Money par l'API (documentation officielle Orange Money API v1.1.0).
 //
-// ÉTAT : PRÊT, NON EXÉCUTÉ. Lancé sans option, le script ne fait AUCUN appel réseau : il vérifie la configuration et
-// affiche ce qu'il ferait (mode « à blanc »). Il n'appelle changePinCode qu'avec --confirmer, après le feu vert explicite
-// du propriétaire : un PIN changé par erreur peut bloquer le compte.
+// Chemins documentés : jeton POST /oauth/v1/token · clé publique GET /api/account/v1/publicKeys (champs key, keyId, keySize, keyType)
+// · changement PATCH /api/eWallet/v1/account?msisdn=…&type=customer|retailer, corps { encryptedPinCode (actuel), encryptedNewPinCode
+// (nouveau) } · lecture de solde (sans effet) POST /api/eWallet/v1/account/customer/balance. Les PIN sont chiffrés en RSA avec la clé
+// publique puis encodés en Base64 (344 caractères pour une clé de 2048 bits). La documentation ne dit PAS quel bourrage RSA utiliser :
+// le script le détecte (PKCS#1 v1.5, puis OAEP SHA-1, puis OAEP SHA-256) avec un appel de solde sans effet — 4003 = déchiffrement
+// impossible, 2011 / 2012 / 2013 = PIN erroné (le chiffrement est donc bon). Code 4003 au changement : redemander la clé publique.
 //
-// Étapes (--confirmer) : 1) jeton OAuth2 · 2) récupération de la clé publique (« Get public key ») ·
-// 3) chiffrement du nouveau PIN avec cette clé · 4) appel changePinCode.
+// SÉCURITÉ
+//  - Aucun PIN, jeton, secret, clé ou texte chiffré n'est affiché, journalisé ni écrit dans un fichier. Les PIN sont saisis au clavier
+//    SANS écho (ou, hors terminal, lus dans OM_CURRENT_PIN / OM_NEW_PIN du fichier .env.local, ignoré par git) ; jamais en argument.
+//  - Sans option, le script ne fait AUCUN appel réseau (mode à blanc). Un vrai changement exige --confirmer.
+//  - Sur la PRODUCTION (ORANGE_MONEY_API_BASE_URL = https://api.orange-sonatel.com) il exige en plus --production. Par défaut : SANDBOX.
 //
-// Le nouveau PIN est lu UNIQUEMENT dans OM_NEW_PIN (.env.local) : jamais en argument de ligne de commande (visible dans la
-// liste des processus), jamais affiché, jamais journalisé — ni lui, ni le texte chiffré, ni la clé, ni les corps de réponse.
-//
-// Les chemins d'API et l'algorithme de chiffrement ci-dessous n'ont PAS pu être relus dans la documentation du portail
-// (rendue côté navigateur, illisible hors connexion) : ils ne sont donc PAS codés en dur ici. Il faut les renseigner dans
-// .env.local d'après la rubrique « Mobile Money Account » avant tout --confirmer :
-//   OM_PUBKEY_PATH       chemin de « Get public key » (ex. /api/…), obligatoire
-//   OM_PUBKEY_FIELD      champ de la réponse qui contient la clé (défaut : publicKey)
-//   OM_CHANGEPIN_PATH    chemin de changePinCode, obligatoire
-//   OM_CHANGEPIN_BODY    gabarit JSON du corps, où {PIN_CHIFFRE} sera remplacé (ex. {"newPin":"{PIN_CHIFFRE}"}), obligatoire
-//   OM_PIN_PADDING       oaep-sha256 | oaep-sha1 | pkcs1 — obligatoire, selon la doc
-//   OM_CHANGEPIN_METHOD  POST | PUT (défaut : POST)
-//
-// Usage : node --env-file=.env.local scripts/orange-money-change-pin.mjs [--confirmer]
+// Usage :
+//   node --env-file=.env.local scripts/orange-money-change-pin.mjs                      (à blanc)
+//   node --env-file=.env.local scripts/orange-money-change-pin.mjs --sandbox-essai      (SANDBOX : numéros de test d'Orange, PIN d'essai
+//                                                                                        changé puis RESTAURÉ ; rien d'autre n'est touché)
+//   node --env-file=.env.local scripts/orange-money-change-pin.mjs --confirmer [--production]   (vrai changement : OM_MSISDN, OM_TYPE)
 import crypto from "node:crypto";
+import readline from "node:readline";
 
-const confirmer = process.argv.includes("--confirmer");
 const SANDBOX = "https://api.sandbox.orange-sonatel.com";
-const base = process.env.ORANGE_MONEY_API_BASE_URL || SANDBOX;
+const PRODUCTION = "https://api.orange-sonatel.com";
+const base = (process.env.ORANGE_MONEY_API_BASE_URL || SANDBOX).replace(/\/$/, "");
+const confirmer = process.argv.includes("--confirmer");
+const essaiSandbox = process.argv.includes("--sandbox-essai");
+const production = process.argv.includes("--production");
+const estProduction = base === PRODUCTION;
 
-function exige(nom) {
-  const v = process.env[nom];
-  if (!v) return null;
-  return v;
+async function fetchOm(chemin, init = {}) {
+  const reponse = await fetch(`${base}${chemin}`, init);
+  const donnees = await reponse.json().catch(() => ({}));
+  return { statut: reponse.status, donnees };
 }
 
-const config = {
-  OM_NEW_PIN: exige("OM_NEW_PIN"),
-  ORANGE_MONEY_CLIENT_ID: exige("ORANGE_MONEY_CLIENT_ID"),
-  ORANGE_MONEY_CLIENT_SECRET: exige("ORANGE_MONEY_CLIENT_SECRET"),
-  OM_PUBKEY_PATH: exige("OM_PUBKEY_PATH"),
-  OM_CHANGEPIN_PATH: exige("OM_CHANGEPIN_PATH"),
-  OM_CHANGEPIN_BODY: exige("OM_CHANGEPIN_BODY"),
-  OM_PIN_PADDING: exige("OM_PIN_PADDING"),
-};
-const champCle = process.env.OM_PUBKEY_FIELD || "publicKey";
-const methode = (process.env.OM_CHANGEPIN_METHOD || "POST").toUpperCase();
-const manquants = Object.entries(config).filter(([, v]) => !v).map(([k]) => k);
-
-console.log(`Environnement : ${process.env.OM_ENVIRONMENT || "(OM_ENVIRONMENT absent)"} — ${base}`);
-console.log(manquants.length ? `Variables manquantes : ${manquants.join(", ")}` : "Variables : toutes présentes.");
-
-if (config.OM_NEW_PIN && !/^\d{4}$/.test(config.OM_NEW_PIN)) {
-  console.log("OM_NEW_PIN n'a pas la forme attendue (4 chiffres) — à vérifier dans la documentation Orange.");
-}
-
-if (!confirmer) {
-  console.log("\nMode à blanc : aucun appel réseau effectué.");
-  console.log("Ce que ferait --confirmer : jeton OAuth2 → GET clé publique → chiffrement du PIN → " + `${methode} changePinCode.`);
-  process.exit(manquants.length ? 1 : 0);
-}
-if (manquants.length) {
-  console.error("Arrêt : renseignez d'abord les variables manquantes (aucun appel effectué).");
-  process.exit(1);
-}
-
-const paddings = {
-  "oaep-sha256": { padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
-  "oaep-sha1": { padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha1" },
-  pkcs1: { padding: crypto.constants.RSA_PKCS1_PADDING },
-};
-if (!paddings[config.OM_PIN_PADDING]) {
-  console.error("OM_PIN_PADDING inconnu (oaep-sha256 | oaep-sha1 | pkcs1). Arrêt, aucun appel effectué.");
-  process.exit(1);
-}
-
-// Message d'erreur sûr : statut HTTP et code/message d'Orange, jamais le corps entier.
-function erreurSure(etape, statut, donnees) {
-  const code = donnees?.code ?? donnees?.errorCode ?? "";
-  const msg = typeof donnees?.message === "string" ? donnees.message.slice(0, 200) : "";
-  return `${etape} : échec (HTTP ${statut}${code ? `, code ${code}` : ""}${msg ? `, ${msg}` : ""}).`;
-}
-
-async function main() {
-  // 1) Jeton OAuth2 (même flux que src/lib/orangeMoney.js)
-  const rJeton = await fetch(`${base}/oauth/v1/token`, {
+async function jeton() {
+  const { statut, donnees } = await fetchOm("/oauth/v1/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: config.ORANGE_MONEY_CLIENT_ID,
-      client_secret: config.ORANGE_MONEY_CLIENT_SECRET,
-      grant_type: "client_credentials",
-    }),
+    body: new URLSearchParams({ client_id: process.env.ORANGE_MONEY_CLIENT_ID, client_secret: process.env.ORANGE_MONEY_CLIENT_SECRET, grant_type: "client_credentials" }),
   });
-  const dJeton = await rJeton.json().catch(() => ({}));
-  if (!rJeton.ok || !dJeton.access_token) throw new Error(erreurSure("Jeton OAuth2", rJeton.status, dJeton));
-  const auth = { Authorization: `Bearer ${dJeton.access_token}` };
-  console.log("1/4 jeton OAuth2 obtenu.");
-
-  // 2) Clé publique
-  const rCle = await fetch(`${base}${config.OM_PUBKEY_PATH}`, { headers: auth });
-  const dCle = await rCle.json().catch(() => ({}));
-  const cleBrute = dCle?.[champCle];
-  if (!rCle.ok || typeof cleBrute !== "string") throw new Error(erreurSure("Clé publique", rCle.status, dCle));
-  // PEM complet, ou base64 DER (SPKI) nu : on accepte les deux.
-  const pem = cleBrute.includes("BEGIN")
-    ? cleBrute
-    : `-----BEGIN PUBLIC KEY-----\n${cleBrute.replace(/\s+/g, "").match(/.{1,64}/g).join("\n")}\n-----END PUBLIC KEY-----`;
-  console.log("2/4 clé publique récupérée.");
-
-  // 3) Chiffrement du PIN
-  const chiffre = crypto
-    .publicEncrypt({ key: pem, ...paddings[config.OM_PIN_PADDING] }, Buffer.from(config.OM_NEW_PIN, "utf8"))
-    .toString("base64");
-  console.log("3/4 PIN chiffré.");
-
-  // 4) changePinCode
-  const corps = config.OM_CHANGEPIN_BODY.replace("{PIN_CHIFFRE}", chiffre);
-  const rPin = await fetch(`${base}${config.OM_CHANGEPIN_PATH}`, {
-    method: methode,
-    headers: { ...auth, "Content-Type": "application/json" },
-    body: corps,
-  });
-  const dPin = await rPin.json().catch(() => ({}));
-  if (!rPin.ok) throw new Error(erreurSure("changePinCode", rPin.status, dPin));
-  console.log(`4/4 changePinCode : accepté (HTTP ${rPin.status}).`);
+  if (statut !== 200 || !donnees.access_token) throw new Error(`Jeton refusé (HTTP ${statut}).`);
+  return donnees.access_token;
 }
 
-main().catch((e) => {
-  console.error(e.message);
+async function clePublique(token) {
+  const { statut, donnees } = await fetchOm("/api/account/v1/publicKeys", { headers: { Authorization: `Bearer ${token}` } });
+  if (statut !== 200 || !donnees.key) throw new Error(`Clé publique indisponible (HTTP ${statut}).`);
+  const pem = `-----BEGIN PUBLIC KEY-----\n${String(donnees.key).match(/.{1,64}/g).join("\n")}\n-----END PUBLIC KEY-----\n`;
+  return { pem, keyId: donnees.keyId };
+}
+
+const BOURRAGES = {
+  pkcs1: { padding: crypto.constants.RSA_PKCS1_PADDING },
+  "oaep-sha1": { padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha1" },
+  "oaep-sha256": { padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
+};
+function chiffrer(pin, pem, bourrage) {
+  return crypto.publicEncrypt({ key: pem, ...BOURRAGES[bourrage] }, Buffer.from(pin, "utf8")).toString("base64");
+}
+
+/** Lecture de solde client (sans effet) : sert à vérifier le chiffrement. Renvoie le statut HTTP et le code d'erreur Orange éventuel. */
+async function essaiSolde(token, msisdn, pin, pem, bourrage) {
+  const { statut, donnees } = await fetchOm("/api/eWallet/v1/account/customer/balance", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ idType: "MSISDN", id: msisdn, encryptedPinCode: chiffrer(pin, pem, bourrage), wallet: "principal" }),
+  });
+  return { statut, code: donnees?.code ? String(donnees.code) : null };
+}
+
+async function detecterBourrage(token, msisdn, pin, pem) {
+  for (const nom of Object.keys(BOURRAGES)) {
+    const { statut, code } = await essaiSolde(token, msisdn, pin, pem, nom);
+    if (statut === 200) return { nom, preuve: "solde lu" };
+    if (code && ["2011", "2012", "2013"].includes(code)) return { nom, preuve: `PIN reconnu comme tel (code ${code}) : le chiffrement est accepté` };
+  }
+  return null;
+}
+
+async function changerPin({ token, msisdn, type, pinActuel, pinNouveau, pem, bourrage }) {
+  return fetchOm(`/api/eWallet/v1/account?msisdn=${encodeURIComponent(msisdn)}&type=${type}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ encryptedPinCode: chiffrer(pinActuel, pem, bourrage), encryptedNewPinCode: chiffrer(pinNouveau, pem, bourrage) }),
+  });
+}
+
+/** Saisie d'un PIN sans écho dans un terminal ; hors terminal, la variable d'environnement donnée. */
+function saisirPin(question, variable) {
+  if (!process.stdin.isTTY) return Promise.resolve(process.env[variable] || "");
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    const ecrire = rl._writeToOutput;
+    rl.question(question, (reponse) => {
+      rl._writeToOutput = ecrire;
+      rl.close();
+      process.stdout.write("\n");
+      resolve(reponse.trim());
+    });
+    rl._writeToOutput = (t) => (t.includes(question) ? ecrire.call(rl, t) : undefined);
+  });
+}
+
+const resume = (r) => `HTTP ${r.statut}${r.donnees?.code ? ` · code ${r.donnees.code}` : ""}${r.donnees?.status ? ` · ${r.donnees.status}` : ""}`;
+
+async function main() {
+  console.log(`Environnement : ${estProduction ? "PRODUCTION" : "SANDBOX"} — ${base}`);
+  const manquants = ["ORANGE_MONEY_CLIENT_ID", "ORANGE_MONEY_CLIENT_SECRET"].filter((n) => !process.env[n]);
+  if (manquants.length) {
+    console.log(`Variables manquantes : ${manquants.join(", ")}`);
+    process.exit(1);
+  }
+
+  if (!confirmer && !essaiSandbox) {
+    console.log("\nMode à blanc : aucun appel réseau effectué.");
+    console.log("--sandbox-essai : SANDBOX seulement, numéros de test d'Orange (PIN d'essai changé puis restauré).");
+    console.log("--confirmer     : vrai changement de PIN (OM_MSISDN, OM_TYPE=customer|retailer ; PIN saisis sans écho)." + (estProduction ? " Production : ajouter --production." : ""));
+    return;
+  }
+
+  if (essaiSandbox) {
+    if (estProduction) throw new Error("--sandbox-essai est interdit sur la production.");
+    const token = await jeton();
+    const sims = await fetchOm("/api/assignments/v1/partner/sim-cards?nbCustomers=1&nbMerchants=1", { headers: { Authorization: `Bearer ${token}` } });
+    const liste = Array.isArray(sims.donnees) ? sims.donnees : [];
+    const client = liste.find((s) => s.type === "CUSTOMER");
+    const marchand = liste.find((s) => s.type === "MERCHANT");
+    if (!client || !marchand) throw new Error(`Numéros de test indisponibles (HTTP ${sims.statut}).`);
+    const { pem, keyId } = await clePublique(token);
+    console.log(`Clé publique lue (keyId ${keyId}). Numéros de test : 1 client, 1 marchand (sandbox).`);
+
+    const detecte = await detecterBourrage(token, client.msisdn, client.pinCode, pem);
+    if (!detecte) throw new Error("Aucun bourrage RSA n'est accepté (4003 partout) : clé à redemander, ou bourrage non prévu.");
+    console.log(`Bourrage RSA accepté par Orange : ${detecte.nom} (${detecte.preuve}).`);
+
+    // Changement du PIN du MARCHAND de test vers un PIN d'essai aléatoire, puis restauration.
+    const pinEssai = String(1000 + crypto.randomInt(0, 9000));
+    const aller = await changerPin({ token, msisdn: marchand.msisdn, type: "retailer", pinActuel: marchand.pinCode, pinNouveau: pinEssai, pem, bourrage: detecte.nom });
+    console.log(`Changement du PIN du marchand de test : ${resume(aller)}`);
+    if (aller.statut === 200) {
+      const retour = await changerPin({ token, msisdn: marchand.msisdn, type: "retailer", pinActuel: pinEssai, pinNouveau: marchand.pinCode, pem, bourrage: detecte.nom });
+      console.log(`Restauration du PIN d'origine : ${resume(retour)}`);
+    }
+    return;
+  }
+
+  // Vrai changement.
+  if (estProduction && !production) throw new Error("Production détectée : relancer avec --production pour confirmer explicitement.");
+  const msisdn = process.env.OM_MSISDN || "";
+  const type = process.env.OM_TYPE || "";
+  if (!/^\d{9}$/.test(msisdn) || !["customer", "retailer"].includes(type)) throw new Error("OM_MSISDN (9 chiffres) et OM_TYPE (customer | retailer) sont requis dans .env.local.");
+  const pinActuel = await saisirPin("PIN actuel (saisie masquée) : ", "OM_CURRENT_PIN");
+  const pinNouveau = await saisirPin("Nouveau PIN (saisie masquée) : ", "OM_NEW_PIN");
+  if (!/^\d{4}$/.test(pinActuel) || !/^\d{4}$/.test(pinNouveau)) throw new Error("Les PIN doivent avoir 4 chiffres.");
+  if (pinActuel === pinNouveau) throw new Error("Le nouveau PIN doit être différent de l'actuel.");
+
+  const token = await jeton();
+  const { pem } = await clePublique(token);
+  const bourrage = process.env.OM_PIN_PADDING && BOURRAGES[process.env.OM_PIN_PADDING] ? process.env.OM_PIN_PADDING : "pkcs1";
+  let resultat = await changerPin({ token, msisdn, type, pinActuel, pinNouveau, pem, bourrage });
+  if (resultat.donnees?.code === "4003") {
+    // Clé révoquée ou invalide : on redemande la clé publique et on rejoue UNE fois.
+    const neuve = await clePublique(token);
+    resultat = await changerPin({ token, msisdn, type, pinActuel, pinNouveau, pem: neuve.pem, bourrage });
+  }
+  console.log(`Changement de PIN : ${resume(resultat)}`);
+  if (resultat.statut !== 200) process.exitCode = 1;
+}
+
+main().catch((erreur) => {
+  console.error(`Erreur : ${erreur.message}`);
   process.exit(1);
 });
