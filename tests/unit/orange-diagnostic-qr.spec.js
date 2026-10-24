@@ -66,9 +66,10 @@ test.describe("journal d'un QR refusé", () => {
     expect(journal).not.toContain(JETON_OAUTH);
   });
 
-  test("le nom accentué est signalé (nomAscii=false) et l'adresse de callback n'est jamais journalisée en clair", async () => {
+  test("le nom journalisé est celui envoyé (simplifié, ASCII, 20 caractères au plus) et l'adresse de callback n'est jamais journalisée en clair", async () => {
     const { journal } = await lancerAvecReponse(JSON.stringify({ message: `rejet de https://ffacilite.com/api/pay/jetons-webhook?t=${JETON_CALLBACK}` }));
-    expect(journal).toContain('"nomAscii":false');
+    expect(journal).toContain('"nomAscii":true');
+    expect(journal).toContain('"nomLongueur":20');
     expect(journal).not.toContain(JETON_CALLBACK);
   });
 });

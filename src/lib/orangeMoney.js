@@ -213,6 +213,39 @@ function journaliserRefusQr({ reponse, corpsBrut, donnees, requete }) {
   );
 }
 
+/** Longueur maximale du champ `name` d'un QR Orange Money : au-delà (ou avec un accent), Orange répond 500 / code 50 en production. */
+const NOM_QR_LONGUEUR_MAX = 20;
+
+/**
+ * Fabrique le champ `name` envoyé à Orange pour un QR code : lettres ASCII, chiffres et espaces seulement, sans accent, espaces multiples
+ * réduits, 20 caractères au plus, jamais vide (repli « Facilite »). Le libellé montré au client sur le site ne change pas : seul ce champ,
+ * lu uniquement par Orange, est simplifié. Constaté en production le 24/10/2026 : « Achat de 10 jetons Facilité Marketplace »
+ * (39 caractères, avec un accent) est refusé, « Test Facilite » passe.
+ */
+export function nomQrOrange(libelle, repli = "Facilite") {
+  const simplifie = String(libelle ?? "")
+    .replace(/œ/g, "oe")
+    .replace(/Œ/g, "OE")
+    .replace(/æ/g, "ae")
+    .replace(/Æ/g, "AE")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[^A-Za-z0-9 ]/g, "")
+    .replace(/ {2,}/g, " ")
+    .trim()
+    .slice(0, NOM_QR_LONGUEUR_MAX)
+    .trim();
+  return simplifie || repli;
+}
+
+/** Nom du QR d'un achat de jetons : « Achat 10 jetons » (ou « Achat 1 jeton »). */
+export const nomQrJetons = (quantite) => nomQrOrange(`Achat ${quantite} jeton${quantite > 1 ? "s" : ""}`);
+
+/** Nom du QR de la formation CV. */
+export const NOM_QR_FORMATION_CV = "Formation CV";
+
 /**
  * Génère un QR code / deeplinks de paiement marchand.
  *
@@ -229,6 +262,8 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     throw new Error("ORANGE_MONEY_MERCHANT_CODE manquant (code marchand à 6 chiffres, distinct du client_id OAuth2).");
   }
 
+  const nomEnvoye = nomQrOrange(nom);
+
   // X-Callback-Url : https obligatoire (Orange refuse le http et valide le certificat). À défaut, Orange utiliserait l'adresse
   // enregistrée via merchantcallback, que notre application n'a pas le droit d'utiliser en sandbox (401 « no apiproduct match »).
   const reponse = await appelAuthentifie("/api/eWallet/v4/qrcode", {
@@ -236,7 +271,7 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     entetes: { "Content-Type": "application/json", ...(callbackUrl ? { "X-Callback-Url": callbackUrl } : {}) },
     corps: JSON.stringify({
       code,
-      name: nom,
+      name: nomEnvoye,
       amount: { value: montantXof, unit: "XOF" },
       validity: validiteSecondes,
       callbackSuccessUrl,
@@ -254,7 +289,7 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     donnees = {};
   }
   if (!reponse.ok || !donnees.qrId) {
-    journaliserRefusQr({ reponse, corpsBrut, donnees, requete: { code, nom, montantXof, validiteSecondes, reference, callbackSuccessUrl, callbackCancelUrl, callbackUrl } });
+    journaliserRefusQr({ reponse, corpsBrut, donnees, requete: { code, nom: nomEnvoye, montantXof, validiteSecondes, reference, callbackSuccessUrl, callbackCancelUrl, callbackUrl } });
     throw new ErreurOrangeMoney(`Échec de génération du QR code Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
   }
 

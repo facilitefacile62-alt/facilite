@@ -5,7 +5,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
-import { genererJetonCallback, genererQrCodePaiement, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { genererJetonCallback, genererQrCodePaiement, NOM_QR_FORMATION_CV, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 // Paiement de la formation "Rédaction de CV" (15 000 FCFA, accès permanent)
@@ -105,7 +105,8 @@ export async function POST(req) {
       qrCode = await genererQrCodePaiement({
         reference: inscriptionId,
         montantXof: MONTANT_XOF,
-        nom: "Formation Rédaction de CV Facilité",
+        // Champ `name` lu par Orange seulement : court et sans accent (voir nomQrOrange).
+        nom: NOM_QR_FORMATION_CV,
         validiteSecondes: QR_VALIDITY_SECONDS,
         // Retour sur le site avec l'identifiant de l'inscription : la page lit l'état, elle ne valide JAMAIS le paiement sur la seule foi de ce retour.
         callbackSuccessUrl: `${appUrl}/formation-redaction-cv?statut=succes&commande=${inscriptionId}`,

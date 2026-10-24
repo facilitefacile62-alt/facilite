@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { genererJetonCallback, genererQrCodePaiement, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { genererJetonCallback, genererQrCodePaiement, nomQrJetons, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 import { z } from "zod";
 
@@ -122,7 +122,8 @@ export async function POST(req) {
       qrCode = await genererQrCodePaiement({
         reference: transaction.id,
         montantXof,
-        nom: `Achat de ${quantiteJetons} jeton${quantiteJetons > 1 ? "s" : ""} Facilité Marketplace`,
+        // Champ `name` lu par Orange seulement : court et sans accent (voir nomQrOrange) ; le libellé montré au client ne change pas.
+        nom: nomQrJetons(quantiteJetons),
         validiteSecondes: QR_VALIDITY_SECONDS,
         // Retour du client sur le site avec l'identifiant de commande : la page lit l'état de la commande, elle ne crédite JAMAIS sur la
         // seule foi de ce retour (seule la confirmation auprès d'Orange, côté serveur, crédite).
