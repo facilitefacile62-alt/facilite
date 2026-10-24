@@ -24,7 +24,10 @@ test.describe("statuts de la documentation", () => {
   test("SUCCESS sans référence ou montant correspondants n'est jamais « payé »", async () => {
     const { evaluerConfirmationOrange } = await charger();
     const attendu = { reference: REF, montantXof: 1500 };
-    expect(evaluerConfirmationOrange({ status: "SUCCESS" }, attendu).etat).toBe("incoherent");
+    // Référence ABSENTE = transaction pas encore retrouvée : jamais payée, mais en attente (pas un rejet définitif).
+    expect(evaluerConfirmationOrange({ status: "SUCCESS" }, attendu).etat).toBe("attente");
+    expect(evaluerConfirmationOrange({ status: "SUCCESS", reference: "", amount: { value: 1500 } }, attendu).etat).toBe("attente");
+    // Référence PRÉSENTE mais différente = incohérent.
     expect(evaluerConfirmationOrange({ status: "SUCCESS", reference: "autre", amount: { value: 1500 } }, attendu).etat).toBe("incoherent");
     expect(evaluerConfirmationOrange({ status: "SUCCESS", reference: REF, amount: { value: 1 } }, attendu).etat).toBe("incoherent");
     expect(evaluerConfirmationOrange({ status: "SUCCESS", reference: REF, amount: { value: 1500, unit: "EUR" } }, attendu).etat).toBe("incoherent");
@@ -118,7 +121,7 @@ test.describe("recherche + statut avant tout crédit", () => {
     m = simulerFetch(routes());
     try {
       const sans = await rechercherTransactionOrange({ transactionId: TX, reference: REF });
-      expect(evaluerConfirmationOrange(sans, { reference: REF, montantXof: 1500 }).etat).toBe("incoherent");
+      expect(evaluerConfirmationOrange(sans, { reference: REF, montantXof: 1500 }).etat).toBe("attente");
     } finally {
       m.restaurer();
     }

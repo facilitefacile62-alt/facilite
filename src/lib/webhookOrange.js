@@ -36,6 +36,8 @@ async function alerteReelle(...args) {
 //   montantXof(commande), appliquer(admin, commande, confirmation, orangeTransactionId) → { resultat }, champsJournal(commande).
 
 const REFERENCE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Attentes entre les essais de confirmation quand la transaction annoncée n'est pas encore listée par la recherche (3 essais au total).
+const DELAIS_REESSAI_MS = [1500, 3000];
 const accepte = () => reponse(202);
 const refusDefinitif = (statut, message) => reponse(statut, { error: message });
 const problemePassager = (statut = 503) => reponse(statut, { error: "Indisponible, réessayez." });
@@ -54,6 +56,7 @@ async function retirerJournal(admin, tableJournal, cle) {
 export async function traiterNotificationOrange(req, adaptateur, dependances = {}) {
   const { nom } = adaptateur;
   const rechercher = dependances.rechercher ?? rechercherTransactionOrange;
+  const attendre = dependances.attendre ?? ((ms) => new Promise((ok) => setTimeout(ok, ms)));
   const alerter = dependances.alerter ?? alerteReelle;
   // NOMS des en-têtes reçus (jamais leurs valeurs) : sert à voir ce qu'Orange envoie réellement (X-Sonatel-Signature, Authorization…).
   console.info(`[${nom}] en-têtes reçus :`, [...req.headers.keys()].sort().join(", "));
@@ -138,14 +141,24 @@ export async function traiterNotificationOrange(req, adaptateur, dependances = {
   // La notification est enregistrée durablement. Confirmation auprès d'Orange (recherche + statut), avec ou sans transactionId.
   let confirmation;
   try {
-    const reponseOrange = await rechercher({
-      transactionId: orangeTransactionId,
-      reference: commande.id,
-      declare: { reference: evenement.reference, amount: evenement.amount },
-    });
-    confirmation = evaluerConfirmationOrange(reponseOrange, { reference: commande.id, montantXof: adaptateur.montantXof(commande) });
-    confirmation.transactionId = reponseOrange.transactionId || orangeTransactionId || null;
-    confirmation.source = reponseOrange.source;
+    // La notification arrive parfois moins d'une seconde après le paiement, avant que la recherche d'Orange ne liste la transaction. Si elle
+    // annonce un SUCCESS et que la ligne reste introuvable, on réessaie à courts intervalles avant de répondre 503 (Orange renverra alors la
+    // notification, et le rattrapage reprend la commande). Aucun crédit tant qu'Orange n'a pas confirmé référence ET montant.
+    const annonceSucces = String(statut || "").toUpperCase() === "SUCCESS";
+    for (let essai = 0; essai <= DELAIS_REESSAI_MS.length; essai += 1) {
+      if (essai > 0) await attendre(DELAIS_REESSAI_MS[essai - 1]);
+      const reponseOrange = await rechercher({
+        transactionId: orangeTransactionId,
+        reference: commande.id,
+        declare: { reference: evenement.reference, amount: evenement.amount },
+      });
+      confirmation = evaluerConfirmationOrange(reponseOrange, { reference: commande.id, montantXof: adaptateur.montantXof(commande) });
+      confirmation.transactionId = reponseOrange.transactionId || orangeTransactionId || null;
+      confirmation.source = reponseOrange.source;
+      const nonRetrouvee = confirmation.etat === "attente" && /pas encore retrouvée/.test(confirmation.raison);
+      if (!(annonceSucces && nonRetrouvee)) break;
+      console.warn(`[${nom}] SUCCESS annoncé mais transaction pas encore retrouvée par la recherche (essai ${essai + 1}/${DELAIS_REESSAI_MS.length + 1}).`);
+    }
   } catch (erreur) {
     // API Orange indisponible, limitée (429) ou « en attente » (51) : PASSAGER → 5xx, journal retiré pour que la relance soit traitée.
     console.error(`[${nom}] Confirmation auprès d'Orange impossible :`, erreur.message);
