@@ -1,4 +1,12 @@
-import { captureCriticalPaymentError } from "@/lib/sentryAlert";
+// Alerte chargée à la demande (comme webhookOrange.js) : le module se teste sous Node, hors du serveur Next ; en production l'alerte part comme avant.
+async function captureCriticalPaymentError(...args) {
+  try {
+    const { captureCriticalPaymentError: alerte } = await import("@/lib/sentryAlert");
+    alerte(...args);
+  } catch {
+    console.error("[Paiement] alerte :", ...args);
+  }
+}
 
 // Prix de la formation « Rédaction de CV » — constante SERVEUR, jamais lue dans la ligne d'inscription : la colonne
 // montant_xof y est posée à l'insertion par le client lui-même (politique d'insertion de l'utilisateur), donc non

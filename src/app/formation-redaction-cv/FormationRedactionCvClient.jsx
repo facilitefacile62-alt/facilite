@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import { formaterCompteARebours, phraseTempsEcoule, secondesRestantes, texteValidite } from "@/lib/validiteQr";
 import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -54,6 +55,8 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
   const [erreurAchat, setErreurAchat] = useState("");
   const intervalRef = useRef(null);
   const interrogerRef = useRef(null);
+  const [qrExpire, setQrExpire] = useState(false);
+  const [reste, setReste] = useState(null); // secondes restantes avant la fin de validité du QR affiché
 
   const chargerTout = useCallback(async () => {
     if (!user?.id) {
@@ -92,6 +95,22 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
 
   useEffect(() => () => arreterSondage(), [arreterSondage]);
 
+  // Validité du QR (5 minutes) : compte à rebours ; à zéro, le QR est MASQUÉ et le bouton est proposé de nouveau. L'interrogation du statut
+  // continue : un paiement réussi, même confirmé après ce délai, est validé par le serveur et s'affiche ici.
+  useEffect(() => {
+    if (statutAchat !== "attente" || !paiement?.validForSeconds || qrExpire) return undefined;
+    const fin = Date.now() + paiement.validForSeconds * 1000;
+    const minuteur = setInterval(() => {
+      const restant = secondesRestantes(fin, Date.now());
+      setReste(restant);
+      if (restant <= 0) {
+        setQrExpire(true);
+        clearInterval(minuteur);
+      }
+    }, 1000);
+    return () => clearInterval(minuteur);
+  }, [statutAchat, paiement, qrExpire]);
+
   const genererPaiement = async () => {
     if (!session) return;
     setErreurAchat("");
@@ -114,6 +133,8 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
       }
 
       setPaiement(data);
+      setQrExpire(false);
+      setReste(data.validForSeconds ?? null);
       setStatutAchat("attente");
 
       arreterSondage();
@@ -144,6 +165,29 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
       setStatutAchat("inactif");
     }
   };
+
+  // Bouton « générer le paiement » (formulaire ET écran « temps écoulé ») : « Payer avec MAXIT » sur téléphone, texte habituel sur ordinateur.
+  const renderBoutonGenerer = () => (
+    <>
+    <button
+      type="button"
+      onClick={genererPaiement}
+      disabled={statutAchat === "chargement"}
+      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
+    >
+      {statutAchat === "chargement" ? (
+        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
+      ) : (
+        <i className="fa-solid fa-qrcode"></i>
+      )}
+      {libelleBoutonPaiement(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)}
+    </button>
+    {aideBoutonPaiement(estMobile) && (
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+    )}
+
+    </>
+  );
 
   const nouvelEssai = () => {
     setPaiement(null);
@@ -250,6 +294,13 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                       Votre inscription est active.
                     </p>
                   </div>
+                ) : statutAchat === "attente" && paiement && qrExpire ? (
+                  <div className="text-center py-3">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+                      {phraseTempsEcoule(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)}
+                    </p>
+                    {renderBoutonGenerer()}
+                  </div>
                 ) : statutAchat === "attente" && paiement ? (
                   <div className="text-center">
                     {paiement.qrCodeBase64 && (
@@ -264,6 +315,10 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                       {paiement.montantXof.toLocaleString("fr-FR")} FCFA
                       <br />
                       Scannez ce QR code avec Orange Money ou MAXIT, ou ouvrez directement votre application :
+                    </p>
+                    <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">
+                      Paiement {texteValidite(paiement.validForSeconds)}
+                      {reste !== null ? ` · il reste ${formaterCompteARebours(reste)}` : ""}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2 mt-3">
                       {paiement.deepLinkOm && (
@@ -306,22 +361,7 @@ export default function FormationRedactionCvClient({ orangeActif = false }) {
                   </p>
                 ) : (
                   <div>
-                    <button
-                      type="button"
-                      onClick={genererPaiement}
-                      disabled={statutAchat === "chargement"}
-                      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
-                    >
-                      {statutAchat === "chargement" ? (
-                        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
-                      ) : (
-                        <i className="fa-solid fa-qrcode"></i>
-                      )}
-                      {libelleBoutonPaiement(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)}
-                    </button>
-                    {aideBoutonPaiement(estMobile) && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
-                    )}
+                    {renderBoutonGenerer()}
                     {erreurAchat && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">{erreurAchat}</p>
                     )}

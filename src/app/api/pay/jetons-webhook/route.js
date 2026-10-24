@@ -18,6 +18,11 @@ export async function POST(req) {
     empreinteJeton: (commande) => commande.callback_token_hash,
     montantXof: (commande) => commande.montant_xof,
     appliquer: (admin, commande, confirmation, orangeTransactionId) => appliquerConfirmationAchat(admin, commande, confirmation, orangeTransactionId),
+    // Transaction Orange qui a crédité la commande (provider_reference vaut le transactionId une fois la commande créditée) ; null sinon.
+    transactionCrediteur: async (admin, commande) => {
+      const { data } = await admin.from("jetons_transactions").select("status, provider_reference").eq("id", commande.id).maybeSingle();
+      return data?.status === "success" ? data.provider_reference ?? null : null;
+    },
     champsJournal: (commande) => ({ jetons_transaction_id: commande.id }),
   });
 }

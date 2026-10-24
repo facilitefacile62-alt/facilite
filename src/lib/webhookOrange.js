@@ -38,6 +38,9 @@ async function alerteReelle(...args) {
 const REFERENCE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Attentes entre les essais de confirmation quand la transaction annoncée n'est pas encore listée par la recherche (3 essais au total).
 const DELAIS_REESSAI_MS = [1500, 3000];
+/** Statut inscrit dans le journal d'un événement SUCCESS reçu pour une commande DÉJÀ payée par une autre transaction. */
+export const STATUT_PAIEMENT_EN_DOUBLE = "DOUBLE_PAIEMENT";
+export const STATUT_DOUBLE_REMBOURSE = "DOUBLE_PAIEMENT_REMBOURSE";
 const accepte = () => reponse(202);
 const refusDefinitif = (statut, message) => reponse(statut, { error: message });
 const problemePassager = (statut = 503) => reponse(statut, { error: "Indisponible, réessayez." });
@@ -185,10 +188,25 @@ export async function traiterNotificationOrange(req, adaptateur, dependances = {
     await retirerJournal(admin, adaptateur.tableJournal, cle);
     return problemePassager(500);
   }
+  // « Déjà traité » alors qu'Orange confirme un SUCCESS (référence ET montant) : si la commande a été créditée par une AUTRE transaction, le client a
+  // payé DEUX FOIS le même QR. Jamais de second crédit ; le paiement en double est journalisé (statut DOUBLE_PAIEMENT), signalé, et visible
+  // dans /admin/commandes-orange pour être remboursé.
+  let paiementEnDouble = false;
+  if (resultat === "deja_traite" && confirmation.etat === "succes" && confirmation.transactionId && adaptateur.transactionCrediteur) {
+    const crediteur = await adaptateur.transactionCrediteur(admin, commande).catch(() => null);
+    if (crediteur && crediteur !== confirmation.transactionId) {
+      paiementEnDouble = true;
+      console.error(`[${nom}] PAIEMENT EN DOUBLE : commande ${commande.id} déjà créditée par ${crediteur}, nouveau paiement ${confirmation.transactionId} à rembourser.`);
+      alerter(`[${nom}] Paiement en double à rembourser`, { reference, transactionIdCrediteur: crediteur, transactionIdEnDouble: confirmation.transactionId });
+    }
+  }
   if (resultat === "doublon_transaction") {
     // Ce même transactionId Orange a déjà servi pour une autre commande : jamais deux crédits pour un paiement.
     alerter(`[${nom}] transactionId déjà utilisé par une autre commande`, { reference, transactionId: confirmation.transactionId });
   }
-  await admin.from(adaptateur.tableJournal).update(adaptateur.champsJournal(commande)).eq("idempotency_key", cle);
+  await admin
+    .from(adaptateur.tableJournal)
+    .update({ ...adaptateur.champsJournal(commande), ...(paiementEnDouble ? { status: STATUT_PAIEMENT_EN_DOUBLE } : {}) })
+    .eq("idempotency_key", cle);
   return accepte();
 }
