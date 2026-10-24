@@ -284,6 +284,9 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
       callbackSuccessUrl,
       callbackCancelUrl,
       reference,
+      // QR à usage unique : Orange accepte ce champ en production (HTTP 200, vérifié le 24/10/2026). Il réduit le risque qu'un même QR soit payé
+      // deux fois ; un éventuel second paiement reste détecté et signalé (DOUBLE_PAIEMENT) par le webhook.
+      restrictions: { isSingleUse: true },
     }),
   });
 
