@@ -6,13 +6,13 @@
 --  - les images d'aperçu (filigranées, basse définition) et le fichier livré après achat vivent dans deux buckets PRIVÉS, servis seulement par des routes
 --    serveur qui vérifient la session (aperçu) ou l'achat confirmé (fichier livré) ;
 --  - un modèle n'est « acheté » qu'après confirmation du serveur (webhook Orange Money) : le client n'a aucun droit d'écriture sur les achats ;
---  - les prix sont toujours ceux de la base (saisis par l'administrateur), jamais ceux envoyés par l'application ; toujours supérieurs à 0.
+--  - les prix sont toujours ceux de la base (saisis par l'administrateur), jamais ceux envoyés par l'application ; toujours d'au moins 100 FCFA.
 
 CREATE TABLE IF NOT EXISTS public.cv_modeles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nom TEXT NOT NULL CHECK (char_length(btrim(nom)) BETWEEN 2 AND 60),
   description TEXT NOT NULL DEFAULT '' CHECK (char_length(description) <= 200),
-  prix_xof INTEGER NOT NULL CHECK (prix_xof > 0 AND prix_xof <= 1000000),
+  prix_xof INTEGER NOT NULL CHECK (prix_xof >= 100 AND prix_xof <= 1000000),
   actif BOOLEAN NOT NULL DEFAULT FALSE,
   ordre INTEGER NOT NULL DEFAULT 0,
   nb_pages INTEGER NOT NULL DEFAULT 0 CHECK (nb_pages BETWEEN 0 AND 10),
