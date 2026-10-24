@@ -114,7 +114,7 @@ export default function ReglagesMarketplaceScreen() {
               <CarteMenu icone="language-outline" titre="Changer la langue" sous={libelleLangue(langue)} onPress={() => router.push('/mon-profil/langue' as Href)} />
             </GroupeCartes>
             <GroupeCartes>
-              <CarteMenu icone="shield-checkmark-outline" titre="Confidentialité" sous="Vos données et votre visibilité" onPress={() => router.push('/mon-profil/confidentialite')} />
+              <CarteMenu icone="shield-checkmark-outline" titre="Confidentialité" sous="Vos données et votre visibilité" onPress={() => router.push('/marketplace/confidentialite' as Href)} />
             </GroupeCartes>
             <GroupeCartes>
               <CarteMenu icone="lock-closed-outline" titre="Sécurité & Connexion" sous="Mot de passe et appareils" onPress={() => router.push('/mon-profil/securite')} />
