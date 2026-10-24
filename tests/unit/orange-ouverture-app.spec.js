@@ -176,7 +176,7 @@ test.describe("les deux pages de paiement utilisent cette logique, sans toucher 
     ["formation CV", "src/app/formation-redaction-cv/FormationRedactionCvClient.jsx"],
   ]) {
     test(`${nom} : ouverture automatique une fois, retour interrogé tout de suite, interrogation toutes les 4 s, boutons et QR conservés`, () => {
-      const s = lire(fichier);
+      const s = lire(fichier) + lire("src/components/AttentePaiementQr.jsx");
       expect(s).toContain("useOuvertureAppPaiement");
       expect(s).toContain("tenterAuto(");
       expect(s).toContain("interrogerRef.current = interroger");

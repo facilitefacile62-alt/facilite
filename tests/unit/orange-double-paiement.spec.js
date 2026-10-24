@@ -228,14 +228,18 @@ test.describe("validité du QR : 5 minutes, une seule constante", () => {
   ]) {
     test(`${nom} : QR masqué à l'expiration (jamais scannable), bouton prêt, interrogation du statut qui continue`, () => {
       const s = lire(fichier);
-      expect(s).toContain("texteValidite(paiement.validForSeconds)");
-      expect(s).toContain("phraseTempsEcoule(");
-      const debut = s.indexOf('statutAchat === "attente" && paiement && qrExpire ? (');
-      expect(debut).toBeGreaterThan(-1);
-      const fin = s.indexOf('statutAchat === "attente" && paiement ? (', debut);
-      const ecranTempsEcoule = s.slice(debut, fin);
-      expect(ecranTempsEcoule).toContain("renderBoutonGenerer()");
-      expect(ecranTempsEcoule).not.toMatch(/qrCodeBase64|<img|data:image/); // plus de QR à l'écran
+      const composant = lire("src/components/AttentePaiementQr.jsx");
+      expect(composant).toContain("texteValidite(paiement.validForSeconds)");
+      expect(composant).toContain("phraseTempsEcoule(");
+      expect(s).toContain("<AttentePaiementQr");
+      expect(s).toContain("qrExpire={qrExpire}");
+      expect(s).toContain("boutonRecommencer={renderBoutonGenerer()}");
+      // Écran « temps écoulé » du composant : plus de QR à l'écran
+      const debut = composant.indexOf("if (qrExpire) {");
+      const fin = composant.indexOf('data-testid="paiement-en-attente"', debut);
+      const ecranTempsEcoule = composant.slice(debut, fin);
+      expect(ecranTempsEcoule).toContain("boutonRecommencer");
+      expect(ecranTempsEcoule).not.toMatch(/qrCodeBase64|<img|data:image/);
       expect(s).toContain("setInterval(interroger, POLL_INTERVAL_MS)"); // le suivi du paiement ne s'arrête pas à l'expiration
       expect(s).not.toMatch(/setQrExpire\(true\)[^;]*arreterSondage/); // l'expiration n'arrête pas le suivi
     });

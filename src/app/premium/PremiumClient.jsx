@@ -2,7 +2,8 @@
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
-import { formaterCompteARebours, phraseTempsEcoule, secondesRestantes, texteValidite } from "@/lib/validiteQr";
+import AttentePaiementQr from "@/components/AttentePaiementQr";
+import { secondesRestantes } from "@/lib/validiteQr";
 import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -424,60 +425,16 @@ export default function PremiumClient({ orangeActif = false }) {
                       Acheter d&apos;autres jetons
                     </button>
                   </div>
-                ) : statutAchat === "attente" && paiement && qrExpire ? (
-                  <div className="text-center py-3">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">
-                      {phraseTempsEcoule(estMobile, "Générer mon QR de paiement Orange Money")}
-                    </p>
-                    {renderBoutonGenerer()}
-                  </div>
                 ) : statutAchat === "attente" && paiement ? (
-                  <div className="text-center flex flex-col">
-                    {paiement.qrCodeBase64 && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`data:image/png;base64,${paiement.qrCodeBase64}`}
-                        alt="QR code de paiement Orange Money"
-                        className="order-2 sm:order-1 w-48 h-48 mx-auto rounded-xl border border-gray-200 dark:border-gray-800"
-                      />
-                    )}
-                    <p className="order-1 sm:order-2 text-xs text-gray-500 dark:text-gray-400 mt-4 sm:mt-4">
-                      {paiement.quantiteJetons} jeton{paiement.quantiteJetons > 1 ? "s" : ""} · {paiement.montantXof} FCFA
-                      <br />
-                      Scannez ce QR code avec Orange Money ou MAXIT, ou ouvrez directement votre application :
-                    </p>
-                    <p className="order-1 sm:order-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">
-                      Paiement {texteValidite(paiement.validForSeconds)}
-                      {reste !== null ? ` · il reste ${formaterCompteARebours(reste)}` : ""}
-                    </p>
-                    <div className="order-1 sm:order-3 flex flex-col sm:flex-row gap-2 mt-3 mb-4 sm:mb-0">
-                      {paiement.deepLinkOm && (
-                        <a
-                          href={paiement.deepLinkOm}
-                          className={`flex-1 py-3 px-4 rounded-2xl text-white font-extrabold text-sm transition-colors ${estMobile ? "bg-gray-900 hover:bg-black" : "bg-orange-500 hover:bg-orange-600"}`}
-                        >
-                          Ouvrir Orange Money
-                        </a>
-                      )}
-                      {paiement.deepLinkMaxit && (
-                        <a
-                          href={paiement.deepLinkMaxit}
-                          className={`flex-1 px-4 rounded-2xl text-white font-extrabold transition-colors ${estMobile ? "order-first py-4 text-base bg-orange-500 hover:bg-orange-600" : "py-3 text-sm bg-gray-900 hover:bg-black"}`}
-                        >
-                          Ouvrir MAXIT
-                        </a>
-                      )}
-                    </div>
-                    {estMobile && paiement.deepLinkMaxit && (
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 order-2 sm:hidden mb-2">
-                        MAXIT s&apos;ouvre tout seul. Sinon, touchez « Ouvrir MAXIT ».
-                      </p>
-                    )}
-                    <p className="order-3 sm:order-4 text-[11px] text-gray-400 dark:text-gray-600 mt-4 flex items-center justify-center gap-2">
-                      <span className="w-3 h-3 border-2 border-gray-300 dark:border-gray-700 border-t-transparent rounded-full animate-spin"></span>
-                      En attente de confirmation du paiement…
-                    </p>
-                  </div>
+                  <AttentePaiementQr
+                    paiement={paiement}
+                    resume={`${paiement.quantiteJetons} jeton${paiement.quantiteJetons > 1 ? "s" : ""} · ${paiement.montantXof} FCFA`}
+                    estMobile={estMobile}
+                    reste={reste}
+                    qrExpire={qrExpire}
+                    libelleBoutonOrdinateur="Générer mon QR de paiement Orange Money"
+                    boutonRecommencer={renderBoutonGenerer()}
+                  />
                 ) : !orangeActif ? (
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">
                     Le paiement en ligne sera bientôt disponible.
