@@ -31,7 +31,7 @@ function formatDateFr(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function FormationRedactionCvClient() {
+export default function FormationRedactionCvClient({ orangeActif = false }) {
   const { user, session } = useAuth();
 
   // Même raisonnement que PremiumClient.jsx : document.referrer/sessionStorage
@@ -281,6 +281,10 @@ export default function FormationRedactionCvClient() {
                       QR expiré ? Générer un nouveau code
                     </button>
                   </div>
+                ) : !orangeActif ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">
+                    Le paiement en ligne sera bientôt disponible.
+                  </p>
                 ) : (
                   <div>
                     <button

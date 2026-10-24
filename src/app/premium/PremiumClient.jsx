@@ -41,7 +41,7 @@ function formatDateFr(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function PremiumClient() {
+export default function PremiumClient({ orangeActif = false }) {
   const { user, session } = useAuth();
 
   // document.referrer / sessionStorage ne peuvent pas être lus au rendu
@@ -421,6 +421,10 @@ export default function PremiumClient() {
                       En attente de confirmation du paiement…
                     </p>
                   </div>
+                ) : !orangeActif ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">
+                    Le paiement en ligne sera bientôt disponible.
+                  </p>
                 ) : (
                   <div>
                     <div className="flex items-center gap-3 mb-3">

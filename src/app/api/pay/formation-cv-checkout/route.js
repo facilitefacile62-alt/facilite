@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
@@ -40,7 +41,7 @@ export async function POST(req) {
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
-    if (!process.env.ORANGE_MONEY_CLIENT_ID || !process.env.ORANGE_MONEY_CLIENT_SECRET || !process.env.ORANGE_MONEY_MERCHANT_CODE) {
+    if (!orangeMoneyActif()) {
       return NextResponse.json(
         { error: "Le paiement Orange Money n'est pas encore configuré." },
         { status: 503 }
