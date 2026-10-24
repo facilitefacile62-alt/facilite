@@ -410,6 +410,16 @@ test.describe("Invariants de sécurité", () => {
       // déclarer protégé en ajoutant un test anti-robot, ce qui viderait cet
       // invariant de son sens. Décision écrite le 2026-08-29.
       "src/app/api/auth/register/route.js",
+
+      // Webhooks Orange Money « Paiement Marchand » (jetons, formation CV) — 24/10/2026. Appelés par Orange, jamais par un
+      // utilisateur connecté : pas de session à exiger. Le contrôle réel est (1) le jeton secret propre à la commande dans l'URL de
+      // callback (?t=, empreinte SHA-256 en base, comparaison en temps constant) OU le secret global (?s=), puis (2) la
+      // confirmation obligatoire de l'état réel du paiement auprès d'Orange (recherche de transactions + API de statut, statut,
+      // référence ET montant) avant tout crédit — une notification n'est qu'un déclencheur. X-Sonatel-Signature n'est PAS vérifiée :
+      // son algorithme et son secret ne sont pas documentés par Orange (on ne les invente pas) ; l'en-tête est seulement noté
+      // dans les journaux. Voir src/lib/webhookOrange.js. Aucun faux marqueur d'autorisation ajouté pour faire taire ce test.
+      "src/app/api/pay/jetons-webhook/route.js",
+      "src/app/api/pay/formation-cv-webhook/route.js",
     ]);
 
     const unprotected = [...serverActionFiles, ...routeHandlerFiles].filter((f) => {
@@ -460,6 +470,21 @@ test.describe("Invariants de sécurité", () => {
       // elle appelle une fonction SQL réservée à service_role qui traite TOUTES les commandes
       // concernées et prévient leurs acheteurs et vendeurs. Aucun utilisateur précis à filtrer.
       "src/app/api/cron/expirer-commandes-sans-livreur/route.js",
+      // Rattrapage planifié (cron, CRON_SECRET) des achats de jetons restés « pending » — 19/10/2026. Opération système
+      // par nature : elle reprend TOUS les achats en attente de 20 min à 24 h, aucun utilisateur précis à filtrer. Rien
+      // n'est crédité sur la foi d'une donnée locale : chaque achat n'est crédité que si Orange confirme statut,
+      // référence et montant (evaluerConfirmationOrange), via la même transition atomique que le webhook.
+      "src/app/api/cron/rattrapage-achats-jetons/route.js",
+      // Webhook d'achat de jetons — 19/10/2026. Le crédit du solde (qui portait le marqueur store_id) est passé dans
+      // src/lib/jetonsPaiement.js, partagé avec le rattrapage. Le webhook agit sur UNE seule commande, identifiée par la
+      // référence de la notification et authentifiée par signature, jeton propre à la commande ou secret de callback ;
+      // rien n'est crédité sans la confirmation d'Orange.
+      "src/app/api/pay/jetons-webhook/route.js",
+      // Traitement commun des webhooks Orange Money (jetons, formation CV) — 24/10/2026. Il agit sur UNE seule commande,
+      // identifiée par la référence de la notification et authentifiée par le jeton propre à la commande ou le secret de callback ;
+      // les écritures de crédit passent par les adaptateurs (jetonsPaiement.js / formationCvPaiement.js), scopés par commande
+      // (transition atomique pending → success, store_id). Rien n'est crédité sans la confirmation d'Orange.
+      "src/lib/webhookOrange.js",
     ]);
 
     const unscoped = files.filter((f) => {

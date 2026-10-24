@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { genererJetonCallback, genererQrCodePaiement, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 import { z } from "zod";
 
@@ -40,7 +42,7 @@ export async function POST(req) {
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
-    if (!process.env.ORANGE_MONEY_CLIENT_ID || !process.env.ORANGE_MONEY_CLIENT_SECRET || !process.env.ORANGE_MONEY_MERCHANT_CODE) {
+    if (!orangeMoneyActif()) {
       return NextResponse.json(
         { error: "Le paiement Orange Money n'est pas encore configuré." },
         { status: 503 }
@@ -92,9 +94,15 @@ export async function POST(req) {
     const montantXof = quantiteJetons * config.cout_jeton_fcfa;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
 
-    const { data: transaction, error: transactionError } = await supabase
+    // Jeton secret propre à cette commande, placé dans l'URL de callback ; seule son empreinte est stockée. La ligne est
+    // écrite avec le rôle serveur (propriété de la boutique déjà vérifiée plus haut) : montant_xof et l'empreinte ne
+    // doivent jamais pouvoir être choisis par le client.
+    const { jeton: jetonCallback, empreinte: empreinteCallback } = genererJetonCallback();
+    const { data: transaction, error: transactionError } = await getSupabaseAdmin()
       .from("jetons_transactions")
       .insert({
+        montant_xof: montantXof,
+        callback_token_hash: empreinteCallback,
         store_id: storeId,
         montant: quantiteJetons,
         type: "achat",
@@ -116,9 +124,11 @@ export async function POST(req) {
         montantXof,
         nom: `Achat de ${quantiteJetons} jeton${quantiteJetons > 1 ? "s" : ""} Facilité Marketplace`,
         validiteSecondes: QR_VALIDITY_SECONDS,
-        callbackSuccessUrl: `${appUrl}/premium?statut=succes`,
-        callbackCancelUrl: `${appUrl}/premium?statut=annule`,
-        callbackUrl: `${appUrl}/api/pay/jetons-webhook`,
+        // Retour du client sur le site avec l'identifiant de commande : la page lit l'état de la commande, elle ne crédite JAMAIS sur la
+        // seule foi de ce retour (seule la confirmation auprès d'Orange, côté serveur, crédite).
+        callbackSuccessUrl: `${appUrl}/premium?statut=succes&commande=${transaction.id}`,
+        callbackCancelUrl: `${appUrl}/premium?statut=annule&commande=${transaction.id}`,
+        callbackUrl: `${appUrl}/api/pay/jetons-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {
       console.error("[Jetons Checkout] Échec génération QR code :", orangeError.message);
@@ -130,7 +140,8 @@ export async function POST(req) {
       return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
 
-    await supabase.from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
+    // Rôle serveur : le client n'a plus aucun droit d'écriture sur jetons_transactions.
+    await getSupabaseAdmin().from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
 
     return NextResponse.json({
       transactionId: transaction.id,
@@ -209,8 +220,10 @@ export async function GET(req) {
     }
 
     try {
-      const statutOrange = await obtenirStatutTransaction(transaction.provider_reference);
-      return NextResponse.json({ status: transaction.status, orangeStatus: statutOrange.status || null });
+      // provider_reference contient le qrId, pas le transactionId Orange (le statut s'interroge par transactionId) : on cherche par
+      // NOTRE référence. Lecture seule, à titre indicatif : seule la confirmation du webhook / du rattrapage crédite.
+      const reponseOrange = await rechercherTransactionOrange({ reference: transaction.id });
+      return NextResponse.json({ status: transaction.status, orangeStatus: reponseOrange.status || null });
     } catch (orangeError) {
       console.error("[Jetons Status] Échec lecture statut :", orangeError.message);
       // Ne bloque jamais l'affichage : la page continue de montrer "pending".
