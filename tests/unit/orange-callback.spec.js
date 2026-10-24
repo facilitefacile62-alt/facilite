@@ -40,9 +40,11 @@ test.describe("secret global de l'URL fixe (version de secours)", () => {
 });
 
 test.describe("recherche de transaction (interface)", () => {
-  test("sans identifiant de transaction Orange, échoue explicitement au lieu d'inventer un chemin", async () => {
-    const { rechercherTransactionOrange } = await charger();
-    await expect(rechercherTransactionOrange({ reference: REF, qrId: "qr-1" })).rejects.toThrow(/documentation Orange requise/);
+  test("sans transactionId NI référence, il n'y a rien à chercher : NOT_FOUND, jamais « payé »", async () => {
+    const { rechercherTransactionOrange, evaluerConfirmationOrange } = await charger();
+    const r = await rechercherTransactionOrange({});
+    expect(r.status).toBe("NOT_FOUND");
+    expect(evaluerConfirmationOrange(r, { reference: REF, montantXof: 100 }).etat).toBe("attente");
   });
 });
 

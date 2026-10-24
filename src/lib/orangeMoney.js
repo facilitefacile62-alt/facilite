@@ -43,6 +43,8 @@ export class ErreurOrangeMoney extends Error {
     this.httpStatus = httpStatus;
     this.codeOrange = extraireCodeOrange(donnees);
     this.messageUtilisateur = traduireErreurOrange({ httpStatus, codeOrange: this.codeOrange });
+    // Code 51 (« demande en attente ») : la demande est peut-être DÉJÀ prise en compte chez Orange. Ne JAMAIS la rejouer.
+    this.nePasRejouer = this.codeOrange === "51";
   }
 }
 
@@ -70,6 +72,46 @@ export function messageUtilisateurOrange(erreur) {
   return erreur instanceof ErreurOrangeMoney ? erreur.messageUtilisateur : traduireErreurOrange({ httpStatus: null, codeOrange: null });
 }
 
+const attendre = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const DELAIS_429_MS = [1000, 2000, 4000];
+
+/**
+ * fetch vers l'API Orange avec attente croissante sur 429 (limite sandbox : 60 requêtes/minute). Aucun autre rejeu automatique :
+ * en particulier jamais sur 5xx / 51 (la demande a pu être prise en compte) — c'est l'appelant qui décide.
+ */
+async function fetchOrange(url, init) {
+  let derniere = null;
+  for (let essai = 0; essai <= DELAIS_429_MS.length; essai += 1) {
+    derniere = await fetch(url, init);
+    if (derniere.status !== 429 || essai === DELAIS_429_MS.length) return derniere;
+    await attendre(DELAIS_429_MS[essai] + Math.floor(Math.random() * 250));
+  }
+  return derniere;
+}
+
+/** Appel authentifié : jeton en cache, et si Orange le refuse (401) on en redemande UN seul et on rejoue une fois. */
+async function appelAuthentifie(chemin, { methode = "GET", entetes = {}, corps } = {}) {
+  const lancer = async () => {
+    const jeton = await obtenirJetonAcces();
+    return fetchOrange(`${baseUrl()}${chemin}`, {
+      method: methode,
+      headers: { Authorization: `Bearer ${jeton}`, ...entetesCle(), ...entetes },
+      ...(corps !== undefined ? { body: corps } : {}),
+    });
+  };
+  let reponse = await lancer();
+  if (reponse.status === 401) {
+    jetonCache = null;
+    reponse = await lancer();
+  }
+  return reponse;
+}
+
+/** En-tête X-Api-Key, SEULEMENT si le contrat Orange en fournit une (ORANGE_MONEY_API_KEY). */
+function entetesCle() {
+  return process.env.ORANGE_MONEY_API_KEY ? { "X-Api-Key": process.env.ORANGE_MONEY_API_KEY } : {};
+}
+
 // Jeton OAuth2 mis en cache en mémoire de process — best effort seulement :
 // une fonction serverless Vercel peut démarrer "à froid" sans ce cache,
 // auquel cas un nouveau jeton est simplement redemandé. Le but est
@@ -90,7 +132,7 @@ async function obtenirJetonAcces() {
     return jetonCache.accessToken;
   }
 
-  const reponse = await fetch(`${baseUrl()}/oauth/v1/token`, {
+  const reponse = await fetchOrange(`${baseUrl()}/oauth/v1/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -128,16 +170,12 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     throw new Error("ORANGE_MONEY_MERCHANT_CODE manquant (code marchand à 6 chiffres, distinct du client_id OAuth2).");
   }
 
-  const accessToken = await obtenirJetonAcces();
-
-  const reponse = await fetch(`${baseUrl()}/api/eWallet/v4/qrcode`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      "X-Callback-Url": callbackUrl,
-    },
-    body: JSON.stringify({
+  // X-Callback-Url : https obligatoire (Orange refuse le http et valide le certificat). À défaut, Orange utiliserait l'adresse
+  // enregistrée via merchantcallback, que notre application n'a pas le droit d'utiliser en sandbox (401 « no apiproduct match »).
+  const reponse = await appelAuthentifie("/api/eWallet/v4/qrcode", {
+    methode: "POST",
+    entetes: { "Content-Type": "application/json", ...(callbackUrl ? { "X-Callback-Url": callbackUrl } : {}) },
+    corps: JSON.stringify({
       code,
       name: nom,
       amount: { value: montantXof, unit: "XOF" },
@@ -160,6 +198,7 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     deepLinkMaxit: donnees.deepLinks?.MAXIT || null,
     deepLinkOm: donnees.deepLinks?.OM || null,
     valideJusqua: donnees.validFor || null,
+    shortLink: donnees.shortLink || null,
   };
 }
 
@@ -169,10 +208,7 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
  * polling, jamais appelé automatiquement en tâche de fond ici.
  */
 export async function obtenirStatutTransaction(transactionId) {
-  const accessToken = await obtenirJetonAcces();
-  const reponse = await fetch(`${baseUrl()}/api/eWallet/v1/transactions/${encodeURIComponent(transactionId)}/status`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const reponse = await appelAuthentifie(`/api/eWallet/v1/transactions/${encodeURIComponent(transactionId)}/status`);
   const donnees = await reponse.json().catch(() => ({}));
   if (!reponse.ok) {
     throw new ErreurOrangeMoney(`Échec de lecture du statut Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
@@ -262,8 +298,10 @@ export function jetonCallbackValide(jetonRecu, empreinteStockee) {
   return attendu.length === recu.length && crypto.timingSafeEqual(attendu, recu);
 }
 
-// Statuts finaux d'échec côté Orange. Tout statut inconnu ou intermédiaire = « en attente » : on ne change rien.
-const STATUTS_ECHEC = new Set(["FAILED", "EXPIRED", "CANCELED", "CANCELLED", "REJECTED"]);
+// Statuts de la documentation officielle (Orange Money API v1.1.0) : ACCEPTED, CANCELLED, FAILED, INITIATED, PENDING, PRE_INITIATED,
+// REJECTED, SUCCESS. FINAUX d'échec : CANCELLED, FAILED, REJECTED (EXPIRED / CANCELED tolérés au cas où). INTERMÉDIAIRES (ACCEPTED,
+// INITIATED, PENDING, PRE_INITIATED) et tout statut inconnu = « en attente » : on ne change rien. Seul SUCCESS est « payé ».
+const STATUTS_ECHEC = new Set(["FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED"]);
 
 /**
  * Juge la réponse de recherche de transaction d'Orange face à la commande.
@@ -305,15 +343,85 @@ export function secretCallbackGlobalValide(recu, attendu) {
 }
 
 /**
- * INTERFACE de recherche d'une transaction chez Orange, utilisée par le webhook et par le rattrapage.
- * Aujourd'hui seule la recherche par identifiant de transaction Orange est branchée (chemin hérité de la spécification
- * transmise en septembre, à valider contre la documentation du portail). La recherche par référence marchande / qrId —
- * indispensable au rattrapage d'une commande dont aucune notification n'est jamais arrivée — attend la documentation
- * « recherche de transaction » : elle échoue explicitement au lieu d'inventer un chemin.
+ * Recherche de transactions : GET /api/eWallet/v1/transactions (filtres reference, transactionId, type, status, fromDateTime,
+ * toDateTime, page, size). Renvoie un tableau (la documentation donne un tableau ; une enveloppe { content } est tolérée).
  */
-export async function rechercherTransactionOrange({ transactionId, reference, qrId }) {
-  if (transactionId) return obtenirStatutTransaction(transactionId);
-  throw new ErreurOrangeMoney(
-    `Recherche de transaction par référence (${reference || "?"}) / qrId (${qrId || "?"}) non implémentée : documentation Orange requise.`
-  );
+export async function listerTransactionsOrange({ reference, transactionId, type = "MERCHANT_PAYMENT", status, fromDateTime, toDateTime, page = 0, size = 20 } = {}) {
+  const q = new URLSearchParams();
+  if (reference) q.set("reference", reference);
+  if (transactionId) q.set("transactionId", transactionId);
+  if (type) q.set("type", type);
+  if (status) q.set("status", status);
+  if (fromDateTime) q.set("fromDateTime", fromDateTime);
+  if (toDateTime) q.set("toDateTime", toDateTime);
+  q.set("page", String(page));
+  q.set("size", String(size));
+  const reponse = await appelAuthentifie(`/api/eWallet/v1/transactions?${q.toString()}`);
+  const donnees = await reponse.json().catch(() => ({}));
+  if (!reponse.ok) {
+    throw new ErreurOrangeMoney(`Échec de la recherche de transactions Orange Money (${reponse.status}) : ${donnees.detail || donnees.message || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
+  }
+  return Array.isArray(donnees) ? donnees : Array.isArray(donnees?.content) ? donnees.content : [];
+}
+
+/**
+ * Interroge Orange sur UNE transaction et renvoie une réponse normalisée { status, reference, amount, transactionId, source },
+ * prête pour evaluerConfirmationOrange. L'API de statut ne renvoie QUE { status } (documentation) : la référence et le montant
+ * viennent de la recherche de transactions, et le statut FINAL vient toujours de l'API de statut — « payé » exige que les DEUX
+ * disent SUCCESS.
+ *
+ * Quand la recherche n'est pas autorisée pour notre application (401 / 403) ou introuvable (404), repli : statut confirmé par
+ * l'API de statut, et référence / montant lus dans la notification reçue (`declare`) — qui ne fait QUE servir à vérifier la
+ * cohérence avec la commande, jamais à décider seule du paiement. Sans `declare` (rattrapage), pas de repli : pas de crédit.
+ */
+export async function rechercherTransactionOrange({ transactionId, reference, declare } = {}) {
+  let trouvee = null;
+  let rechercheIndisponible = false;
+  if (transactionId || reference) {
+    try {
+      const liste = await listerTransactionsOrange(transactionId ? { transactionId, reference } : { reference });
+      const memeId = (t) => !transactionId || String(t?.transactionId ?? "") === String(transactionId);
+      const memeRef = (t) => !reference || String(t?.reference ?? "") === String(reference);
+      const candidates = liste.filter((t) => memeId(t) && memeRef(t));
+      // Plusieurs lignes pour une même référence (rejouée) : un paiement abouti prime sur les autres.
+      trouvee = candidates.find((t) => String(t?.status ?? "").toUpperCase() === "SUCCESS") ?? candidates[0] ?? null;
+    } catch (erreur) {
+      if (erreur instanceof ErreurOrangeMoney && [401, 403, 404].includes(erreur.httpStatus)) rechercheIndisponible = true;
+      else throw erreur;
+    }
+  }
+
+  const idFinal = trouvee?.transactionId || transactionId || null;
+  if (!idFinal) return { status: "NOT_FOUND", reference: reference ?? null, amount: null, transactionId: null, source: "recherche" };
+
+  // Vérité terrain : l'API de statut, appelée systématiquement avant tout crédit.
+  const statut = await obtenirStatutTransaction(idFinal);
+  const statutFinal = String(statut?.status ?? "").toUpperCase();
+
+  if (trouvee) {
+    const statutRecherche = String(trouvee.status ?? "").toUpperCase();
+    // Les deux sources doivent dire SUCCESS ; sinon on garde le statut non-SUCCESS (attente ou échec), jamais SUCCESS.
+    const status = statutFinal === "SUCCESS" && statutRecherche === "SUCCESS" ? "SUCCESS" : statutFinal !== "SUCCESS" ? statutFinal : statutRecherche;
+    return { status, reference: trouvee.reference ?? null, amount: trouvee.amount ?? null, transactionId: idFinal, source: "recherche+statut" };
+  }
+  if (rechercheIndisponible && declare) {
+    return { status: statutFinal, reference: declare.reference ?? null, amount: declare.amount ?? null, transactionId: idFinal, source: "statut+notification" };
+  }
+  // Rien trouvé par la recherche : on ne présume rien (référence et montant inconnus → jamais « payé »).
+  return { status: statutFinal === "SUCCESS" ? "SUCCESS" : statutFinal, reference: null, amount: null, transactionId: idFinal, source: "statut" };
+}
+
+/**
+ * Contrôle FACULTATIF de l'en-tête Authorization: Basic {apiKey} que la documentation annonce pour les notifications quand une
+ * apiKey est enregistrée via merchantcallback. Retourne { requis, valide } : `requis` vaut false tant que la variable
+ * ORANGE_MONEY_CALLBACK_BASIC_KEY n'existe pas (rien n'est imposé avant d'avoir vu en sandbox qu'Orange l'envoie). Comparaison en
+ * temps constant, via empreintes de même longueur.
+ */
+export function controlerBasicCallback(enTeteAutorisation, attendu = process.env.ORANGE_MONEY_CALLBACK_BASIC_KEY) {
+  if (!attendu) return { requis: false, valide: true };
+  const recu = String(enTeteAutorisation ?? "").replace(/^Basic\s+/i, "").trim();
+  if (!recu) return { requis: true, valide: false };
+  const a = Buffer.from(hasherJetonCallback(recu), "utf8");
+  const b = Buffer.from(hasherJetonCallback(attendu), "utf8");
+  return { requis: true, valide: a.length === b.length && crypto.timingSafeEqual(a, b) };
 }
