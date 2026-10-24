@@ -9,6 +9,7 @@ import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 import { urlPhoto } from '@/lib/marketplace';
+import RemplissageRapide, { type InfosScannees } from '@/components/RemplissageRapide';
 import SelecteurDateNaissance, { dateValide } from '@/components/SelecteurDateNaissance';
 import { departementLePlusProche } from '@/lib/departements';
 import { VILLES } from '@/lib/offresParVille';
@@ -133,6 +134,15 @@ export default function ModifierBoutiqueScreen() {
         }, { d: Infinity, nom: '' }).nom
       : '';
 
+  // Scan d'un document : les informations lues remplissent le formulaire (rien n'est enregistré avant « Enregistrer »).
+  function remplirDepuisScan(infos: InfosScannees) {
+    const lu = infos.nomComplet ? decouperNom(infos.nomComplet) : { prenom: infos.prenom ?? '', nom: infos.nom ?? '' };
+    if (lu.prenom) setPrenom(lu.prenom);
+    if (lu.nom) setNom(lu.nom);
+    if (infos.ville && !ville.trim()) setVille(infos.ville);
+    if (infos.telephone && !whatsapp.trim()) setWhatsapp(infos.telephone.replace(/[^\d+]/g, ''));
+  }
+
   async function enregistrer() {
     if (!userId || enregistrement) return;
     if (!prenom.trim() || !nom.trim()) {
@@ -256,6 +266,8 @@ export default function ModifierBoutiqueScreen() {
                 {envoiLogo ? <ActivityIndicator size="small" color={VERT} /> : <Ionicons name="pencil" size={12} color="#1A1A1A" />}
               </View>
             </View>
+
+            <RemplissageRapide onRempli={remplirDepuisScan} />
 
             {/* Prénom et nom côte à côte */}
             <View className="flex-row gap-2.5" onLayout={suivre('prenom')}>
