@@ -109,15 +109,15 @@ export default function ReglagesMarketplaceScreen() {
 
           <View className="px-4">
             <GroupeCartes>
-              <CarteMenu icone="id-card-outline" titre="Coordonnées" sous="Téléphone, e-mail et adresse" onPress={() => router.push('/mon-profil/coordonnees')} />
+              <CarteMenu icone="id-card-outline" titre="Coordonnées" sous="Téléphone, e-mail et adresse" onPress={() => router.push('/marketplace/coordonnees' as Href)} />
               <CarteMenu icone="help-circle-outline" titre="Foire aux questions" sous="Les réponses à vos questions" onPress={() => router.push('/web/faq')} />
-              <CarteMenu icone="language-outline" titre="Changer la langue" sous={libelleLangue(langue)} onPress={() => router.push('/mon-profil/langue' as Href)} />
+              <CarteMenu icone="language-outline" titre="Changer la langue" sous={libelleLangue(langue)} onPress={() => router.push('/marketplace/langue' as Href)} />
             </GroupeCartes>
             <GroupeCartes>
               <CarteMenu icone="shield-checkmark-outline" titre="Confidentialité" sous="Vos données et votre visibilité" onPress={() => router.push('/marketplace/confidentialite' as Href)} />
             </GroupeCartes>
             <GroupeCartes>
-              <CarteMenu icone="lock-closed-outline" titre="Sécurité & Connexion" sous="Mot de passe et appareils" onPress={() => router.push('/mon-profil/securite')} />
+              <CarteMenu icone="lock-closed-outline" titre="Sécurité & Connexion" sous="Mot de passe et appareils" onPress={() => router.push('/marketplace/securite' as Href)} />
               <CarteMenu icone="log-out-outline" titre="Se déconnecter" rouge onPress={deconnexion} />
               <CarteMenu icone="arrow-undo-outline" titre="Retour au Marketplace" sous="Revenir à Locaux" sansFleche onPress={() => router.replace('/marketplace' as Href)} />
             </GroupeCartes>
@@ -159,11 +159,11 @@ export default function ReglagesMarketplaceScreen() {
                   titre="Compte"
                   enfants={
                     <>
-                      <LigneMenu emoji="👤" titre="Informations personnelles" onPress={() => router.push('/mon-profil/infos-perso')} />
-                      <LigneMenu emoji="🪪" titre="Coordonnées" onPress={() => router.push('/mon-profil/coordonnees')} />
+                      <LigneMenu emoji="👤" titre="Informations personnelles" onPress={() => router.push('/marketplace/infos-perso' as Href)} />
+                      <LigneMenu emoji="🪪" titre="Coordonnées" onPress={() => router.push('/marketplace/coordonnees' as Href)} />
                       <LigneMenu emoji="🚚" titre="Contact & Livraison" onPress={() => BIENTOT('Contact & Livraison')} />
                       <LigneMenu emoji="❔" titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
-                      <LigneMenu emoji="🌐" titre="Langue" sous={libelleLangue(langue)} derniere onPress={() => router.push('/mon-profil/langue' as Href)} />
+                      <LigneMenu emoji="🌐" titre="Langue" sous={libelleLangue(langue)} derniere onPress={() => router.push('/marketplace/langue' as Href)} />
                     </>
                   }
                 />
@@ -193,8 +193,8 @@ export default function ReglagesMarketplaceScreen() {
                   titre="Compte"
                   enfants={
                     <>
-                      <LigneMenu emoji="👤" titre="Informations personnelles" onPress={() => router.push('/mon-profil/infos-perso')} />
-                      <LigneMenu emoji="🪪" titre="Coordonnées" derniere onPress={() => router.push('/mon-profil/coordonnees')} />
+                      <LigneMenu emoji="👤" titre="Informations personnelles" onPress={() => router.push('/marketplace/infos-perso' as Href)} />
+                      <LigneMenu emoji="🪪" titre="Coordonnées" derniere onPress={() => router.push('/marketplace/coordonnees' as Href)} />
                     </>
                   }
                 />
@@ -203,7 +203,7 @@ export default function ReglagesMarketplaceScreen() {
                   enfants={
                     <>
                       <LigneMenu emoji="❔" titre="Foire aux questions" onPress={() => router.push('/web/faq')} />
-                      <LigneMenu emoji="🌐" titre="Changer la langue" sous={libelleLangue(langue)} derniere onPress={() => router.push('/mon-profil/langue' as Href)} />
+                      <LigneMenu emoji="🌐" titre="Changer la langue" sous={libelleLangue(langue)} derniere onPress={() => router.push('/marketplace/langue' as Href)} />
                     </>
                   }
                 />
@@ -223,7 +223,7 @@ export default function ReglagesMarketplaceScreen() {
                       onPress={() => router.push('/web/confidentialite')}
                     />
                   )}
-                  <LigneMenu emoji="🔒" titre="Sécurité & Connexion" onPress={() => router.push('/mon-profil/securite')} />
+                  <LigneMenu emoji="🔒" titre="Sécurité & Connexion" onPress={() => router.push('/marketplace/securite' as Href)} />
                   <LigneMenu emoji="↪️" titre="Se déconnecter" rouge derniere onPress={deconnexion} />
                 </>
               }
