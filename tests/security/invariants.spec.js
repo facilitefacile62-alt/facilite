@@ -215,6 +215,11 @@ test.describe("Invariants de sécurité", () => {
       // propriétaire) et vérifiés par confirmer_whatsapp_boutique() (SECURITY DEFINER). Voir
       // 20261024120000_coordonnees_cv_et_confirmation_whatsapp.sql.
       "whatsapp_confirmations",
+      // Catalogue des modèles de CV à vendre (« Achat de CV ») : aucun GRANT ni policy pour les clients — les chemins des PDF d'origine
+      // et des aperçus ne doivent jamais quitter le serveur. Lu uniquement par lister_modeles_cv() (SECURITY DEFINER, sans aucun chemin
+      // de fichier) et par les routes serveur (service_role) ; écrit par l'administrateur via une route admin. Voir
+      // 20261024220000_achat_de_cv_catalogue.sql.
+      "cv_modeles",
       // Tarif de livraison (une seule ligne) : aucun GRANT ni policy, lu uniquement par
       // lire_tarif_livraison() et modifié uniquement par definir_tarif_livraison() (administrateur,
       // SECURITY DEFINER). Une policy de lecture « pour tous » serait tautologique (invariant 7).
