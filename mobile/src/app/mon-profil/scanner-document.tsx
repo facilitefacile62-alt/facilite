@@ -170,7 +170,10 @@ export default function ScannerDocumentScreen() {
         headline: donnees.headline || undefined,
         bio: donnees.bio || undefined,
         city: donnees.city || undefined,
-        phone: donnees.phone || undefined,
+        // Les coordonnées lues sur le CV vont dans « Coordonnées du CV » (colonnes à part) : le téléphone du compte n'est jamais remplacé.
+        cv_telephone: donnees.phone || undefined,
+        cv_email: donnees.email || undefined,
+        cv_ville: donnees.city || undefined,
         // Un tableau vide n'écrase les langues/expériences existantes que
         // si la revue en propose au moins une (voir le bandeau de
         // confirmation) — sinon une extraction qui n'a rien trouvé
