@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
 import AttentePaiementQr from "@/components/AttentePaiementQr";
+import { effacerPaiementEnCours, lirePaiementEnCours, sauvegarderPaiementEnCours } from "@/lib/paiementEnCours";
 import { secondesRestantes } from "@/lib/validiteQr";
 import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
@@ -177,6 +178,65 @@ export default function PremiumClient({ orangeActif = false }) {
     return () => clearInterval(minuteur);
   }, [statutAchat, paiement, qrExpire]);
 
+  // Affiche le paiement en attente (QR, boutons) et suit son statut toutes les 4 secondes ; sert à la création ET à la restauration après rechargement.
+  const demarrerSuivi = useCallback(
+    (data) => {
+      setPaiement(data);
+      setQrExpire(false);
+      setReste(data.validForSeconds ?? null);
+      setStatutAchat("attente");
+
+      arreterSondage();
+      const interroger = async () => {
+        try {
+          const statusRes = await fetch(`/api/pay/jetons-checkout?transactionId=${data.transactionId}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const statusData = await statusRes.json().catch(() => ({}));
+
+          if (statusData.status === "success") {
+            effacerPaiementEnCours("jetons");
+            setStatutAchat("succes");
+            arreterSondage();
+            chargerTout();
+          } else if (statusData.status === "failed") {
+            effacerPaiementEnCours("jetons");
+            setStatutAchat("echec");
+            arreterSondage();
+          }
+        } catch {
+          // Panne réseau passagère du sondage : ne casse pas l'affichage,
+          // la prochaine tentative reprendra normalement.
+        }
+      };
+      interrogerRef.current = interroger;
+      intervalRef.current = setInterval(interroger, POLL_INTERVAL_MS);
+    },
+    [session, arreterSondage, chargerTout]
+  );
+
+  // Retour sur la page (rechargée) avec un paiement encore valable : on retrouve DIRECTEMENT le QR et les boutons, sans refaire de commande.
+  const restaureRef = useRef(false);
+  useEffect(() => {
+    if (!session || !boutique || !user?.id || restaureRef.current) return;
+    restaureRef.current = true;
+    const sauvegarde = lirePaiementEnCours("jetons", { proprietaire: user.id });
+    if (!sauvegarde) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/pay/jetons-checkout?transactionId=${sauvegarde.transactionId}`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const etat = await res.json().catch(() => ({}));
+        if (etat.status === "pending") demarrerSuivi(sauvegarde);
+        else {
+          effacerPaiementEnCours("jetons");
+          if (etat.status === "success") chargerTout();
+        }
+      } catch {
+        // Hors ligne : on ne restaure rien, la page reste utilisable.
+      }
+    })();
+  }, [session, boutique, user, demarrerSuivi, chargerTout]);
+
   const genererPaiement = async () => {
     if (!session || !boutique) return;
     setErreurAchat("");
@@ -194,39 +254,20 @@ export default function PremiumClient({ orangeActif = false }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.qrId) {
+        // Un QR vient d'être préparé pour cette boutique (code 429) : on affiche CELUI-LÀ, avec ses boutons, au lieu d'une erreur.
+        const enCours = res.status === 429 ? lirePaiementEnCours("jetons", { proprietaire: user?.id }) : null;
+        if (enCours) {
+          demarrerSuivi(enCours);
+          return;
+        }
         setErreurAchat(data.error || "Impossible de générer le QR de paiement. Réessayez.");
         setStatutAchat("inactif");
         return;
       }
 
-      setPaiement(data);
-      setQrExpire(false);
-      setReste(data.validForSeconds ?? null);
-      setStatutAchat("attente");
-
-      arreterSondage();
-      const interroger = async () => {
-        try {
-          const statusRes = await fetch(`/api/pay/jetons-checkout?transactionId=${data.transactionId}`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          });
-          const statusData = await statusRes.json().catch(() => ({}));
-
-          if (statusData.status === "success") {
-            setStatutAchat("succes");
-            arreterSondage();
-            chargerTout();
-          } else if (statusData.status === "failed") {
-            setStatutAchat("echec");
-            arreterSondage();
-          }
-        } catch {
-          // Panne réseau passagère du sondage : ne casse pas l'affichage,
-          // la prochaine tentative reprendra normalement.
-        }
-      };
-      interrogerRef.current = interroger;
-      intervalRef.current = setInterval(interroger, POLL_INTERVAL_MS);
+      // Gardé sur l'appareil : si la page est rechargée (retour de MAXIT, bouton « Quitter »), le QR et les boutons sont retrouvés.
+      sauvegarderPaiementEnCours("jetons", data, { proprietaire: user?.id });
+      demarrerSuivi(data);
       // Une seule tentative automatique par commande ; le QR et les boutons restent affichés si l'application ne s'ouvre pas.
       tenterAuto(data.transactionId, { deepLinkMaxit: data.deepLinkMaxit, deepLinkOm: data.deepLinkOm, deepLink: data.deepLink });
     } catch (err) {
@@ -260,6 +301,7 @@ export default function PremiumClient({ orangeActif = false }) {
   );
 
   const nouvelAchat = () => {
+    effacerPaiementEnCours("jetons");
     setPaiement(null);
     setStatutAchat("inactif");
     setErreurAchat("");
