@@ -20,6 +20,58 @@ function formaterDate(iso) {
   return iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 }
 
+function TableauDoubles({ lignes, enCours, onRembourse }) {
+  return (
+    <section className="mb-8">
+      <h2 className="text-base font-extrabold text-red-700 dark:text-red-400 mb-1">
+        Paiements en double à rembourser <span className="text-gray-400 font-bold">({lignes.length})</span>
+      </h2>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Un client a payé deux fois le même QR. La commande n&apos;a été créditée qu&apos;une seule fois : le second paiement est à rembourser chez Orange.
+      </p>
+      {lignes.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400">Aucun paiement en double.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-red-200 dark:border-red-900">
+          <table className="w-full text-sm">
+            <thead className="bg-red-50 dark:bg-red-950/30 text-left text-xs uppercase tracking-wide text-red-800">
+              <tr>
+                <th className="px-3 py-2">Reçu</th>
+                <th className="px-3 py-2">Commande (référence)</th>
+                <th className="px-3 py-2">Montant à rembourser</th>
+                <th className="px-3 py-2">Transaction en double</th>
+                <th className="px-3 py-2">Transaction créditée</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lignes.map((l) => (
+                <tr key={l.evenementId} className="border-t border-red-100 dark:border-red-900">
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{formaterDate(l.recuLe)}</td>
+                  <td className="px-3 py-2 font-mono text-xs break-all">{l.reference}</td>
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums font-bold">{l.montantXof ? `${l.montantXof.toLocaleString("fr-FR")} FCFA` : "—"}</td>
+                  <td className="px-3 py-2 font-mono text-xs font-bold">{l.transactionEnDouble || "—"}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{l.transactionCreditee || "—"}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onRembourse(l.type, l.evenementId)}
+                      disabled={enCours === l.evenementId}
+                      className="px-3 py-1.5 rounded-xl bg-gray-900 text-white text-xs font-bold hover:bg-black disabled:opacity-50"
+                    >
+                      Marquer remboursé
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Tableau({ titre, type, lignes, enCours, onReverifier }) {
   return (
     <section className="mb-8">
@@ -114,6 +166,23 @@ export default function AdminCommandesOrangePage() {
     }
   }
 
+  async function rembourse(type, evenementId) {
+    setEnCours(evenementId);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/commandes-orange/rembourse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ type, evenementId }),
+      });
+      const corps = await res.json().catch(() => ({}));
+      setMessage(res.ok ? "Paiement en double marqué comme remboursé." : corps.error || "Mise à jour impossible.");
+      await charger();
+    } finally {
+      setEnCours(null);
+    }
+  }
+
   if (authLoading) return null;
   if (!isAdmin) return <p className="p-6 text-sm text-gray-600">Réservé aux administrateurs.</p>;
 
@@ -130,6 +199,7 @@ export default function AdminCommandesOrangePage() {
       {!donnees && !erreur && <p className="text-sm text-gray-500">Chargement…</p>}
       {donnees && (
         <>
+          <TableauDoubles lignes={donnees.doubles ?? []} enCours={enCours} onRembourse={rembourse} />
           <Tableau titre="Achats de jetons" type="jetons" lignes={donnees.jetons} enCours={enCours} onReverifier={reverifier} />
           <Tableau titre="Formation rédaction de CV" type="formation" lignes={donnees.formations} enCours={enCours} onReverifier={reverifier} />
         </>

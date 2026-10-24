@@ -6,7 +6,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
-import { genererJetonCallback, genererQrCodePaiement, NOM_QR_FORMATION_CV, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { genererJetonCallback, genererQrCodePaiement, NOM_QR_FORMATION_CV, QR_VALIDITE_SECONDES, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 // Paiement de la formation "Rédaction de CV" (15 000 FCFA, accès permanent)
@@ -24,7 +24,6 @@ import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 // besoin d'une table séparée. Réutilisée telle quelle en cas de nouvelle
 // tentative (QR expiré, paiement annulé) plutôt que d'en recréer une.
 const MONTANT_XOF = MONTANT_FORMATION_CV_XOF;
-const QR_VALIDITY_SECONDS = 900;
 
 export const runtime = "nodejs";
 
@@ -108,7 +107,7 @@ export async function POST(req) {
         montantXof: MONTANT_XOF,
         // Champ `name` lu par Orange seulement : court et sans accent (voir nomQrOrange).
         nom: NOM_QR_FORMATION_CV,
-        validiteSecondes: QR_VALIDITY_SECONDS,
+        validiteSecondes: QR_VALIDITE_SECONDES,
         // Retour sur le site avec l'identifiant de l'inscription : la page lit l'état, elle ne valide JAMAIS le paiement sur la seule foi de ce retour.
         callbackSuccessUrl: `${appUrl}/formation-redaction-cv?statut=succes&commande=${inscriptionId}`,
         callbackCancelUrl: `${appUrl}/formation-redaction-cv?statut=annule&commande=${inscriptionId}`,
@@ -137,7 +136,7 @@ export async function POST(req) {
       qrCodeBase64: qrCode.qrCodeBase64,
       deepLinkMaxit: qrCode.deepLinkMaxit,
       deepLinkOm: qrCode.deepLinkOm,
-      validForSeconds: QR_VALIDITY_SECONDS,
+      validForSeconds: QR_VALIDITE_SECONDES,
     });
   } catch (error) {
     console.error("[Formation CV Checkout API Error]", error);

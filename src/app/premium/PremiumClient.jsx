@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import { formaterCompteARebours, phraseTempsEcoule, secondesRestantes, texteValidite } from "@/lib/validiteQr";
 import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -73,6 +74,7 @@ export default function PremiumClient({ orangeActif = false }) {
   // elle ne crédite jamais sur la seule foi de ce retour (seule la confirmation serveur auprès d'Orange crédite).
   const [retour, setRetour] = useState(null); // { statut, etat: "verification" | "succes" | "echec" | "annule" }
   const [qrExpire, setQrExpire] = useState(false);
+  const [reste, setReste] = useState(null); // secondes restantes avant la fin de validité du QR affiché
   const interrogerRef = useRef(null);
 
   const [activationEnCours, setActivationEnCours] = useState(false);
@@ -158,12 +160,21 @@ export default function PremiumClient({ orangeActif = false }) {
     return () => clearInterval(minuteur);
   }, [session, chargerTout]);
 
-  // QR expiré (validité 15 min, code Orange 4004) : plus de paiement possible avec ce code, on propose d'en générer un nouveau.
+  // Validité du QR (5 minutes) : compte à rebours ; à zéro, le QR est MASQUÉ (plus scannable depuis la page) et le bouton est proposé de nouveau.
+  // L'interrogation du statut continue : un paiement réussi, même confirmé après ce délai, est crédité par le serveur et s'affiche ici.
   useEffect(() => {
-    if (statutAchat !== "attente" || !paiement?.validForSeconds) return undefined;
-    const t = setTimeout(() => setQrExpire(true), paiement.validForSeconds * 1000);
-    return () => clearTimeout(t);
-  }, [statutAchat, paiement]);
+    if (statutAchat !== "attente" || !paiement?.validForSeconds || qrExpire) return undefined;
+    const fin = Date.now() + paiement.validForSeconds * 1000;
+    const minuteur = setInterval(() => {
+      const restant = secondesRestantes(fin, Date.now());
+      setReste(restant);
+      if (restant <= 0) {
+        setQrExpire(true);
+        clearInterval(minuteur);
+      }
+    }, 1000);
+    return () => clearInterval(minuteur);
+  }, [statutAchat, paiement, qrExpire]);
 
   const genererPaiement = async () => {
     if (!session || !boutique) return;
@@ -189,6 +200,7 @@ export default function PremiumClient({ orangeActif = false }) {
 
       setPaiement(data);
       setQrExpire(false);
+      setReste(data.validForSeconds ?? null);
       setStatutAchat("attente");
 
       arreterSondage();
@@ -222,6 +234,29 @@ export default function PremiumClient({ orangeActif = false }) {
       setStatutAchat("inactif");
     }
   };
+
+  // Bouton « générer le paiement » (formulaire ET écran « temps écoulé ») : « Payer avec MAXIT » sur téléphone, texte habituel sur ordinateur.
+  const renderBoutonGenerer = () => (
+    <>
+    <button
+      type="button"
+      onClick={genererPaiement}
+      disabled={statutAchat === "chargement"}
+      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
+    >
+      {statutAchat === "chargement" ? (
+        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
+      ) : (
+        <i className="fa-solid fa-qrcode"></i>
+      )}
+      {libelleBoutonPaiement(estMobile, "Générer mon QR de paiement Orange Money")}
+    </button>
+    {aideBoutonPaiement(estMobile) && (
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+    )}
+
+    </>
+  );
 
   const nouvelAchat = () => {
     setPaiement(null);
@@ -391,11 +426,10 @@ export default function PremiumClient({ orangeActif = false }) {
                   </div>
                 ) : statutAchat === "attente" && paiement && qrExpire ? (
                   <div className="text-center py-3">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">Le code de paiement a expiré</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">Générez-en un nouveau pour réessayer.</p>
-                    <button type="button" onClick={nouvelAchat} className="py-2.5 px-4 rounded-2xl bg-gray-900 text-white font-extrabold text-sm hover:bg-black transition-colors">
-                      Nouveau code de paiement
-                    </button>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+                      {phraseTempsEcoule(estMobile, "Générer mon QR de paiement Orange Money")}
+                    </p>
+                    {renderBoutonGenerer()}
                   </div>
                 ) : statutAchat === "attente" && paiement ? (
                   <div className="text-center flex flex-col">
@@ -411,6 +445,10 @@ export default function PremiumClient({ orangeActif = false }) {
                       {paiement.quantiteJetons} jeton{paiement.quantiteJetons > 1 ? "s" : ""} · {paiement.montantXof} FCFA
                       <br />
                       Scannez ce QR code avec Orange Money ou MAXIT, ou ouvrez directement votre application :
+                    </p>
+                    <p className="order-1 sm:order-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">
+                      Paiement {texteValidite(paiement.validForSeconds)}
+                      {reste !== null ? ` · il reste ${formaterCompteARebours(reste)}` : ""}
                     </p>
                     <div className="order-1 sm:order-3 flex flex-col sm:flex-row gap-2 mt-3 mb-4 sm:mb-0">
                       {paiement.deepLinkOm && (
@@ -460,22 +498,7 @@ export default function PremiumClient({ orangeActif = false }) {
                         {taux && ` · ${quantiteAchat * taux.cout_jeton_fcfa} FCFA`}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={genererPaiement}
-                      disabled={statutAchat === "chargement"}
-                      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
-                    >
-                      {statutAchat === "chargement" ? (
-                        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
-                      ) : (
-                        <i className="fa-solid fa-qrcode"></i>
-                      )}
-                      {libelleBoutonPaiement(estMobile, "Générer mon QR de paiement Orange Money")}
-                    </button>
-                    {aideBoutonPaiement(estMobile) && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
-                    )}
+                    {renderBoutonGenerer()}
                     {statutAchat === "echec" && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">
                         Le paiement n&apos;a pas abouti. Vous pouvez réessayer.

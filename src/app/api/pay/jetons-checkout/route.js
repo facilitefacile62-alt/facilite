@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { genererJetonCallback, genererQrCodePaiement, nomQrJetons, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { genererJetonCallback, genererQrCodePaiement, nomQrJetons, QR_VALIDITE_SECONDES, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 import { aLePrixTest, prixJetonFcfa } from "@/lib/prixTestOrange";
 import { z } from "zod";
@@ -18,7 +18,6 @@ import { z } from "zod";
 // l'intégration Orange Money "Paiement Marchand" déjà codée
 // (src/lib/orangeMoney.js) — seule la table écrite change
 // (jetons_transactions au lieu de transactions/subscriptions).
-const QR_VALIDITY_SECONDS = 900;
 const QUANTITE_MIN = 1;
 const QUANTITE_MAX = 100000; // garde-fou large, pas une vraie limite métier
 
@@ -81,6 +80,21 @@ export async function POST(req) {
       return NextResponse.json({ error: "Boutique introuvable." }, { status: 404 });
     }
 
+    // Garde-fou : un QR vient d'être créé pour cette boutique il y a moins de 20 secondes (double touche, deux onglets) : on n'en crée pas un
+    // second en parallèle — deux QR ouverts en même temps pour le même achat pourraient être payés tous les deux. Les commandes sans QR
+    // (échec de création chez Orange) ne comptent pas : on peut réessayer tout de suite.
+    const { count: qrRecents } = await getSupabaseAdmin()
+      .from("jetons_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", storeId)
+      .eq("type", "achat")
+      .eq("status", "pending")
+      .not("provider_reference", "is", null)
+      .gt("created_at", new Date(Date.now() - 20_000).toISOString());
+    if ((qrRecents ?? 0) > 0) {
+      return NextResponse.json({ error: "Un paiement vient d'être préparé. Patientez quelques secondes avant d'en demander un autre." }, { status: 429 });
+    }
+
     const { data: config, error: configError } = await supabase
       .from("jetons_config")
       .select("cout_jeton_fcfa")
@@ -129,7 +143,7 @@ export async function POST(req) {
         montantXof,
         // Champ `name` lu par Orange seulement : court et sans accent (voir nomQrOrange) ; le libellé montré au client ne change pas.
         nom: nomQrJetons(quantiteJetons),
-        validiteSecondes: QR_VALIDITY_SECONDS,
+        validiteSecondes: QR_VALIDITE_SECONDES,
         // Retour du client sur le site avec l'identifiant de commande : la page lit l'état de la commande, elle ne crédite JAMAIS sur la
         // seule foi de ce retour (seule la confirmation auprès d'Orange, côté serveur, crédite).
         callbackSuccessUrl: `${appUrl}/premium?statut=succes&commande=${transaction.id}`,
@@ -160,7 +174,7 @@ export async function POST(req) {
       qrCodeBase64: qrCode.qrCodeBase64,
       deepLinkMaxit: qrCode.deepLinkMaxit,
       deepLinkOm: qrCode.deepLinkOm,
-      validForSeconds: QR_VALIDITY_SECONDS,
+      validForSeconds: QR_VALIDITE_SECONDES,
     });
   } catch (error) {
     console.error("[Jetons Checkout API Error]", error);

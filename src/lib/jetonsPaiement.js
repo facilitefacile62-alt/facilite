@@ -1,4 +1,12 @@
-import { captureCriticalPaymentError } from "@/lib/sentryAlert";
+// Alerte chargée à la demande (comme webhookOrange.js) : le module se teste sous Node, hors du serveur Next ; en production l'alerte part comme avant.
+async function captureCriticalPaymentError(...args) {
+  try {
+    const { captureCriticalPaymentError: alerte } = await import("@/lib/sentryAlert");
+    alerte(...args);
+  } catch {
+    console.error("[Paiement] alerte :", ...args);
+  }
+}
 
 /**
  * Applique à une commande de jetons la confirmation d'Orange (voir evaluerConfirmationOrange dans orangeMoney.js) : la
@@ -27,7 +35,9 @@ export async function appliquerConfirmationAchat(supabaseAdmin, transaction, con
         provider_reference: orangeTransactionId || transaction.provider_reference,
       })
       .eq("id", transaction.id)
-      .eq("status", "pending")
+      // « pending » ou « failed » : une commande marquée échouée (tentative refusée, ou plus de 24 h sans nouvelle) dont Orange confirme ensuite un
+      // SUCCESS avec la bonne référence ET le bon montant n'a jamais été créditée : elle l'est, UNE seule fois (transition atomique ci-dessous).
+      .in("status", ["pending", "failed"])
       .select();
 
     if (updateError) {
@@ -42,7 +52,7 @@ export async function appliquerConfirmationAchat(supabaseAdmin, transaction, con
       return { resultat: "erreur" };
     }
     if (!misesAJour || misesAJour.length === 0) {
-      // Déjà passée à "success" (ou "failed") par un appel précédent : rien à refaire.
+      // Déjà passée à "success" par un appel précédent : rien à refaire (jamais de second crédit).
       return { resultat: "deja_traite" };
     }
 

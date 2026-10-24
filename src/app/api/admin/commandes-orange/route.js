@@ -3,6 +3,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
 import { MONTANT_FORMATION_CV_XOF } from "@/lib/formationCvPaiement";
+import { STATUT_PAIEMENT_EN_DOUBLE } from "@/lib/webhookOrange";
 
 export const runtime = "nodejs";
 
@@ -42,12 +43,52 @@ export async function GET(req) {
         .order("updated_at", { ascending: false })
         .limit(LOT_MAX),
     ]);
+    // Paiements EN DOUBLE (même QR payé deux fois) : événements SUCCESS confirmés par Orange pour une commande déjà créditée par une autre
+    // transaction (statut DOUBLE_PAIEMENT, voir webhookOrange). À rembourser ; la commande, elle, n'a été créditée qu'une fois.
+    const [doublesJetons, doublesFormation] = await Promise.all([
+      admin.from("jetons_webhook_events").select("id, reference, orange_transaction_id, jetons_transaction_id, received_at").eq("status", STATUT_PAIEMENT_EN_DOUBLE).order("received_at", { ascending: false }).limit(LOT_MAX),
+      admin.from("formation_redaction_cv_webhook_events").select("id, reference, orange_transaction_id, inscription_id, received_at").eq("status", STATUT_PAIEMENT_EN_DOUBLE).order("received_at", { ascending: false }).limit(LOT_MAX),
+    ]);
+    if (doublesJetons.error || doublesFormation.error) {
+      console.error("[Admin Commandes Orange] Lecture des doubles impossible :", doublesJetons.error?.message || doublesFormation.error?.message);
+      return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
+    }
+    const idsJetons = [...new Set(doublesJetons.data.map((e) => e.jetons_transaction_id).filter(Boolean))];
+    const idsFormation = [...new Set(doublesFormation.data.map((e) => e.inscription_id).filter(Boolean))];
+    const [commandesDoubles, inscriptionsDoubles] = await Promise.all([
+      idsJetons.length ? admin.from("jetons_transactions").select("id, montant_xof, provider_reference").in("id", idsJetons) : { data: [], error: null },
+      idsFormation.length ? admin.from("formation_redaction_cv_inscriptions").select("id, orange_transaction_id").in("id", idsFormation) : { data: [], error: null },
+    ]);
+    const parId = (liste) => Object.fromEntries((liste.data ?? []).map((l) => [l.id, l]));
+    const jetonsParId = parId(commandesDoubles);
+    const formationParId = parId(inscriptionsDoubles);
+
     if (achats.error || formations.error) {
       console.error("[Admin Commandes Orange] Lecture impossible :", achats.error?.message || formations.error?.message);
       return NextResponse.json({ error: "Lecture impossible." }, { status: 500 });
     }
 
     return NextResponse.json({
+      doubles: [
+        ...doublesJetons.data.map((e) => ({
+          type: "jetons",
+          evenementId: e.id,
+          reference: e.reference,
+          transactionEnDouble: e.orange_transaction_id,
+          transactionCreditee: jetonsParId[e.jetons_transaction_id]?.provider_reference ?? null,
+          montantXof: jetonsParId[e.jetons_transaction_id]?.montant_xof ?? null,
+          recuLe: e.received_at,
+        })),
+        ...doublesFormation.data.map((e) => ({
+          type: "formation",
+          evenementId: e.id,
+          reference: e.reference,
+          transactionEnDouble: e.orange_transaction_id,
+          transactionCreditee: formationParId[e.inscription_id]?.orange_transaction_id ?? null,
+          montantXof: MONTANT_FORMATION_CV_XOF,
+          recuLe: e.received_at,
+        })),
+      ].sort((a, b) => String(b.recuLe).localeCompare(String(a.recuLe))),
       jetons: achats.data.map((c) => ({
         id: c.id,
         etat: c.status,

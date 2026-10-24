@@ -22,6 +22,11 @@ export async function POST(req) {
     empreinteJeton: (commande) => commande.callback_token_hash,
     montantXof: () => MONTANT_FORMATION_CV_XOF,
     appliquer: (admin, commande, confirmation, orangeTransactionId) => appliquerConfirmationInscription(admin, commande, confirmation, orangeTransactionId),
+    // Transaction Orange qui a validé l'inscription ; null si elle n'est pas payée.
+    transactionCrediteur: async (admin, commande) => {
+      const { data } = await admin.from("formation_redaction_cv_inscriptions").select("paye, orange_transaction_id").eq("id", commande.id).maybeSingle();
+      return data?.paye ? data.orange_transaction_id ?? null : null;
+    },
     champsJournal: (commande) => ({ inscription_id: commande.id }),
   });
 }

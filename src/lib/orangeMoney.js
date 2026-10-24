@@ -213,6 +213,13 @@ function journaliserRefusQr({ reponse, corpsBrut, donnees, requete }) {
   );
 }
 
+/**
+ * Durée de validité d'un QR code Orange Money, en secondes : 5 minutes (pour les jetons ET la formation CV). Une seule constante, envoyée à
+ * Orange par genererQrCodePaiement et reprise par les pages pour le texte « valable 5 minutes » et le compte à rebours. Un QR plus court
+ * limite le temps pendant lequel il pourrait être payé deux fois ; un paiement réussi reste crédité même confirmé après ce délai.
+ */
+export const QR_VALIDITE_SECONDES = 300;
+
 /** Longueur maximale du champ `name` d'un QR Orange Money : au-delà (ou avec un accent), Orange répond 500 / code 50 en production. */
 const NOM_QR_LONGUEUR_MAX = 20;
 
@@ -256,7 +263,7 @@ export const NOM_QR_FORMATION_CV = "Formation CV";
  * n'est pas renseignée, cette fonction échoue explicitement au lieu
  * d'envoyer une valeur inventée à l'API Orange.
  */
-export async function genererQrCodePaiement({ reference, montantXof, nom, validiteSecondes = 900, callbackSuccessUrl, callbackCancelUrl, callbackUrl }) {
+export async function genererQrCodePaiement({ reference, montantXof, nom, validiteSecondes = QR_VALIDITE_SECONDES, callbackSuccessUrl, callbackCancelUrl, callbackUrl }) {
   const code = process.env.ORANGE_MONEY_MERCHANT_CODE;
   if (!code) {
     throw new Error("ORANGE_MONEY_MERCHANT_CODE manquant (code marchand à 6 chiffres, distinct du client_id OAuth2).");
