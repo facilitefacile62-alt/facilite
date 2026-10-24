@@ -167,6 +167,10 @@ export default function ChatDetailScreen() {
   const { marques, basculer: basculerMarque, reagir } = useMarquesMessages(id);
   const [actions, setActions] = useState<{ message: ChatMessage; y: number } | null>(null);
   const [selection, setSelection] = useState<string[] | null>(null);
+  // Réponse en cours (bande au-dessus de la saisie, comme WhatsApp), message à surligner après un saut vers l'original, et bouton « descendre ».
+  const [reponseA, setReponseA] = useState<ChatMessage | null>(null);
+  const [surligne, setSurligne] = useState<string | null>(null);
+  const [loinDuBas, setLoinDuBas] = useState(false);
   const messagesAffiches =
     (messages && termeRecherche.trim()
       ? messages.filter((m) => contientSansAccent(m.text, termeRecherche.trim()))
@@ -184,7 +188,7 @@ export default function ChatDetailScreen() {
     const texte = cible.text || cible.fileName || '';
     switch (a) {
       case 'repondre':
-        setBrouillon(`↪ « ${texte.slice(0, 80)}${texte.length > 80 ? '…' : ''} »\n`);
+        setReponseA(cible);
         break;
       case 'copier':
         await Clipboard.setStringAsync(texte);
@@ -236,6 +240,25 @@ export default function ChatDetailScreen() {
     }
   }
 
+  const auteurDeCitation = (m: ChatMessage) => {
+    const c = decouperCitation(m.text);
+    const original = c ? trouverOriginal(messagesAffiches ?? [], m, c.extrait) : null;
+    return original ? (original.sender === 'me' ? 'Vous' : autreParticipant?.nom || 'Message') : undefined;
+  };
+  // Touche sur une citation : la discussion remonte jusqu'au message d'origine, qui s'illumine un instant.
+  function allerAuMessage(reponse: ChatMessage, extrait: string) {
+    const liste = messagesAffiches ?? [];
+    const original = trouverOriginal(liste, reponse, extrait);
+    if (!original) {
+      Alert.alert('Message introuvable', "Le message d'origine n'est plus affiché dans cette discussion.");
+      return;
+    }
+    const index = liste.findIndex((m) => m.id === original.id);
+    listeRef.current?.scrollToIndex({ index, viewPosition: 0.4, animated: true });
+    setSurligne(original.id);
+    setTimeout(() => setSurligne(null), 1600);
+  }
+
   const textesSelectionnes = () => (messages ?? []).filter((m) => selection?.includes(m.id)).map((m) => m.text || m.fileName || '').join('\n');
 
   useEffect(() => {
@@ -251,8 +274,10 @@ export default function ChatDetailScreen() {
 
   async function handleEnvoyer() {
     if (!peutEnvoyer) return;
-    const texte = brouillon;
+    // Réponse à un message : le texte envoyé commence par « ↪ « extrait » » (reconnu à l'affichage et rendu en citation).
+    const texte = reponseA ? `↪ « ${extraitPourReponse(reponseA)} »\n${brouillon}` : brouillon;
     setBrouillon('');
+    setReponseA(null);
     await envoyer(texte);
   }
 
@@ -450,6 +475,21 @@ export default function ChatDetailScreen() {
             </View>
           ) : null}
 
+          {selection ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.08)' }}>
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#1A1A1A' }}>{selection.length} sélectionné{selection.length > 1 ? 's' : ''}</Text>
+              <Pressable onPress={() => Clipboard.setStringAsync(textesSelectionnes()).then(() => setSelection(null))} hitSlop={8}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2563EB' }}>Copier</Text>
+              </Pressable>
+              <Pressable onPress={() => Share.share({ message: textesSelectionnes() }).then(() => setSelection(null)).catch(() => {})} hitSlop={8}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2563EB' }}>Partager</Text>
+              </Pressable>
+              <Pressable onPress={() => setSelection(null)} hitSlop={8}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#6B7280' }}>Annuler</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <View style={{ flex: 1 }}>
             {/* Fil : s'ouvre sur le dernier message, et suit les nouveaux */}
             {messages === null ? (
@@ -467,7 +507,13 @@ export default function ChatDetailScreen() {
                 onContentSizeChange={() => listeRef.current?.scrollToEnd({ animated: false })}
                 // La discussion se raccourcit quand le clavier, le menu de pièces jointes ou les émojis s'ouvrent : on garde le dernier message en vue.
                 onLayout={() => listeRef.current?.scrollToEnd({ animated: false })}
-                extraData={[marques, selection]}
+                onScroll={(e) => {
+                  const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                  setLoinDuBas(contentSize.height - contentOffset.y - layoutMeasurement.height > 280);
+                }}
+                scrollEventThrottle={100}
+                onScrollToIndexFailed={(info) => listeRef.current?.scrollToOffset({ offset: Math.max(0, info.averageItemLength * info.index - 120), animated: true })}
+                extraData={[marques, selection, surligne]}
                 renderItem={({ item }) => (
                   <BulleMessage
                     message={item}
@@ -476,6 +522,9 @@ export default function ChatDetailScreen() {
                     important={marques.importants.includes(item.id)}
                     reaction={marques.reactions[item.id]}
                     selectionne={Boolean(selection?.includes(item.id))}
+                    surligne={surligne === item.id}
+                    auteurCitation={auteurDeCitation(item)}
+                    onCitation={(extrait) => allerAuMessage(item, extrait)}
                     onLongPress={(y) => !selection && setActions({ message: item, y })}
                     onPress={
                       selection
@@ -492,6 +541,14 @@ export default function ChatDetailScreen() {
               />
             )}
 
+            {loinDuBas ? (
+              <Pressable
+                onPress={() => listeRef.current?.scrollToEnd({ animated: true })}
+                accessibilityLabel="Aller au dernier message"
+                style={{ position: 'absolute', right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', elevation: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
+                <Ionicons name="chevron-down" size={24} color="#374151" />
+              </Pressable>
+            ) : null}
           </View>
 
           {/* Menu pièce jointe : feuille du bas posée DANS la page, entre la discussion et la saisie — la discussion se raccourcit au lieu d'être recouverte. */}
@@ -608,21 +665,6 @@ export default function ChatDetailScreen() {
             </Pressable>
           </Modal>
 
-          {selection ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' }}>
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#1A1A1A' }}>{selection.length} sélectionné{selection.length > 1 ? 's' : ''}</Text>
-              <Pressable onPress={() => Clipboard.setStringAsync(textesSelectionnes()).then(() => setSelection(null))} hitSlop={8}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2563EB' }}>Copier</Text>
-              </Pressable>
-              <Pressable onPress={() => Share.share({ message: textesSelectionnes() }).then(() => setSelection(null)).catch(() => {})} hitSlop={8}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2563EB' }}>Partager</Text>
-              </Pressable>
-              <Pressable onPress={() => setSelection(null)} hitSlop={8}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: '#6B7280' }}>Annuler</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
           <ActionsMessage
             visible={Boolean(actions)}
             moi={actions?.message.sender === 'me'}
@@ -639,6 +681,18 @@ export default function ChatDetailScreen() {
             onFermer={() => setActions(null)}
             sansSuppression={marketplace}
           />
+
+          {reponseA ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' }}>
+              <View style={{ flex: 1, borderLeftWidth: 4, borderLeftColor: '#8B5E3C', backgroundColor: '#F4F1ED', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#8B5E3C' }}>{reponseA.sender === 'me' ? 'Vous' : autreParticipant?.nom || 'Message'}</Text>
+                <Text numberOfLines={2} style={{ fontSize: 13, color: 'rgba(0,0,0,0.6)' }}>{extraitPourReponse(reponseA)}</Text>
+              </View>
+              <Pressable onPress={() => setReponseA(null)} accessibilityLabel="Annuler la réponse" hitSlop={10}>
+                <Ionicons name="close" size={22} color="#374151" />
+              </Pressable>
+            </View>
+          ) : null}
 
           <ZoneSaisie
             brouillon={brouillon}
@@ -1006,6 +1060,30 @@ function ZoneSaisie({
   );
 }
 
+/** Texte court d'un message, pour la bande de réponse et la citation. */
+function extraitPourReponse(m: ChatMessage): string {
+  const brut = m.text ? m.text.replace(/^↪ « [\s\S]*? »\n/, '') : m.attachmentType === 'image' ? '📷 Photo' : m.attachmentType === 'audio' ? '🎤 Message vocal' : m.fileName || 'Pièce jointe';
+  const une = brut.replace(/\s+/g, ' ').trim();
+  return une.length > 80 ? `${une.slice(0, 80)}…` : une;
+}
+
+/** Sépare une citation « ↪ « extrait » » du texte écrit par la personne. */
+function decouperCitation(texte: string): { extrait: string; corps: string } | null {
+  const m = /^↪ « ([\s\S]*?) »\n([\s\S]*)$/.exec(texte);
+  return m ? { extrait: m[1], corps: m[2] } : null;
+}
+
+/** Message d'origine d'une citation : le plus récent AVANT la réponse dont l'extrait correspond. */
+function trouverOriginal(liste: ChatMessage[], reponse: ChatMessage, extrait: string): ChatMessage | null {
+  const debut = extrait.replace(/…$/, '');
+  const index = liste.findIndex((m) => m.id === reponse.id);
+  for (let i = (index < 0 ? liste.length : index) - 1; i >= 0; i -= 1) {
+    const candidat = extraitPourReponse(liste[i]).replace(/…$/, '');
+    if (candidat.startsWith(debut) || debut.startsWith(candidat)) return liste[i];
+  }
+  return null;
+}
+
 function BulleMessage({
   message,
   marketplace,
@@ -1013,6 +1091,9 @@ function BulleMessage({
   important = false,
   reaction,
   selectionne = false,
+  surligne = false,
+  auteurCitation,
+  onCitation,
   onLongPress,
   onPress,
 }: {
@@ -1022,11 +1103,16 @@ function BulleMessage({
   important?: boolean;
   reaction?: string;
   selectionne?: boolean;
+  surligne?: boolean;
+  auteurCitation?: string;
+  onCitation?: (extrait: string) => void;
   onLongPress?: (y: number) => void;
   onPress?: () => void;
 }) {
   const moi = message.sender === 'me';
   const aUnePieceJointe = !!message.attachmentUrl && !!message.attachmentType;
+  const citation = !aUnePieceJointe ? decouperCitation(message.text) : null;
+  const texteAffiche = citation ? citation.corps : message.text;
 
   return (
     <View style={{ flexDirection: 'row', justifyContent: moi ? 'flex-end' : 'flex-start' }}>
@@ -1048,7 +1134,17 @@ function BulleMessage({
           borderColor: moi ? 'rgba(16,185,129,0.25)' : 'rgba(0,0,0,0.06)',
           gap: 4,
           ...(selectionne ? { borderWidth: 2, borderColor: '#10B981' } : null),
+          ...(surligne ? { backgroundColor: '#FDE68A' } : null),
         }}>
+        {citation ? (
+          <Pressable
+            onPress={() => onCitation?.(citation.extrait)}
+            accessibilityLabel="Voir le message d'origine"
+            style={{ borderLeftWidth: 4, borderLeftColor: '#8B5E3C', backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 9 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#8B5E3C' }}>{auteurCitation || 'Message'}</Text>
+            <Text numberOfLines={2} style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.6)' }}>{citation.extrait}</Text>
+          </Pressable>
+        ) : null}
         {aUnePieceJointe && message.attachmentType === 'image' && (
           <ImagePieceJointe chemin={message.attachmentUrl as string} />
         )}
@@ -1067,8 +1163,8 @@ function BulleMessage({
         )}
         {/* Prise de contact sur un article : la carte (photo, nom, prix) remplace le texte, touchable pour rouvrir l'article. */}
         {!aUnePieceJointe && articleDuMessage(message.text) ? <CarteArticleMessage articleId={articleDuMessage(message.text) as string} /> : null}
-        {!aUnePieceJointe && message.text && !articleDuMessage(message.text) ? (
-          <Text style={{ fontSize: marketplace ? 15 : 16, lineHeight: marketplace ? 21 : 23, color: '#111827' }}>{message.text}</Text>
+        {!aUnePieceJointe && texteAffiche && !articleDuMessage(message.text) ? (
+          <Text style={{ fontSize: marketplace ? 15 : 16, lineHeight: marketplace ? 21 : 23, color: '#111827' }}>{texteAffiche}</Text>
         ) : null}
         <View
           style={{
@@ -1103,6 +1199,8 @@ function BulleMessage({
 function ImagePieceJointe({ chemin }: { chemin: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [ouverte, setOuverte] = useState(false);
+  // Proportions réelles de la photo (portrait, paysage ou carré) au lieu d'un carré rogné ; touchable pour l'agrandir.
+  const [ratio, setRatio] = useState(1);
 
   useEffect(() => {
     let annule = false;
@@ -1119,9 +1217,9 @@ function ImagePieceJointe({ chemin }: { chemin: string }) {
       <Pressable
         onPress={() => url && setOuverte(true)}
         accessibilityLabel="Agrandir la photo"
-        style={{ width: 190, height: 190, borderRadius: 11, overflow: 'hidden', backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}>
+        style={{ width: 230, height: Math.max(130, Math.min(320, Math.round(230 / ratio))), borderRadius: 11, overflow: 'hidden', backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}>
         {url ? (
-          <Image source={{ uri: url }} alt="Photo envoyée" style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <Image source={{ uri: url }} alt="Photo envoyée" style={{ width: '100%', height: '100%' }} contentFit="cover" onLoad={(e) => e.source.width && e.source.height && setRatio(e.source.width / e.source.height)} />
         ) : (
           <ActivityIndicator color="#6B7280" />
         )}
