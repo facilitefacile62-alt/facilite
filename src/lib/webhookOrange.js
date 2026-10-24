@@ -35,6 +35,7 @@ async function alerteReelle(...args) {
 //   nom, tableJournal, trouverCommande(admin, reference) → { commande, erreur }, empreinteJeton(commande),
 //   montantXof(commande), appliquer(admin, commande, confirmation, orangeTransactionId) → { resultat }, champsJournal(commande).
 
+const REFERENCE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const accepte = () => reponse(202);
 const refusDefinitif = (statut, message) => reponse(statut, { error: message });
 const problemePassager = (statut = 503) => reponse(statut, { error: "Indisponible, réessayez." });
@@ -71,6 +72,14 @@ export async function traiterNotificationOrange(req, adaptateur, dependances = {
   if (basic.requis && !basic.valide) {
     console.error(`[${nom}] En-tête Authorization (Basic) absent ou différent.`);
     return refusDefinitif(401, "Non autorisé.");
+  }
+
+  // Nos références sont toujours des UUID (identifiant de la commande). Autre chose = notification qui ne peut pas être la nôtre : commande
+  // inconnue, refus définitif 404 — sans toucher à la base (une valeur non UUID y provoquerait une erreur, donc un 5xx et des nouveaux
+  // essais inutiles d'Orange) et sans jamais interroger Orange.
+  if (evenement.reference && (typeof evenement.reference !== "string" || !REFERENCE_UUID.test(evenement.reference))) {
+    console.error(`[${nom}] Référence qui n'est pas un UUID : commande inconnue.`);
+    return refusDefinitif(404, "Introuvable.");
   }
 
   let admin;

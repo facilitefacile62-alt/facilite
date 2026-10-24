@@ -207,6 +207,27 @@ test.describe("webhook : 202 / 4xx définitif / 5xx passager", () => {
     expect(credits).toBe(1);
   });
 
+  test("référence qui n'est pas un UUID : 404 définitif, sans toucher à la base ni interroger Orange", async () => {
+    const { traiterNotificationOrange, empreinte, jeton } = await preparer();
+    for (const reference of ["x", "123", "6f1d2a40-0000-4000-8000-00000000000", { a: 1 }, 42]) {
+      let baseAppelee = 0;
+      let orangeAppele = 0;
+      const admin = { from: () => ((baseAppelee += 1), { insert: async () => ({ error: null }) }) };
+      const adapt = {
+        ...adaptateur({ commande: { id: REF }, jetonHash: empreinte }),
+        trouverCommande: async () => ((baseAppelee += 1), { commande: null, erreur: { message: "invalid input syntax for type uuid" } }),
+      };
+      const r = await traiterNotificationOrange(requete({ ...notification(), reference }, { jeton }), adapt, {
+        admin,
+        rechercher: async () => ((orangeAppele += 1), {}),
+        alerter: () => {},
+      });
+      expect(r.status).toBe(404);
+      expect(baseAppelee).toBe(0);
+      expect(orangeAppele).toBe(0);
+    }
+  });
+
   test("corps illisible = 400 définitif ; jeton invalide ou commande inconnue = 404 définitif", async () => {
     const { traiterNotificationOrange, jeton, empreinte } = await preparer();
     const commande = { id: REF };
