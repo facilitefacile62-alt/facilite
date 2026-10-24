@@ -2,9 +2,9 @@
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
 import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
-import AttentePaiementQr from "@/components/AttentePaiementQr";
+import { BarrePaiementFixe, QrPaiementCarte } from "@/components/FacturationQr";
 import { effacerPaiementEnCours, lirePaiementEnCours, sauvegarderPaiementEnCours } from "@/lib/paiementEnCours";
-import { secondesRestantes } from "@/lib/validiteQr";
+import { phraseTempsEcoule, secondesRestantes } from "@/lib/validiteQr";
 import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -293,12 +293,14 @@ export default function PremiumClient({ orangeActif = false }) {
       )}
       {libelleBoutonPaiement(estMobile, "Générer mon QR de paiement Orange Money")}
     </button>
-    {aideBoutonPaiement(estMobile) && (
-      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
-    )}
+    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+      {aideBoutonPaiement(estMobile) ?? "Touchez le bouton : votre QR de paiement Orange Money s'affiche."}
+    </p>
 
     </>
   );
+
+  const changerQuantite = (sens) => setQuantiteAchat((q) => Math.min(500, Math.max(10, (Number.isFinite(q) ? q : 10) + sens * 10)));
 
   const nouvelAchat = () => {
     effacerPaiementEnCours("jetons");
@@ -324,22 +326,37 @@ export default function PremiumClient({ orangeActif = false }) {
   const jetonsRequis = taux?.jetons_requis_premium_an ?? null;
   const soldeSuffisant = jetonsRequis != null && soldeJetons >= jetonsRequis;
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-12 sm:py-16">
-      <div className="max-w-xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
-            <i className="fa-solid fa-crown"></i>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-            Premium Locaux
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Jetons rechargeables pour mettre votre boutique en avant sur la carte et la recherche.
-          </p>
-        </div>
+  // Messages sous « Acheter des jetons » (maquette) : vert = paiement reçu, rouge = déjà préparé ou erreur, gris = annulé / expiré.
+  const enAttenteQr = statutAchat === "attente" && Boolean(paiement) && !qrExpire;
+  const classeMessage = (couleur) =>
+    ({
+      vert: "bg-[#ECFDF5] text-[#047857] dark:bg-emerald-950/40 dark:text-emerald-300",
+      rouge: "bg-[#FEF2F2] text-[#B91C1C] dark:bg-red-950/40 dark:text-red-300",
+      gris: "bg-[#F1F2F4] text-[#374151] dark:bg-gray-800 dark:text-gray-300",
+      bleu: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+    })[couleur];
+  let message = null;
+  if (statutAchat === "succes") message = { couleur: "vert", texte: `Paiement reçu : +${paiement?.quantiteJetons ?? quantiteAchat} jetons ajoutés à votre solde.` };
+  else if (statutAchat === "attente" && paiement && qrExpire) message = { couleur: "gris", texte: phraseTempsEcoule(estMobile, "Générer mon QR de paiement Orange Money") };
+  else if (retour?.etat === "succes") message = { couleur: "vert", texte: "Paiement reçu : vos jetons ont été ajoutés à votre solde." };
+  else if (retour?.etat === "verification") message = { couleur: "bleu", texte: "Vérification de votre paiement auprès d'Orange Money…" };
+  else if (retour?.etat === "echec") message = { couleur: "gris", texte: "Le paiement n'a pas abouti. Vous pouvez recommencer." };
+  else if (retour?.etat === "annule") message = { couleur: "gris", texte: "Paiement annulé. Aucun montant n'a été débité." };
+  else if (statutAchat === "echec") message = { couleur: "gris", texte: "Le paiement n'a pas abouti. Vous pouvez réessayer." };
+  else if (erreurAchat) message = { couleur: "rouge", texte: erreurAchat };
 
-        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs p-6 sm:p-8">
+  return (
+    <div className={`min-h-screen bg-[#F2F0EA] dark:bg-gray-950 px-4 pt-6 sm:pt-10 ${enAttenteQr ? "pb-44" : "pb-12"}`}>
+      <div className="max-w-xl mx-auto">
+        <Link
+          href="/marketplace?onglet=vendre"
+          aria-label="Retour à ma boutique"
+          className="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#D9D1C1] bg-white text-gray-900 dark:bg-gray-900 dark:text-white dark:border-gray-700"
+        >
+          <i className="fa-solid fa-chevron-left"></i>
+        </Link>
+
+        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-[#D9D1C1] dark:border-gray-800 p-4 sm:p-6">
           {dansAppPlay ? (
             <div className="text-center py-6">
               <h2 className="text-base font-extrabold text-gray-900 dark:text-white mb-2">
@@ -375,39 +392,33 @@ export default function PremiumClient({ orangeActif = false }) {
               </Link>
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Statut Premium actuel */}
-              <div
-                className={`rounded-2xl p-4 border ${
-                  premiumActif
-                    ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50"
-                    : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                <p className={`text-sm font-black ${premiumActif ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
-                  {premiumActif ? "Premium Locaux actif" : "Premium Locaux non actif"}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {premiumActif
-                    ? `Valable jusqu'au ${formatDateFr(premiumActif.date_expiration)}. Priorité de position sur la carte et la recherche.`
-                    : "Activez-le en dépensant vos jetons pour mettre votre boutique en avant pendant 1 an."}
-                </p>
-              </div>
+            <div>
+              {/* Premium actif : l'encadré vert n'apparaît QUE lorsque Premium est actif */}
+              {premiumActif && (
+                <div className="mb-3 rounded-2xl border border-emerald-200 bg-[#ECFDF5] p-3 dark:bg-emerald-950/30 dark:border-emerald-900/50" data-testid="premium-actif">
+                  <p className="text-sm font-extrabold text-[#047857] dark:text-emerald-300">Premium Locaux actif</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Votre boutique est mise en avant jusqu&apos;au {formatDateFr(premiumActif.date_expiration)}.
+                  </p>
+                </div>
+              )}
 
               {/* Solde de jetons */}
               <div className="flex items-center justify-between px-1">
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Solde de jetons</span>
-                <span className="text-xl font-extrabold text-gray-900 dark:text-white">{soldeJetons}</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-200">Solde de jetons</span>
+                <span className="text-2xl font-black text-gray-900 dark:text-white">{soldeJetons}</span>
               </div>
 
               {/* Activation Premium */}
               {!premiumActif && (
-                <div>
+                <div className="mt-3">
                   <button
                     type="button"
                     onClick={activerPremium}
                     disabled={!soldeSuffisant || activationEnCours}
-                    className="w-full py-3.5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
+                    className={`w-full min-h-12 px-6 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed ${
+                      soldeSuffisant ? "bg-[#F59E0B] hover:bg-[#d98a08]" : "bg-[#FCD58F]"
+                    }`}
                   >
                     {activationEnCours ? (
                       <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
@@ -419,7 +430,7 @@ export default function PremiumClient({ orangeActif = false }) {
                       : "Activer Premium Locaux"}
                   </button>
                   {!soldeSuffisant && jetonsRequis != null && (
-                    <p className="text-[11px] text-gray-400 dark:text-gray-600 text-center mt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
                       Il vous manque {jetonsRequis - soldeJetons} jeton{jetonsRequis - soldeJetons > 1 ? "s" : ""}.
                     </p>
                   )}
@@ -429,83 +440,50 @@ export default function PremiumClient({ orangeActif = false }) {
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-                <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Acheter des jetons</p>
+              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-800">
+                <p className="text-sm font-extrabold text-gray-900 dark:text-white">Acheter des jetons</p>
 
-                {retour && (
-                  <div
-                    className={`mb-3 rounded-xl px-3 py-2.5 text-xs font-bold ${
-                      retour.etat === "succes"
-                        ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400"
-                        : retour.etat === "verification"
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                    }`}
-                    role="status"
-                  >
-                    {retour.etat === "verification" && "Vérification de votre paiement auprès d'Orange Money…"}
-                    {retour.etat === "succes" && "Paiement confirmé : vos jetons ont été crédités."}
-                    {retour.etat === "echec" && "Le paiement n'a pas abouti. Vous pouvez recommencer."}
-                    {retour.etat === "annule" && "Paiement annulé. Aucun montant n'a été débité."}
+                {message && (
+                  <div className={`mt-2.5 rounded-xl px-3 py-2.5 text-[13px] font-bold ${classeMessage(message.couleur)}`} role="status" data-testid="message-facturation">
+                    {message.texte}
                   </div>
                 )}
 
-                {statutAchat === "succes" ? (
-                  <div className="text-center py-4">
-                    <div className="w-12 h-12 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center mx-auto mb-3 text-lg">
-                      <i className="fa-solid fa-check"></i>
-                    </div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">Paiement confirmé</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">
-                      Vos jetons ont été crédités.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={nouvelAchat}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Acheter d&apos;autres jetons
-                    </button>
+                {statutAchat === "attente" && paiement && !qrExpire ? (
+                  <div className="mt-3">
+                    <QrPaiementCarte paiement={paiement} />
                   </div>
-                ) : statutAchat === "attente" && paiement ? (
-                  <AttentePaiementQr
-                    paiement={paiement}
-                    resume={`${paiement.quantiteJetons} jeton${paiement.quantiteJetons > 1 ? "s" : ""} · ${paiement.montantXof} FCFA`}
-                    estMobile={estMobile}
-                    reste={reste}
-                    qrExpire={qrExpire}
-                    libelleBoutonOrdinateur="Générer mon QR de paiement Orange Money"
-                    boutonRecommencer={renderBoutonGenerer()}
-                  />
                 ) : !orangeActif ? (
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">
                     Le paiement en ligne sera bientôt disponible.
                   </p>
                 ) : (
-                  <div>
+                  <div className="mt-3">
                     <div className="flex items-center gap-3 mb-3">
-                      <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={quantiteAchat}
-                        onChange={(e) => setQuantiteAchat(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        className="w-24 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-bold text-center"
-                      />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        jeton{quantiteAchat > 1 ? "s" : ""}
-                        {taux && ` · ${quantiteAchat * taux.cout_jeton_fcfa} FCFA`}
+                      <div className="flex items-center rounded-2xl border border-[#D9D1C1] dark:border-gray-700">
+                        <button
+                          type="button"
+                          onClick={() => changerQuantite(-1)}
+                          aria-label="Moins de jetons"
+                          className="h-12 w-11 text-lg font-bold text-gray-900 dark:text-white"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-10 text-center text-base font-black text-gray-900 dark:text-white" data-testid="quantite-jetons">{quantiteAchat}</span>
+                        <button
+                          type="button"
+                          onClick={() => changerQuantite(1)}
+                          aria-label="Plus de jetons"
+                          className="h-12 w-11 text-lg font-bold text-gray-900 dark:text-white"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        jetons{taux && <> · <strong className="text-gray-900 dark:text-white">{(quantiteAchat * taux.cout_jeton_fcfa).toLocaleString("fr-FR")} FCFA</strong></>}
                       </span>
                     </div>
                     {renderBoutonGenerer()}
-                    {statutAchat === "echec" && (
-                      <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">
-                        Le paiement n&apos;a pas abouti. Vous pouvez réessayer.
-                      </p>
-                    )}
-                    {erreurAchat && (
-                      <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">{erreurAchat}</p>
-                    )}
                   </div>
                 )}
               </div>
@@ -513,6 +491,9 @@ export default function PremiumClient({ orangeActif = false }) {
           )}
         </div>
       </div>
+
+      {/* Barre fixe en bas : seulement pendant le QR */}
+      {enAttenteQr && <BarrePaiementFixe paiement={paiement} reste={reste} />}
     </div>
   );
 }

@@ -132,14 +132,16 @@ test.describe("rendu sur téléphone : bouton, puis QR visible juste dessous", (
     expect(expire).not.toContain("<img");
   });
 
-  test("à « Paiement confirmé » les pages n'affichent plus ce composant (donc plus de QR) : la branche « succes » précède celle de l'attente", () => {
-    for (const f of ["src/app/premium/PremiumClient.jsx", "src/app/formation-redaction-cv/FormationRedactionCvClient.jsx"]) {
-      const s = fs.readFileSync(path.join(__dirname, "../..", f), "utf8");
-      const succes = s.indexOf('statutAchat === "succes"');
-      const attente = s.indexOf('statutAchat === "attente" && paiement ? (');
-      expect(succes).toBeGreaterThan(-1);
-      expect(attente).toBeGreaterThan(succes);
-      expect(s.indexOf("Paiement confirmé", succes)).toBeLessThan(attente);
-    }
+  test("à « Paiement confirmé » les pages n'affichent plus de QR : la branche « succes » précède celle de l'attente (formation CV) / le QR n'est rendu qu'en attente (jetons)", () => {
+    const lire = (f) => fs.readFileSync(path.join(__dirname, "../..", f), "utf8");
+    const formation = lire("src/app/formation-redaction-cv/FormationRedactionCvClient.jsx");
+    const succes = formation.indexOf('statutAchat === "succes"');
+    const attente = formation.indexOf('statutAchat === "attente" && paiement ? (');
+    expect(succes).toBeGreaterThan(-1);
+    expect(attente).toBeGreaterThan(succes);
+    expect(formation.indexOf("Paiement confirmé", succes)).toBeLessThan(attente);
+    const jetons = lire("src/app/premium/PremiumClient.jsx");
+    expect(jetons).toMatch(/statutAchat === "attente" && paiement && !qrExpire \? \(\s*<div className="mt-3">\s*<QrPaiementCarte/);
+    expect(jetons).toContain('if (statutAchat === "succes") message = { couleur: "vert"'); // paiement reçu : message vert, plus de QR
   });
 });
