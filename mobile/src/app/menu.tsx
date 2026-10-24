@@ -6,6 +6,7 @@ import { Alert, Animated, Dimensions, Linking, PanResponder, Pressable, ScrollVi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
 import { contientSansAccent } from '@/lib/texte';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import { definirUserMode } from '@/lib/userMode';
@@ -36,6 +37,8 @@ type Tuile = {
   lien?: string;
   // Interrupteur du site (Administration → Fonctionnalités) qui commande cette tuile.
   interrupteur?: string;
+  // Page dont le but est un paiement de bien numérique : masquée sur iOS (règle Apple 3.1.1).
+  paiementNumerique?: boolean;
 };
 
 const NB_ENTREPRISES = SPONTANEOUS_COMPANIES.length;
@@ -46,7 +49,7 @@ const TUILES_FACILITE: Tuile[] = [
   { id: 'candidature', emoji: '🏢', teinte: '#DCE8FD', titre: 'Candidature Spontanée', sous: 'Grandes entreprises', tag: { texte: `${NB_ENTREPRISES} ENTR.`, fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/candidature-spontanee', interrupteur: 'nav_plus_recrutement_spontane' },
   { id: 'depots', emoji: '📍', teinte: '#EDE7FB', titre: 'Dépôts Physiques', sous: 'Stations & Adresses', route: '/web/recrutement-journalier', interrupteur: 'nav_plus_depots' },
   { id: 'concours', emoji: '🏅', teinte: '#FDEEDC', titre: 'Concours', sous: 'Avis & Examens', tag: { texte: 'PUBLIC', fond: '#FDEEDC', couleur: '#9A3412' }, route: '/web/concours', interrupteur: 'nav_plus_concours' },
-  { id: 'formation', emoji: '🎓', teinte: '#D7F2EA', titre: 'Formation', sous: 'Certifications & Cours', tag: { texte: 'PRO', fond: '#D7F2EA', couleur: '#0d3b34' }, route: '/web/formations', interrupteur: 'nav_plus_formation' },
+  { id: 'formation', emoji: '🎓', teinte: '#D7F2EA', titre: 'Formation', sous: 'Certifications & Cours', tag: { texte: 'PRO', fond: '#D7F2EA', couleur: '#0d3b34' }, route: '/web/formations', interrupteur: 'nav_plus_formation', paiementNumerique: true },
   { id: 'telecharger', emoji: '📲', teinte: '#EDEBE6', titre: "Télécharger l'application", sous: 'Installez Facilité en un geste', tag: { texte: 'NOUVEAU', fond: '#EDEBE6', couleur: '#44403C' }, lien: 'https://ffacilite.com/telecharger-android' },
   { id: 'idees', emoji: '💡', teinte: '#FDF3D0', titre: 'Boîte à idées', sous: 'Vos suggestions', route: '/web/boite-a-idees', interrupteur: 'nav_plus_boite_idees' },
   { id: 'faq', emoji: '❓', teinte: '#D7F2EA', titre: 'FAQ & Centre d’aide', sous: 'Questions fréquentes', route: '/web/faq' },
@@ -150,7 +153,7 @@ export default function MenuScreen() {
   // Tuiles du mode, filtrées par les interrupteurs puis par la recherche.
   const q = terme.trim();
   const filtre = (liste: Tuile[]) =>
-    liste.filter((tu) => ouvert(tu.interrupteur) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
+    liste.filter((tu) => ouvert(tu.interrupteur) && (achatsNumeriquesAutorises || !tu.paiementNumerique) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
   const tuilesFacilite = filtre(TUILES_FACILITE);
   const tuilesLocaux = filtre(TUILES_LOCAUX);
 

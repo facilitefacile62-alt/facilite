@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { type WebViewNavigation } from 'react-native-webview';
 import type { ShouldStartLoadRequest, WebViewSource } from 'react-native-webview/lib/WebViewTypes';
 
+import IndisponibleNeutre from '@/components/IndisponibleNeutre';
+import { agentUtilisateurApp, pageWebBloquee } from '@/lib/biensNumeriques';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
 
@@ -103,6 +105,9 @@ export default function EcranWeb() {
     setPeutReculer(nav.canGoBack);
   }, []);
 
+  // Pages dont le seul but est un paiement de bien numérique (Premium, formation) : jamais ouvertes sur iOS (règle Apple 3.1.1).
+  if (pageWebBloquee(cle)) return <IndisponibleNeutre />;
+
   if (!config) {
     return (
       <View className="flex-1 bg-white">
@@ -186,6 +191,8 @@ export default function EcranWeb() {
               key={cleChargement}
               ref={webviewRef}
               source={source}
+              // Sur iOS, les pages du site savent qu'elles sont dans l'application (marqueur dans l'identité du navigateur) et y masquent leurs paiements.
+              applicationNameForUserAgent={agentUtilisateurApp}
               onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
               onNavigationStateChange={onNavigationStateChange}
               onLoadStart={() => setChargement(true)}
