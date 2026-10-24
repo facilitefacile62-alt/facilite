@@ -210,6 +210,11 @@ test.describe("Invariants de sécurité", () => {
       // /api/envoyer-email (service_role, après contrôle de session) ; aucun
       // GRANT à anon/authenticated. Voir 20261013150000_emails_envoyes.sql.
       "emails_envoyes",
+      // Codes de confirmation du WhatsApp d'une boutique (seulement leur empreinte SHA-256, durée de vie 10 minutes, 5 essais) : aucun
+      // GRANT ni policy pour les clients. Créés par la route /api/marketplace/whatsapp-code (service_role, après contrôle du
+      // propriétaire) et vérifiés par confirmer_whatsapp_boutique() (SECURITY DEFINER). Voir
+      // 20261024120000_coordonnees_cv_et_confirmation_whatsapp.sql.
+      "whatsapp_confirmations",
       // Tarif de livraison (une seule ligne) : aucun GRANT ni policy, lu uniquement par
       // lire_tarif_livraison() et modifié uniquement par definir_tarif_livraison() (administrateur,
       // SECURITY DEFINER). Une policy de lecture « pour tous » serait tautologique (invariant 7).

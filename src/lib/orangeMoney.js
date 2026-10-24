@@ -155,6 +155,98 @@ async function obtenirJetonAcces() {
 }
 
 /**
+ * Masque ce qui pourrait ressembler à un secret dans un texte renvoyé par Orange (longues chaînes de type clé ou jeton, paramètre t= d'une
+ * adresse de callback) et le tronque. Jamais de clé, de jeton ni d'en-tête Authorization dans les journaux.
+ */
+function masquerTexte(texte, max = 300) {
+  return String(texte ?? "")
+    .replace(/([?&]t=)[^&\s"]+/g, "$1[masqué]")
+    .replace(/[A-Za-z0-9._~+/=-]{40,}/g, "[masqué]")
+    .slice(0, max);
+}
+
+const hoteDe = (url) => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "adresse invalide";
+  }
+};
+
+/**
+ * Journal du refus d'un QR code : statut HTTP, code et message d'Orange (masqués), champs reçus, identifiant de requête, et la FORME de ce
+ * qui a été envoyé (longueurs, nombres, hôtes, https oui/non). Jamais la valeur du code marchand, des clés, du jeton OAuth, du jeton
+ * de callback ni d'un en-tête d'autorisation.
+ */
+function journaliserRefusQr({ reponse, corpsBrut, donnees, requete }) {
+  const identifiant = ["x-request-id", "x-correlation-id", "x-kong-request-id", "x-amzn-requestid"].map((c) => reponse.headers.get(c)).find(Boolean) ?? null;
+  const code = String(requete.code ?? "");
+  console.error(
+    "[Orange QR refusé]",
+    JSON.stringify({
+      http: reponse.status,
+      codeOrange: extraireCodeOrange(donnees),
+      message: masquerTexte(donnees.message ?? donnees.error_description ?? donnees.description ?? donnees.detail ?? donnees.title ?? donnees.error ?? ""),
+      champsRecus: donnees && typeof donnees === "object" ? Object.keys(donnees).slice(0, 12) : [],
+      corpsApercu: masquerTexte(corpsBrut, 200),
+      typeContenu: reponse.headers.get("content-type"),
+      identifiantRequete: identifiant,
+      serveur: hoteDe(baseUrl()),
+      requete: {
+        codeMarchandLongueur: code.length,
+        codeMarchandChiffresSeulement: /^\d+$/.test(code),
+        codeMarchandCommencePar62: code.startsWith("62"),
+        montant: requete.montantXof,
+        unite: "XOF",
+        validiteSecondes: requete.validiteSecondes,
+        referenceLongueur: String(requete.reference ?? "").length,
+        nomLongueur: String(requete.nom ?? "").length,
+        nomAscii: /^[\x20-\x7e]*$/.test(String(requete.nom ?? "")),
+        successUrlHote: hoteDe(requete.callbackSuccessUrl),
+        successUrlHttps: String(requete.callbackSuccessUrl ?? "").startsWith("https://"),
+        cancelUrlHttps: String(requete.callbackCancelUrl ?? "").startsWith("https://"),
+        callbackHote: requete.callbackUrl ? hoteDe(requete.callbackUrl) : null,
+        callbackHttps: String(requete.callbackUrl ?? "").startsWith("https://"),
+        callbackLongueur: String(requete.callbackUrl ?? "").length,
+      },
+    })
+  );
+}
+
+/** Longueur maximale du champ `name` d'un QR Orange Money : au-delà (ou avec un accent), Orange répond 500 / code 50 en production. */
+const NOM_QR_LONGUEUR_MAX = 20;
+
+/**
+ * Fabrique le champ `name` envoyé à Orange pour un QR code : lettres ASCII, chiffres et espaces seulement, sans accent, espaces multiples
+ * réduits, 20 caractères au plus, jamais vide (repli « Facilite »). Le libellé montré au client sur le site ne change pas : seul ce champ,
+ * lu uniquement par Orange, est simplifié. Constaté en production le 24/10/2026 : « Achat de 10 jetons Facilité Marketplace »
+ * (39 caractères, avec un accent) est refusé, « Test Facilite » passe.
+ */
+export function nomQrOrange(libelle, repli = "Facilite") {
+  const simplifie = String(libelle ?? "")
+    .replace(/œ/g, "oe")
+    .replace(/Œ/g, "OE")
+    .replace(/æ/g, "ae")
+    .replace(/Æ/g, "AE")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[^A-Za-z0-9 ]/g, "")
+    .replace(/ {2,}/g, " ")
+    .trim()
+    .slice(0, NOM_QR_LONGUEUR_MAX)
+    .trim();
+  return simplifie || repli;
+}
+
+/** Nom du QR d'un achat de jetons : « Achat 10 jetons » (ou « Achat 1 jeton »). */
+export const nomQrJetons = (quantite) => nomQrOrange(`Achat ${quantite} jeton${quantite > 1 ? "s" : ""}`);
+
+/** Nom du QR de la formation CV. */
+export const NOM_QR_FORMATION_CV = "Formation CV";
+
+/**
  * Génère un QR code / deeplinks de paiement marchand.
  *
  * `code` (le "code marchand" à 6 chiffres) est DISTINCT de
@@ -170,6 +262,8 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     throw new Error("ORANGE_MONEY_MERCHANT_CODE manquant (code marchand à 6 chiffres, distinct du client_id OAuth2).");
   }
 
+  const nomEnvoye = nomQrOrange(nom);
+
   // X-Callback-Url : https obligatoire (Orange refuse le http et valide le certificat). À défaut, Orange utiliserait l'adresse
   // enregistrée via merchantcallback, que notre application n'a pas le droit d'utiliser en sandbox (401 « no apiproduct match »).
   const reponse = await appelAuthentifie("/api/eWallet/v4/qrcode", {
@@ -177,7 +271,7 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     entetes: { "Content-Type": "application/json", ...(callbackUrl ? { "X-Callback-Url": callbackUrl } : {}) },
     corps: JSON.stringify({
       code,
-      name: nom,
+      name: nomEnvoye,
       amount: { value: montantXof, unit: "XOF" },
       validity: validiteSecondes,
       callbackSuccessUrl,
@@ -186,8 +280,16 @@ export async function genererQrCodePaiement({ reference, montantXof, nom, validi
     }),
   });
 
-  const donnees = await reponse.json().catch(() => ({}));
+  // Corps lu en TEXTE d'abord : une réponse d'erreur qui n'est pas du JSON (ou un JSON de forme inattendue) ne doit pas disparaître des journaux.
+  const corpsBrut = await reponse.text().catch(() => "");
+  let donnees = {};
+  try {
+    donnees = JSON.parse(corpsBrut) ?? {};
+  } catch {
+    donnees = {};
+  }
   if (!reponse.ok || !donnees.qrId) {
+    journaliserRefusQr({ reponse, corpsBrut, donnees, requete: { code, nom: nomEnvoye, montantXof, validiteSecondes, reference, callbackSuccessUrl, callbackCancelUrl, callbackUrl } });
     throw new ErreurOrangeMoney(`Échec de génération du QR code Orange Money (${reponse.status}) : ${donnees.message || donnees.error || "réponse invalide"}.`, { httpStatus: reponse.status, donnees });
   }
 
