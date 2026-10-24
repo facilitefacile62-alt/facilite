@@ -9,6 +9,7 @@ import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
 import { urlPhoto } from '@/lib/marketplace';
+import { supabase } from '@/lib/supabase';
 import RemplissageRapide, { type InfosScannees } from '@/components/RemplissageRapide';
 import SelecteurDateNaissance, { dateValide } from '@/components/SelecteurDateNaissance';
 import { departementLePlusProche } from '@/lib/departements';
@@ -152,6 +153,14 @@ export default function ModifierBoutiqueScreen() {
     if (naissance && !dateValide(naissance)) {
       Alert.alert('Date de naissance', 'Choisis le jour, le mois et l’année, ou laisse les trois listes vides.');
       return;
+    }
+    // Un numéro n'appartient qu'à un seul utilisateur : on prévient AVANT d'enregistrer quoi que ce soit.
+    if (whatsapp.trim()) {
+      const { data: pris, error: erreurNumero } = await supabase.rpc('numero_deja_utilise', { p_numero: whatsapp.trim() });
+      if (!erreurNumero && pris === true) {
+        Alert.alert('Numéro déjà utilisé', 'Ce numéro WhatsApp est déjà utilisé par un autre compte. Un numéro ne peut appartenir qu’à un seul utilisateur.');
+        return;
+      }
     }
     setEnregistrement(true);
     try {
