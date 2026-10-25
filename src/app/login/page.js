@@ -7,12 +7,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { notifierConnexion } from "@/lib/confirmerConnexion";
 import PhoneAuthForm from "@/components/PhoneAuthForm";
+import { useConnexionTelephoneOuverte } from "@/lib/connexionTelephoneInterrupteur";
 
-// Désactivé temporairement (Twilio non configuré, voir point 5 - inscription
-// Google/e-mail) : masque l'onglet Téléphone sans toucher au code ni au
-// composant PhoneAuthForm, pour pouvoir le réactiver d'un simple `true` une
-// fois Twilio branché.
-const PHONE_LOGIN_ENABLED = false;
+// L'onglet Téléphone est commandé par l'interrupteur feat_connexion_telephone (table feature_flags, lisible sans connexion, FERMÉ par défaut et en cas de doute) :
+// plus besoin de redéployer pour le rouvrir. Fermé, seuls « Continuer avec Google » et l'e-mail sont proposés.
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +24,7 @@ export default function LoginPage() {
 
   // Méthode de connexion : 'email' ou 'phone'
   const [authMethod, setAuthMethod] = useState("email");
+  const PHONE_LOGIN_ENABLED = useConnexionTelephoneOuverte();
 
   // États de chargement et retours
   const [isLoading, setIsLoading] = useState(false);
@@ -513,7 +512,7 @@ export default function LoginPage() {
             </div>
 
             {/* Onglets E-mail / Téléphone — Téléphone masqué tant que Twilio
-                n'est pas configuré (PHONE_LOGIN_ENABLED ci-dessus) */}
+                est fermé (interrupteur feat_connexion_telephone) */}
             {PHONE_LOGIN_ENABLED && (
               <div className="flex bg-gray-100 rounded-xl p-1" role="tablist" aria-label="Méthode de connexion">
                 <button

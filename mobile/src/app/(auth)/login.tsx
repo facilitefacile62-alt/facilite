@@ -13,6 +13,7 @@ import {
   envoyerCodeEmail,
   verifierCodeEmail,
 } from '@/lib/connexionEmail';
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { LIBELLE_UTILISER_EMAIL, MESSAGE_CODE_TARDE, libelleRenvoi } from '@/lib/messagesCode';
 import {
   INDICATIF,
@@ -70,7 +71,9 @@ export default function LoginScreen() {
     return () => clearTimeout(t);
   }, [attente]);
 
-  const parTelephone = onglet === 'telephone';
+  // Interrupteur feat_connexion_telephone (fermé par défaut) : fermé, jamais d'onglet Téléphone, et l'e-mail est la seule saisie.
+  const telephoneOuvert = useFonctionnalite('feat_connexion_telephone');
+  const parTelephone = telephoneOuvert && onglet === 'telephone';
   const saisieValide = parTelephone ? numeroValide(chiffres) : emailValide(email);
 
   async function envoyer() {
@@ -278,6 +281,7 @@ export default function LoginScreen() {
         <View className="flex-1" style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
       </View>
 
+      {telephoneOuvert ? (
       <View className="flex-row mt-4" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
         {(['telephone', 'email'] as const).map((o) => {
           const actif = onglet === o;
@@ -302,6 +306,7 @@ export default function LoginScreen() {
           );
         })}
       </View>
+      ) : null}
 
       <View
         className="flex-row items-center mt-4"
