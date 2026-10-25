@@ -5,6 +5,7 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { validateUploadedFile } from "@/lib/validation";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { extractAndEmbedResume } from "@/lib/resumeEmbedding";
+import { competencesReelles } from "@/lib/valeursExemple";
 
 export const runtime = "nodejs";
 // Même contrainte que /api/process-resume : l'extraction d'un CV importé
@@ -243,7 +244,7 @@ export async function POST(req) {
       cvMatchScore =
         similarityScore !== null
           ? similarityScore
-          : computeScore(candidateProfile?.skills || [], candidateProfile?.bio || "", offerData.description || "");
+          : computeScore(competencesReelles(candidateProfile?.skills) || [], candidateProfile?.bio || "", offerData.description || "");
     }
 
     const allAttachments = [];

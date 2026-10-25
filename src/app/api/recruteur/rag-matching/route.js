@@ -5,6 +5,7 @@ import { checkAiQuota, AI_DAILY_QUOTA } from "@/lib/aiQuota";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { SUPABASE_URL } from "@/lib/env";
 import { z } from "zod";
+import { competencesReelles } from "@/lib/valeursExemple";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -217,7 +218,9 @@ export async function POST(req) {
       const p = profileMap.get(m.user_id) || {};
       const r = resumeMap.get(m.user_id) || {};
       const cvExtract = r.content?.extractedText ? r.content.extractedText.slice(0, 1200) : "";
-      const skillsStr = Array.isArray(p.skills) ? p.skills.join(", ") : (p.skills || "Non spécifié");
+      // Les compétences d'EXEMPLE des anciens profils (liste exacte) ne sont jamais présentées à l'IA comme des compétences déclarées.
+      const skillsDeclarees = competencesReelles(p.skills);
+      const skillsStr = Array.isArray(skillsDeclarees) && skillsDeclarees.length > 0 ? skillsDeclarees.join(", ") : "Non spécifié";
 
       return `--- CANDIDAT #${idx + 1} (ID: ${m.user_id}) ---
 Nom: ${p.full_name || m.candidate_name || "Candidat"}
@@ -309,7 +312,7 @@ Pour CHAQUE candidat listé ci-dessus, analyse rigoureusement la correspondance 
         matchScore: Math.round((m.similarity || 0.5) * 100),
         verdict: m.similarity > 0.75 ? "Excellente adéquation" : "Forte adéquation",
         summary: `${p.full_name || "Ce candidat"} présente un profil pertinent avec des compétences adaptées au poste.`,
-        strengths: Array.isArray(p.skills) ? p.skills.slice(0, 3) : ["Profil technique correspondant"],
+        strengths: Array.isArray(competencesReelles(p.skills)) && competencesReelles(p.skills).length > 0 ? competencesReelles(p.skills).slice(0, 3) : ["Profil technique correspondant"],
         missingSkills: ["À vérifier lors de l'entretien"],
         interviewQuestions: ["Parlez-moi de votre expérience sur des projets similaires."],
       };
@@ -320,7 +323,7 @@ Pour CHAQUE candidat listé ci-dessus, analyse rigoureusement la correspondance 
         headline: p.bio ? p.bio.slice(0, 100) : "Professionnel qualifié",
         city: p.city || "Sénégal",
         avatarUrl: p.avatar_url || null,
-        skills: Array.isArray(p.skills) ? p.skills : [],
+        skills: Array.isArray(competencesReelles(p.skills)) ? competencesReelles(p.skills) : [],
         hasCv: !!p.cv_url || !!r.content?.extractedText,
         similarityScore: Math.round((m.similarity || 0.5) * 100),
         ragAnalysis: {

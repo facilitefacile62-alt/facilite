@@ -24,6 +24,7 @@ import { LISTING_TYPE_LABELS, audioAutorise } from "@/lib/listingTypes";
 import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import CandidatsPotentielsOffre from "@/components/CandidatsPotentielsOffre";
+import { competencesReelles } from "@/lib/valeursExemple";
 
 const EMPTY_OFFER = {
   title: "",
@@ -1335,7 +1336,7 @@ export default function RecruteurDashboardPage() {
           !q ||
           (c.full_name || "").toLowerCase().includes(q) ||
           (c.headline || "").toLowerCase().includes(q) ||
-          (Array.isArray(c.skills) ? c.skills.join(" ") : "").toLowerCase().includes(q);
+          (Array.isArray(competencesReelles(c.skills)) ? competencesReelles(c.skills).join(" ") : "").toLowerCase().includes(q);
         const matchesLocation =
           !locationFilter || (c.city || c.location || "").toLowerCase().includes(locationFilter.toLowerCase());
         return matchesSearch && matchesLocation;
@@ -3312,11 +3313,11 @@ export default function RecruteurDashboardPage() {
                 </p>
               </div>
 
-              {Array.isArray(selectedCandidate.skills) && selectedCandidate.skills.length > 0 && (
+              {Array.isArray(competencesReelles(selectedCandidate.skills)) && competencesReelles(selectedCandidate.skills).length > 0 && (
                 <div>
                   <span className="font-extrabold text-gray-500 uppercase tracking-wider block mb-1.5">Compétences</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedCandidate.skills.map((skill, i) => (
+                    {competencesReelles(selectedCandidate.skills).map((skill, i) => (
                       <span key={i} className="px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-lg font-bold text-[10px]">
                         {skill}
                       </span>
