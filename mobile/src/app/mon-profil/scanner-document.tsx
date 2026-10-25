@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import GrosBoutonsChoix from '@/components/GrosBoutonsChoix';
 import { useAuth } from '@/context/AuthContext';
 import { terminerOnboarding } from '@/lib/onboarding';
+import { lireCvChoisi, memoriserCvChoisi } from '@/lib/mesCv';
 import { appliquerRubriquesCv } from '@/lib/rubriquesCv';
 import { changements, rubriquesReelles, rubriquesVides, type Rubriques } from '@/lib/rubriquesCvLogique';
 import { supabase } from '@/lib/supabase';
@@ -38,7 +39,7 @@ type Etat =
 
 export default function ScannerDocumentScreen() {
   const router = useRouter();
-  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const { onboarding, depuis } = useLocalSearchParams<{ onboarding?: string; depuis?: string }>();
   const { user, profile, refreshProfile } = useAuth();
 
   // Ouvert depuis l'écran 24 de l'onboarding : une fois le document
@@ -52,7 +53,11 @@ export default function ScannerDocumentScreen() {
     }
     router.back();
   }
-  const [etat, setEtat] = useState<Etat>({ phase: 'choix' });
+  // Ouvert depuis « Mes CV » (CV déjà enregistré sur Facilité) : on passe directement à la relecture, comme après une analyse.
+  const [etat, setEtat] = useState<Etat>(() => {
+    const choisi = depuis === 'mes-cv' ? lireCvChoisi() : null;
+    return choisi ? { phase: 'revue', donnees: choisi } : { phase: 'choix' };
+  });
   const [enregistrement, setEnregistrement] = useState(false);
 
   async function traiterFichier(uri: string, nomFichier: string, type: string) {
@@ -184,6 +189,7 @@ export default function ScannerDocumentScreen() {
       return;
     }
     setEnregistrement(false);
+    memoriserCvChoisi(null);
     await refreshProfile();
     Alert.alert('✓ CV enregistré', 'Vos informations ont été mises à jour. Les anciennes sont gardées : vous pouvez les retrouver.');
     await terminerParcours();
@@ -208,7 +214,18 @@ export default function ScannerDocumentScreen() {
               d&apos;enregistrer.
             </Text>
 
-            <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-4" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+            {/* Un CV déjà enregistré sur Facilité (créé sur le site ou importé) : la mise à jour du profil en un geste */}
+            <Pressable onPress={() => router.push('/mon-profil/choisir-cv' as Href)} className="flex-row items-center gap-3 bg-white rounded-full mt-4" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+              <View className="w-11 h-11 rounded-full bg-[#D1FAE5] items-center justify-center">
+                <Ionicons name="documents-outline" size={20} color="#047857" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Utiliser un CV déjà sur Facilité</Text>
+                <Text className="text-[11.5px] text-black/45 mt-0.5">Un CV créé ou importé</Text>
+              </View>
+            </Pressable>
+
+            <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-3" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
               <View className="w-11 h-11 rounded-full bg-[#d7f2ea] items-center justify-center">
                 <Ionicons name="camera-outline" size={20} color="#0d3b34" />
               </View>

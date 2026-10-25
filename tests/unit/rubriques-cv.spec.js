@@ -88,7 +88,7 @@ test.describe("lecture de l'analyse du CV", () => {
     expect(listeDeTextes(["x".repeat(201)])).toEqual([]);
   });
   test("le scanner lit les formations, les compétences et les centres d'intérêt de la réponse du serveur", () => {
-    const s = lire("mobile/src/lib/scanDocument.ts");
+    const s = lire("mobile/src/lib/scanLogique.ts");
     for (const t of ["fields.formations", "competences_cles_hard_skills", "competences_informatiques", "qualites_personnelles", "centres_d_interet"]) expect(s).toContain(t);
   });
 });
