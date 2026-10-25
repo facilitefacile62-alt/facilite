@@ -22,7 +22,9 @@ export type Outil = {
   ouvrir: (router: ReturnType<typeof useRouter>) => void;
 };
 
-const OUTILS_PDF_SITE = () => '/web/fonctionnalites' as const;
+// Chaque outil PDF ouvre DIRECTEMENT son outil sur le site (« Compresser PDF » → la page « Compresser le fichier PDF »), jamais la liste des
+// outils du site : l'identifiant est transmis à la WebView, qui le passe au pont de session (liste fermée côté serveur).
+const OUTILS_PDF_SITE = (outil: string) => `/web/fonctionnalites?outil=${outil}` as const;
 
 export const OUTILS: Outil[] = [
   {
@@ -32,7 +34,7 @@ export const OUTILS: Outil[] = [
     bg: '#E0E7FF',
     titre: 'Compresser PDF',
     sous: 'Optimisation',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('compresser-pdf')),
   },
   {
     id: 'fusionner',
@@ -41,7 +43,7 @@ export const OUTILS: Outil[] = [
     bg: '#DBEAFE',
     titre: 'Fusionner PDF',
     sous: 'Outil PDF',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('fusionner-pdf')),
   },
   {
     id: 'diviser',
@@ -50,7 +52,7 @@ export const OUTILS: Outil[] = [
     bg: '#FEF3C7',
     titre: 'Diviser PDF',
     sous: 'Outil PDF',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('diviser-pdf')),
   },
   {
     id: 'organiser',
@@ -59,7 +61,7 @@ export const OUTILS: Outil[] = [
     bg: '#D1FAE5',
     titre: 'Organiser PDF',
     sous: 'Outil PDF',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('organiser-pdf')),
   },
   {
     id: 'jpg_en_pdf',
@@ -68,7 +70,7 @@ export const OUTILS: Outil[] = [
     bg: '#FCE7F3',
     titre: 'JPG en PDF',
     sous: 'Conversion',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('jpg-en-pdf')),
   },
   {
     id: 'pdf_en_jpg',
@@ -77,7 +79,7 @@ export const OUTILS: Outil[] = [
     bg: '#EDE9FE',
     titre: 'PDF en JPG',
     sous: 'Conversion',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE()),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('pdf-en-jpg')),
   },
   {
     id: 'extracteur_ia',

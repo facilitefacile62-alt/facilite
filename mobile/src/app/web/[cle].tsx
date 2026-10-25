@@ -37,7 +37,7 @@ function avecMarqueurEmbarque(url: string): string {
 }
 
 export default function EcranWeb() {
-  const { cle, template, id, lat, lng, vue } = useLocalSearchParams<{ cle: string; template?: string; id?: string; lat?: string; lng?: string; vue?: string }>();
+  const { cle, template, id, outil, lat, lng, vue } = useLocalSearchParams<{ cle: string; template?: string; id?: string; outil?: string; lat?: string; lng?: string; vue?: string }>();
   const router = useRouter();
   const webviewRef = useRef<WebView>(null);
   const [chargement, setChargement] = useState(true);
@@ -134,7 +134,7 @@ export default function EcranWeb() {
         method: 'POST',
         body: `access_token=${encodeURIComponent(jetons?.acces ?? '')}&refresh_token=${encodeURIComponent(
           jetons?.renouvellement ?? ''
-        )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}${id ? `&id=${encodeURIComponent(id)}` : ''}`,
+        )}&cible=${encodeURIComponent(cle)}${template ? `&template=${encodeURIComponent(template)}` : ''}${id ? `&id=${encodeURIComponent(id)}` : ''}${cle === 'fonctionnalites' && outil && /^[a-z-]{3,30}$/.test(outil) ? `&outil=${encodeURIComponent(outil)}` : ''}`,
       }
     : { uri: avecMarqueurEmbarque(`${SITE_URL}${config.chemin}${adresseCarte(cle, lat, lng, vue)}`) };
 
