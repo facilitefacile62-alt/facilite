@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CarteMenu, GroupeCartes } from '@/components/CarteMenu';
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
+import GlisserEntreOnglets from '@/components/GlisserEntreOnglets';
 import { useThemeApp } from '@/context/ThemeApp';
 import { lireLangue, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
 import { useT } from '@/lib/i18n';
@@ -32,6 +33,8 @@ export default function ParametresScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteModifierInfos actif="parametres" />
 
+        {/* Glisser vers la droite ouvre « À propos », comme toucher l'onglet. */}
+        <GlisserEntreOnglets versGauche={'/mon-profil/a-propos' as Href}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 16, paddingBottom: 28 }}>
           <View className="px-4 mb-4">
             <View className="flex-row items-center gap-2">
@@ -101,6 +104,7 @@ export default function ParametresScreen() {
             </GroupeCartes>
           </View>
         </ScrollView>
+        </GlisserEntreOnglets>
       </SafeAreaView>
     </View>
   );

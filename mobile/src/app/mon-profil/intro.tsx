@@ -7,28 +7,28 @@ import { CarteLigne, ListeCartes, PASTILLE_PUBLIC } from '@/components/CarteProf
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 
-// « Profil — À propos » / Intro — maquette du 20/10/2026 : même design que le menu. Une carte « Phrase d'accroche »
-// (pastille Public), puis une carte par information (nom complet, titre professionnel, ville, pays, téléphone, e-mail),
-// puis le bouton blanc pleine largeur « Modifier mon profil Intro ».
+// « Profil — À propos » / Intro (demande du 25/10/2026) : une carte « Phrase d'accroche » (pastille Public), une carte « Bio », puis une carte par
+// information — nom complet, titre professionnel, ville, pays, téléphone — puis le bouton blanc pleine largeur « Modifier mon profil Intro »,
+// qui ouvre la MODIFICATION de l'intro (et non plus « Informations personnelles »). Plus d'e-mail ici : il appartient au compte.
 //
-// Tout vient de `profiles` (bio, full_name, headline, city, country, phone, contact_email) et du compte. Une valeur
-// absente s'affiche « Non renseigné » — jamais un exemple inventé.
+// Tout vient de `profiles` (accroche, bio, full_name, headline, city, country, phone). Une valeur absente s'affiche « Non renseigné » —
+// jamais un exemple inventé.
 function texte(v: unknown): string | null {
   return typeof v === 'string' && v.trim() ? v.trim() : null;
 }
 
 export default function ProfilIntroScreen() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
+  const accroche = texte(profile?.accroche);
   const bio = texte(profile?.bio);
   const lignes: { icone: keyof typeof Ionicons.glyphMap; valeur: string | null; sous: string }[] = [
     { icone: 'person-outline', valeur: texte(profile?.full_name), sous: 'Nom complet' },
     { icone: 'briefcase-outline', valeur: texte(profile?.headline), sous: 'Titre professionnel' },
     { icone: 'location-outline', valeur: texte(profile?.city) ?? texte(profile?.location), sous: 'Ville actuelle' },
-    { icone: 'flag-outline', valeur: texte(profile?.country), sous: 'Pays / origine' },
+    { icone: 'flag-outline', valeur: texte(profile?.country), sous: 'Pays' },
     { icone: 'call-outline', valeur: texte(profile?.phone) ?? texte(profile?.contact_phone), sous: 'Téléphone' },
-    { icone: 'mail-outline', valeur: texte(profile?.contact_email) ?? user?.email ?? null, sous: 'E-mail' },
   ];
 
   return (
@@ -45,7 +45,18 @@ export default function ProfilIntroScreen() {
               pastille={PASTILLE_PUBLIC}
               enfants={
                 <Text style={{ fontSize: 13, lineHeight: 19.5, color: '#374151', marginTop: 4 }}>
-                  {bio ?? "Aucune phrase d'accroche pour le moment."}
+                  {accroche ?? "Aucune phrase d'accroche pour le moment."}
+                </Text>
+              }
+            />
+            <CarteLigne
+              alignHaut
+              icone="document-text-outline"
+              titre="Bio"
+              pastille={PASTILLE_PUBLIC}
+              enfants={
+                <Text style={{ fontSize: 13, lineHeight: 19.5, color: '#374151', marginTop: 4 }}>
+                  {bio ?? 'Aucune bio pour le moment.'}
                 </Text>
               }
             />
@@ -55,7 +66,7 @@ export default function ProfilIntroScreen() {
           </ListeCartes>
 
           <Pressable
-            onPress={() => router.push('/mon-profil/infos-perso')}
+            onPress={() => router.push('/mon-profil/intro-modifier')}
             accessibilityRole="button"
             className="flex-row items-center justify-center gap-2 bg-white"
             style={{ marginHorizontal: 12, minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }}>
