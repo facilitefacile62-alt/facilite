@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { limiter } from "@/lib/limiteur";
 import * as codes from "./codes.js";
-import { PHRASE_ALERTE, SUJETS_ALERTE } from "./messages.js";
+import { gabaritAlerte, gabaritCode, SUPPORT_WHATSAPP_URL } from "./gabarits.js";
 
 // Dépendances RÉELLES du service « Informations du compte » (base, e-mail, SMS, limites). Les tests passent leurs propres doublures au même service.
 
@@ -46,8 +46,6 @@ async function envoyerSms(destination, texte) {
   }
 }
 
-const TITRES_CODE = { preuve: "Votre code de vérification Facilité", nouvelle_valeur: "Confirmez votre nouvelle information Facilité" };
-
 export function creerDependances() {
   const admin = getSupabaseAdmin();
   return {
@@ -71,14 +69,13 @@ export function creerDependances() {
       return { ok: !error };
     },
     envoyerCode: async ({ canal, destination, code, but }) => {
-      const titre = TITRES_CODE[but] ?? TITRES_CODE.preuve;
       if (canal === "telephone") return envoyerSms(destination, `Facilité : votre code est ${code}. Il est valable 10 minutes. Ne le donnez à personne.`);
-      return envoyerEmail(destination, titre, `<p>Votre code : <strong style="font-size:24px;letter-spacing:4px">${code}</strong></p><p>Il est valable 10 minutes. Ne le donnez à personne.</p><p>${PHRASE_ALERTE}</p>`);
+      const { sujet, html } = gabaritCode(code, but);
+      return envoyerEmail(destination, sujet, html);
     },
     envoyerAlerte: async ({ destination, action, canal }) => {
-      const sujet = SUJETS_ALERTE[`${action}_${canal}`] ?? "Votre compte Facilité a changé";
-      const support = process.env.SUPPORT_WHATSAPP_URL || "https://wa.me/221771400832";
-      return envoyerEmail(destination, sujet, `<p>${sujet}.</p><p>${PHRASE_ALERTE}</p><p><a href="${support}">Contacter le support sur WhatsApp</a></p>`);
+      const { sujet, html } = gabaritAlerte(action, canal, process.env.SUPPORT_WHATSAPP_URL || SUPPORT_WHATSAPP_URL);
+      return envoyerEmail(destination, sujet, html);
     },
   };
 }
