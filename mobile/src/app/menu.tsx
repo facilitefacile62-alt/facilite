@@ -36,7 +36,7 @@ type Tuile = {
   route?: string;
   lien?: string;
   // Interrupteur du site (Administration → Fonctionnalités) qui commande cette tuile.
-  interrupteur?: string;
+  interrupteur?: string | string[];
   // Page dont le but est un paiement de bien numérique : masquée sur iOS (règle Apple 3.1.1).
   paiementNumerique?: boolean;
 };
@@ -44,14 +44,14 @@ type Tuile = {
 const NB_ENTREPRISES = SPONTANEOUS_COMPANIES.length;
 
 const TUILES_FACILITE: Tuile[] = [
-  { id: 'diagnostic', emoji: '🔍', teinte: '#DCE8FD', titre: 'Diagnostic CV', sous: 'Score ATS & mots-clés', tag: { texte: 'GRATUIT', fond: '#D1FAE5', couleur: '#047857' }, route: '/web/importer-cv', interrupteur: 'feat_diagnostic_cv' },
-  { id: 'fonctionnalites', emoji: '🛠️', teinte: '#EDE7FB', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E7E5E4', couleur: '#44403C' }, route: '/profil?onglet=fonctionnalites&retour=menu', interrupteur: 'nav_plus_fonctionnalites' },
+  { id: 'diagnostic', emoji: '🔍', teinte: '#DCE8FD', titre: 'Diagnostic CV', sous: 'Score ATS & mots-clés', tag: { texte: 'GRATUIT', fond: '#D1FAE5', couleur: '#047857' }, route: '/web/importer-cv', interrupteur: ['feat_diagnostic_cv', 'feat_app_diagnostic_cv'] },
+  { id: 'fonctionnalites', emoji: '🛠️', teinte: '#EDE7FB', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E7E5E4', couleur: '#44403C' }, route: '/profil?onglet=fonctionnalites&retour=menu', interrupteur: ['nav_plus_fonctionnalites', 'feat_app_fonctionnalites'] },
   { id: 'candidature', emoji: '🏢', teinte: '#DCE8FD', titre: 'Candidature Spontanée', sous: 'Grandes entreprises', tag: { texte: `${NB_ENTREPRISES} ENTR.`, fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/candidature-spontanee', interrupteur: 'nav_plus_recrutement_spontane' },
   { id: 'depots', emoji: '📍', teinte: '#EDE7FB', titre: 'Dépôts Physiques', sous: 'Stations & Adresses', route: '/web/recrutement-journalier', interrupteur: 'nav_plus_depots' },
   { id: 'concours', emoji: '🏅', teinte: '#FDEEDC', titre: 'Concours', sous: 'Avis & Examens', tag: { texte: 'PUBLIC', fond: '#FDEEDC', couleur: '#9A3412' }, route: '/web/concours', interrupteur: 'nav_plus_concours' },
   { id: 'formation', emoji: '🎓', teinte: '#D7F2EA', titre: 'Formation', sous: 'Certifications & Cours', tag: { texte: 'PRO', fond: '#D7F2EA', couleur: '#0d3b34' }, route: '/web/formations', interrupteur: 'nav_plus_formation', paiementNumerique: true },
   { id: 'telecharger', emoji: '📲', teinte: '#EDEBE6', titre: "Télécharger l'application", sous: 'Installez Facilité en un geste', tag: { texte: 'NOUVEAU', fond: '#EDEBE6', couleur: '#44403C' }, lien: 'https://ffacilite.com/telecharger-android' },
-  { id: 'idees', emoji: '💡', teinte: '#FDF3D0', titre: 'Boîte à idées', sous: 'Vos suggestions', route: '/web/boite-a-idees', interrupteur: 'nav_plus_boite_idees' },
+  { id: 'idees', emoji: '💡', teinte: '#FDF3D0', titre: 'Boîte à idées', sous: 'Vos suggestions', route: '/web/boite-a-idees', interrupteur: ['nav_plus_boite_idees', 'feat_app_boite_idees'] },
   { id: 'faq', emoji: '❓', teinte: '#D7F2EA', titre: 'FAQ & Centre d’aide', sous: 'Questions fréquentes', route: '/web/faq' },
 ];
 

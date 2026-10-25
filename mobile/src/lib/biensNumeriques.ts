@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 
 import { ID_INTERRUPTEUR_PAIEMENTS, achatNumeriqueAutorise, cleWebBloquee, marqueurAgentUtilisateur, navigationWebBloquee } from '@/lib/biensNumeriquesLogique';
-import { useFonctionnalite } from '@/lib/featureFlags';
+import { interrupteursPageSite } from '@/lib/ecransMasquesLogique';
+import { useFonctionnalite, useFonctionnalites } from '@/lib/featureFlags';
 
 // Valeurs propres à l'appareil (voir biensNumeriquesLogique.ts pour la règle).
 export const agentUtilisateurApp = marqueurAgentUtilisateur(Platform.OS);
@@ -11,10 +12,15 @@ export function usePaiementsAutorises(): boolean {
   return achatNumeriqueAutorise(Platform.OS, useFonctionnalite(ID_INTERRUPTEUR_PAIEMENTS));
 }
 
-/** Fonction qui dit si un lien suivi dans une page du site est une page de paiement à refuser (achat non autorisé). */
+/** Fonction qui dit si un lien suivi dans une page du site est à refuser : page de paiement (achat non autorisé) ou outil masqué (Création de CV, Modèles, Fonctionnalités, Boîte à idées, Extracteur). */
 export function useNavigationWebBloquee(): (url: string) => boolean {
-  const ouvert = useFonctionnalite(ID_INTERRUPTEUR_PAIEMENTS);
-  return (url) => navigationWebBloquee(url, Platform.OS, ouvert);
+  const paiementsOuverts = useFonctionnalite(ID_INTERRUPTEUR_PAIEMENTS);
+  const autorise = useFonctionnalites();
+  return (url) => {
+    if (navigationWebBloquee(url, Platform.OS, paiementsOuverts)) return true;
+    const requis = interrupteursPageSite(url);
+    return !autorise(requis.length ? requis : undefined);
+  };
 }
 
 /** Cette page du site (Premium, formation, facturation) est-elle bloquée dans l'application ? */

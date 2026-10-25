@@ -34,6 +34,14 @@ export const PAR_DEFAUT: Record<string, Interrupteur> = {
   // Paiements dans l'application (jetons, Premium de Locaux, formation, achat de CV, facturation) : FERMÉS par défaut, sur Android comme sur iPhone (où ils restent
   // de toute façon masqués) ; interrupteur illisible = fermés.
   feat_paiements_application: coupe(),
+  // Fonctions masquées dans la première version Android : FERMÉES par défaut et si la table est illisible. Propres à l'application (le site ne les lit pas).
+  feat_scanner_document: coupe(),
+  feat_app_extracteur: coupe(),
+  feat_app_fonctionnalites: coupe(),
+  feat_app_diagnostic_cv: coupe(),
+  feat_app_boite_idees: coupe(),
+  feat_app_creer_cv: coupe(),
+  feat_app_modeles_cv: coupe(),
 };
 
 export type Role = 'admin' | 'recruiter' | 'user' | 'visitor';

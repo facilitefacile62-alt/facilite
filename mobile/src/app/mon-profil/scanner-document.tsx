@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import GrosBoutonsChoix from '@/components/GrosBoutonsChoix';
 import { useAuth } from '@/context/AuthContext';
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { terminerOnboarding } from '@/lib/onboarding';
 import { lireCvChoisi, memoriserCvChoisi } from '@/lib/mesCv';
 import { appliquerRubriquesCv } from '@/lib/rubriquesCv';
@@ -41,6 +42,8 @@ export default function ScannerDocumentScreen() {
   const router = useRouter();
   const { onboarding, depuis } = useLocalSearchParams<{ onboarding?: string; depuis?: string }>();
   const { user, profile, refreshProfile } = useAuth();
+  const scanOuvert = useFonctionnalite('feat_scanner_document');
+  const creerCvOuvert = useFonctionnalite('feat_app_creer_cv');
 
   // Ouvert depuis l'écran 24 de l'onboarding : une fois le document
   // enregistré, le parcours est terminé et on arrive sur l'accueil Facilité.
@@ -225,6 +228,9 @@ export default function ScannerDocumentScreen() {
               </View>
             </Pressable>
 
+            {/* Photo, galerie, fichier : analyse par l'IA (payante) — masquée tant que feat_scanner_document est fermé. « Utiliser un CV déjà sur Facilité » reste. */}
+            {scanOuvert ? (
+              <>
             <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-3" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
               <View className="w-11 h-11 rounded-full bg-[#d7f2ea] items-center justify-center">
                 <Ionicons name="camera-outline" size={20} color="#0d3b34" />
@@ -254,11 +260,15 @@ export default function ScannerDocumentScreen() {
                 <Text className="text-[11.5px] text-black/45 mt-0.5">PDF, Word, image</Text>
               </View>
             </Pressable>
+              </>
+            ) : null}
 
             {/* Pas encore de CV : un seul lien pour en créer un */}
-            <Pressable onPress={() => router.push('/web/creer-cv' as Href)} accessibilityRole="link" className="items-center justify-center mt-4" style={{ minHeight: 48 }}>
+            {creerCvOuvert ? (
+              <Pressable onPress={() => router.push('/web/creer-cv' as Href)} accessibilityRole="link" className="items-center justify-center mt-4" style={{ minHeight: 48 }}>
               <Text className="text-[14px] font-bold" style={{ color: '#2563EB' }}>Je n&apos;ai pas de CV : en créer un</Text>
             </Pressable>
+            ) : null}
           </ScrollView>
         )}
 
