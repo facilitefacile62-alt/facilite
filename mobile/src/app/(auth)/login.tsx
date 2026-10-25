@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
 
 import { BoutonContinuer, CaseRonde, CasesCode } from '@/components/CasesCode';
@@ -13,6 +13,7 @@ import {
   envoyerCodeEmail,
   verifierCodeEmail,
 } from '@/lib/connexionEmail';
+import { LIBELLE_UTILISER_EMAIL, MESSAGE_CODE_TARDE, libelleRenvoi } from '@/lib/messagesCode';
 import {
   INDICATIF,
   LONGUEUR_CODE,
@@ -53,6 +54,9 @@ export default function LoginScreen() {
   const [googleEnCours, setGoogleEnCours] = useState(false);
   const [erreur, setErreur] = useState('');
   const [attente, setAttente] = useState(0);
+  // Heure d'envoi du dernier code (pour dire « pas bon » ou « expiré ») et verrou contre les doubles envois.
+  const [envoyeLe, setEnvoyeLe] = useState<number | null>(null);
+  const verrouEnvoi = useRef(false);
   // Secours « mot de passe » (facultatif) quand le code n'arrive pas : fenêtre ouverte depuis la page du code.
   const [fenetreMdp, setFenetreMdp] = useState(false);
   const [motDePasse, setMotDePasse] = useState('');
@@ -70,16 +74,19 @@ export default function LoginScreen() {
   const saisieValide = parTelephone ? numeroValide(chiffres) : emailValide(email);
 
   async function envoyer() {
-    if (!saisieValide || chargement) return;
+    if (!saisieValide || chargement || verrouEnvoi.current) return;
+    verrouEnvoi.current = true;
     setChargement(true);
     setErreur('');
     const probleme = parTelephone ? await envoyerCodeSmsConnexion(chiffres) : await envoyerCodeEmail(email);
+    verrouEnvoi.current = false;
     setChargement(false);
     if (probleme) {
       setErreur(probleme);
       return;
     }
     setCode('');
+    setEnvoyeLe(Date.now());
     setAttente(DELAI_RENVOI_EMAIL_S);
     setEtape('code');
   }
@@ -89,7 +96,7 @@ export default function LoginScreen() {
     setChargement(true);
     setErreur('');
     await memoriserGarderSession(garder);
-    const probleme = parTelephone ? await verifierCodeSms(chiffres, valeur) : await verifierCodeEmail(email, valeur);
+    const probleme = parTelephone ? await verifierCodeSms(chiffres, valeur, envoyeLe) : await verifierCodeEmail(email, valeur, envoyeLe);
     setChargement(false);
     if (probleme) {
       setErreur(probleme);
@@ -122,16 +129,27 @@ export default function LoginScreen() {
   }
 
   async function renvoyer() {
-    if (attente > 0 || chargement) return;
+    if (attente > 0 || chargement || verrouEnvoi.current) return;
+    verrouEnvoi.current = true;
     setChargement(true);
     setErreur('');
     const probleme = parTelephone ? await envoyerCodeSmsConnexion(chiffres) : await envoyerCodeEmail(email);
+    verrouEnvoi.current = false;
     setChargement(false);
     if (probleme) setErreur(probleme);
     else {
       setCode('');
+      setEnvoyeLe(Date.now());
       setAttente(DELAI_RENVOI_EMAIL_S);
     }
+  }
+
+  // « Utiliser mon e-mail à la place » : retour à la saisie, sur l'onglet e-mail, sans renvoyer de SMS.
+  function utiliserEmail() {
+    setOnglet('email');
+    setEtape('saisie');
+    setCode('');
+    setErreur('');
   }
 
   async function google() {
@@ -175,13 +193,26 @@ export default function LoginScreen() {
           <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreur}</Text>
         ) : null}
 
-        <Pressable onPress={renvoyer} disabled={attente > 0 || chargement} hitSlop={6} className="mt-5 self-start">
-          <Text
-            className="text-[15px]"
-            style={{ color: attente > 0 ? 'rgba(0,0,0,0.4)' : '#10B981', fontWeight: attente > 0 ? '500' : '800' }}>
-            {attente > 0 ? `Renvoyer un code ${attente}s` : 'Renvoyer un code'}
-          </Text>
+        <Text className="text-[15px] font-bold mt-5" style={{ color: 'rgba(0,0,0,0.7)', lineHeight: 21 }}>{MESSAGE_CODE_TARDE}</Text>
+
+        <Pressable
+          onPress={renvoyer}
+          disabled={attente > 0 || chargement}
+          accessibilityRole="button"
+          className="mt-4 items-center justify-center bg-white"
+          style={{ minHeight: 60, borderRadius: 18, borderWidth: 2, borderColor: attente > 0 ? 'rgba(0,0,0,0.15)' : '#10B981', opacity: attente > 0 || chargement ? 0.6 : 1, paddingHorizontal: 14 }}>
+          <Text className="text-[17px] font-black text-center" style={{ color: attente > 0 ? 'rgba(0,0,0,0.5)' : '#047857' }}>{libelleRenvoi(attente)}</Text>
         </Pressable>
+
+        {parTelephone ? (
+          <Pressable
+            onPress={utiliserEmail}
+            accessibilityRole="button"
+            className="mt-3 items-center justify-center bg-white"
+            style={{ minHeight: 60, borderRadius: 18, borderWidth: 2, borderColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 14 }}>
+            <Text className="text-[17px] font-black text-center text-[#111]">{LIBELLE_UTILISER_EMAIL}</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable onPress={() => router.push('/connexion-email')} hitSlop={6} className="mt-5 self-start">
           <Text className="text-[15px] font-black" style={{ color: '#2563EB' }}>Besoin d&apos;aide pour te connecter ?</Text>
