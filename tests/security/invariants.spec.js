@@ -220,6 +220,10 @@ test.describe("Invariants de sécurité", () => {
       // de fichier) et par les routes serveur (service_role) ; écrit par l'administrateur via une route admin. Voir
       // 20261024220000_achat_de_cv_catalogue.sql.
       "cv_modeles",
+      // Sauvegarde du nettoyage des valeurs d'exemple des profils (ancienne valeur des colonnes vidées, pour le retour arrière) : aucun GRANT ni policy
+      // pour les clients, jamais lue ni écrite par l'application ; seule la migration et son fichier de retour arrière y touchent. Voir
+      // 20261025160000_nettoyage_valeurs_exemple_profils.sql.
+      "profils_valeurs_exemple_nettoyees",
       // Tarif de livraison (une seule ligne) : aucun GRANT ni policy, lu uniquement par
       // lire_tarif_livraison() et modifié uniquement par definir_tarif_livraison() (administrateur,
       // SECURITY DEFINER). Une policy de lecture « pour tous » serait tautologique (invariant 7).
