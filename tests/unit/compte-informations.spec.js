@@ -415,6 +415,13 @@ test.describe("aucune écriture directe depuis un client", () => {
       expect(t, f).not.toMatch(/from\(\s*['"]profiles['"]\s*\)\s*\.(update|upsert|insert)/);
     }
   });
+  test("« Sécurité & Connexion » ne change plus ni e-mail ni téléphone et ne dissocie plus rien : lien vers l'écran unique", async () => {
+    const t = lire("src/components/SecurityTabContent.jsx");
+    expect(t).not.toMatch(/updateUser\s*\(\s*\{\s*(phone|email)/);
+    expect(t).not.toMatch(/unlinkIdentity\s*\(/);
+    expect(t).not.toMatch(/type:\s*["'](phone_change|email_change)["']/);
+    expect(t).toContain('href="/informations-compte"');
+  });
   test("le client n'a aucun droit sur les tables des codes et du journal (migration)", async () => {
     const m = lire("supabase/migrations/20261025190000_informations_compte.sql");
     expect(m).toMatch(/REVOKE ALL ON public\.compte_verifications FROM PUBLIC, anon, authenticated/);

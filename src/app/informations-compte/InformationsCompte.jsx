@@ -165,6 +165,7 @@ export default function InformationsCompte() {
     if (!r.ok) return setMessage(r.message);
     setEtat(r.etat);
     setFait(r.message);
+    renouvelerSession();
     fermer();
   };
   const dissocier = async () => {
@@ -175,8 +176,11 @@ export default function InformationsCompte() {
     if (!r.ok) return setMessage(r.message);
     setEtat(r.etat);
     setFait(r.message);
+    renouvelerSession();
     fermer();
   };
+  // Après un changement fait par le serveur, la session de cet appareil porte encore l'ancienne valeur : on la renouvelle pour que tout le site la voie.
+  const renouvelerSession = () => supabase.auth.refreshSession().catch(() => {});
   const voirActivite = async () => {
     const r = await appeler("activite");
     setActivite(r.ok ? r.evenements : []);
