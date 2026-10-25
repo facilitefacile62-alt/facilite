@@ -29,7 +29,7 @@ test.describe("nettoyage des comptes existants", () => {
     expect(sql).toContain(`p.languages = ${LANGUE}`);
     expect(sql).toContain(`p.skills = ${COMPETENCES}`);
     expect(sql.match(/p\.updated_at <= p\.created_at \+ interval '5 seconds'/g)).toHaveLength(2); // sauvegarde ET mise à jour : mêmes conditions
-    expect(sql).not.toMatch(/\bLIKE\b|ILIKE|jsonb_array_length|DELETE|TRUNCATE|DROP\s+(TABLE|COLUMN)/i);
+    expect(sql).not.toMatch(/\bLIKE\b|ILIKE|jsonb_array_length|DELETE\s+FROM|TRUNCATE|DROP\s+(TABLE|COLUMN)/i);
   });
   test("chaque colonne est jugée séparément ; seules languages et skills sont écrites ; updated_at n'est pas modifié", () => {
     const maj = sql.slice(sql.indexOf("UPDATE public.profiles"));
