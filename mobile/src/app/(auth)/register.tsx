@@ -1,5 +1,5 @@
 import { Link, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { BoutonContinuer } from '@/components/CasesCode';
@@ -16,6 +16,7 @@ import {
   numeroValide,
   verifierCodeSms,
 } from '@/lib/connexionSms';
+import { LIBELLE_UTILISER_EMAIL, MESSAGE_CODE_TARDE, libelleRenvoi } from '@/lib/messagesCode';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 
@@ -43,6 +44,9 @@ export default function RegisterScreen() {
   const [codeEnvoye, setCodeEnvoye] = useState(false);
   const [code, setCode] = useState('');
   const [attente, setAttente] = useState(0);
+  // Heure d'envoi du dernier code (« pas bon » ou « expiré ») et verrou contre les doubles envois.
+  const [envoyeLe, setEnvoyeLe] = useState<number | null>(null);
+  const verrouEnvoi = useRef(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -87,16 +91,19 @@ export default function RegisterScreen() {
   };
 
   const envoyerCode = async () => {
-    if (!nomComplet || !numeroValide(chiffres) || loading) return;
+    if (!nomComplet || !numeroValide(chiffres) || loading || verrouEnvoi.current) return;
+    verrouEnvoi.current = true;
     setLoading(true);
     setErrorMessage('');
     const probleme = await envoyerCodeSms(chiffres, { nomComplet });
+    verrouEnvoi.current = false;
     setLoading(false);
     if (probleme) {
       setErrorMessage(probleme);
       return;
     }
     setCode('');
+    setEnvoyeLe(Date.now());
     setAttente(DELAI_RENVOI_S);
     setCodeEnvoye(true);
   };
@@ -105,7 +112,7 @@ export default function RegisterScreen() {
     if (code.length !== LONGUEUR_CODE || loading) return;
     setLoading(true);
     setErrorMessage('');
-    const probleme = await verifierCodeSms(chiffres, code);
+    const probleme = await verifierCodeSms(chiffres, code, envoyeLe);
     setLoading(false);
     if (probleme) setErrorMessage(probleme);
     // Succès : la session déclenche la redirection du garde d'authentification.
@@ -163,29 +170,40 @@ export default function RegisterScreen() {
           />
           {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
           <BoutonContinuer libelle="Valider" onPress={validerCode} actif={code.length === LONGUEUR_CODE} chargement={loading} />
-          <View className="flex-row justify-center items-center gap-1.5">
-            <Text className="text-[14px]" style={{ color: 'rgba(0,0,0,0.5)' }}>
-              Pas reçu ?
-            </Text>
-            <Pressable
-              onPress={async () => {
-                if (attente > 0 || loading) return;
-                setLoading(true);
-                const p = await envoyerCodeSms(chiffres, { nomComplet });
-                setLoading(false);
-                if (p) setErrorMessage(p);
-                else {
-                  setCode('');
-                  setAttente(DELAI_RENVOI_S);
-                }
-              }}
-              disabled={attente > 0 || loading}
-              hitSlop={8}>
-              <Text className="text-[14px] font-extrabold underline" style={{ color: '#0B3D2A', opacity: attente > 0 ? 0.45 : 1 }}>
-                {attente > 0 ? `Renvoyer le code (${attente} s)` : 'Renvoyer le code'}
-              </Text>
-            </Pressable>
-          </View>
+          <Text className="text-[15px] font-bold" style={{ color: 'rgba(0,0,0,0.7)', lineHeight: 21 }}>{MESSAGE_CODE_TARDE}</Text>
+          <Pressable
+            onPress={async () => {
+              if (attente > 0 || loading || verrouEnvoi.current) return;
+              verrouEnvoi.current = true;
+              setLoading(true);
+              const p = await envoyerCodeSms(chiffres, { nomComplet });
+              verrouEnvoi.current = false;
+              setLoading(false);
+              if (p) setErrorMessage(p);
+              else {
+                setCode('');
+                setEnvoyeLe(Date.now());
+                setAttente(DELAI_RENVOI_S);
+              }
+            }}
+            disabled={attente > 0 || loading}
+            accessibilityRole="button"
+            className="items-center justify-center bg-white"
+            style={{ minHeight: 60, borderRadius: 18, borderWidth: 2, borderColor: attente > 0 ? 'rgba(0,0,0,0.15)' : '#10B981', opacity: attente > 0 || loading ? 0.6 : 1, paddingHorizontal: 14 }}>
+            <Text className="text-[17px] font-black text-center" style={{ color: attente > 0 ? 'rgba(0,0,0,0.5)' : '#047857' }}>{libelleRenvoi(attente)}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setMethode('email');
+              setCodeEnvoye(false);
+              setCode('');
+              setErrorMessage('');
+            }}
+            accessibilityRole="button"
+            className="items-center justify-center bg-white"
+            style={{ minHeight: 60, borderRadius: 18, borderWidth: 2, borderColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 14 }}>
+            <Text className="text-[17px] font-black text-center text-[#111]">{LIBELLE_UTILISER_EMAIL}</Text>
+          </Pressable>
         </View>
       ) : (
         <>
