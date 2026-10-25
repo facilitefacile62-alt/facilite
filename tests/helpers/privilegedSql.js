@@ -34,13 +34,32 @@ function getTestDbUrl() {
   return dbUrl;
 }
 
+/**
+ * Lignes renvoyées par `supabase db query`, quel que soit le mode de la CLI : objet { boundary, rows } (mode « agent » ou --linked) ou simple tableau
+ * (`-o json` hors mode agent, cas de la CI). Une commande sans résultat (INSERT, DROP TABLE…) n'imprime qu'une étiquette (« INSERT 0 1 ») : aucune ligne.
+ * Retourne null si la sortie n'est reconnue d'aucune de ces formes (le test échoue alors bruyamment, jamais en silence).
+ */
+function parserSortieCli(stdout) {
+  const debut = stdout.search(/^[{[]/m);
+  if (debut >= 0) {
+    try {
+      const donnees = JSON.parse(stdout.slice(debut));
+      return Array.isArray(donnees) ? donnees : donnees.rows || [];
+    } catch {
+      return null;
+    }
+  }
+  const utile = stdout.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^Connecting to /i.test(l));
+  return utile.length > 0 && utile.every((l) => /^[A-Z][A-Z ]*( \d+)*$/.test(l)) ? [] : null;
+}
+
 function runSupabaseCliQuery(sql, connFlag, timeoutMs) {
   const tmpFile = path.join(os.tmpdir(), `privileged-sql-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
   fs.writeFileSync(tmpFile, sql);
 
   return new Promise((resolve, reject) => {
     exec(
-      `npx supabase db query ${connFlag} --yes -f "${tmpFile}"`,
+      `npx supabase db query ${connFlag} -o json --yes -f "${tmpFile}"`,
       { cwd: REPO_ROOT, encoding: "utf-8", timeout: timeoutMs, windowsHide: true, maxBuffer: 10 * 1024 * 1024 },
       (error, stdout, stderr) => {
         try {
@@ -62,11 +81,9 @@ function runSupabaseCliQuery(sql, connFlag, timeoutMs) {
           return;
         }
 
-        try {
-          resolve(JSON.parse(stdout.slice(stdout.indexOf("{"))).rows || []);
-        } catch {
-          reject(new Error(`réponse CLI non-JSON — ${stdout.slice(0, 300)}`));
-        }
+        const lignes = parserSortieCli(stdout);
+        if (lignes) resolve(lignes);
+        else reject(new Error(`réponse CLI non-JSON — ${stdout.slice(0, 300)}`));
       }
     );
   });
