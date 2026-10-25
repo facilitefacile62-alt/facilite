@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { checkRateLimit } from "@/lib/apiAuth";
+import { cheminFonctionnalites } from "@/lib/outilsDirects";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
@@ -84,6 +85,7 @@ export async function POST(req) {
   const refreshToken = form.get("refresh_token");
   const cible = form.get("cible");
   const template = form.get("template");
+  const outil = form.get("outil");
 
   const idCible = form.get("id");
 
@@ -111,10 +113,13 @@ export async function POST(req) {
   const { allowed, error: rateError } = await checkRateLimit(data.user.id);
   if (!allowed) return rateError;
 
+  // Outil PDF ouvert directement depuis l'application : l'identifiant vient d'une liste fermée (outilsDirects.js), jamais recopié tel quel.
   const cheminFinal =
     cible === "creer-cv" && typeof template === "string" && template
       ? `${chemin}?template=${encodeURIComponent(template)}`
-      : chemin;
+      : cible === "fonctionnalites"
+        ? cheminFonctionnalites(outil)
+        : chemin;
   // 303 (et non le 307 par défaut) : la redirection doit se faire en GET. Avec 307 le navigateur intégré rejouait le POST vers
   // la page cible, qui répondait 405 (constaté le 25/09/2026 sur tablette : « Erreur 405 — /fonctionnalite-indisponible »).
   const res = NextResponse.redirect(new URL(cheminFinal, req.url), 303);
