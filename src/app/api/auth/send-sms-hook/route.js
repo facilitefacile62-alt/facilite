@@ -17,8 +17,10 @@ export async function POST(req) {
   const corps = await req.text();
   const controle = verifierSignatureWebhook({ corps, entetes: req.headers, secret: process.env.SEND_SMS_HOOK_SECRET });
   if (!controle.ok) {
-    const statut = controle.raison === "secret_absent" ? 503 : 401;
-    return NextResponse.json({ error: { http_code: statut, message: statut === 503 ? "Hook non configuré." : "Signature invalide." } }, { status: statut });
+    // Secret non défini (hook pas encore configuré) : 403, JAMAIS 503 — Supabase réessaierait un 503 jusqu'à 3 fois. Rien n'est envoyé, rien n'est écrit au journal.
+    // Signature fausse alors que le secret existe : 401.
+    const statut = controle.raison === "secret_absent" ? 403 : 401;
+    return NextResponse.json({ error: { http_code: statut, message: statut === 403 ? "Hook non configuré." : "Signature invalide." } }, { status: statut });
   }
 
   const limite = new Promise((resolve) =>
