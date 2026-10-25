@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PDFDocument, degrees } from "pdf-lib";
 import JSZip from "jszip";
@@ -460,6 +460,13 @@ export default function FonctionnalitesPage() {
   const [draggedPage, setDraggedPage] = useState(null);
 
   // Accordéons
+  // Outil ouvert DIRECTEMENT depuis l'application (?tool=…, page affichée dans sa WebView) : pas de « Retour aux outils » ni de liste des outils du
+  // site — le retour se fait avec la flèche de l'application, qui ramène à sa propre liste.
+  const ouvertDepuisApp = useSyncExternalStore(
+    () => () => {},
+    () => document.cookie.includes("app_embed=1") && new URLSearchParams(window.location.search).has("tool"),
+    () => false
+  );
   const [openSteps, setOpenSteps] = useState(false);
   const [openHighlights, setOpenHighlights] = useState(false);
 
@@ -1210,19 +1217,21 @@ export default function FonctionnalitesPage() {
             <div>
               {/* Barre de retour et tag */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileView("list");
-                    resetToolState();
-                  }}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-black transition cursor-pointer shadow-xs group"
-                >
-                  <i className="fa-solid fa-arrow-left text-sm text-[#E5322D] group-hover:-translate-x-1 transition-transform"></i>
-                  <span>← Retour aux outils</span>
-                </button>
+                {!ouvertDepuisApp && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileView("list");
+                      resetToolState();
+                    }}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-black transition cursor-pointer shadow-xs group"
+                  >
+                    <i className="fa-solid fa-arrow-left text-sm text-[#E5322D] group-hover:-translate-x-1 transition-transform"></i>
+                    <span>← Retour aux outils</span>
+                  </button>
+                )}
 
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${activeItem.tagColor}`}>
+                <span className={`ml-auto px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${activeItem.tagColor}`}>
                   {activeItem.tag}
                 </span>
               </div>
