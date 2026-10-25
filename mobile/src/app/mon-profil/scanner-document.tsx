@@ -1,19 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import GrosBoutonsChoix from '@/components/GrosBoutonsChoix';
 import { useAuth } from '@/context/AuthContext';
 import { terminerOnboarding } from '@/lib/onboarding';
+import { lireCvChoisi, memoriserCvChoisi } from '@/lib/mesCv';
+import { appliquerRubriquesCv } from '@/lib/rubriquesCv';
+import { changements, rubriquesReelles, rubriquesVides, type Rubriques } from '@/lib/rubriquesCvLogique';
 import { supabase } from '@/lib/supabase';
 import {
   analyserDocument,
   scannerPieceIdentite,
   type DonneesExtraites,
   type ExperienceExtraite,
+  type FormationExtraite,
   type LangueExtraite,
 } from '@/lib/scanDocument';
 
@@ -21,20 +26,21 @@ import {
 // passeport -> pré-remplissage nom/prénom/quartier ; sinon CV/document ->
 // /api/parse-document -> revue éditable avant écrasement du profil. Pas de
 // restriction de format côté app (photo OU PDF/Word) : voir scanDocument.ts.
-// La revue CV n'inclut pas les formations (profiles.educations) : aucun
-// écran mobile ne les affiche encore (voir mon-profil/a-propos.tsx), donc
-// rien n'est écrit dans une colonne qu'on ne peut pas relire ici.
+// Les cinq rubriques du CV (langues, expériences, formation, compétences, centres d'intérêt) ne sont JAMAIS remplacées en silence : si la personne
+// en a déjà, un écran très simple demande « Remplacer mes informations par celles de ce CV ? » (deux gros boutons) ; l'ancienne version est gardée
+// par le serveur et reste récupérable (mon-profil/versions-cv.tsx).
 type Etat =
   | { phase: 'choix' }
   | { phase: 'analyse'; message: string }
   | { phase: 'identite'; prenom: string; nom: string; quartier: string }
   | { phase: 'revue'; donnees: DonneesExtraites }
+  | { phase: 'confirmation'; donnees: DonneesExtraites }
   | { phase: 'erreur'; message: string };
 
 export default function ScannerDocumentScreen() {
   const router = useRouter();
-  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
-  const { user, refreshProfile } = useAuth();
+  const { onboarding, depuis } = useLocalSearchParams<{ onboarding?: string; depuis?: string }>();
+  const { user, profile, refreshProfile } = useAuth();
 
   // Ouvert depuis l'écran 24 de l'onboarding : une fois le document
   // enregistré, le parcours est terminé et on arrive sur l'accueil Facilité.
@@ -47,7 +53,11 @@ export default function ScannerDocumentScreen() {
     }
     router.back();
   }
-  const [etat, setEtat] = useState<Etat>({ phase: 'choix' });
+  // Ouvert depuis « Mes CV » (CV déjà enregistré sur Facilité) : on passe directement à la relecture, comme après une analyse.
+  const [etat, setEtat] = useState<Etat>(() => {
+    const choisi = depuis === 'mes-cv' ? lireCvChoisi() : null;
+    return choisi ? { phase: 'revue', donnees: choisi } : { phase: 'choix' };
+  });
   const [enregistrement, setEnregistrement] = useState(false);
 
   async function traiterFichier(uri: string, nomFichier: string, type: string) {
@@ -141,52 +151,47 @@ export default function ScannerDocumentScreen() {
     await terminerParcours();
   }
 
+  // Rubriques déjà présentes (les valeurs d'exemple de la base ne comptent pas) : rien à perdre → on enregistre ; sinon, écran de confirmation.
   function confirmerEcrasement(donnees: DonneesExtraites) {
-    // Alert.alert est sans effet sur react-native-web (aperçu navigateur) :
-    // on y passe par la confirmation du navigateur.
-    if (Platform.OS === 'web') {
-      if (window.confirm('Les champs remplis ci-dessous vont remplacer vos informations personnelles, langues et expériences actuelles.')) {
-        enregistrerRevue(donnees);
-      }
+    if (rubriquesVides(rubriquesReelles(profile))) {
+      enregistrerRevue(donnees);
       return;
     }
-    Alert.alert(
-      'Remplacer vos informations ?',
-      'Les champs remplis ci-dessous vont remplacer vos informations personnelles, langues et expériences actuelles.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Remplacer', style: 'destructive', onPress: () => enregistrerRevue(donnees) },
-      ]
-    );
+    setEtat({ phase: 'confirmation', donnees });
   }
 
   async function enregistrerRevue(donnees: DonneesExtraites) {
     if (!user?.id) return;
     setEnregistrement(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: donnees.fullName || undefined,
-        headline: donnees.headline || undefined,
-        bio: donnees.bio || undefined,
-        city: donnees.city || undefined,
-        phone: donnees.phone || undefined,
-        // Un tableau vide n'écrase les langues/expériences existantes que
-        // si la revue en propose au moins une (voir le bandeau de
-        // confirmation) — sinon une extraction qui n'a rien trouvé
-        // effacerait silencieusement des données réelles déjà enregistrées.
-        languages: donnees.languages.length > 0 ? donnees.languages : undefined,
-        experiences: donnees.experiences.length > 0 ? donnees.experiences : undefined,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-    setEnregistrement(false);
-    if (error) {
+    try {
+      // 1) Les cinq rubriques, par le serveur : il garde d'abord une copie de l'état actuel (version récupérable), puis écrit. Une rubrique que ce
+      //    CV ne contient pas reste telle quelle (jamais effacée par une extraction qui n'a rien trouvé).
+      await appliquerRubriquesCv(rubriquesDeLaRevue(donnees));
+      // 2) Identité lue sur le CV (nom, titre, bio, ville) et coordonnées du CV : vérifiées par la personne sur l'écran de revue.
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: donnees.fullName || undefined,
+          headline: donnees.headline || undefined,
+          bio: donnees.bio || undefined,
+          city: donnees.city || undefined,
+          // Les coordonnées lues sur le CV vont dans « Coordonnées du CV » (colonnes à part) : le téléphone du compte n'est jamais remplacé.
+          cv_telephone: donnees.phone || undefined,
+          cv_email: donnees.email || undefined,
+          cv_ville: donnees.city || undefined,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      if (error) throw new Error(error.message);
+    } catch {
+      setEnregistrement(false);
       Alert.alert('Erreur', "Impossible d'enregistrer pour le moment.");
       return;
     }
+    setEnregistrement(false);
+    memoriserCvChoisi(null);
     await refreshProfile();
-    Alert.alert('✓ Document analysé', 'Les informations du profil ont été mises à jour.');
+    Alert.alert('✓ CV enregistré', 'Vos informations ont été mises à jour. Les anciennes sont gardées : vous pouvez les retrouver.');
     await terminerParcours();
   }
 
@@ -209,7 +214,18 @@ export default function ScannerDocumentScreen() {
               d&apos;enregistrer.
             </Text>
 
-            <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-4" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+            {/* Un CV déjà enregistré sur Facilité (créé sur le site ou importé) : la mise à jour du profil en un geste */}
+            <Pressable onPress={() => router.push('/mon-profil/choisir-cv' as Href)} className="flex-row items-center gap-3 bg-white rounded-full mt-4" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
+              <View className="w-11 h-11 rounded-full bg-[#D1FAE5] items-center justify-center">
+                <Ionicons name="documents-outline" size={20} color="#047857" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Utiliser un CV déjà sur Facilité</Text>
+                <Text className="text-[11.5px] text-black/45 mt-0.5">Un CV créé ou importé</Text>
+              </View>
+            </Pressable>
+
+            <Pressable onPress={prendrePhoto} className="flex-row items-center gap-3 bg-white rounded-full mt-3" style={{ paddingVertical: 9, paddingLeft: 10, paddingRight: 22 }}>
               <View className="w-11 h-11 rounded-full bg-[#d7f2ea] items-center justify-center">
                 <Ionicons name="camera-outline" size={20} color="#0d3b34" />
               </View>
@@ -237,6 +253,11 @@ export default function ScannerDocumentScreen() {
                 <Text className="text-[13.5px] font-bold text-[#1A1A1A]">Choisir un fichier</Text>
                 <Text className="text-[11.5px] text-black/45 mt-0.5">PDF, Word, image</Text>
               </View>
+            </Pressable>
+
+            {/* Pas encore de CV : un seul lien pour en créer un */}
+            <Pressable onPress={() => router.push('/web/creer-cv' as Href)} accessibilityRole="link" className="items-center justify-center mt-4" style={{ minHeight: 48 }}>
+              <Text className="text-[14px] font-bold" style={{ color: '#2563EB' }}>Je n&apos;ai pas de CV : en créer un</Text>
             </Pressable>
           </ScrollView>
         )}
@@ -269,6 +290,22 @@ export default function ScannerDocumentScreen() {
 
         {etat.phase === 'revue' && (
           <RevueDocument donnees={etat.donnees} enregistrement={enregistrement} onValider={confirmerEcrasement} />
+        )}
+
+        {etat.phase === 'confirmation' && (
+          <GrosBoutonsChoix
+            question="Remplacer mes informations par celles de ce CV ?"
+            details={[
+              ...changements(rubriquesReelles(profile), rubriquesDeLaRevue(etat.donnees)).map((c) => c.texte),
+              'Votre nom, titre, bio et ville seront aussi mis à jour.',
+              'Vos anciennes informations sont gardées : vous pourrez les récupérer.',
+            ]}
+            oui="Oui, remplacer"
+            non="Non, garder les miennes"
+            occupe={enregistrement}
+            onOui={() => enregistrerRevue(etat.donnees)}
+            onNon={() => setEtat({ phase: 'revue', donnees: etat.donnees })}
+          />
         )}
       </SafeAreaView>
     </View>
@@ -334,6 +371,9 @@ function RevueDocument({
   const [phone, setPhone] = useState(donnees.phone);
   const [languages, setLanguages] = useState<LangueExtraite[]>(donnees.languages);
   const [experiences, setExperiences] = useState<ExperienceExtraite[]>(donnees.experiences);
+  const [educations, setEducations] = useState<FormationExtraite[]>(donnees.educations);
+  const [skills, setSkills] = useState<string[]>(donnees.skills);
+  const [interests, setInterests] = useState<string[]>(donnees.interests);
 
   return (
     <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false}>
@@ -403,8 +443,55 @@ function RevueDocument({
         </View>
       )}
 
+      {educations.length > 0 && (
+        <View className="mt-4">
+          <Text className="text-[11px] font-bold text-black/40 tracking-wide">🎓 FORMATIONS DÉTECTÉES</Text>
+          <View className="gap-2 mt-2">
+            {educations.map((f, i) => (
+              <View key={`${f.school}-${f.degree}-${i}`} className="flex-row items-start gap-2.5 bg-white rounded-xl px-3.5 py-2.5">
+                <View className="flex-1">
+                  <Text className="text-[13px] font-bold text-[#1A1A1A]">{f.school || f.degree}</Text>
+                  <Text className="text-[11.5px] text-black/50 mt-0.5">{f.school ? [f.degree, f.field].filter(Boolean).join(' - ') : f.field}</Text>
+                </View>
+                <Pressable onPress={() => setEducations((prev) => prev.filter((_, idx) => idx !== i))}>
+                  <Ionicons name="close-circle-outline" size={18} color="rgba(0,0,0,0.35)" />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {skills.length > 0 && (
+        <View className="mt-4">
+          <Text className="text-[11px] font-bold text-black/40 tracking-wide">💡 COMPÉTENCES DÉTECTÉES</Text>
+          <View className="flex-row flex-wrap gap-2 mt-2">
+            {skills.map((c, i) => (
+              <Pressable key={`${c}-${i}`} onPress={() => setSkills((prev) => prev.filter((_, idx) => idx !== i))} className="flex-row items-center gap-1.5 bg-white rounded-[10px] px-3 py-2">
+                <Text className="text-[12.5px] font-semibold text-[#1A1A1A]">{c}</Text>
+                <Ionicons name="close" size={13} color="rgba(0,0,0,0.4)" />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {interests.length > 0 && (
+        <View className="mt-4">
+          <Text className="text-[11px] font-bold text-black/40 tracking-wide">🎯 CENTRES D&apos;INTÉRÊT DÉTECTÉS</Text>
+          <View className="flex-row flex-wrap gap-2 mt-2">
+            {interests.map((c, i) => (
+              <Pressable key={`${c}-${i}`} onPress={() => setInterests((prev) => prev.filter((_, idx) => idx !== i))} className="flex-row items-center gap-1.5 bg-white rounded-[10px] px-3 py-2">
+                <Text className="text-[12.5px] font-semibold text-[#1A1A1A]">{c}</Text>
+                <Ionicons name="close" size={13} color="rgba(0,0,0,0.4)" />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       <Pressable
-        onPress={() => onValider({ fullName, headline, bio, city, phone, email: donnees.email, languages, experiences, degrade: donnees.degrade })}
+        onPress={() => onValider({ fullName, headline, bio, city, phone, email: donnees.email, languages, experiences, educations, skills, interests, degrade: donnees.degrade })}
         disabled={enregistrement}
         className="bg-emerald-500 rounded-full py-3.5 items-center mt-5">
         <Text className="text-white text-[14px] font-bold">
@@ -413,6 +500,17 @@ function RevueDocument({
       </Pressable>
     </ScrollView>
   );
+}
+
+/** Les cinq rubriques telles qu'elles ont été relues et validées sur l'écran de revue. */
+function rubriquesDeLaRevue(d: DonneesExtraites): Rubriques {
+  return {
+    languages: d.languages.map((l) => ({ id: `lang-${l.name}`, name: l.name, level: l.level })),
+    experiences: d.experiences,
+    educations: d.educations,
+    skills: d.skills,
+    interests: d.interests,
+  };
 }
 
 function ChampRevue({ label, valeur, onChange }: { label: string; valeur: string; onChange: (v: string) => void }) {

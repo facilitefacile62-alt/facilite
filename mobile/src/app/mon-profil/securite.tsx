@@ -1,11 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ChampMotDePasse from '@/components/ChampMotDePasse';
 import EnteteRubrique from '@/components/EnteteRubrique';
+import SelecteurPays from '@/components/SelecteurPays';
 import { useAuth } from '@/context/AuthContext';
+import { enregistrerChampsProfil } from '@/lib/profilChamps';
 import { verifierChangementMotDePasse } from '@/lib/recuperationMotDePasse';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL } from '@/lib/webEcrans';
@@ -33,17 +37,66 @@ function emailMasque(email: string | undefined): string {
   return `${local.slice(0, 1)}***@${domaine}`;
 }
 
+function Critere({ ok, texte }: { ok: boolean; texte: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <Ionicons name={ok ? 'checkmark-circle' : 'ellipse-outline'} size={14} color={ok ? '#10B981' : 'rgba(0,0,0,0.3)'} />
+      <Text className="text-[11.5px]" style={{ color: ok ? '#047857' : 'rgba(0,0,0,0.45)' }}>{texte}</Text>
+    </View>
+  );
+}
+
 function texteOuNonRenseigne(v: unknown): string {
   return typeof v === 'string' && v.trim() ? v : 'Non renseignée';
 }
 
 export default function ProfilSecuriteScreen() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const [motDePasse, setMotDePasse] = useState('');
   const [actuel, setActuel] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [enCours, setEnCours] = useState(false);
+  // Ancien mot de passe vérifié (changement seulement) : tant qu'il ne l'est pas, « nouveau » et « confirmer » restent grisés.
+  const [actuelVerifie, setActuelVerifie] = useState(false);
+  const [verification, setVerification] = useState(false);
+  const [actuelFaux, setActuelFaux] = useState(false);
+  const defilement = useRef<ScrollView>(null);
+
+  async function verifierActuel() {
+    if (!actuel || verification || actuelVerifie) return;
+    setVerification(true);
+    setActuelFaux(false);
+    try {
+      const identifiant = user?.email ? { email: user.email, password: actuel } : { phone: user?.phone ?? '', password: actuel };
+      const { error } = await supabase.auth.signInWithPassword(identifiant);
+      if (error) setActuelFaux(true);
+      else setActuelVerifie(true);
+    } finally {
+      setVerification(false);
+    }
+  }
+  // Un champ du formulaire reçoit le focus : on descend jusqu'au bas de la page, pour voir le champ ET le bouton « Changer le mot de passe »
+  // au-dessus du clavier (la page est arrêtée au-dessus du clavier, voir ConteneurClavier).
+  const versLeBas = () => setTimeout(() => defilement.current?.scrollToEnd({ animated: true }), 250);
+  // Pays : modifiable ici (profiles.country) par un menu déroulant.
+  const [editionPays, setEditionPays] = useState(false);
+  const [pays, setPays] = useState('');
+  const [paysEnCours, setPaysEnCours] = useState(false);
+
+  async function enregistrerPays() {
+    if (!user?.id || paysEnCours) return;
+    setPaysEnCours(true);
+    try {
+      await enregistrerChampsProfil(user.id, { country: pays.trim() || null });
+      await refreshProfile();
+      setEditionPays(false);
+    } catch {
+      Alert.alert('Erreur', "Impossible d'enregistrer le pays pour le moment.");
+    } finally {
+      setPaysEnCours(false);
+    }
+  }
   // null = pas encore connu (aucun formulaire affiché plutôt que de deviner) ; 'echec' = le serveur n'a pas répondu.
   const [aUnMotDePasse, setAUnMotDePasse] = useState<boolean | null | 'echec'>(null);
   const [essai, setEssai] = useState(0);
@@ -69,7 +122,7 @@ export default function ProfilSecuriteScreen() {
 
   const assezLong = motDePasse.length >= LONGUEUR_MIN;
   // Changement : ancien + nouveau + confirmation remplis ; création : nouveau assez long.
-  const peutEnregistrer = aUnMotDePasse === true ? Boolean(actuel) && assezLong && Boolean(confirmation) : assezLong;
+  const peutEnregistrer = aUnMotDePasse === true ? actuelVerifie && assezLong && confirmation === motDePasse : assezLong;
 
   async function definirMotDePasse() {
     if (enCours) return;
@@ -146,7 +199,7 @@ export default function ProfilSecuriteScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <EnteteRubrique titre="Sécurité & Connexion" />
 
-        <ScrollView contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView ref={defilement} contentContainerClassName="px-5 pb-8" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View className="bg-white rounded-2xl p-3.5">
             <View className="flex-row items-center gap-2">
               <Ionicons name="card-outline" size={15} color="#2563EB" />
@@ -172,8 +225,32 @@ export default function ProfilSecuriteScreen() {
                       {l.valeur}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-down" size={15} color="rgba(0,0,0,0.35)" />
+                  {l.cle === 'pays' ? (
+                    <Pressable
+                      onPress={() => {
+                        setPays(typeof profile?.country === 'string' ? profile.country : '');
+                        setEditionPays((v) => !v);
+                      }}
+                      hitSlop={10}
+                      accessibilityLabel="Modifier le pays">
+                      <Ionicons name={editionPays ? 'chevron-up' : 'create-outline'} size={17} color="#2563EB" />
+                    </Pressable>
+                  ) : (
+                    <Ionicons name="chevron-down" size={15} color="rgba(0,0,0,0.35)" />
+                  )}
                 </View>
+                {l.cle === 'pays' && editionPays ? (
+                  <View className="mt-2.5">
+                    <SelecteurPays valeur={pays} onChange={setPays} />
+                    <Pressable
+                      onPress={enregistrerPays}
+                      disabled={paysEnCours}
+                      className="self-start rounded-full px-5 py-2.5 mt-2.5"
+                      style={{ backgroundColor: '#047857', opacity: paysEnCours ? 0.5 : 1 }}>
+                      <Text className="text-[13px] font-bold text-white">{paysEnCours ? 'Enregistrement…' : 'Enregistrer'}</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
             ))}
           </View>
@@ -219,50 +296,48 @@ export default function ProfilSecuriteScreen() {
             {aUnMotDePasse === true ? (
               <>
                 <Text className="text-[12px] font-bold text-black/55 mt-3.5">Mot de passe actuel</Text>
-                <TextInput
-                  value={actuel}
-                  onChangeText={setActuel}
-                  placeholder="••••••••"
-                  placeholderTextColor="rgba(0,0,0,0.3)"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
+                <ChampMotDePasse
+                  valeur={actuel}
+                  onChange={(t) => {
+                    setActuel(t);
+                    setActuelVerifie(false);
+                    setActuelFaux(false);
+                  }}
+                  onFocus={versLeBas}
+                  onSubmit={verifierActuel}
                 />
+                {actuelVerifie ? (
+                  <Critere ok texte="Mot de passe actuel correct" />
+                ) : (
+                  <>
+                    {actuelFaux ? <Text className="text-[12px] font-bold text-[#B91C1C] mt-2">Mot de passe actuel incorrect.</Text> : null}
+                    <Pressable
+                      onPress={verifierActuel}
+                      disabled={!actuel || verification}
+                      className="self-start rounded-full px-5 py-2.5 mt-2.5"
+                      style={{ backgroundColor: '#047857', opacity: !actuel || verification ? 0.45 : 1 }}>
+                      <Text className="text-[13px] font-bold text-white">{verification ? 'Vérification…' : 'Vérifier'}</Text>
+                    </Pressable>
+                  </>
+                )}
               </>
             ) : null}
 
             {typeof aUnMotDePasse === 'boolean' ? (
               <>
                 <Text className="text-[12px] font-bold text-black/55 mt-3.5">Nouveau mot de passe</Text>
-                <TextInput
-                  value={motDePasse}
-                  onChangeText={setMotDePasse}
-                  placeholder="••••••••"
-                  placeholderTextColor="rgba(0,0,0,0.3)"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
-                />
-                <View className="flex-row items-center gap-1.5 mt-2">
-                  <View
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: assezLong ? '#10B981' : 'rgba(0,0,0,0.25)' }}
-                  />
-                  <Text className="text-[11.5px] text-black/45">{LONGUEUR_MIN} caractères minimum</Text>
+                <ChampMotDePasse valeur={motDePasse} onChange={setMotDePasse} nouveau onFocus={versLeBas} desactive={aUnMotDePasse === true && !actuelVerifie} />
+                <View className="mt-2 gap-1">
+                  <Critere ok={assezLong} texte={`${LONGUEUR_MIN} caractères minimum`} />
+                  <Critere ok={/[A-Za-z]/.test(motDePasse)} texte="Au moins une lettre (conseillé)" />
+                  <Critere ok={/\d/.test(motDePasse)} texte="Au moins un chiffre (conseillé)" />
                 </View>
 
                 {aUnMotDePasse === true ? (
                   <>
                     <Text className="text-[12px] font-bold text-black/55 mt-3.5">Confirmer le nouveau mot de passe</Text>
-                    <TextInput
-                      value={confirmation}
-                      onChangeText={setConfirmation}
-                      placeholder="••••••••"
-                      placeholderTextColor="rgba(0,0,0,0.3)"
-                      secureTextEntry
-                      autoCapitalize="none"
-                      className="border-[1.5px] border-[#0B3D2A] rounded-[14px] px-3.5 py-3.5 mt-2 text-[14px] text-[#1A1A1A]"
-                    />
+                    <ChampMotDePasse valeur={confirmation} onChange={setConfirmation} nouveau onFocus={versLeBas} desactive={!actuelVerifie} />
+                    {confirmation ? <Critere ok={confirmation === motDePasse} texte={confirmation === motDePasse ? 'Les deux mots de passe sont identiques' : 'Les deux mots de passe sont différents'} /> : null}
                   </>
                 ) : null}
 

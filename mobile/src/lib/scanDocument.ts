@@ -1,4 +1,8 @@
 import { Platform } from 'react-native';
+import { mapperChampsExtraits, type DonneesExtraites } from '@/lib/scanLogique';
+
+// Les types et la lecture des champs extraits (réutilisés pour les CV déjà enregistrés sur Facilité) vivent dans scanLogique.ts.
+export type { DonneesExtraites, ExperienceExtraite, FormationExtraite, LangueExtraite } from '@/lib/scanLogique';
 import { supabase } from '@/lib/supabase';
 
 // Client mobile pour les deux endpoints réels déjà utilisés par
@@ -23,27 +27,6 @@ export type ResultatScanIdentite = {
   prenom?: string;
   quartier?: string;
   error?: string;
-};
-
-export type LangueExtraite = { name: string; level: string };
-export type ExperienceExtraite = {
-  title: string;
-  company: string;
-  location?: string;
-  startYear?: string;
-  isCurrent?: boolean;
-};
-
-export type DonneesExtraites = {
-  fullName: string;
-  headline: string;
-  bio: string;
-  city: string;
-  phone: string;
-  email: string;
-  languages: LangueExtraite[];
-  experiences: ExperienceExtraite[];
-  degrade: boolean;
 };
 
 async function enteteAuth(): Promise<Record<string, string> | undefined> {
@@ -83,67 +66,6 @@ export async function scannerPieceIdentite(
     return { isIdentityDocument: false, error: resultat?.error || "Erreur lors de l'analyse du document." };
   }
   return resultat;
-}
-
-function texte(source: unknown, cles: string[]): string {
-  if (!source || typeof source !== 'object') return '';
-  for (const cle of cles) {
-    const v = (source as Record<string, unknown>)[cle];
-    if (typeof v === 'string' && v.trim()) return v.trim();
-  }
-  return '';
-}
-
-function mapperChampsExtraits(fields: Record<string, unknown>): Omit<DonneesExtraites, 'degrade'> {
-  const etatCivil = fields.etat_civil;
-  const contacts = fields.contacts;
-
-  const fullName = texte(etatCivil, ['nom']) || texte(fields, ['fullName', 'name']);
-  const headline = texte(etatCivil, ['titre_professionnel']) || texte(fields, ['title', 'jobTitle']);
-  const bio = texte(fields, ['profil_professionnel']) || texte(fields, ['bio', 'summary']);
-  const city = texte(contacts, ['localisation']) || texte(fields, ['city', 'location']);
-  const phone = texte(contacts, ['telephone']) || texte(fields, ['phone', 'telephone']);
-  const email = texte(contacts, ['email']) || texte(fields, ['email']);
-
-  const languesDetail = (fields.langues as Record<string, unknown> | undefined)?.detail;
-  const languesBrutes: unknown[] = Array.isArray(languesDetail)
-    ? languesDetail
-    : Array.isArray(fields.languages)
-      ? (fields.languages as unknown[])
-      : [];
-  const languages: LangueExtraite[] = languesBrutes
-    .map((l): LangueExtraite => {
-      if (typeof l === 'string') {
-        const [nomLangue, niveau] = l.split(/[-:(]/).map((s) => s.trim());
-        return { name: nomLangue || l, level: niveau || '' };
-      }
-      return { name: texte(l, ['name', 'langue']), level: texte(l, ['level', 'niveau']) };
-    })
-    .filter((l) => l.name);
-
-  const expBrutes: unknown[] = Array.isArray(fields.experiences_professionnelles)
-    ? (fields.experiences_professionnelles as unknown[])
-    : Array.isArray(fields.experiences)
-      ? (fields.experiences as unknown[])
-      : [];
-  const experiences: ExperienceExtraite[] = expBrutes
-    .map((x): ExperienceExtraite | null => {
-      if (!x || typeof x !== 'object') return null;
-      const dates = texte(x, ['dates']);
-      const anneeMatch = dates.match(/\d{4}/);
-      const title = texte(x, ['poste', 'title']);
-      if (!title) return null;
-      return {
-        title,
-        company: texte(x, ['entreprise', 'company']),
-        location: texte(x, ['localisation', 'location']) || undefined,
-        startYear: anneeMatch?.[0] || texte(x, ['startYear']) || undefined,
-        isCurrent: /présent|present|en cours/i.test(dates),
-      };
-    })
-    .filter((x): x is ExperienceExtraite => x !== null);
-
-  return { fullName, headline, bio, city, phone, email, languages, experiences };
 }
 
 export async function analyserDocument(

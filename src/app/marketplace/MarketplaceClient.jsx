@@ -2092,7 +2092,8 @@ function VueReglages({
           contact_email: coordEmail || null,
           city: emplacement || "Dakar",
           location: emplacement || "Dakar",
-          date_naissance: anniversaire || null,
+          // La date de naissance ne change jamais une fois renseignée : on ne la renvoie pas si elle existe déjà (la base la verrouille aussi).
+          ...(profile?.date_naissance ? {} : { date_naissance: anniversaire || null }),
           gender: sexe,
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
@@ -2787,9 +2788,11 @@ function VueReglages({
                 type="date"
                 value={anniversaire}
                 onChange={(e) => setAnniversaire(e.target.value)}
-                className="w-full bg-transparent text-xs sm:text-sm text-gray-700 dark:text-gray-200 outline-none cursor-pointer"
+                disabled={Boolean(profile?.date_naissance)}
+                title={profile?.date_naissance ? "La date de naissance ne change jamais une fois renseignée" : undefined}
+                className="w-full bg-transparent text-xs sm:text-sm text-gray-700 dark:text-gray-200 outline-none cursor-pointer disabled:cursor-default disabled:text-gray-500"
               />
-              <i className="fa-regular fa-calendar text-gray-400 text-sm shrink-0 pointer-events-none"></i>
+              <i className={`fa-solid ${profile?.date_naissance ? "fa-lock" : "fa-regular fa-calendar"} text-gray-400 text-sm shrink-0 pointer-events-none`}></i>
             </div>
 
             {/* Sexe */}

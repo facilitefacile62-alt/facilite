@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import BoutonAideOutil from '@/components/BoutonAideOutil';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import {
   IconChevronBas,
@@ -66,6 +67,9 @@ export default function ExtracteurScreen() {
               <IconChevronGauche />
               <Text className="text-blue-600 text-[14px] font-bold">Retour</Text>
             </Pressable>
+            <View className="flex-1" />
+            {/* Bouton « Aide » de l'outil, dans sa page */}
+            <BoutonAideOutil outilId="extracteur_ia" titre="Extracteur 1-Click" />
           </View>
 
           <LinearGradient colors={['#0d3b34', '#0f4f42']} style={{ borderRadius: 18, padding: 16 }}>

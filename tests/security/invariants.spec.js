@@ -218,7 +218,8 @@ test.describe("Invariants de sécurité", () => {
       "whatsapp_confirmations",
       // Catalogue des modèles de CV à vendre (« Achat de CV ») : aucun GRANT ni policy pour les clients — les chemins des PDF d'origine
       // et des aperçus ne doivent jamais quitter le serveur. Lu uniquement par lister_modeles_cv() (SECURITY DEFINER, sans aucun chemin
-      // de fichier) et par les routes serveur (service_role). Voir 20261024220000_achat_de_cv_catalogue.sql.
+      // de fichier) et par les routes serveur (service_role) ; écrit par l'administrateur via une route admin. Voir
+      // 20261024220000_achat_de_cv_catalogue.sql.
       "cv_modeles",
       // Sauvegarde du nettoyage des valeurs d'exemple des profils (ancienne valeur des colonnes vidées, pour le retour arrière) : aucun GRANT ni policy
       // pour les clients, jamais lue ni écrite par l'application ; seule la migration et son fichier de retour arrière y touchent. Voir

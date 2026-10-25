@@ -40,6 +40,7 @@ export default function ActionsMessage({
   onReaction,
   onAction,
   onFermer,
+  sansSuppression,
 }: {
   visible: boolean;
   moi: boolean;
@@ -52,6 +53,8 @@ export default function ActionsMessage({
   onReaction: (emoji: string) => void;
   onAction: (a: ActionMessage) => void;
   onFermer: () => void;
+  /** Discussions Locaux : un message ne se supprime jamais (ni ne se modifie), même seulement sur son propre écran. */
+  sansSuppression?: boolean;
 }) {
   const { height } = useWindowDimensions();
 
@@ -66,7 +69,7 @@ export default function ActionsMessage({
     { id: 'partager', libelle: 'Partager', icone: 'share-outline' },
     { id: 'ouvrir', libelle: 'Ouvrir avec', icone: 'open-outline', desactive: !aUnePieceJointe },
     ...(moi ? [] : [{ id: 'signaler', libelle: 'Signaler', icone: 'flag-outline' as const, danger: true, separateurAvant: true }]),
-    { id: 'supprimer', libelle: 'Supprimer', icone: 'trash-outline', danger: true, separateurAvant: moi },
+    ...(sansSuppression ? [] : [{ id: 'supprimer', libelle: 'Supprimer', icone: 'trash-outline' as const, danger: true, separateurAvant: moi }]),
   ];
 
   // Hauteur approximative du bloc (réactions + menu) pour qu'il reste entièrement à l'écran.

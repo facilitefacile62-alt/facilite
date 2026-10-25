@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 // Bouton d'action de la plateforme (règle du 12/10/2026) : capsule entièrement
@@ -10,6 +10,7 @@ export default function BoutonAction({
   titre,
   sousTitre,
   icone,
+  iconeCouronne,
   onPress,
   desactive,
   chargement,
@@ -18,6 +19,8 @@ export default function BoutonAction({
   titre: string;
   sousTitre?: string;
   icone: keyof typeof Ionicons.glyphMap;
+  /** Couronne (Premium) : Ionicons n'en a pas, on la prend dans MaterialCommunityIcons. */
+  iconeCouronne?: boolean;
   onPress: () => void;
   desactive?: boolean;
   chargement?: boolean;
@@ -47,7 +50,11 @@ export default function BoutonAction({
         {chargement ? (
           <ActivityIndicator size="small" color={sombre ? '#fff' : '#047857'} />
         ) : (
-          <Ionicons name={icone} size={19} color={sombre ? '#fff' : '#047857'} />
+          iconeCouronne ? (
+            <MaterialCommunityIcons name="crown" size={20} color={sombre ? '#fff' : '#047857'} />
+          ) : (
+            <Ionicons name={icone} size={19} color={sombre ? '#fff' : '#047857'} />
+          )
         )}
       </View>
       <View className="flex-1 min-w-0">

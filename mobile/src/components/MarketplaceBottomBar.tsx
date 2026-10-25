@@ -40,7 +40,11 @@ const ENTREES: Entree[] = [
 function entreeActive(chemin: string, depuisProfil = false): Entree['id'] | null {
   // Vendeur : « Profil » ouvre directement « Ma boutique » (?profil=1) : l'entrée Profil reste allumée.
   if (depuisProfil && chemin.startsWith('/marketplace/vendre')) return 'profil';
-  if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/mon-profil') || chemin.startsWith('/marketplace/a-propos')) return 'profil';
+  if (chemin.startsWith('/marketplace/vendre/facturation')) return 'profil';
+  if (chemin.startsWith('/marketplace/profil') || chemin.startsWith('/marketplace/mon-profil') || chemin.startsWith('/marketplace/a-propos') ||
+    chemin.startsWith('/marketplace/reglages') || chemin.startsWith('/marketplace/coordonnees') || chemin.startsWith('/marketplace/informations-compte') || chemin.startsWith('/marketplace/securite') ||
+    chemin.startsWith('/marketplace/infos-perso') || chemin.startsWith('/marketplace/scanner-document') || chemin.startsWith('/marketplace/confidentialite') ||
+    chemin.startsWith('/marketplace/langue')) return 'profil';
   if (chemin.startsWith('/marketplace/autour')) return 'autour';
   if (chemin.startsWith('/marketplace/recherche')) return 'accueil';
   if (chemin.startsWith('/marketplace/vendre')) return 'publier';

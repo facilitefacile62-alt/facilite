@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BoutonAction from '@/components/BoutonAction';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
+import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
 import { CATEGORIES_ETABLISSEMENT, METIERS_SERVICE, libelleCategorieEtablissement } from '@/lib/boutiqueCategories';
 import { NOM_JOUR, chargerHoraires, estAujourdhui, type HoraireJour } from '@/lib/horaires';
 import { prixLisible, urlPhoto } from '@/lib/marketplace';
@@ -399,6 +400,19 @@ export default function MaBoutiqueScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Page de facturation : jetons et mise en avant (Premium) de la boutique. Masquée sur iOS (biens numériques, règle Apple 3.1.1). */}
+        {achatsNumeriquesAutorises ? (
+          <View className="px-4 mt-3">
+            <BoutonAction
+              titre="Page de facturation"
+              sousTitre="Jetons et mise en avant de la boutique"
+              icone="ribbon-outline"
+              iconeCouronne
+              onPress={() => router.push('/marketplace/vendre/facturation' as Href)}
+            />
+          </View>
+        ) : null}
 
         {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
         <View className="flex-row gap-2.5 px-4 mt-3">

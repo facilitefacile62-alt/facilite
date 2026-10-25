@@ -1,16 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ApercuDocument from '@/components/ApercuDocument';
 import AvatarProfil from '@/components/AvatarProfil';
+import CatalogueCv from '@/components/CatalogueCv';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import { useImportDocument } from '@/components/FeuilleImportDocument';
 import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import LigneOutil from '@/components/LigneOutil';
 import { useAuth } from '@/context/AuthContext';
+import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
 import {
   badgeDocument,
   chargerMesDocuments,
@@ -38,7 +40,7 @@ const BORDURE = 'rgba(0,0,0,0.06)';
 const BLEU = '#2563EB';
 const VERT = '#10B981';
 
-type Onglet = 'documents' | 'fonctionnalites';
+type Onglet = 'documents' | 'fonctionnalites' | 'achat-cv';
 
 export default function ProfilScreen() {
   const t = useT();
@@ -48,7 +50,11 @@ export default function ProfilScreen() {
 
   // Ouvert depuis le menu ☰ (tuile « Fonctionnalités ») : l'onglet Fonctionnalités s'affiche d'emblée, avec un bouton Retour vers là d'où l'on vient.
   const { onglet: ongletDemande, retour: retourDemande } = useLocalSearchParams<{ onglet?: string; retour?: string }>();
-  const [onglet, setOnglet] = useState<Onglet>(ongletDemande === 'fonctionnalites' ? 'fonctionnalites' : 'documents');
+  const [onglet, setOnglet] = useState<Onglet>(
+    ongletDemande === 'fonctionnalites' ? 'fonctionnalites' : ongletDemande === 'achat-cv' && achatsNumeriquesAutorises ? 'achat-cv' : 'documents'
+  );
+  const { width: largeurEcran } = useWindowDimensions();
+  const rangeeOnglets = useRef<ScrollView>(null);
   const [documents, setDocuments] = useState<DocumentProfil[] | null>(null);
   const [erreur, setErreur] = useState(false);
   const { ouvrir: importer, occupe: envoiEnCours, feuille: feuilleImport } = useImportDocument((nouveau) =>
@@ -186,31 +192,49 @@ export default function ProfilScreen() {
             </View>
           </View>
 
-          {/* Onglets Documents / Fonctionnalités (jamais « Publications ») */}
-          <View className="flex-row gap-2.5 px-4 mt-4">
-            {(
-              [
-                { id: 'documents' as const, label: 'Documents', icone: 'document-text-outline' as const },
-                { id: 'fonctionnalites' as const, label: 'Fonctionnalités', icone: 'flash-outline' as const },
-              ]
-            ).map((o) => {
-              const actif = onglet === o.id;
-              return (
-                <Pressable
-                  key={o.id}
-                  onPress={() => setOnglet(o.id)}
-                  className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl py-3"
-                  style={{
-                    backgroundColor: CARTE,
-                    borderWidth: actif ? 1.5 : 1,
-                    borderColor: actif ? '#1A1A1A' : BORDURE,
-                  }}>
-                  <Ionicons name={o.icone} size={14} color="#1A1A1A" />
-                  <Text className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A]`}>{t(o.label)}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          {/* Onglets Documents / Fonctionnalités / Achat de CV (jamais « Publications »). « Achat de CV » est masqué sur iOS (biens numériques,
+              règle Apple 3.1.1) : il ne reste alors que les deux premiers, comme avant. Les trois tiennent dans la largeur (marges 8 px, espace
+              6 px) ; sur un très petit écran la rangée défile et l'onglet actif reste visible. */}
+          {(() => {
+            const liste = [
+              { id: 'documents' as const, label: 'Documents', icone: 'document-text-outline' as const },
+              { id: 'fonctionnalites' as const, label: 'Fonctionnalités', icone: 'flash-outline' as const },
+              ...(achatsNumeriquesAutorises ? [{ id: 'achat-cv' as const, label: 'Achat de CV', icone: 'bag-handle-outline' as const }] : []),
+            ];
+            const marge = liste.length > 2 ? 8 : 16;
+            const espace = liste.length > 2 ? 6 : 10;
+            const largeur = Math.max(112, Math.floor((largeurEcran - marge * 2 - espace * (liste.length - 1)) / liste.length));
+            return (
+              <ScrollView
+                ref={rangeeOnglets}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="mt-4 flex-grow-0"
+                contentContainerStyle={{ paddingHorizontal: marge, gap: espace }}>
+                {liste.map((o, i) => {
+                  const actif = onglet === o.id;
+                  return (
+                    <Pressable
+                      key={o.id}
+                      onPress={() => {
+                        setOnglet(o.id);
+                        rangeeOnglets.current?.scrollTo({ x: Math.max(0, i * (largeur + espace) - 24), animated: true });
+                      }}
+                      className="flex-row items-center justify-center gap-1.5 rounded-xl py-3"
+                      style={{
+                        width: largeur,
+                        backgroundColor: CARTE,
+                        borderWidth: actif ? 1.5 : 1,
+                        borderColor: actif ? '#1A1A1A' : BORDURE,
+                      }}>
+                      <Ionicons name={o.icone} size={14} color="#1A1A1A" />
+                      <Text className={`text-[13px] ${actif ? 'font-black' : 'font-semibold'} text-[#1A1A1A]`} numberOfLines={1}>{t(o.label)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            );
+          })()}
 
           {onglet === 'documents' ? (
             <View className="px-4 mt-3">
@@ -263,6 +287,8 @@ export default function ProfilScreen() {
                 </View>
               )}
             </View>
+          ) : onglet === 'achat-cv' && achatsNumeriquesAutorises ? (
+            <CatalogueCv />
           ) : (
             <FlatList
               scrollEnabled={false}

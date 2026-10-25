@@ -39,6 +39,8 @@ export type MaBoutique = {
   logo_photo: string | null;
   /** Chemin de la photo de couverture dans le bucket marketplace-photos (voir definirCouvertureBoutique). */
   cover_photo: string | null;
+  /** 9 derniers chiffres du numéro WhatsApp CONFIRMÉ par code ; la confirmation vaut tant que le numéro actuel est celui-là. */
+  whatsapp_confirme_numero?: string | null;
 };
 
 /** Une boutique vue par n'importe quel visiteur (page publique) : mêmes champs que MaBoutique + propriétaire et avatar. */
@@ -93,7 +95,7 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
   const { data, error } = await supabase
     .from('marketplace_stores')
     .select(
-      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, cover_photo'
+      'id, nom, quartier, ville, telephone_whatsapp, actif, type_boutique, latitude, longitude, metier, description_prestation, categorie_etablissement, disponible_manuel, logo_photo, cover_photo, whatsapp_confirme_numero'
     )
     .eq('owner_id', userId)
     .order('created_at', { ascending: true });
