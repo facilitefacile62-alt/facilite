@@ -6,8 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { type WebViewNavigation } from 'react-native-webview';
 import type { ShouldStartLoadRequest, WebViewSource } from 'react-native-webview/lib/WebViewTypes';
 
+import BoutonAideOutil from '@/components/BoutonAideOutil';
 import IndisponibleNeutre from '@/components/IndisponibleNeutre';
 import { agentUtilisateurApp, pageWebBloquee } from '@/lib/biensNumeriques';
+import { OUTILS } from '@/lib/outils';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
 
@@ -37,7 +39,7 @@ function avecMarqueurEmbarque(url: string): string {
 }
 
 export default function EcranWeb() {
-  const { cle, template, id, outil, lat, lng, vue } = useLocalSearchParams<{ cle: string; template?: string; id?: string; outil?: string; lat?: string; lng?: string; vue?: string }>();
+  const { cle, template, id, outil, aide, lat, lng, vue } = useLocalSearchParams<{ cle: string; template?: string; id?: string; outil?: string; aide?: string; lat?: string; lng?: string; vue?: string }>();
   const router = useRouter();
   const webviewRef = useRef<WebView>(null);
   const [chargement, setChargement] = useState(true);
@@ -51,6 +53,7 @@ export default function EcranWeb() {
   const [cleChargement, setCleChargement] = useState(0);
 
   const config = WEB_ECRANS[cle as CleEcranWeb];
+  const aideOutil = typeof aide === 'string' ? OUTILS.find((o) => o.id === aide) : undefined;
   // Seuls des écrans déjà protégés par l'app (session déjà vérifiée avant
   // d'arriver ici) mènent à une cible authRequise : l'absence de session est
   // donc un cas anormal, pas le chemin attendu — affiché plutôt que de
@@ -148,6 +151,8 @@ export default function EcranWeb() {
           <Text className="flex-1 text-[15px] font-extrabold text-[#1A1A1A]" numberOfLines={1}>
             {config.titre}
           </Text>
+          {/* Page d'un outil de « Fonctionnalités » : son bouton « Aide » est ICI, à l'intérieur de la page de l'outil. */}
+          {aideOutil ? <BoutonAideOutil outilId={aideOutil.id} titre={aideOutil.titre} /> : null}
           <Pressable
             onPress={() => {
               setErreur(false);

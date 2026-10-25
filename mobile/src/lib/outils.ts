@@ -24,7 +24,8 @@ export type Outil = {
 
 // Chaque outil PDF ouvre DIRECTEMENT son outil sur le site (« Compresser PDF » → la page « Compresser le fichier PDF »), jamais la liste des
 // outils du site : l'identifiant est transmis à la WebView, qui le passe au pont de session (liste fermée côté serveur).
-const OUTILS_PDF_SITE = (outil: string) => `/web/fonctionnalites?outil=${outil}` as const;
+// `aide` = identifiant de l'outil : la page affiche alors son bouton « Aide » (voir BoutonAideOutil).
+const OUTILS_PDF_SITE = (outil: string, aide: string) => `/web/fonctionnalites?outil=${outil}&aide=${aide}` as const;
 
 export const OUTILS: Outil[] = [
   {
@@ -34,7 +35,7 @@ export const OUTILS: Outil[] = [
     bg: '#E0E7FF',
     titre: 'Compresser PDF',
     sous: 'Optimisation',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE('compresser-pdf')),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('compresser-pdf', 'compresser')),
   },
   {
     id: 'fusionner',
@@ -43,7 +44,7 @@ export const OUTILS: Outil[] = [
     bg: '#DBEAFE',
     titre: 'Fusionner PDF',
     sous: 'Outil PDF',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE('fusionner-pdf')),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('fusionner-pdf', 'fusionner')),
   },
   {
     id: 'diviser',
@@ -52,7 +53,7 @@ export const OUTILS: Outil[] = [
     bg: '#FEF3C7',
     titre: 'Diviser PDF',
     sous: 'Outil PDF',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE('diviser-pdf')),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('diviser-pdf', 'diviser')),
   },
   {
     id: 'organiser',
@@ -61,7 +62,7 @@ export const OUTILS: Outil[] = [
     bg: '#D1FAE5',
     titre: 'Organiser PDF',
     sous: 'Outil PDF',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE('organiser-pdf')),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('organiser-pdf', 'organiser')),
   },
   {
     id: 'jpg_en_pdf',
@@ -70,7 +71,7 @@ export const OUTILS: Outil[] = [
     bg: '#FCE7F3',
     titre: 'JPG en PDF',
     sous: 'Conversion',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE('jpg-en-pdf')),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('jpg-en-pdf', 'jpg_en_pdf')),
   },
   {
     id: 'pdf_en_jpg',
@@ -79,7 +80,7 @@ export const OUTILS: Outil[] = [
     bg: '#EDE9FE',
     titre: 'PDF en JPG',
     sous: 'Conversion',
-    ouvrir: (router) => router.push(OUTILS_PDF_SITE('pdf-en-jpg')),
+    ouvrir: (router) => router.push(OUTILS_PDF_SITE('pdf-en-jpg', 'pdf_en_jpg')),
   },
   {
     id: 'extracteur_ia',
@@ -97,7 +98,7 @@ export const OUTILS: Outil[] = [
     bg: '#EDE9FE',
     titre: 'Boîte à idées',
     sous: 'Collaboratif',
-    ouvrir: (router) => router.push('/web/boite-a-idees'),
+    ouvrir: (router) => router.push('/web/boite-a-idees?aide=boite_idees'),
   },
   {
     id: 'diagnostic_cv',
@@ -106,7 +107,7 @@ export const OUTILS: Outil[] = [
     bg: '#D1FAE5',
     titre: 'Diagnostic CV Gratuit',
     sous: 'Analyse ATS et mots-clés',
-    ouvrir: (router) => router.push('/web/importer-cv'),
+    ouvrir: (router) => router.push('/web/importer-cv?aide=diagnostic_cv'),
   },
   {
     id: 'services_modeles',
@@ -115,7 +116,7 @@ export const OUTILS: Outil[] = [
     bg: '#DBEAFE',
     titre: 'Studio Services & Modèles',
     sous: 'CV, lettres et modèles prêts',
-    ouvrir: (router) => router.push('/web/modeles'),
+    ouvrir: (router) => router.push('/web/modeles?aide=services_modeles'),
   },
 ];
 

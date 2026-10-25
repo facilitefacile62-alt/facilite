@@ -27,7 +27,7 @@ test.describe("outils PDF : ouverture directe", () => {
       expect(outil, id).toBeTruthy();
       const appels = [];
       outil.ouvrir({ push: (c) => appels.push(c) });
-      expect(appels).toEqual([`/web/fonctionnalites?outil=${outilSite}`]);
+      expect(appels).toEqual([`/web/fonctionnalites?outil=${outilSite}&aide=${id}`]);
       expect(IDS_SITE).toContain(outilSite);
     }
     expect(new Set(Object.values(ATTENDU)).size).toBe(6); // jamais deux outils vers la même page
@@ -41,9 +41,9 @@ test.describe("outils PDF : ouverture directe", () => {
       return appels[0];
     };
     expect(cible("extracteur_ia")).toBe("/extracteur");
-    expect(cible("boite_idees")).toBe("/web/boite-a-idees");
-    expect(cible("diagnostic_cv")).toBe("/web/importer-cv");
-    expect(cible("services_modeles")).toBe("/web/modeles");
+    expect(cible("boite_idees")).toBe("/web/boite-a-idees?aide=boite_idees");
+    expect(cible("diagnostic_cv")).toBe("/web/importer-cv?aide=diagnostic_cv");
+    expect(cible("services_modeles")).toBe("/web/modeles?aide=services_modeles");
     expect(OUTILS).toHaveLength(10);
   });
 
