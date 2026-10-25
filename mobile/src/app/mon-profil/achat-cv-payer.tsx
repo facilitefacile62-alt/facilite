@@ -10,7 +10,7 @@ import IndisponibleNeutre from '@/components/IndisponibleNeutre';
 import { BarrePaiement, CarteQr } from '@/components/PaiementQr';
 import { chargerModelesCv, creerPaiementCv, lienTelechargementCv, statutAchatCv, urlApercuPage, useEnteteImages, type PaiementCv } from '@/lib/achatCv';
 import { messageAchatCv, prixFcfa, type ModeleCv, type TypeMessageCv } from '@/lib/achatCvLogique';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import { secondesRestantes } from '@/lib/facturationLogique';
 
 // Paiement d'un modèle de CV (maquette du 24/10/2026, « Paiement » et « QR ») : même aspect et mêmes éléments que la page de facturation de Locaux.
@@ -23,6 +23,7 @@ const ORANGE_OM = '#FF6B00';
 const INTERVALLE_STATUT_MS = 4000;
 
 export default function AchatCvPayer() {
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
   return achatsNumeriquesAutorises ? <PayerContenu /> : <IndisponibleNeutre retour={'/profil' as Href} />;
 }
 

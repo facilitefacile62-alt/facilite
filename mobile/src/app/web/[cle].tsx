@@ -8,7 +8,7 @@ import type { ShouldStartLoadRequest, WebViewSource } from 'react-native-webview
 
 import BoutonAideOutil from '@/components/BoutonAideOutil';
 import IndisponibleNeutre from '@/components/IndisponibleNeutre';
-import { agentUtilisateurApp, pageWebBloquee } from '@/lib/biensNumeriques';
+import { agentUtilisateurApp, useNavigationWebBloquee, usePageWebBloquee } from '@/lib/biensNumeriques';
 import { OUTILS } from '@/lib/outils';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL, WEB_ECRANS, type CleEcranWeb } from '@/lib/webEcrans';
@@ -53,6 +53,8 @@ export default function EcranWeb() {
   const [cleChargement, setCleChargement] = useState(0);
 
   const config = WEB_ECRANS[cle as CleEcranWeb];
+  const pageBloquee = usePageWebBloquee(cle);
+  const navigationBloquee = useNavigationWebBloquee();
   const aideOutil = typeof aide === 'string' ? OUTILS.find((o) => o.id === aide) : undefined;
   // Seuls des écrans déjà protégés par l'app (session déjà vérifiée avant
   // d'arriver ici) mènent à une cible authRequise : l'absence de session est
@@ -101,15 +103,17 @@ export default function EcranWeb() {
       Linking.openURL(url).catch(() => {});
       return false;
     }
+    // Lien vers une page de paiement (Premium, formation, facturation) alors que l'achat n'est pas autorisé : refusé, la page reste où elle est.
+    if (navigationBloquee(url)) return false;
     return true;
-  }, []);
+  }, [navigationBloquee]);
 
   const onNavigationStateChange = useCallback((nav: WebViewNavigation) => {
     setPeutReculer(nav.canGoBack);
   }, []);
 
   // Pages dont le seul but est un paiement de bien numérique (Premium, formation) : jamais ouvertes sur iOS (règle Apple 3.1.1).
-  if (pageWebBloquee(cle)) return <IndisponibleNeutre />;
+  if (pageBloquee) return <IndisponibleNeutre />;
 
   if (!config) {
     return (

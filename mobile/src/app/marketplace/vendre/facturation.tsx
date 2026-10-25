@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import IndisponibleNeutre from '@/components/IndisponibleNeutre';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import {
   activerPremium,
   chargerPremiumJusqua,
@@ -43,8 +43,9 @@ const BORDURE = '#D9D1C1';
 const ORANGE_OM = '#FF6B00';
 const INTERVALLE_STATUT_MS = 4000;
 
-// Jetons et Premium sont des biens numériques : sur iOS (règle Apple 3.1.1), cet écran est remplacé par un message neutre.
+// Jetons et Premium sont des biens numériques : sur iPhone (règle Apple 3.1.1) et sur Android tant que feat_paiements_application est fermé, cet écran est remplacé par un message neutre.
 export default function FacturationScreen() {
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
   return achatsNumeriquesAutorises ? <FacturationContenu /> : <IndisponibleNeutre retour={'/marketplace/vendre/ma-boutique' as Href} />;
 }
 

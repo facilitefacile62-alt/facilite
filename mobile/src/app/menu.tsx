@@ -6,7 +6,7 @@ import { Alert, Animated, Dimensions, Linking, PanResponder, Pressable, ScrollVi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import { contientSansAccent } from '@/lib/texte';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import { definirUserMode } from '@/lib/userMode';
@@ -67,6 +67,7 @@ export default function MenuScreen() {
   const insets = useSafeAreaInsets();
   const { user, profile, signOut } = useAuth();
   const ouvert = useFonctionnalites();
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
   // Mode affiché (Facilité | Locaux) : on part de la plateforme où l'on se trouve (☰ ouvert depuis Locaux → Locaux, depuis Facilité →

@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BoutonAction from '@/components/BoutonAction';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import { CATEGORIES_ETABLISSEMENT, METIERS_SERVICE, libelleCategorieEtablissement } from '@/lib/boutiqueCategories';
 import { NOM_JOUR, chargerHoraires, estAujourdhui, type HoraireJour } from '@/lib/horaires';
 import { prixLisible, urlPhoto } from '@/lib/marketplace';
@@ -53,6 +53,7 @@ type Onglet = 'article' | 'service' | 'etablissement';
 export default function MaBoutiqueScreen() {
   const router = useRouter();
   const livreurOuvert = useFonctionnalite('nav_marketplace_livreur');
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
   const { user } = useAuth();
   const userId = user?.id;
   const [boutique, setBoutique] = useState<MaBoutique | null | undefined>(undefined); // undefined = chargement
