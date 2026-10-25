@@ -1,14 +1,6 @@
 import EcranEtiquettes from '@/components/EcranEtiquettes';
 
-// Compétences — maquette 52. Données réelles : profiles.skills (tableau de
-// chaînes, voir src/app/profil/page.js côté web).
+// Compétences — lecture seule, issues du CV scanné ou importé (profiles.skills, tableau de chaînes).
 export default function ProfilCompetencesScreen() {
-  return (
-    <EcranEtiquettes
-      titre="Compétences"
-      champ="skills"
-      libelleAjout="+ Ajouter une compétence"
-      placeholder="Ex : Rédaction juridique"
-    />
-  );
+  return <EcranEtiquettes titre="Compétences" champ="skills" />;
 }

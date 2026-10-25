@@ -1,14 +1,6 @@
 import EcranEtiquettes from '@/components/EcranEtiquettes';
 
-// Centres d'intérêt — maquette 53. Données réelles : profiles.interests
-// (tableau de chaînes, voir src/app/profil/page.js côté web).
+// Centres d'intérêt — lecture seule, issus du CV scanné ou importé (profiles.interests, tableau de chaînes).
 export default function ProfilCentresInteretScreen() {
-  return (
-    <EcranEtiquettes
-      titre="Centres d'intérêt"
-      champ="interests"
-      libelleAjout="+ Ajouter un centre d'intérêt"
-      placeholder="Ex : Bénévolat"
-    />
-  );
+  return <EcranEtiquettes titre="Centres d'intérêt" champ="interests" />;
 }
