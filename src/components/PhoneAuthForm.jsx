@@ -1,10 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { notifierConnexion } from "@/lib/confirmerConnexion";
+import {
+  DELAI_RENVOI_S,
+  LIBELLE_UTILISER_EMAIL,
+  MESSAGE_CODE_TARDE,
+  libelleRenvoi,
+  messageErreurCode,
+  messageErreurEnvoi,
+} from "@/lib/connexionTelephone";
 
 // Liste des pays demandés avec ISO pour les drapeaux réels (FlagCDN)
 const COUNTRIES = [
@@ -32,7 +40,7 @@ const COUNTRIES = [
 //   habituelle, pour laisser l'appelant proposer PhoneSignupEmailPrompt
 //   (jamais imposé : la règle "email obligatoire pour candidater" ne
 //   bloque que la candidature, pas la création du compte).
-export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login", onNeedsEmail }) {
+export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login", onNeedsEmail, onUseEmail }) {
   const router = useRouter();
 
   // Étape 1 : 'phone' (Saisie numéro) | Étape 2 : 'otp' (Saisie code 6 chiffres)
@@ -51,6 +59,16 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login",
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
+
+  // Compte à rebours avant « Renvoyer le code » (60 s) et verrou contre les doubles envois (deux clics, ou un clic pendant l'envoi).
+  const [attente, setAttente] = useState(0);
+  const [envoyeLe, setEnvoyeLe] = useState(null);
+  const envoiEnCours = useRef(false);
+  useEffect(() => {
+    if (attente <= 0) return;
+    const t = setTimeout(() => setAttente((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [attente]);
 
   // Obtenir l'indicatif final à utiliser
   const getActiveCode = () => {
@@ -76,58 +94,41 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login",
     const cleanLocal = localNumber.replace(/[\s\-\(\)]/g, "");
     
     if (!cleanLocal) {
-      setError("Veuillez saisir un numéro de téléphone valide.");
+      setError("Saisissez votre numéro.");
       return;
     }
 
     const fullPhoneNumber = `${activeCode}${cleanLocal}`;
     setPhone(fullPhoneNumber);
+    await envoyerCode(fullPhoneNumber);
+  };
 
+  // Envoi (ou renvoi) du code : un seul à la fois, jamais de texte technique à l'écran.
+  const envoyerCode = async (numero) => {
+    if (envoiEnCours.current) return;
+    envoiEnCours.current = true;
     setLoading(true);
-
+    setError(null);
+    setMessage(null);
     try {
       const { error: supabaseError } = await supabase.auth.signInWithOtp({
-        phone: fullPhoneNumber,
+        phone: numero,
         options: {
-          // mode "login" (défaut) : jamais de création de compte, un
-          // numéro inconnu renvoie une erreur explicite ci-dessous plutôt
-          // que de créer un compte fantôme sans nom ni e-mail comme
-          // c'était le cas avant. mode "signup" : autorisé, voir
-          // onNeedsEmail plus bas pour ce qui suit une vraie création.
+          // mode "login" (défaut) : jamais de création de compte, un numéro inconnu renvoie une erreur explicite plutôt que de créer un compte
+          // fantôme sans nom ni e-mail. mode "signup" : autorisé, voir onNeedsEmail plus bas pour ce qui suit une vraie création.
           shouldCreateUser: mode === "signup",
         },
       });
-
       if (supabaseError) throw supabaseError;
-
       setStep("otp");
-      setMessage(`Un code de validation à 6 chiffres a été envoyé par SMS au ${fullPhoneNumber}.`);
+      setOtpToken("");
+      setEnvoyeLe(Date.now());
+      setAttente(DELAI_RENVOI_S);
     } catch (err) {
       console.error("Détail complet erreur OTP :", err);
-
-      // Extraction propre du message sans jamais passer un objet au state
-      let msg = "Impossible d'envoyer le SMS. Vérifiez le numéro.";
-      if (typeof err === 'string') {
-        msg = err;
-      } else if (err && typeof err === 'object') {
-        msg = err.message || err.error_description || err.msg || String(err);
-      }
-
-      // shouldCreateUser:false + numéro inconnu -> Supabase renvoie un
-      // message technique ("Signups not allowed for otp", code
-      // otp_disabled) qui ne dit rien à un candidat. Reformulé explicitement
-      // plutôt que laissé tel quel.
-      if (/signups? not allowed/i.test(msg) || err?.code === "otp_disabled") {
-        msg = "Aucun compte n'est associé à ce numéro. Créez d'abord un compte par e-mail ou Google, puis ajoutez et vérifiez votre numéro depuis votre profil (Sécurité & Connexion).";
-      }
-
-      // Sécurité anti-objet vide "{}"
-      if (!msg || msg === "{}" || msg === "[object Object]") {
-        msg = "Erreur lors de l'envoi du SMS. Vérifiez la configuration Twilio/Supabase.";
-      }
-
-      setError(msg);
+      setError(messageErreurEnvoi(err));
     } finally {
+      envoiEnCours.current = false;
       setLoading(false);
     }
   };
@@ -142,7 +143,7 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login",
 
     const cleanToken = otpToken.trim();
     if (cleanToken.length !== 6) {
-      setError("Veuillez saisir un code valide à 6 chiffres.");
+      setError("Saisissez les 6 chiffres du code.");
       return;
     }
 
@@ -182,31 +183,26 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login",
     } catch (err) {
       console.error("Détail complet erreur OTP :", err);
       
-      // Extraction propre du message sans jamais passer un objet au state
-      let msg = "Code invalide ou expiré. Veuillez réessayer.";
-      if (typeof err === 'string') {
-        msg = err;
-      } else if (err && typeof err === 'object') {
-        msg = err.message || err.error_description || err.msg || String(err);
-      }
-      
-      // Sécurité anti-objet vide "{}"
-      if (!msg || msg === "{}" || msg === "[object Object]") {
-        msg = "Erreur lors de la vérification du code. Veuillez réessayer.";
-      }
-      
-      setError(msg);
+      // « Pas bon » ou « expiré » (Supabase répond la même chose pour les deux : on tranche sur le temps écoulé depuis l'envoi).
+      setError(messageErreurCode(err, envoyeLe));
     } finally {
       setLoading(false);
     }
   };
 
-  // Réinitialiser pour renvoyer un code
-  const handleResendCode = () => {
+  // Renvoyer le code au même numéro (seulement quand le compte à rebours est fini).
+  const handleRenvoyer = () => {
+    if (attente > 0) return;
+    envoyerCode(phone);
+  };
+
+  // Revenir à la saisie pour corriger le numéro.
+  const handleChangeNumber = () => {
     setOtpToken("");
     setStep("phone");
     setError(null);
     setMessage(null);
+    setAttente(0);
   };
 
   return (
@@ -375,13 +371,34 @@ export default function PhoneAuthForm({ onSuccessRedirect = "/", mode = "login",
             )}
           </button>
 
-          <div className="text-center pt-2">
+          <p className="text-sm font-semibold text-gray-700 text-center leading-snug">{MESSAGE_CODE_TARDE}</p>
+
+          <button
+            type="button"
+            onClick={handleRenvoyer}
+            disabled={attente > 0 || loading}
+            className="w-full min-h-14 py-3 bg-white border-2 border-emerald-600 text-emerald-700 font-extrabold text-base rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {libelleRenvoi(attente)}
+          </button>
+
+          {onUseEmail && (
             <button
               type="button"
-              onClick={handleResendCode}
-              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer"
+              onClick={onUseEmail}
+              className="w-full min-h-14 py-3 bg-white border-2 border-gray-300 text-gray-900 font-extrabold text-base rounded-xl hover:bg-gray-50 transition cursor-pointer"
             >
-              ← Modifier le numéro ou renvoyer un code
+              {LIBELLE_UTILISER_EMAIL}
+            </button>
+          )}
+
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={handleChangeNumber}
+              className="text-sm font-semibold text-emerald-700 hover:underline cursor-pointer"
+            >
+              ← Changer le numéro
             </button>
           </div>
         </form>

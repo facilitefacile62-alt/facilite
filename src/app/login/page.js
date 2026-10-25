@@ -556,7 +556,7 @@ export default function LoginPage() {
                     compte — une connexion réussie ici est TOUJOURS un
                     compte déjà existant. Jamais /bienvenue, contrairement
                     au mode "signup" de /register. */}
-                <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} />
+                <PhoneAuthForm onSuccessRedirect={typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("redirect") || "/") : "/"} onUseEmail={() => setAuthMethod("email")} />
               </div>
             ) : step === 1 ? (
               <form onSubmit={handleEmailStepSubmit} className="space-y-2.5">
