@@ -68,7 +68,9 @@ function FormulaireCreationBoutique({
   const connu = decouperNom(profile?.full_name as string | undefined);
   const [prenom, setPrenom] = useState(connu.prenom);
   const [nomFamille, setNomFamille] = useState(connu.nom);
+  // Deux cases séparées, remplies par la personne, sans confirmation : numéro d'appel (profiles.phone) et WhatsApp (boutique).
   const [telephone, setTelephone] = useState((profile?.phone as string | undefined) ?? '');
+  const [whatsapp, setWhatsapp] = useState((profile?.phone as string | undefined) ?? '');
   const [email, setEmail] = useState((profile?.contact_email as string | undefined) || user?.email || '');
   const [nom, setNom] = useState('');
   const [ville, setVille] = useState<string | null>(null);
@@ -81,8 +83,8 @@ function FormulaireCreationBoutique({
       Alert.alert('Informations manquantes', 'Le prénom et le nom sont obligatoires.');
       return;
     }
-    if (!telephone.trim()) {
-      Alert.alert('Téléphone manquant', 'Indiquez votre numéro WhatsApp pour que les acheteurs puissent vous joindre.');
+    if (!whatsapp.trim()) {
+      Alert.alert('WhatsApp manquant', 'Indiquez votre numéro WhatsApp pour que les acheteurs puissent vous joindre.');
       return;
     }
     setEnregistrement(true);
@@ -110,7 +112,7 @@ function FormulaireCreationBoutique({
     }
     setEnregistrement(true);
     try {
-      await creerBoutique(userId, { nom, ville, quartier: null, telephoneWhatsapp: telephone, position });
+      await creerBoutique(userId, { nom, ville, quartier: null, telephoneWhatsapp: whatsapp, position });
       onCree();
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Impossible de créer votre boutique.');
@@ -131,9 +133,16 @@ function FormulaireCreationBoutique({
           <Champ libelle="Prénom*" value={prenom} onChangeText={setPrenom} placeholder="Votre prénom" />
           <Champ libelle="Nom*" value={nomFamille} onChangeText={setNomFamille} placeholder="Votre nom" />
           <Champ
-            libelle="Téléphone (WhatsApp)"
+            libelle="Numéro d'appel (facultatif)"
             value={telephone}
             onChangeText={setTelephone}
+            placeholder="+221 77 000 00 00"
+            keyboardType="phone-pad"
+          />
+          <Champ
+            libelle="Numéro WhatsApp*"
+            value={whatsapp}
+            onChangeText={setWhatsapp}
             placeholder="+221 77 000 00 00"
             keyboardType="phone-pad"
           />
