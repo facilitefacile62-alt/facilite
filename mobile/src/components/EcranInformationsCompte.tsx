@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CarteMenu, FOND_CARTES } from '@/components/CarteMenu';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import {
   confirmerChangement,
   demanderChangement,
@@ -43,7 +44,7 @@ function GrosBouton({ texte, onPress, variante = 'plein', occupe, desactive }: {
 const ouvrirSupport = () => Linking.openURL(`https://wa.me/${WHATSAPP_FACILITE}`).catch(() => {});
 
 export default function EcranInformationsCompte() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [etat, setEtat] = useState<EtatCompte | null>(null);
   const [erreur, setErreur] = useState('');
   const [fait, setFait] = useState('');
@@ -89,6 +90,8 @@ export default function EcranInformationsCompte() {
   const terminer = (r: ReponseCompte) => {
     if (r.etat) setEtat(r.etat);
     setFait(r.message ?? "C'est fait.");
+    // La session de cet appareil porte encore l'ancienne valeur : on la renouvelle (le serveur a déjà fermé les autres appareils).
+    supabase.auth.refreshSession().then(() => refreshProfile()).catch(() => {});
     fermer();
   };
 
