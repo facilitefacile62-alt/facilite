@@ -26,6 +26,10 @@
     {
       "path": "/api/cron/expirer-commandes-sans-livreur",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/solde-sms",
+      "schedule": "0 7 * * *"
     }
   ]
 }

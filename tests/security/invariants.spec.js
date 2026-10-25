@@ -195,6 +195,7 @@ test.describe("Invariants de sécurité", () => {
     const JUSTIFIED_ZERO_POLICY = new Set([
       "ai_usage_daily", // service_role uniquement par design, aucune policy authenticated n'a jamais existé
       "compte_verifications", // codes et autorisations de « Informations du compte » : lus et écrits par le serveur seulement (service_role), jamais par une application — 25/10/2026
+      "sms_envois_journal", // journal des envois de SMS du hook (numéro haché) : lu et écrit par le serveur seulement (service_role) — 25/10/2026
       // Lecture ET écriture exclusivement via record_cv_consultations()/
       // get_cv_quota_today() (SECURITY DEFINER) — jamais un SELECT/INSERT
       // direct, même pour un admin. Voir 20260806150000_cv_consultations_quota.sql.
@@ -497,6 +498,13 @@ test.describe("Invariants de sécurité", () => {
       // n'est crédité sur la foi d'une donnée locale : chaque achat n'est crédité que si Orange confirme statut,
       // référence et montant (evaluerConfirmationOrange), via la même transition atomique que le webhook.
       "src/app/api/cron/rattrapage-achats-jetons/route.js",
+      // Hook d'envoi de SMS (src/lib/smsHook/depsServeur.js) — 25/10/2026. Il n'écrit et ne lit QUE dans sms_envois_journal, table réservée au serveur (aucun droit ni
+      // aucune policy pour les applications) : une ligne par demande de code, avec l'empreinte du numéro (jamais le numéro ni le code) et le résultat de l'envoi.
+      // Aucun utilisateur précis à filtrer : la demande vient de Supabase Auth, signée (Standard Webhooks), et le journal décrit le trafic, pas une personne.
+      "src/lib/smsHook/depsServeur.js",
+      // Contrôle quotidien du solde de SMS Orange (cron, CRON_SECRET exigé avant tout accès à la base) — 25/10/2026. Opération système par nature : il purge le journal
+      // des envois de plus de 90 jours et y note ses propres alertes (sms_envois_journal, table réservée au serveur). Aucun utilisateur précis à filtrer.
+      "src/app/api/cron/solde-sms/route.js",
       // Rattrapage planifié (cron, CRON_SECRET / RATTRAPAGE_CRON_SECRET) des achats de modèles de CV — 25/10/2026. Même nature que le
       // rattrapage des jetons : opération système sur TOUS les achats en attente, aucun utilisateur précis à filtrer ; chaque achat n'est
       // validé que si Orange confirme statut, référence et montant, par la même transition atomique que le webhook.
