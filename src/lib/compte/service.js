@@ -23,7 +23,7 @@ import { messagePour, messageReussite } from "./messages.js";
 // qu'elle renvoie). Source de vérité : l'authentification Supabase (auth.users) ; profiles n'en est qu'une copie, mise à jour par la base (déclencheur
 // synchroniser_contact_profil) et RELUE ici.
 //
-// RÈGLE D'OR : on ne dit « changé » ou « retiré » qu'après avoir RELU le compte et constaté que la valeur a vraiment changé, côté authentification ET côté profil.
+// RÈGLE D'OR : on ne dit « changé » ou « retiré » qu'après avoir RELU le compte et constaté que la valeur a vraiment changé, côté authentification ET (pour l'e-mail) côté profil.
 // Si l'API accepte sans effet, ou refuse : « Impossible pour le moment », sans rien faire croire, et l'échec est écrit au journal de sécurité.
 //
 // Toutes les dépendances (base, e-mail, SMS, limites, horloge) sont passées en paramètre : le même code tourne en production et dans les tests.
@@ -57,7 +57,7 @@ async function lireUtilisateur(ctx, deps) {
 }
 
 async function lireCopieProfil(ctx, deps) {
-  const { data } = await deps.admin.from("profiles").select("email, phone").eq("id", ctx.userId).maybeSingle();
+  const { data } = await deps.admin.from("profiles").select("email").eq("id", ctx.userId).maybeSingle();
   return data ?? null;
 }
 
@@ -320,21 +320,25 @@ async function consommer(ctx, deps, autorisationId) {
   await deps.admin.from("compte_verifications").update({ utilise_le: maintenant }).eq("user_id", ctx.userId).eq("autorisation_id", autorisationId);
 }
 
-/** Relit le compte ET sa copie dans profiles ; true seulement si les deux montrent la valeur attendue (ou l'absence de valeur). */
+/**
+ * Relit le compte ET, pour l'e-mail, sa copie dans profiles.email ; true seulement si les deux montrent la valeur attendue (ou l'absence de valeur).
+ * Le téléphone n'a PAS de copie à relire : profiles.phone est le numéro de contact (vendeur…), jamais touché par un changement de compte.
+ */
 async function constaterEtat(ctx, deps, canal, attendue /* null = retiré */) {
   const relu = await lireUtilisateur(ctx, deps);
   if (!relu) return { ok: false, relu: null, detail: "relecture_impossible" };
   const dansAuth = valeurActuelle(relu, canal);
   const authOk = attendue === null ? dansAuth === "" : dansAuth === attendue;
   if (!authOk) return { ok: false, relu, detail: "sans_effet_auth" };
-  let copie = await lireCopieProfil(ctx, deps);
-  const copieValeur = (c) => (canal === "email" ? String(c?.email ?? "").toLowerCase() : chiffresTelephone(c?.phone));
-  const copieOk = (c) => (attendue === null ? copieValeur(c) === "" : copieValeur(c) === attendue);
-  if (!copieOk(copie)) {
-    // Le déclencheur aurait dû recopier la valeur : on tente une réparation explicite, puis on relit encore.
-    await deps.admin.from("profiles").update(canal === "email" ? { email: attendue } : { phone: attendue }).eq("id", ctx.userId);
-    copie = await lireCopieProfil(ctx, deps);
-    if (!copieOk(copie)) return { ok: false, relu, detail: "profil_non_synchronise" };
+  if (canal === "email") {
+    const copieOk = (c) => (attendue === null ? String(c?.email ?? "") === "" : String(c?.email ?? "").toLowerCase() === attendue);
+    let copie = await lireCopieProfil(ctx, deps);
+    if (!copieOk(copie)) {
+      // Le déclencheur aurait dû recopier l'e-mail : on tente une réparation explicite, puis on relit encore.
+      await deps.admin.from("profiles").update({ email: attendue }).eq("id", ctx.userId);
+      copie = await lireCopieProfil(ctx, deps);
+      if (!copieOk(copie)) return { ok: false, relu, detail: "profil_non_synchronise" };
+    }
   }
   return { ok: true, relu };
 }

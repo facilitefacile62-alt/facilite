@@ -293,7 +293,7 @@ test.describe("on ne dit « changé » ou « retiré » qu'après avoir relu le 
     expect(r.message).toMatch(/^Impossible pour le moment/);
     expect(env.monde.tables.compte_journal_securite.find((l) => l.type === "dissociation_echec").detail).toBe("sans_effet_auth");
   });
-  test("dissociation réussie : relue côté auth ET profil, alerte, autres sessions fermées", async () => {
+  test("dissociation réussie : relue côté auth, alerte, autres sessions fermées", async () => {
     const s = await service();
     const { creerMonde } = await faux();
     const env = creerMonde({ utilisateur: { last_sign_in_at: ANCIEN } });
@@ -302,10 +302,40 @@ test.describe("on ne dit « changé » ou « retiré » qu'après avoir relu le 
     expect(r.ok).toBe(true);
     expect(r.message).toBe("Votre numéro a été retiré.");
     expect(env.monde.utilisateur.phone).toBeNull();
-    expect(env.monde.profil.phone).toBeNull();
+    expect(env.monde.profil.phone).toBe("221700000001"); // le contact du profil n'est pas vidé
     expect(r.etat.telephone).toBeNull();
     expect(env.monde.alertes[0]).toMatchObject({ destination: "marie@gmail.com", action: "dissocier", canal: "telephone" });
     expect(env.monde.sessionsFermees).toBe(1);
+  });
+});
+
+test.describe("profiles.phone (numéro de contact du vendeur) n'est jamais touché par le compte", () => {
+  test("changer, retirer le numéro de connexion ou changer l'e-mail : profiles.phone reste identique", async () => {
+    const s = await service();
+    const { creerMonde } = await faux();
+    const env = creerMonde({ utilisateur: { last_sign_in_at: "2026-10-25T11:59:00Z" } }); // connexion récente : aucun code de preuve à envoyer
+    const contact = env.monde.profil.phone;
+    const ch = await changer(env, "telephone", "76 555 44 33");
+    await s.confirmerChangement(env.ctx, { canal: "telephone", code: env.dernierCode("nouvelle_valeur"), autorisation: ch.aut }, env.deps);
+    expect(env.monde.utilisateur.phone).toBe("221765554433");
+    expect(env.monde.profil.phone).toBe(contact);
+    env.avancer(1000);
+    const aut = await preuve(env, "telephone");
+    const dis = await s.dissocier(env.ctx, { canal: "telephone", autorisation: aut }, env.deps);
+    expect(dis.ok).toBe(true);
+    expect(env.monde.utilisateur.phone).toBeNull();
+    expect(env.monde.profil.phone).toBe(contact);
+    const em = await changer(env, "email", "nouveau@gmail.com");
+    await s.confirmerChangement(env.ctx, { canal: "email", code: env.dernierCode("nouvelle_valeur"), autorisation: em.aut }, env.deps);
+    expect(env.monde.profil.email).toBe("nouveau@gmail.com");
+    expect(env.monde.profil.phone).toBe(contact);
+  });
+  test("la migration ne recopie que l'e-mail (déclencheur sur email seulement, aucune écriture de profiles.phone)", async () => {
+    const m = lire("supabase/migrations/20261025190000_informations_compte.sql");
+    expect(m).toMatch(/AFTER UPDATE OF email ON auth\.users/);
+    expect(m).not.toMatch(/UPDATE public\.profiles SET phone/);
+    expect(m).not.toMatch(/AFTER UPDATE OF email, phone/);
+    expect(lire("src/lib/compte/service.js")).not.toMatch(/from\("profiles"\)\.update\(\{[^}]*phone/);
   });
 });
 
@@ -340,7 +370,7 @@ test.describe("téléphone derrière le drapeau", () => {
     const r = await s.confirmerChangement(env.ctx, { canal: "telephone", code: env.dernierCode("nouvelle_valeur"), autorisation: aut }, env.deps);
     expect(r.ok).toBe(true);
     expect(env.monde.utilisateur.phone).toBe("221765554433");
-    expect(env.monde.profil.phone).toBe("221765554433");
+    expect(env.monde.profil.phone).toBe("221700000001"); // le contact du profil ne bouge pas
   });
 });
 

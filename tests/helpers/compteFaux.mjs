@@ -18,7 +18,8 @@ export function creerMonde({ utilisateur, options = {} } = {}) {
     appelsAuth: [],
     seq: 0,
   };
-  monde.profil = { email: monde.utilisateur.email, phone: monde.utilisateur.phone };
+  // profiles.phone = numéro de CONTACT (vendeur…), distinct du numéro de connexion : il ne bouge jamais avec le compte.
+  monde.profil = { email: monde.utilisateur.email, phone: "221700000001" };
   const maintenant = () => monde.horloge;
   const iso = (ms) => new Date(ms).toISOString();
 
@@ -86,7 +87,7 @@ export function creerMonde({ utilisateur, options = {} } = {}) {
           if (!monde.options.sansEffetAuth) {
             if (champs.email) { monde.utilisateur.email = champs.email; monde.utilisateur.email_confirmed_at = "2026-10-25"; }
             if (champs.phone) { monde.utilisateur.phone = champs.phone.replace(/\D/g, ""); monde.utilisateur.phone_confirmed_at = "2026-10-25"; }
-            if (!monde.options.sansSyncProfil) monde.profil = { email: monde.utilisateur.email || null, phone: monde.utilisateur.phone || null };
+            if (!monde.options.sansSyncProfil && champs.email) monde.profil.email = monde.utilisateur.email || null;
           }
           return { data: {}, error: null };
         },
@@ -108,7 +109,7 @@ export function creerMonde({ utilisateur, options = {} } = {}) {
       const champ = canal === "email" ? "email" : "phone";
       monde.utilisateur[champ] = null;
       monde.utilisateur[`${champ}_confirmed_at`] = null;
-      if (!monde.options.sansSyncProfil) monde.profil[champ] = null;
+      if (!monde.options.sansSyncProfil && champ === "email") monde.profil.email = null;
       return { error: null };
     },
     fermerAutresSessions: async () => { monde.sessionsFermees++; return { ok: true }; },

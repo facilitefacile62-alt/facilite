@@ -3,7 +3,7 @@
 -- Cette migration pose :
 --  1) compte_journal_securite : journal de sécurité (écrit par le serveur seulement, chacun ne lit que ses propres lignes) ;
 --  2) compte_verifications : codes à usage unique et autorisations de courte durée (table fermée aux clients : jamais lue ni écrite depuis une application) ;
---  3) synchroniser_contact_profil() : tout changement d'e-mail ou de téléphone dans l'authentification est recopié dans profiles par la base elle-même
+--  3) synchroniser_contact_profil() : tout changement d'e-mail dans l'authentification est recopié dans profiles.email par la base elle-même
 --     (source de vérité = auth.users ; avant ce déclencheur, rien ne mettait profiles.email à jour après un changement) ;
 --  4) compte_dissocier_methode() : retire le téléphone ou l'e-mail d'un compte, côté SERVEUR seulement. Constat du 25/10/2026 : l'API d'administration accepte
 --     « email: vide » ou « phone: vide » SANS aucun effet, et la dissociation par le client (unlinkIdentity) exige le réglage Supabase « liaison manuelle »,
@@ -56,7 +56,10 @@ REVOKE ALL ON public.compte_verifications FROM PUBLIC, anon, authenticated;
 GRANT ALL ON public.compte_verifications TO service_role;
 CREATE INDEX IF NOT EXISTS compte_verifications_utilisateur ON public.compte_verifications (user_id, but, cree_le DESC);
 
--- 3) Synchronisation d'auth.users vers profiles (après chaque changement d'e-mail ou de téléphone)
+-- 3) Synchronisation d'auth.users vers profiles : l'E-MAIL SEULEMENT.
+--    Le téléphone n'est PAS recopié : dans plusieurs écrans (vendeur, informations personnelles, scanner de CV), profiles.phone est le numéro de CONTACT
+--    saisi par la personne (contact du vendeur), distinct du numéro de connexion. Tant que les deux ne sont pas séparés (chantier à part), un changement
+--    ou une dissociation du numéro de connexion ne doit jamais modifier ni vider profiles.phone.
 CREATE OR REPLACE FUNCTION public.synchroniser_contact_profil()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -67,16 +70,13 @@ BEGIN
   IF NEW.email IS DISTINCT FROM OLD.email THEN
     UPDATE public.profiles SET email = NULLIF(NEW.email, '') WHERE id = NEW.id;
   END IF;
-  IF NEW.phone IS DISTINCT FROM OLD.phone THEN
-    UPDATE public.profiles SET phone = NULLIF(NEW.phone, '') WHERE id = NEW.id;
-  END IF;
   RETURN NEW;
 END;
 $$;
 REVOKE ALL ON FUNCTION public.synchroniser_contact_profil() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS synchroniser_contact_profil ON auth.users;
 CREATE TRIGGER synchroniser_contact_profil
-  AFTER UPDATE OF email, phone ON auth.users
+  AFTER UPDATE OF email ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.synchroniser_contact_profil();
 
 -- 4) Dissociation côté serveur
