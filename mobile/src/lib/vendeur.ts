@@ -110,18 +110,40 @@ export async function chargerMesBoutiques(userId: string): Promise<MaBoutique[]>
  */
 export async function enregistrerIdentiteVendeur(
   userId: string,
-  champs: { prenom: string; nom: string; telephone: string; email: string }
+  champs: { prenom: string; nom: string; telephone?: string; email: string }
 ): Promise<void> {
+  // `telephone` = NUMÉRO D'APPEL (profiles.phone), saisi par la personne, sans confirmation ; vide = on ne touche pas au numéro déjà enregistré.
+  // Même écriture directe que le site (vendeur-informations-personnelles, fenêtre « Coordonnées » de Locaux) : aucune écriture nouvelle ni élargie.
+  const numeroAppel = champs.telephone?.trim();
   const { error } = await supabase
     .from('profiles')
     .update({
       full_name: `${champs.prenom.trim()} ${champs.nom.trim()}`.trim(),
-      phone: champs.telephone.trim(),
+      ...(numeroAppel ? { phone: numeroAppel } : {}),
       contact_email: champs.email.trim() || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId);
-  if (error) throw new Error("Impossible d'enregistrer vos informations pour le moment.");
+  if (error) {
+    // La base refuse un numéro déjà utilisé par un autre compte (code 23505) : on le dit, sans dire à qui il est.
+    throw new Error(error.code === '23505' ? 'Ce numéro est déjà utilisé par un autre compte.' : "Impossible d'enregistrer vos informations pour le moment.");
+  }
+}
+
+/**
+ * Change le seul numéro WhatsApp d'une boutique : modifier_ma_boutique remplace TOUS les champs reçus, on lui renvoie donc les valeurs actuelles de la boutique
+ * (nom, quartier, ville, métier…) avec le nouveau numéro. Même fonction SQL que le formulaire de la boutique.
+ */
+export async function changerWhatsappBoutique(boutique: MaBoutique, numero: string): Promise<void> {
+  await modifierBoutique(boutique.id, {
+    nom: boutique.nom,
+    quartier: boutique.quartier,
+    ville: boutique.ville,
+    telephoneWhatsapp: numero,
+    metier: boutique.metier,
+    descriptionPrestation: boutique.description_prestation,
+    categorieEtablissement: boutique.categorie_etablissement,
+  });
 }
 
 export async function chargerMesArticles(storeId: string): Promise<MonArticle[]> {

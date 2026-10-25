@@ -5,11 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CarteMenu, FOND_CARTES } from '@/components/CarteMenu';
 import EnteteRubrique from '@/components/EnteteRubrique';
+import ModifierNumeroModal from '@/components/ModifierNumeroModal';
 import SelecteurPays from '@/components/SelecteurPays';
 import { useAuth } from '@/context/AuthContext';
 import { VILLES } from '@/lib/offresParVille';
 import { enregistrerChampsProfil } from '@/lib/profilChamps';
-import { chargerMesBoutiques } from '@/lib/vendeur';
+import { supabase } from '@/lib/supabase';
+import { changerWhatsappBoutique, chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 
 // Coordonnées — mêmes cartes que les autres réglages. Deux variantes : « compte » (Paramètres de Facilité) = téléphone et e-mail SEULEMENT, les deux
 // moyens de récupérer le compte ; « locaux » (Réglages de Locaux) = en plus le WhatsApp de la boutique, la ville verrouillée et le pays. Téléphone, e-mail et WhatsApp affichent ce qui a été CONFIRMÉ (numéro vérifié par SMS,
@@ -28,7 +30,10 @@ export default function EcranCoordonnees({ variante }: { variante: 'compte' | 'l
   const complet = variante === 'locaux';
   const { user, profile, refreshProfile } = useAuth();
   const [whatsappBoutique, setWhatsappBoutique] = useState('');
-  const [boutiqueId, setBoutiqueId] = useState<string | null>(null);
+  const [boutique, setBoutique] = useState<MaBoutique | null>(null);
+  // Fenêtre de changement d'un numéro (Locaux) : numéro d'appel (profiles.phone) ou WhatsApp de la boutique, sans confirmation.
+  const [edition, setEdition] = useState<'appel' | 'whatsapp' | null>(null);
+  const [erreurNumero, setErreurNumero] = useState('');
   const [villeBoutique, setVilleBoutique] = useState('');
   const [chargement, setChargement] = useState(true);
   const [editionPays, setEditionPays] = useState(false);
@@ -41,7 +46,7 @@ export default function EcranCoordonnees({ variante }: { variante: 'compte' | 'l
       .then((liste) => {
         const b = liste[0];
         if (!b) return;
-        setBoutiqueId(b.id);
+        setBoutique(b);
         setWhatsappBoutique(b.telephone_whatsapp ?? '');
         if (b.ville) setVilleBoutique(b.ville);
         else if (b.latitude != null && b.longitude != null) {
@@ -61,11 +66,39 @@ export default function EcranCoordonnees({ variante }: { variante: 'compte' | 'l
     const v = profile?.[cle];
     return typeof v === 'string' ? v.trim() : '';
   };
-  const telephone = user?.phone || texte('phone');
+  // Locaux : « numéro d'appel » = profiles.phone (le contact saisi par la personne). Facilité : numéro de connexion du compte, en lecture seule.
+  const telephone = complet ? texte('phone') : user?.phone || texte('phone');
   const email = user?.email || texte('contact_email');
   const whatsapp = whatsappBoutique || texte('contact_whatsapp');
   const ville = villeBoutique || texte('city');
   const paysEnregistre = texte('country');
+
+  async function enregistrerNumero(saisie: string) {
+    if (!user?.id || enCours || !edition) return;
+    const numero = saisie.trim();
+    setErreurNumero('');
+    setEnCours(true);
+    try {
+      // Même contrôle que le site et que « Modifier la boutique » : un numéro déjà utilisé par un AUTRE compte est refusé (la base le refuse aussi).
+      if (numero) {
+        const { data: pris, error: erreurControle } = await supabase.rpc('numero_deja_utilise', { p_numero: numero });
+        if (!erreurControle && pris) throw new Error('Ce numéro est déjà utilisé par un autre compte.');
+      }
+      if (edition === 'appel') {
+        await enregistrerChampsProfil(user.id, { phone: numero || null });
+        await refreshProfile();
+      } else if (boutique) {
+        await changerWhatsappBoutique(boutique, numero);
+        setWhatsappBoutique(numero);
+        setBoutique({ ...boutique, telephone_whatsapp: numero || null });
+      }
+      setEdition(null);
+    } catch (e) {
+      setErreurNumero(e instanceof Error && e.message ? e.message : "Impossible d'enregistrer ce numéro pour le moment.");
+    } finally {
+      setEnCours(false);
+    }
+  }
 
   async function enregistrerPays() {
     if (!user?.id || enCours) return;
@@ -89,23 +122,41 @@ export default function EcranCoordonnees({ variante }: { variante: 'compte' | 'l
         <ScrollView contentContainerClassName="px-5 pb-8 gap-3" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {chargement ? <ActivityIndicator style={{ marginTop: 8 }} color="#047857" /> : null}
 
-          <CarteMenu
-            icone="call-outline"
-            titre="Téléphone"
-            sous={telephone || 'Aucun numéro confirmé'}
-            sansFleche
-            droite={telephone ? (user?.phone && user?.phone_confirmed_at ? <Pastille texte="Confirmé" vert /> : <Pastille texte="À confirmer" attente />) : undefined}
-            onPress={() => {}}
-          />
           {complet ? (
-          <CarteMenu
-            icone="logo-whatsapp"
-            titre="WhatsApp"
-            sous={whatsapp || 'Aucun numéro WhatsApp'}
-            sansFleche
-            onPress={() => {}}
-          />
-          ) : null}
+            <>
+              <CarteMenu
+                icone="call-outline"
+                titre="Numéro d'appel"
+                sous={telephone || 'Non renseigné · touchez pour l\'ajouter'}
+                onPress={() => {
+                  setErreurNumero('');
+                  setEdition('appel');
+                }}
+              />
+              <CarteMenu
+                icone="logo-whatsapp"
+                titre="WhatsApp"
+                sous={whatsapp || (boutique ? 'Non renseigné · touchez pour l\'ajouter' : 'Disponible après la création de votre boutique')}
+                onPress={() => {
+                  if (!boutique) {
+                    Alert.alert('Boutique nécessaire', 'Le numéro WhatsApp se règle sur votre boutique. Créez d\'abord votre boutique.');
+                    return;
+                  }
+                  setErreurNumero('');
+                  setEdition('whatsapp');
+                }}
+              />
+            </>
+          ) : (
+            <CarteMenu
+              icone="call-outline"
+              titre="Téléphone"
+              sous={telephone || 'Aucun numéro confirmé'}
+              sansFleche
+              droite={telephone ? (user?.phone && user?.phone_confirmed_at ? <Pastille texte="Confirmé" vert /> : <Pastille texte="À confirmer" attente />) : undefined}
+              onPress={() => {}}
+            />
+          )}
           <CarteMenu
             icone="mail-outline"
             titre="E-mail"
@@ -151,6 +202,21 @@ export default function EcranCoordonnees({ variante }: { variante: 'compte' | 'l
           ) : null}
         </ScrollView>
       </SafeAreaView>
+
+      <ModifierNumeroModal
+        visible={edition !== null}
+        titre={edition === 'whatsapp' ? 'Numéro WhatsApp' : "Numéro d'appel"}
+        aide={
+          edition === 'whatsapp'
+            ? 'Les acheteurs vous écrivent sur ce numéro WhatsApp. Aucune confirmation n\'est demandée.'
+            : 'Les acheteurs vous appellent sur ce numéro. Aucune confirmation n\'est demandée.'
+        }
+        valeurInitiale={edition === 'whatsapp' ? whatsappBoutique : texte('phone')}
+        enCours={enCours}
+        erreur={erreurNumero}
+        onEnregistrer={enregistrerNumero}
+        onFermer={() => setEdition(null)}
+      />
     </View>
   );
 }
