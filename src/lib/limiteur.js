@@ -35,14 +35,14 @@ export function compterEnMemoire(cle, fenetreSecondes, maintenantMs = Date.now()
 
 /**
  * Autorise-t-on cet appel ? `cle` identifie le compteur (ex. « compte:envoi:u:<id> »), `max` le nombre d'appels permis dans `fenetreSecondes`.
- * Retourne true si l'appel est permis, false s'il dépasse la limite.
+ * Retourne true si l'appel est permis, false s'il dépasse la limite. `delaiMs` borne l'attente de Redis (le hook SMS n'a que 5 s au total).
  */
-export async function limiter(cle, max, fenetreSecondes) {
+export async function limiter(cle, max, fenetreSecondes, delaiMs = DELAI_REDIS_MS) {
   if (redis) {
     try {
       const resultat = await Promise.race([
         redis.pipeline().incr(`limite:${cle}`).expire(`limite:${cle}`, fenetreSecondes, "NX").exec(),
-        new Promise((resolve) => setTimeout(() => resolve(null), DELAI_REDIS_MS)),
+        new Promise((resolve) => setTimeout(() => resolve(null), delaiMs)),
       ]);
       if (resultat !== null) return Number(resultat[0]) <= max;
     } catch (erreur) {
