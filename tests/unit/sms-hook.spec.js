@@ -86,6 +86,34 @@ test.describe("signature", () => {
     expect(r.statut).toBe(401);
     expect(m.appels).toEqual([]);
   });
+  test("secret SEND_SMS_HOOK_SECRET non défini : 403 (pas 503), aucun appel réseau, rien dans le journal — même avec un appel qui paraît bien formé", async () => {
+    const { traiterEnvoi } = await service();
+    const m = monde();
+    const corps = JSON.stringify({ user: { phone: NUMERO }, sms: { otp: CODE } });
+    const entetes = new Headers({ "webhook-id": "x", "webhook-timestamp": String(Math.floor(Date.now() / 1000)), "webhook-signature": "v1,AAAA" });
+    for (const env of [{}, { SEND_SMS_HOOK_SECRET: "" }, { ...ENV_ORANGE, SEND_SMS_HOOK_SECRET: undefined }]) {
+      const r = await traiterEnvoi({ corps, entetes, deps: { ...m.deps, env } });
+      expect(r.statut).toBe(403);
+      expect([429, 503]).not.toContain(r.statut);
+    }
+    expect(m.appels).toEqual([]);
+    expect(m.journal).toEqual([]);
+    expect(m.alertes).toEqual([]);
+  });
+  test("secret défini + signature fausse : 401 (et non 403)", async () => {
+    const { traiterEnvoi } = await service();
+    const m = monde();
+    const entetes = new Headers({ "webhook-id": "x", "webhook-timestamp": String(Math.floor(Date.now() / 1000)), "webhook-signature": "v1,AAAA" });
+    const r = await traiterEnvoi({ corps: "{}", entetes, deps: { ...m.deps, env: ENV_ORANGE } });
+    expect(r.statut).toBe(401);
+    expect(m.journal).toEqual([]);
+  });
+  test("la route : 403 quand le secret est absent, 401 sinon, jamais 503", () => {
+    const route = lire("src/app/api/auth/send-sms-hook/route.js");
+    expect(route).toContain('controle.raison === "secret_absent" ? 403 : 401');
+    const code = route.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n"); // hors commentaires
+    expect(code).not.toMatch(/\b503\b/);
+  });
   test("la route vérifie elle-même la signature avant tout", () => {
     const route = lire("src/app/api/auth/send-sms-hook/route.js");
     expect(route).toContain("verifierSignatureWebhook");

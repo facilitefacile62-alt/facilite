@@ -49,7 +49,8 @@ export async function traiterEnvoi({ corps, entetes, deps }) {
   // 1) Signature : sans elle, rien.
   const sig = verifierSignatureWebhook({ corps, entetes, secret: env.SEND_SMS_HOOK_SECRET, maintenantMs: maintenant() });
   if (!sig.ok) {
-    if (sig.raison === "secret_absent") return reponse(503, "Hook non configuré.");
+    // Secret non défini : 403 (jamais 503, que Supabase réessaierait) ; rien n'est envoyé ni journalisé.
+    if (sig.raison === "secret_absent") return reponse(403, "Hook non configuré.");
     return reponse(401, "Signature invalide.");
   }
 
