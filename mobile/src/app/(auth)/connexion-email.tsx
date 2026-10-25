@@ -11,6 +11,8 @@ import {
   SeparateurOu,
 } from '@/components/ChampsAuth';
 import EcranConnexion from '@/components/EcranConnexion';
+import { messageErreurGoogle, messageRefusConnexion } from '@/lib/connexionApplicationLogique';
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
 
@@ -21,8 +23,12 @@ import { supabase } from '@/lib/supabase';
 // Flux inchangé, en deux étapes : e-mail seul, puis mot de passe (+ lien
 // magique, + « Modifier »).
 
-export default function ConnexionEmailScreen() {
+export default function ConnexionEmailScreen({ racine = false }: { racine?: boolean } = {}) {
   const router = useRouter();
+  // Interrupteurs de l'application (fermés par défaut, illisible = fermé) : inscription, « mot de passe oublié », lien magique.
+  const inscriptionOuverte = useFonctionnalite('feat_app_inscription');
+  const motDePasseOublieOuvert = useFonctionnalite('feat_app_mot_de_passe_oublie');
+  const lienMagiqueOuvert = useFonctionnalite('feat_app_connexion_sans_mot_de_passe');
   const [etape, setEtape] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,14 +58,8 @@ export default function ConnexionEmailScreen() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email: emailPropre(), password });
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setErrorMessage('Adresse email ou mot de passe incorrect. Vérifiez vos identifiants.');
-        } else if (error.message.includes('Email not confirmed')) {
-          setErrorMessage("Votre adresse email n'a pas encore été confirmée. Vérifiez votre boîte de réception.");
-          setNeedsConfirmation(true);
-        } else {
-          setErrorMessage(error.message);
-        }
+        // Un seul message neutre, en français : jamais « adresse inconnue » ni « adresse non confirmée », jamais de texte technique anglais.
+        setErrorMessage(messageRefusConnexion(error));
       }
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function ConnexionEmailScreen() {
     setIsResending(true);
     try {
       const { error } = await supabase.auth.resend({ type: 'signup', email: emailPropre() });
-      setErrorMessage(error ? error.message || "Impossible de renvoyer l'email." : 'Un nouvel email a été envoyé.');
+      setErrorMessage(error ? "Impossible de renvoyer l'e-mail pour le moment. Réessayez plus tard." : 'Un nouvel e-mail a été envoyé.');
       if (!error) setNeedsConfirmation(false);
     } finally {
       setIsResending(false);
@@ -87,7 +87,7 @@ export default function ConnexionEmailScreen() {
     setErrorMessage('');
     try {
       const { error } = await supabase.auth.signInWithOtp({ email: emailPropre() });
-      if (error) setErrorMessage(error.message || "Impossible d'envoyer le lien magique.");
+      if (error) setErrorMessage("Impossible d'envoyer le lien pour le moment. Réessayez plus tard.");
       else setMagicLinkSent(true);
     } finally {
       setMagicLinkLoading(false);
@@ -100,7 +100,7 @@ export default function ConnexionEmailScreen() {
     try {
       await seConnecterAvecGoogle();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Erreur lors de la connexion Google.');
+      setErrorMessage(messageErreurGoogle(err));
     } finally {
       setGoogleLoading(false);
     }
@@ -109,7 +109,7 @@ export default function ConnexionEmailScreen() {
   const retour = () => (router.canGoBack() ? router.back() : router.replace('/login'));
 
   return (
-    <EcranConnexion retour={retour}>
+    <EcranConnexion retour={racine ? undefined : retour}>
       <Text className="text-[26px] font-black text-[#111] mt-1">Connexion</Text>
       <Text className="text-[15px] mt-1.5 mb-5" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 21 }}>
         Saisis tes identifiants pour te connecter.
@@ -136,9 +136,11 @@ export default function ConnexionEmailScreen() {
           <View className="mt-4">
             <BoutonContinuer onPress={validerEtape1} actif={emailPropre().includes('@')} />
           </View>
-          <View className="mt-2">
-            <LienTexte texte="Mot de passe oublié ?" onPress={() => router.push('/forgot-password')} />
-          </View>
+          {motDePasseOublieOuvert ? (
+            <View className="mt-2">
+              <LienTexte texte="Mot de passe oublié ?" onPress={() => router.push('/forgot-password')} />
+            </View>
+          ) : null}
         </>
       ) : (
         <>
@@ -180,16 +182,22 @@ export default function ConnexionEmailScreen() {
                 />
               </View>
 
-              <View className="flex-row items-center justify-between mt-3">
-                <Pressable onPress={envoyerLienMagique} disabled={magicLinkLoading} hitSlop={8}>
-                  <Text className="text-[14px] font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>
-                    {magicLinkLoading ? 'Envoi…' : 'Lien magique'}
-                  </Text>
-                </Pressable>
-                <Pressable onPress={() => router.push('/forgot-password')} hitSlop={8}>
-                  <Text className="text-[14px] font-bold" style={{ color: '#10B981' }}>Mot de passe oublié ?</Text>
-                </Pressable>
-              </View>
+              {lienMagiqueOuvert || motDePasseOublieOuvert ? (
+                <View className="flex-row items-center justify-between mt-3">
+                  {lienMagiqueOuvert ? (
+                    <Pressable onPress={envoyerLienMagique} disabled={magicLinkLoading} hitSlop={8}>
+                      <Text className="text-[14px] font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>
+                        {magicLinkLoading ? 'Envoi…' : 'Lien magique'}
+                      </Text>
+                    </Pressable>
+                  ) : <View />}
+                  {motDePasseOublieOuvert ? (
+                    <Pressable onPress={() => router.push('/forgot-password')} hitSlop={8}>
+                      <Text className="text-[14px] font-bold" style={{ color: '#10B981' }}>Mot de passe oublié ?</Text>
+                    </Pressable>
+                  ) : <View />}
+                </View>
+              ) : null}
 
               {errorMessage ? <BoiteErreur texte={errorMessage} /> : null}
 
@@ -213,12 +221,14 @@ export default function ConnexionEmailScreen() {
         </>
       )}
 
-      <View className="flex-row justify-center items-center gap-1.5 mt-5 flex-wrap">
-        <Text className="text-[15px] text-[#111]">Pas encore de compte ?</Text>
-        <Pressable onPress={() => router.push('/register')} hitSlop={8}>
-          <Text className="text-[15px] font-bold" style={{ color: '#2563EB' }}>S&apos;inscrire</Text>
-        </Pressable>
-      </View>
+      {inscriptionOuverte ? (
+        <View className="flex-row justify-center items-center gap-1.5 mt-5 flex-wrap">
+          <Text className="text-[15px] text-[#111]">Pas encore de compte ?</Text>
+          <Pressable onPress={() => router.push('/register')} hitSlop={8}>
+            <Text className="text-[15px] font-bold" style={{ color: '#2563EB' }}>S&apos;inscrire</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </EcranConnexion>
   );
 }

@@ -42,6 +42,11 @@ export const PAR_DEFAUT: Record<string, Interrupteur> = {
   feat_app_boite_idees: coupe(),
   feat_app_creer_cv: coupe(),
   feat_app_modeles_cv: coupe(),
+  // Connexion dans l'application (Android) : seuls « Continuer avec Google » et e-mail + mot de passe sont proposés. L'inscription, « mot de passe oublié » et la
+  // connexion par code ou lien magique sont FERMÉS par défaut (illisible = fermés) ; la réinitialisation du mot de passe se fait sur le site.
+  feat_app_inscription: coupe(),
+  feat_app_mot_de_passe_oublie: coupe(),
+  feat_app_connexion_sans_mot_de_passe: coupe(),
 };
 
 export type Role = 'admin' | 'recruiter' | 'user' | 'visitor';
