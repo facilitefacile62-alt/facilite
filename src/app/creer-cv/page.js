@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback, createContext, useContext } f
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
+import { exempleCvNeutre, identiteAEcrire, MESSAGE_ECRIVEZ_VOS_INFORMATIONS } from "@/lib/exempleCreateurCv";
 import TemplatePreviewModal from "@/components/TemplatePreviewModal";
 import { cvTemplates, resolveTemplateId, DEFAULT_TEMPLATE_ID } from "@/lib/cvModels";
 
@@ -847,7 +848,7 @@ export default function CreerCv() {
     companyName: "Entreprise Cible",
     city: "Dakar",
     date: "14/08/2026",
-    subject: "Candidature au poste de Entrepreneur numérique",
+    subject: "Candidature au poste de [intitulé du poste]",
     body: "Madame, Monsieur,\n\nVivement intéressé(e) par les opportunités au sein de votre structure, je vous présente ma candidature.\n\nFort(e) de mon parcours et des compétences acquises, je serais ravi(e) de mettre mon dynamisme et mon expertise au service de vos projets.\n\nDans l'attente d'un échange, je vous prie d'agréer, Madame, Monsieur, mes salutations distinguées."
   });
   const [toast, setToast] = useState({ show: false, message: "", icon: "fa-circle-info" });
@@ -886,117 +887,8 @@ export default function CreerCv() {
   const [formSubmitted, setFormSubmitted] = useState(false);
 
   // Resume Form Data State
-  const [cvData, setCvData] = useState({
-    firstName: "Macoumba",
-    lastName: "Samake",
-    jobTitle: "Entrepreneur numérique",
-    email: "facilitefacile@gmail.com",
-    phone: "+221 77 140 08 32",
-    address: "",
-    postalCode: "",
-    city: "Pikine",
-    birthDate: "",
-    drivingLicense: "",
-    nationality: "Sénégalaise",
-    maritalStatus: "",
-    linkedin: "https://www.linkedin.com/company/facilite-digital",
-    availability: "Disponible",
-    cvLang: "Français",
-    photoZoom: 1,
-    photoX: 50,
-    photoY: 50,
-    experiences: [
-      {
-        id: 1,
-        title: "ENTREPRENEURE",
-        employer: "AZMA Collection",
-        city: "Dakar",
-        startDate: "Jan 2024",
-        endDate: "",
-        current: true,
-        description: "• Piloter quotidiennement les activités, suivre les stocks, gérer les inventaires et les commandes.\n• Accueillir, conseiller, vendre et fidéliser la clientèle.\n• Promouvoir les produits et gérer la relation fournisseur.\n• Faire preuve de rigueur, d'autonomie, de gestion des priorités et d'esprit d'initiative."
-      },
-      {
-        id: 2,
-        title: "GÉRANTE",
-        employer: "AZMA Collection",
-        city: "Dakar",
-        startDate: "Jan 2024",
-        endDate: "",
-        current: true,
-        description: "• Piloter quotidiennement les activités, suivre les stocks, gérer les inventaires et les commandes.\n• Accueillir, conseiller, vendre et fidéliser la clientèle.\n• Promouvoir les produits et gérer la relation fournisseur.\n• Faire preuve de rigueur, d'autonomie, de gestion des priorités et d'esprit d'initiative."
-      }
-    ],
-    educations: [
-      {
-        id: 1,
-        degree: "FORMATION DE DÉLÉGUÉE MÉDICALE ET GESTIONNAIRE EN PHARMACIE",
-        school: "CEFAS (Centre de Formation Africain du Sénégal)",
-        city: "Dakar",
-        startDate: "Jan 2026",
-        endDate: "",
-        current: true,
-        description: ""
-      },
-      {
-        id: 2,
-        degree: "TERMINALE",
-        school: "Lycée de Kébémer",
-        city: "Kébémer",
-        startDate: "Jan 2024",
-        endDate: "Jan 2025",
-        current: false,
-        description: ""
-      },
-      {
-        id: 3,
-        degree: "BREVET DE FIN D'ÉTUDES MOYENNES (BFEM)",
-        school: "CEM Commune 3, Kébémer",
-        city: "Kébémer",
-        startDate: "Jan 2021",
-        endDate: "Jan 2022",
-        current: false,
-        description: ""
-      }
-    ],
-    skills: [
-      { id: 1, name: "Gestion des stocks et inventaires", level: "Avancé" },
-      { id: 2, name: "Accueil et fidélisation client", level: "Avancé" },
-      { id: 3, name: "Négociation & relation fournisseurs", level: "Avancé" },
-      { id: 4, name: "Rigueur et autonomie opérationnelle", level: "Avancé" }
-    ],
-    profile: "Professionnelle polyvalente du secteur pharmaceutique, diplômée en déléguée médicale et gestionnaire en pharmacie du CEFAS, je conjugue rigueur scientifique et expertise opérationnelle. Forte d'une expérience entrepreneuriale réussie, je maîtrise les enjeux de la gestion des stocks, de l'approvisionnement et de la relation client. Dotée d'une solide compréhension de la pharmacologie et des normes pharmaceutiques, je suis reconnue pour mon aisance relationnelle, ma capacité d'analyse et ma proactivité. Passionnée par le secteur de la santé, je souhaite mettre mon sens de l'organisation et mon efficacité au service de votre structure pour optimiser la qualité du conseil et le développement de vos activités.",
-    languages: [
-      { id: 1, name: "Français", level: "Langue véhiculaire" },
-      { id: 2, name: "Wolof", level: "Langue maternelle" },
-      { id: 3, name: "Anglais", level: "Intermédiaire (B2)" }
-    ],
-    qualities: [
-      { id: 1, name: "Déléguée Médicale CEFAS" },
-      { id: 2, name: "Gestionnaire en Pharmacie" }
-    ],
-    itSkills: [
-      { id: 1, name: "Pack Office (Word, Excel)" },
-      { id: 2, name: "Logiciels de gestion de stock" },
-      { id: 3, name: "Canva & Outils numériques" }
-    ],
-    hobbies: [
-      { id: 1, name: "Entrepreneuriat & Commerce" },
-      { id: 2, name: "Santé & Pharmacologie" },
-      { id: 3, name: "Technologies & Digital" }
-    ],
-    sectionTitles: {
-      contact: "Coordonnées",
-      experience: "EXPÉRIENCE",
-      education: "FORMATION",
-      skills: "APTITUDES",
-      profile: "PROFIL",
-      languages: "LANGUES",
-      itSkills: "LOGICIELS",
-      qualities: "CERTIFICATIONS",
-      hobbies: "CENTRES D'INTÉRÊT"
-    }
-  });
+  // Exemple de départ NEUTRE et fictif (voir src/lib/exempleCreateurCv.js) : jamais l'identité d'une vraie personne.
+  const [cvData, setCvData] = useState(exempleCvNeutre);
 
   // Toggles for optional info fields
   const [optionalFields, setOptionalFields] = useState({
@@ -1698,7 +1590,18 @@ export default function CreerCv() {
   // Sauvegarde du brouillon de CV avant d'ouvrir la modale de paiement : la
   // confection finale (export PDF) est désormais une prestation payante
   // (voir PricingModal) — on ne perd pas pour autant le travail déjà saisi.
+  // Garde-fou (25/10/2026) : ni téléchargement, ni paiement, ni impression tant que le nom ou le téléphone sont ceux d'un exemple.
+  const identiteOk = () => {
+    if (!identiteAEcrire(cvData)) return true;
+    triggerToast(MESSAGE_ECRIVEZ_VOS_INFORMATIONS, "fa-triangle-exclamation");
+    return false;
+  };
+  const imprimerCv = () => {
+    if (identiteOk()) window.print();
+  };
+
   const saveCvDraftAndOpenPricing = async () => {
+    if (!identiteOk()) return;
     if (savingDraft) return; // évite une double insertion en base sur un double-clic
     setSavingDraft(true);
     try {
@@ -1715,7 +1618,7 @@ export default function CreerCv() {
       // sauvegarde, ou revenait éditer son CV, une NOUVELLE ligne était
       // créée. Relevé en production le 2026-08-28 : 3 comptes portent des
       // doublons stricts (même compte, même titre), dont « Mon CV Facilité »
-      // ×105 et « CV - Macoumba Samake » ×3 — ces trois-là enregistrés à
+      // ×105 et « CV - Prénom Nom » ×3 — ces trois-là enregistrés à
       // 17h41, 17h45 puis 18h06, avec un contenu différent à chaque fois :
       // c'est bien la même édition resauvegardée, pas trois CV distincts.
       // Conséquence visible pour l'utilisateur : le quota de documents se
@@ -1845,6 +1748,7 @@ export default function CreerCv() {
   // mon CV" sur une commande déjà payée dans /candidat/facturation). Capture
   // l'aperçu déjà rendu à l'écran, WYSIWYG garanti (voir src/lib/pdfExport.js).
   const handleDownloadPdf = async () => {
+    if (!identiteOk()) return;
     setDownloadingPdf(true);
     try {
       const { exportElementToPdf } = await import("@/lib/pdfExport");
@@ -5138,7 +5042,7 @@ Laisse vide les champs non trouvés.`;
                   </span>
                   <button
                     type="button"
-                    onClick={() => window.print()}
+                    onClick={imprimerCv}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-[11px] font-bold shadow-2xs transition cursor-pointer"
                     title="Imprimer ou enregistrer en PDF"
                   >
@@ -5467,7 +5371,7 @@ Laisse vide les champs non trouvés.`;
                               </li>
                               <li className="flex items-start space-x-1.5">
                                 <i className="fa-solid fa-phone mt-0.5 flex-shrink-0 text-white/60"></i>
-                                <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                                <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" />
                               </li>
                               <li className="flex items-start space-x-1.5">
                                 <i className="fa-solid fa-location-dot mt-0.5 flex-shrink-0 text-white/60"></i>
@@ -5648,7 +5552,7 @@ Laisse vide les champs non trouvés.`;
                         {/* Contacts horizontally */}
                         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[9px] text-gray-500 font-bold pt-1">
                           <span className="flex items-center"><i className="fa-regular fa-envelope mr-1 text-gray-400"></i><CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" /></span>
-                          <span className="flex items-center"><i className="fa-solid fa-phone mr-1 text-gray-400"></i><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" /></span>
+                          <span className="flex items-center"><i className="fa-solid fa-phone mr-1 text-gray-400"></i><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" /></span>
                           <span className="flex items-center"><i className="fa-solid fa-location-dot mr-1 text-gray-400"></i><CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" /></span>
                           {cvData.linkedin && (
                             <span className="flex items-center"><i className="fa-brands fa-linkedin mr-1 text-gray-400"></i><CanvaText value={cvData.linkedin} onChange={(v) => setCvData(prev => ({ ...prev, linkedin: v }))} id="linkedin" name="LinkedIn" placeholder="linkedin.com/in/profil" /></span>
@@ -5802,7 +5706,7 @@ Laisse vide les champs non trouvés.`;
                       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[9px] text-white/80 font-bold">
                         <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" />
                         <span>•</span>
-                        <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                        <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" />
                         <span>•</span>
                         <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" />
                       </div>
@@ -5956,7 +5860,7 @@ Laisse vide les champs non trouvés.`;
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] text-white/70 font-semibold mt-2">
                           <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" />
                           <span>•</span>
-                          <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                          <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" />
                           <span>•</span>
                           <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" />
                         </div>
@@ -6113,7 +6017,7 @@ Laisse vide les champs non trouvés.`;
                             <h3 className="text-[10px] font-black uppercase tracking-wider mb-2 flex items-center gap-1.5"><i className="fa-solid fa-circle-dot text-[8px]"></i>{cvData.sectionTitles?.contact?.toUpperCase() || "CONTACT"}</h3>
                             <ul className="space-y-1.5 text-[9px] text-white/90 font-semibold">
                               <li className="break-all"><CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" /></li>
-                              <li><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" /></li>
+                              <li><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" /></li>
                               <li><CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" /></li>
                             </ul>
                           </CanvaElementWrapper>
@@ -6272,7 +6176,7 @@ Laisse vide les champs non trouvés.`;
                             <h3 className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1.5">{"// Contact"}</h3>
                             <ul className="space-y-1 text-[9px] text-slate-200 font-medium">
                               <li className="break-all"><CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="email@exemple.com" /></li>
-                              <li><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" /></li>
+                              <li><CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" /></li>
                               <li><CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Dakar" /></li>
                             </ul>
                           </CanvaElementWrapper>
@@ -6488,7 +6392,7 @@ Laisse vide les champs non trouvés.`;
                             <div className="space-y-0.5">
                               <div className="bg-[#FAF7F2] border border-[#382F2D] rounded-lg px-2 py-0.5 text-[8px] font-bold text-[#382F2D] flex items-center gap-1.5 shadow-xs">
                                 <i className="fa-solid fa-mobile-screen text-emerald-600 text-[8.5px] w-3 text-center"></i>
-                                <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" className="truncate" />
+                                <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" className="truncate" />
                               </div>
                               <div className="bg-[#FAF7F2] border border-[#382F2D] rounded-lg px-2 py-0.5 text-[8px] font-bold text-[#382F2D] flex items-center gap-1.5 shadow-xs">
                                 <i className="fa-solid fa-envelope text-blue-600 text-[8.5px] w-3 text-center"></i>
@@ -6740,13 +6644,13 @@ Laisse vide les champs non trouvés.`;
                       <div className="ml-6 flex-grow">
                         <div className="flex items-center gap-2">
                           <h1 className="text-xl sm:text-2xl font-black text-[#285E8E] tracking-wide mb-1 leading-tight">
-                            <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Entrepreneur numérique" />
+                            <CanvaText value={cvData.jobTitle || cvData.experiences[0]?.title} onChange={(v) => setCvData(prev => ({ ...prev, jobTitle: v }))} id="jobTitle" name="Titre professionnel" placeholder="Votre métier" />
                           </h1>
                           <i className="fa-solid fa-pen text-[#285E8E] text-xs opacity-0 group-hover/hdr:opacity-100 transition" title="Modifier"></i>
                         </div>
                         <h2 className="text-base font-bold text-gray-800 tracking-tight flex items-center gap-1.5 flex-wrap">
-                          <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Macoumba" />
-                          <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="Samake" />
+                          <CanvaText value={cvData.firstName} onChange={(v) => setCvData(prev => ({ ...prev, firstName: v }))} id="firstName" name="Prénom" placeholder="Prénom" />
+                          <CanvaText value={cvData.lastName} onChange={(v) => setCvData(prev => ({ ...prev, lastName: v }))} id="lastName" name="Nom" placeholder="NOM" />
                         </h2>
                       </div>
                     </CanvaElementWrapper>
@@ -6760,15 +6664,15 @@ Laisse vide les champs non trouvés.`;
                     >
                       <div className="flex items-center gap-1.5">
                         <i className="fa-solid fa-location-dot text-[#285E8E] text-[10px]"></i>
-                        <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Pikine" />
+                        <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Votre ville" />
                       </div>
                       <div className="flex items-center gap-1.5">
                         <i className="fa-solid fa-envelope text-[#285E8E] text-[10px]"></i>
-                        <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="facilitefacile@gmail.com" />
+                        <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="prenom.nom@exemple.com" />
                       </div>
                       <div className="flex items-center gap-1.5">
                         <i className="fa-solid fa-phone text-[#285E8E] text-[10px]"></i>
-                        <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                        <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" />
                         <i className="fa-solid fa-pen text-[#285E8E] text-[8px] ml-1 opacity-0 group-hover/cnt:opacity-100 transition"></i>
                       </div>
                     </CanvaElementWrapper>
@@ -6972,15 +6876,15 @@ Laisse vide les champs non trouvés.`;
                         <ul className="space-y-2 text-[10px] font-semibold">
                           <li className="flex items-center space-x-2">
                             <i className="fa-solid fa-mobile-screen text-[#D4AF37] w-4 text-center"></i>
-                            <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                            <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" />
                           </li>
                           <li className="flex items-center space-x-2">
                             <i className="fa-solid fa-envelope text-[#D4AF37] w-4 text-center"></i>
-                            <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="facilitefacile@gmail.com" className="break-all" />
+                            <CanvaText value={cvData.email} onChange={(v) => setCvData(prev => ({ ...prev, email: v }))} id="email" name="Email" placeholder="prenom.nom@exemple.com" className="break-all" />
                           </li>
                           <li className="flex items-center space-x-2">
                             <i className="fa-solid fa-location-dot text-[#D4AF37] w-4 text-center"></i>
-                            <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Pikine" />
+                            <CanvaText value={cvData.city || cvData.address} onChange={(v) => setCvData(prev => ({ ...prev, city: v }))} id="city" name="Ville" placeholder="Votre ville" />
                           </li>
                         </ul>
                       </CanvaElementWrapper>
@@ -7226,7 +7130,7 @@ Laisse vide les champs non trouvés.`;
                           <ul className="space-y-1.5 text-[9px] text-gray-700 font-semibold">
                             <li className="flex items-start gap-1.5">
                               <i className="fa-solid fa-phone text-[#1B2A4A] mt-0.5 flex-shrink-0"></i>
-                              <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 140 08 32" />
+                              <CanvaText value={cvData.phone} onChange={(v) => setCvData(prev => ({ ...prev, phone: v }))} id="phone" name="Téléphone" placeholder="+221 77 000 00 00" />
                             </li>
                             <li className="flex items-start gap-1.5">
                               <i className="fa-solid fa-envelope text-[#1B2A4A] mt-0.5 flex-shrink-0"></i>
@@ -7441,8 +7345,8 @@ Laisse vide les champs non trouvés.`;
                                 <p className="text-xs font-bold text-blue-600 tracking-wider uppercase mt-0.5">{cvData.jobTitle || "Professionnel"}</p>
                               </div>
                               <div className="text-[9px] text-gray-600 text-right leading-tight font-medium">
-                                <p>{cvData.phone || "+221 77 140 08 32"}</p>
-                                <p>{cvData.email || "facilitefacile@gmail.com"}</p>
+                                <p>{cvData.phone}</p>
+                                <p>{cvData.email}</p>
                                 <p>{cvData.city || "Dakar, Sénégal"}</p>
                               </div>
                             </div>
@@ -8044,7 +7948,7 @@ Laisse vide les champs non trouvés.`;
             <div className="flex items-center space-x-2 sm:space-x-3">
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={imprimerCv}
                 className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-extrabold rounded-xl transition flex items-center gap-2 cursor-pointer border border-slate-600 shadow-sm"
               >
                 <i className="fa-solid fa-print"></i>
