@@ -22,6 +22,7 @@ import InformationsPersonnellesContent from "@/components/InformationsPersonnell
 import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp";
 import { chargerNiveauxEtudes, trouverNiveau, deduireNiveauDepuisFormations } from "@/lib/niveauxEtudes";
 import SelecteurMetier from "@/components/SelecteurMetier";
+import OngletAchatCv from "@/components/OngletAchatCv";
 
 /**
  * Convertit une data URI base64 (sortie de canvas.toDataURL) en Blob, sans
@@ -3056,6 +3057,8 @@ export default function ProfilPage() {
                   >
                     <span>Mes documents</span>
                   </button>
+                  {/* Lien vers la page « Achat de CV » (masqué dans l'application iOS) */}
+                  <OngletAchatCv />
                   <button
                     onClick={() => handleSelectTab("settings")}
                     className={`text-sm font-extrabold pb-2.5 pt-1 transition-all relative whitespace-nowrap cursor-pointer ${

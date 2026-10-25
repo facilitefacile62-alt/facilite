@@ -42,9 +42,11 @@
 // si Chrome venait à le changer.
 
 const CLE = "facilite:contexte-play";
+/** Marqueur ajouté par l'application iOS à l'identité de sa WebView (voir mobile/src/lib/biensNumeriquesLogique.ts). */
+export const MARQUEUR_APP_IOS = "FaciliteApp/ios";
 
 /**
- * @returns {boolean} vrai uniquement si l'on tourne dans l'app Android.
+ * @returns {boolean} vrai uniquement si l'on tourne dans l'app Android (TWA) ou dans l'app iOS de Facilité.
  *
  * En cas de doute, renvoie faux — c'est-à-dire « on est sur le web, montre
  * l'achat ». Le choix est délibéré : cette fonction est appelée depuis le
@@ -81,6 +83,17 @@ export function estDansAppPlay() {
     }
   } catch {
     // URL illisible : on s'en tient au signal 1.
+  }
+
+  // Signal 3 — l'application iOS de Facilité (WebView) ajoute « FaciliteApp/ios » à l'identité du navigateur. Règle Apple 3.1.1 : un bien numérique
+  // acheté et consommé dans une application iOS ne doit afficher ni prix, ni bouton d'achat, ni renvoi vers un paiement externe. Toutes les pages
+  // qui testent estDansAppPlay() (jetons / Premium, formation, création de CV payante, Achat de CV) y affichent donc leur message neutre.
+  try {
+    if (typeof navigator !== "undefined" && String(navigator.userAgent || "").includes(MARQUEUR_APP_IOS)) {
+      detecte = true;
+    }
+  } catch {
+    // Identité illisible : on s'en tient aux autres signaux.
   }
 
   if (detecte) {

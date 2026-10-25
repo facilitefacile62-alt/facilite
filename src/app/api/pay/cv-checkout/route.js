@@ -82,8 +82,8 @@ export async function POST(req) {
         nom: nomQrCv(preparation.nom),
         validiteSecondes: QR_VALIDITE_SECONDES,
         // Retour sur le site avec l'identifiant de l'achat : la page lit l'état, elle ne valide JAMAIS un achat sur la seule foi de ce retour.
-        callbackSuccessUrl: `${appUrl}/profil?onglet=achat-cv&statut=succes&commande=${achatId}`,
-        callbackCancelUrl: `${appUrl}/profil?onglet=achat-cv&statut=annule&commande=${achatId}`,
+        callbackSuccessUrl: `${appUrl}/achat-cv?statut=succes&commande=${achatId}`,
+        callbackCancelUrl: `${appUrl}/achat-cv?statut=annule&commande=${achatId}`,
         callbackUrl: `${appUrl}/api/pay/cv-achat-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {

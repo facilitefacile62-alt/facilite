@@ -25,7 +25,7 @@ const ligneReelle = (tx, montant = 100, reference = REF) => ({
   amount: { value: montant, unit: "XOF" },
   requestDate: "2026-10-24T12:53:03.494Z",
   reference,
-  metadata: { successRedirectUrl: "https://ffacilite.com/profil?onglet=achat-cv&statut=succes", cancelRedirectUrl: "https://ffacilite.com/profil?onglet=achat-cv&statut=annule" },
+  metadata: { successRedirectUrl: "https://ffacilite.com/achat-cv?statut=succes", cancelRedirectUrl: "https://ffacilite.com/achat-cv?statut=annule" },
   receiveNotification: true,
   type: "MERCHANT_PAYMENT",
   transactionId: tx,
