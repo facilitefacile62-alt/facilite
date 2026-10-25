@@ -931,6 +931,11 @@ export default function SecurityTabContent({ userSession, intentCandidature = fa
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Changer ou retirer le téléphone / l'e-mail : écran unique, règles côté serveur (même chose dans Facilité et Locaux) */}
+      <a href="/informations-compte" className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-black">
+        <span>Informations du compte : téléphone et e-mail</span>
+        <span aria-hidden="true">→</span>
+      </a>
       {/* Alertes */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-start space-x-2">
