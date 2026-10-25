@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
+import { formeLien } from "@/lib/ouvertureAppPaiement";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
-import { genererQrCodePaiement, obtenirStatutTransaction, messageUtilisateurOrange } from "@/lib/orangeMoney";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { genererJetonCallback, genererQrCodePaiement, nomQrJetons, QR_VALIDITE_SECONDES, rechercherTransactionOrange, messageUtilisateurOrange } from "@/lib/orangeMoney";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
+import { aLePrixTest, prixJetonFcfa } from "@/lib/prixTestOrange";
 import { z } from "zod";
 
 // Achat de jetons Marketplace — remplace l'ancien abonnement générique
@@ -14,7 +18,6 @@ import { z } from "zod";
 // l'intégration Orange Money "Paiement Marchand" déjà codée
 // (src/lib/orangeMoney.js) — seule la table écrite change
 // (jetons_transactions au lieu de transactions/subscriptions).
-const QR_VALIDITY_SECONDS = 900;
 const QUANTITE_MIN = 1;
 const QUANTITE_MAX = 100000; // garde-fou large, pas une vraie limite métier
 
@@ -40,7 +43,7 @@ export async function POST(req) {
     const { allowed, error: rateError } = await checkRateLimit(user.id);
     if (!allowed) return rateError;
 
-    if (!process.env.ORANGE_MONEY_CLIENT_ID || !process.env.ORANGE_MONEY_CLIENT_SECRET || !process.env.ORANGE_MONEY_MERCHANT_CODE) {
+    if (!orangeMoneyActif()) {
       return NextResponse.json(
         { error: "Le paiement Orange Money n'est pas encore configuré." },
         { status: 503 }
@@ -77,6 +80,21 @@ export async function POST(req) {
       return NextResponse.json({ error: "Boutique introuvable." }, { status: 404 });
     }
 
+    // Garde-fou : un QR vient d'être créé pour cette boutique il y a moins de 20 secondes (double touche, deux onglets) : on n'en crée pas un
+    // second en parallèle — deux QR ouverts en même temps pour le même achat pourraient être payés tous les deux. Les commandes sans QR
+    // (échec de création chez Orange) ne comptent pas : on peut réessayer tout de suite.
+    const { count: qrRecents } = await getSupabaseAdmin()
+      .from("jetons_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("store_id", storeId)
+      .eq("type", "achat")
+      .eq("status", "pending")
+      .not("provider_reference", "is", null)
+      .gt("created_at", new Date(Date.now() - 20_000).toISOString());
+    if ((qrRecents ?? 0) > 0) {
+      return NextResponse.json({ error: "Un paiement vient d'être préparé. Patientez quelques secondes avant d'en demander un autre." }, { status: 429 });
+    }
+
     const { data: config, error: configError } = await supabase
       .from("jetons_config")
       .select("cout_jeton_fcfa")
@@ -89,12 +107,21 @@ export async function POST(req) {
       return NextResponse.json({ error: "Le tarif des jetons n'est pas configuré." }, { status: 503 });
     }
 
-    const montantXof = quantiteJetons * config.cout_jeton_fcfa;
+    // Prix de test (1 FCFA par jeton) SEULEMENT pour les comptes listés dans ORANGE_TEST_PRIX_USER_IDS, comparés à l'utilisateur authentifié
+    // côté serveur ; rien ne vient du navigateur. Le montant enregistré dans la commande est celui-ci : le webhook vérifie le même montant.
+    const montantXof = quantiteJetons * prixJetonFcfa({ userId: user.id, tarifConfigureFcfa: config.cout_jeton_fcfa });
+    if (aLePrixTest(user.id)) console.info("[Jetons Checkout] Prix de test appliqué à un compte autorisé.");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "";
 
-    const { data: transaction, error: transactionError } = await supabase
+    // Jeton secret propre à cette commande, placé dans l'URL de callback ; seule son empreinte est stockée. La ligne est
+    // écrite avec le rôle serveur (propriété de la boutique déjà vérifiée plus haut) : montant_xof et l'empreinte ne
+    // doivent jamais pouvoir être choisis par le client.
+    const { jeton: jetonCallback, empreinte: empreinteCallback } = genererJetonCallback();
+    const { data: transaction, error: transactionError } = await getSupabaseAdmin()
       .from("jetons_transactions")
       .insert({
+        montant_xof: montantXof,
+        callback_token_hash: empreinteCallback,
         store_id: storeId,
         montant: quantiteJetons,
         type: "achat",
@@ -114,11 +141,14 @@ export async function POST(req) {
       qrCode = await genererQrCodePaiement({
         reference: transaction.id,
         montantXof,
-        nom: `Achat de ${quantiteJetons} jeton${quantiteJetons > 1 ? "s" : ""} Facilité Marketplace`,
-        validiteSecondes: QR_VALIDITY_SECONDS,
-        callbackSuccessUrl: `${appUrl}/premium?statut=succes`,
-        callbackCancelUrl: `${appUrl}/premium?statut=annule`,
-        callbackUrl: `${appUrl}/api/pay/jetons-webhook`,
+        // Champ `name` lu par Orange seulement : court et sans accent (voir nomQrOrange) ; le libellé montré au client ne change pas.
+        nom: nomQrJetons(quantiteJetons),
+        validiteSecondes: QR_VALIDITE_SECONDES,
+        // Retour du client sur le site avec l'identifiant de commande : la page lit l'état de la commande, elle ne crédite JAMAIS sur la
+        // seule foi de ce retour (seule la confirmation auprès d'Orange, côté serveur, crédite).
+        callbackSuccessUrl: `${appUrl}/premium?statut=succes&commande=${transaction.id}`,
+        callbackCancelUrl: `${appUrl}/premium?statut=annule&commande=${transaction.id}`,
+        callbackUrl: `${appUrl}/api/pay/jetons-webhook?t=${jetonCallback}`,
       });
     } catch (orangeError) {
       console.error("[Jetons Checkout] Échec génération QR code :", orangeError.message);
@@ -130,7 +160,11 @@ export async function POST(req) {
       return NextResponse.json({ error: messageUtilisateurOrange(orangeError) }, { status: orangeError.httpStatus === 429 ? 429 : 502 });
     }
 
-    await supabase.from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
+    // Forme des liens d'application renvoyés par Orange (schéma, hôte, longueur — jamais le chemin ni les paramètres) : lien web https ou lien d'application ?
+    console.info("[Jetons Checkout] Liens d'application Orange : MAXIT =", formeLien(qrCode.deepLinkMaxit), "· OM =", formeLien(qrCode.deepLinkOm), "· générique =", formeLien(qrCode.deepLink));
+
+    // Rôle serveur : le client n'a plus aucun droit d'écriture sur jetons_transactions.
+    await getSupabaseAdmin().from("jetons_transactions").update({ provider_reference: qrCode.qrId }).eq("id", transaction.id);
 
     return NextResponse.json({
       transactionId: transaction.id,
@@ -140,7 +174,7 @@ export async function POST(req) {
       qrCodeBase64: qrCode.qrCodeBase64,
       deepLinkMaxit: qrCode.deepLinkMaxit,
       deepLinkOm: qrCode.deepLinkOm,
-      validForSeconds: QR_VALIDITY_SECONDS,
+      validForSeconds: QR_VALIDITE_SECONDES,
     });
   } catch (error) {
     console.error("[Jetons Checkout API Error]", error);
@@ -209,8 +243,10 @@ export async function GET(req) {
     }
 
     try {
-      const statutOrange = await obtenirStatutTransaction(transaction.provider_reference);
-      return NextResponse.json({ status: transaction.status, orangeStatus: statutOrange.status || null });
+      // provider_reference contient le qrId, pas le transactionId Orange (le statut s'interroge par transactionId) : on cherche par
+      // NOTRE référence. Lecture seule, à titre indicatif : seule la confirmation du webhook / du rattrapage crédite.
+      const reponseOrange = await rechercherTransactionOrange({ reference: transaction.id });
+      return NextResponse.json({ status: transaction.status, orangeStatus: reponseOrange.status || null });
     } catch (orangeError) {
       console.error("[Jetons Status] Échec lecture statut :", orangeError.message);
       // Ne bloque jamais l'affichage : la page continue de montrer "pending".

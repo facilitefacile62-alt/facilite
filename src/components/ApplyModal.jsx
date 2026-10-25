@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { computeApplicationMatch } from "@/lib/matchScore";
 import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { enregistrerIntentionCandidature } from "@/lib/candidatureIntentions";
+import { competencesReelles } from "@/lib/valeursExemple";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -262,7 +263,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
           candidateEducation: candidateProfile?.education_level,
           requiredEducationCode: offerDetails.min_education_level_code,
           candidateEducationCode: candidateProfile?.education_level_code,
-          candidateSkills: candidateProfile?.skills,
+          candidateSkills: competencesReelles(candidateProfile?.skills),
           candidateBio: candidateProfile?.bio,
         });
         if (result.reasons.length > 0) {

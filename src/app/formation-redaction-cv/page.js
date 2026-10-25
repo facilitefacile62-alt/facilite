@@ -1,4 +1,8 @@
+import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
 import FormationRedactionCvClient from "./FormationRedactionCvClient";
+
+// Lit ORANGE_MONEY_ENABLED à chaque requête (et non figé au moment du build).
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Formation Rédaction de CV | Facilité",
@@ -6,5 +10,5 @@ export const metadata = {
 };
 
 export default function FormationRedactionCvPage() {
-  return <FormationRedactionCvClient />;
+  return <FormationRedactionCvClient orangeActif={orangeMoneyActif()} />;
 }

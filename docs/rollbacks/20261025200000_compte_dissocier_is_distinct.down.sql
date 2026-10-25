@@ -1,0 +1,2 @@
+-- Annulation de 20261025200000 : remet la version de 20261025190000 (même comportement). À passer par un fichier, jamais dans l'éditeur du dashboard.
+-- Rejouer la section « 4) Dissociation côté serveur » de supabase/migrations/20261025190000_informations_compte.sql.

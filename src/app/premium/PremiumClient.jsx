@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
+import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import AttentePaiementQr from "@/components/AttentePaiementQr";
+import { secondesRestantes } from "@/lib/validiteQr";
+import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { estDansAppPlay } from "@/lib/contextePlay";
@@ -41,7 +45,7 @@ function formatDateFr(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function PremiumClient() {
+export default function PremiumClient({ orangeActif = false }) {
   const { user, session } = useAuth();
 
   // document.referrer / sessionStorage ne peuvent pas être lus au rendu
@@ -66,6 +70,13 @@ export default function PremiumClient() {
   const [statutAchat, setStatutAchat] = useState("inactif"); // inactif | chargement | attente | succes | echec
   const [erreurAchat, setErreurAchat] = useState("");
   const intervalRef = useRef(null);
+
+  // Retour depuis Orange (callbackSuccessUrl / callbackCancelUrl → ?statut=succes|annule&commande=<id>) : la page LIT l'état de la commande,
+  // elle ne crédite jamais sur la seule foi de ce retour (seule la confirmation serveur auprès d'Orange crédite).
+  const [retour, setRetour] = useState(null); // { statut, etat: "verification" | "succes" | "echec" | "annule" }
+  const [qrExpire, setQrExpire] = useState(false);
+  const [reste, setReste] = useState(null); // secondes restantes avant la fin de validité du QR affiché
+  const interrogerRef = useRef(null);
 
   const [activationEnCours, setActivationEnCours] = useState(false);
   const [erreurActivation, setErreurActivation] = useState("");
@@ -107,9 +118,64 @@ export default function PremiumClient() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    interrogerRef.current = null;
   }, []);
 
+  // Ouverture automatique de MAXIT sur téléphone (une seule fois par commande) et interrogation immédiate du statut au retour dans le navigateur.
+  const { estMobile, tenterAuto } = useOuvertureAppPaiement({
+    actif: statutAchat === "attente" && Boolean(paiement) && !qrExpire,
+    interroger: () => interrogerRef.current?.(),
+  });
+
   useEffect(() => () => arreterSondage(), [arreterSondage]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const statut = params.get("statut");
+    const commande = params.get("commande");
+    if (!statut || !commande || !session) return undefined;
+    if (statut === "annule") {
+      setRetour({ statut, etat: "annule" });
+      return undefined;
+    }
+    setRetour({ statut, etat: "verification" });
+    let essais = 0;
+    const minuteur = setInterval(async () => {
+      essais += 1;
+      try {
+        const res = await fetch(`/api/pay/jetons-checkout?transactionId=${encodeURIComponent(commande)}`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const data = await res.json().catch(() => ({}));
+        if (data.status === "success") {
+          setRetour({ statut, etat: "succes" });
+          clearInterval(minuteur);
+          chargerTout();
+        } else if (data.status === "failed") {
+          setRetour({ statut, etat: "echec" });
+          clearInterval(minuteur);
+        }
+      } catch {
+        // Panne passagère : on réessaie au prochain tour.
+      }
+      if (essais >= 40) clearInterval(minuteur); // ~2 min ; le rattrapage serveur prend ensuite le relais
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(minuteur);
+  }, [session, chargerTout]);
+
+  // Validité du QR (5 minutes) : compte à rebours ; à zéro, le QR est MASQUÉ (plus scannable depuis la page) et le bouton est proposé de nouveau.
+  // L'interrogation du statut continue : un paiement réussi, même confirmé après ce délai, est crédité par le serveur et s'affiche ici.
+  useEffect(() => {
+    if (statutAchat !== "attente" || !paiement?.validForSeconds || qrExpire) return undefined;
+    const fin = Date.now() + paiement.validForSeconds * 1000;
+    const minuteur = setInterval(() => {
+      const restant = secondesRestantes(fin, Date.now());
+      setReste(restant);
+      if (restant <= 0) {
+        setQrExpire(true);
+        clearInterval(minuteur);
+      }
+    }, 1000);
+    return () => clearInterval(minuteur);
+  }, [statutAchat, paiement, qrExpire]);
 
   const genererPaiement = async () => {
     if (!session || !boutique) return;
@@ -134,10 +200,12 @@ export default function PremiumClient() {
       }
 
       setPaiement(data);
+      setQrExpire(false);
+      setReste(data.validForSeconds ?? null);
       setStatutAchat("attente");
 
       arreterSondage();
-      intervalRef.current = setInterval(async () => {
+      const interroger = async () => {
         try {
           const statusRes = await fetch(`/api/pay/jetons-checkout?transactionId=${data.transactionId}`, {
             headers: { Authorization: `Bearer ${session.access_token}` },
@@ -156,13 +224,40 @@ export default function PremiumClient() {
           // Panne réseau passagère du sondage : ne casse pas l'affichage,
           // la prochaine tentative reprendra normalement.
         }
-      }, POLL_INTERVAL_MS);
+      };
+      interrogerRef.current = interroger;
+      intervalRef.current = setInterval(interroger, POLL_INTERVAL_MS);
+      // Une seule tentative automatique par commande ; le QR et les boutons restent affichés si l'application ne s'ouvre pas.
+      tenterAuto(data.transactionId, { deepLinkMaxit: data.deepLinkMaxit, deepLinkOm: data.deepLinkOm, deepLink: data.deepLink });
     } catch (err) {
       console.error("Erreur génération paiement jetons :", err);
       setErreurAchat("Une erreur réseau est survenue. Vérifiez votre connexion et réessayez.");
       setStatutAchat("inactif");
     }
   };
+
+  // Bouton « générer le paiement » (formulaire ET écran « temps écoulé ») : « Payer avec MAXIT » sur téléphone, texte habituel sur ordinateur.
+  const renderBoutonGenerer = () => (
+    <>
+    <button
+      type="button"
+      onClick={genererPaiement}
+      disabled={statutAchat === "chargement"}
+      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
+    >
+      {statutAchat === "chargement" ? (
+        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
+      ) : (
+        <i className="fa-solid fa-qrcode"></i>
+      )}
+      {libelleBoutonPaiement(estMobile, "Générer mon QR de paiement Orange Money")}
+    </button>
+    {aideBoutonPaiement(estMobile) && (
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+    )}
+
+    </>
+  );
 
   const nouvelAchat = () => {
     setPaiement(null);
@@ -295,6 +390,24 @@ export default function PremiumClient() {
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Acheter des jetons</p>
 
+                {retour && (
+                  <div
+                    className={`mb-3 rounded-xl px-3 py-2.5 text-xs font-bold ${
+                      retour.etat === "succes"
+                        ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                        : retour.etat === "verification"
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    }`}
+                    role="status"
+                  >
+                    {retour.etat === "verification" && "Vérification de votre paiement auprès d'Orange Money…"}
+                    {retour.etat === "succes" && "Paiement confirmé : vos jetons ont été crédités."}
+                    {retour.etat === "echec" && "Le paiement n'a pas abouti. Vous pouvez recommencer."}
+                    {retour.etat === "annule" && "Paiement annulé. Aucun montant n'a été débité."}
+                  </div>
+                )}
+
                 {statutAchat === "succes" ? (
                   <div className="text-center py-4">
                     <div className="w-12 h-12 bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center mx-auto mb-3 text-lg">
@@ -313,43 +426,19 @@ export default function PremiumClient() {
                     </button>
                   </div>
                 ) : statutAchat === "attente" && paiement ? (
-                  <div className="text-center">
-                    {paiement.qrCodeBase64 && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`data:image/png;base64,${paiement.qrCodeBase64}`}
-                        alt="QR code de paiement Orange Money"
-                        className="w-48 h-48 mx-auto rounded-xl border border-gray-200 dark:border-gray-800"
-                      />
-                    )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                      {paiement.quantiteJetons} jeton{paiement.quantiteJetons > 1 ? "s" : ""} · {paiement.montantXof} FCFA
-                      <br />
-                      Scannez ce QR code avec Orange Money ou MAXIT, ou ouvrez directement votre application :
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                      {paiement.deepLinkOm && (
-                        <a
-                          href={paiement.deepLinkOm}
-                          className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 text-white font-extrabold text-sm hover:bg-orange-600 transition-colors"
-                        >
-                          Ouvrir Orange Money
-                        </a>
-                      )}
-                      {paiement.deepLinkMaxit && (
-                        <a
-                          href={paiement.deepLinkMaxit}
-                          className="flex-1 py-3 px-4 rounded-2xl bg-gray-900 text-white font-extrabold text-sm hover:bg-black transition-colors"
-                        >
-                          Ouvrir MAXIT
-                        </a>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-4 flex items-center justify-center gap-2">
-                      <span className="w-3 h-3 border-2 border-gray-300 dark:border-gray-700 border-t-transparent rounded-full animate-spin"></span>
-                      En attente de confirmation du paiement…
-                    </p>
-                  </div>
+                  <AttentePaiementQr
+                    paiement={paiement}
+                    resume={`${paiement.quantiteJetons} jeton${paiement.quantiteJetons > 1 ? "s" : ""} · ${paiement.montantXof} FCFA`}
+                    estMobile={estMobile}
+                    reste={reste}
+                    qrExpire={qrExpire}
+                    libelleBoutonOrdinateur="Générer mon QR de paiement Orange Money"
+                    boutonRecommencer={renderBoutonGenerer()}
+                  />
+                ) : !orangeActif ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">
+                    Le paiement en ligne sera bientôt disponible.
+                  </p>
                 ) : (
                   <div>
                     <div className="flex items-center gap-3 mb-3">
@@ -366,19 +455,7 @@ export default function PremiumClient() {
                         {taux && ` · ${quantiteAchat * taux.cout_jeton_fcfa} FCFA`}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={genererPaiement}
-                      disabled={statutAchat === "chargement"}
-                      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
-                    >
-                      {statutAchat === "chargement" ? (
-                        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
-                      ) : (
-                        <i className="fa-solid fa-qrcode"></i>
-                      )}
-                      Générer mon QR de paiement Orange Money
-                    </button>
+                    {renderBoutonGenerer()}
                     {statutAchat === "echec" && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">
                         Le paiement n&apos;a pas abouti. Vous pouvez réessayer.

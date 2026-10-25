@@ -1,6 +1,10 @@
 import { Suspense } from "react";
 import { canonicalMetadata } from "@/lib/staticPageMetadata";
+import { orangeMoneyActif } from "@/lib/orangeMoneyActif";
 import PremiumClient from "./PremiumClient";
+
+// Lit ORANGE_MONEY_ENABLED à chaque requête (et non figé au moment du build).
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   ...canonicalMetadata("/premium"),
@@ -17,7 +21,7 @@ export default function PremiumPage() {
         </div>
       }
     >
-      <PremiumClient />
+      <PremiumClient orangeActif={orangeMoneyActif()} />
     </Suspense>
   );
 }

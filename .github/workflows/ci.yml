@@ -99,11 +99,12 @@ jobs:
   security-invariants:
     name: Invariants de sécurité
     runs-on: ubuntu-latest
-    # À la demande seulement (20/10/2026) : les 13 invariants interrogent la production ET y écrivent (table de sondage
-    # créée puis supprimée, table invariant_status) ; les confier à une CI de dépôt public exigerait un secret avec droit
-    # d'écriture sur la base de production. Ils restent le garde-fou local (`npx playwright test
-    # tests/security/invariants.spec.js` avant chaque commit, voir CLAUDE.md).
-    if: github.event_name == 'workflow_dispatch'
+    # À la demande (20/10/2026), puis aussi après chaque fusion dans main (25/10/2026) : les 13 invariants interrogent la
+    # production ET y écrivent (table de sondage créée puis supprimée, table invariant_status). Ils ne tournent donc JAMAIS
+    # sur une pull request (le secret SUPABASE_DB_URL, qui a un droit d'écriture sur la base de production, ne doit pas être
+    # confié à du code de branche non fusionné, dans un dépôt public) : sur « push » dans main seulement, donc après revue.
+    # Avant la fusion, le garde-fou reste local (`npx playwright test tests/security/invariants.spec.js`, voir CLAUDE.md).
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
     steps:
       - name: Checkout
@@ -157,7 +158,7 @@ jobs:
           fi
 
       - name: Exécuter les 13 invariants de sécurité
-        run: npx playwright test tests/security/invariants.spec.js --project=chromium
+        run: npx playwright test -c playwright.invariants.config.js
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"

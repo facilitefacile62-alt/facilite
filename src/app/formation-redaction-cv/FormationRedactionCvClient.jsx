@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useSyncExternalStore, useEffect, useRef, useCallback } from "react";
+import { useOuvertureAppPaiement } from "@/lib/useOuvertureAppPaiement";
+import AttentePaiementQr from "@/components/AttentePaiementQr";
+import { secondesRestantes } from "@/lib/validiteQr";
+import { aideBoutonPaiement, libelleBoutonPaiement } from "@/lib/ouvertureAppPaiement";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { estDansAppPlay } from "@/lib/contextePlay";
@@ -31,7 +35,7 @@ function formatDateFr(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function FormationRedactionCvClient() {
+export default function FormationRedactionCvClient({ orangeActif = false }) {
   const { user, session } = useAuth();
 
   // Même raisonnement que PremiumClient.jsx : document.referrer/sessionStorage
@@ -51,6 +55,9 @@ export default function FormationRedactionCvClient() {
   const [statutAchat, setStatutAchat] = useState("inactif"); // inactif | chargement | attente | succes | echec
   const [erreurAchat, setErreurAchat] = useState("");
   const intervalRef = useRef(null);
+  const interrogerRef = useRef(null);
+  const [qrExpire, setQrExpire] = useState(false);
+  const [reste, setReste] = useState(null); // secondes restantes avant la fin de validité du QR affiché
 
   const chargerTout = useCallback(async () => {
     if (!user?.id) {
@@ -78,9 +85,32 @@ export default function FormationRedactionCvClient() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    interrogerRef.current = null;
   }, []);
 
+  // Ouverture automatique de MAXIT sur téléphone (une seule fois par commande) et interrogation immédiate du statut au retour dans le navigateur.
+  const { estMobile, tenterAuto } = useOuvertureAppPaiement({
+    actif: statutAchat === "attente" && Boolean(paiement),
+    interroger: () => interrogerRef.current?.(),
+  });
+
   useEffect(() => () => arreterSondage(), [arreterSondage]);
+
+  // Validité du QR (5 minutes) : compte à rebours ; à zéro, le QR est MASQUÉ et le bouton est proposé de nouveau. L'interrogation du statut
+  // continue : un paiement réussi, même confirmé après ce délai, est validé par le serveur et s'affiche ici.
+  useEffect(() => {
+    if (statutAchat !== "attente" || !paiement?.validForSeconds || qrExpire) return undefined;
+    const fin = Date.now() + paiement.validForSeconds * 1000;
+    const minuteur = setInterval(() => {
+      const restant = secondesRestantes(fin, Date.now());
+      setReste(restant);
+      if (restant <= 0) {
+        setQrExpire(true);
+        clearInterval(minuteur);
+      }
+    }, 1000);
+    return () => clearInterval(minuteur);
+  }, [statutAchat, paiement, qrExpire]);
 
   const genererPaiement = async () => {
     if (!session) return;
@@ -104,10 +134,12 @@ export default function FormationRedactionCvClient() {
       }
 
       setPaiement(data);
+      setQrExpire(false);
+      setReste(data.validForSeconds ?? null);
       setStatutAchat("attente");
 
       arreterSondage();
-      intervalRef.current = setInterval(async () => {
+      const interroger = async () => {
         try {
           const statusRes = await fetch("/api/pay/formation-cv-checkout", {
             headers: { Authorization: `Bearer ${session.access_token}` },
@@ -123,13 +155,40 @@ export default function FormationRedactionCvClient() {
           // Panne réseau passagère du sondage : ne casse pas l'affichage,
           // la prochaine tentative reprendra normalement.
         }
-      }, POLL_INTERVAL_MS);
+      };
+      interrogerRef.current = interroger;
+      intervalRef.current = setInterval(interroger, POLL_INTERVAL_MS);
+      // Une seule tentative automatique par commande ; le QR et les boutons restent affichés si l'application ne s'ouvre pas.
+      tenterAuto(data.qrId, { deepLinkMaxit: data.deepLinkMaxit, deepLinkOm: data.deepLinkOm, deepLink: data.deepLink });
     } catch (err) {
       console.error("Erreur génération paiement formation CV :", err);
       setErreurAchat("Une erreur réseau est survenue. Vérifiez votre connexion et réessayez.");
       setStatutAchat("inactif");
     }
   };
+
+  // Bouton « générer le paiement » (formulaire ET écran « temps écoulé ») : « Payer avec MAXIT » sur téléphone, texte habituel sur ordinateur.
+  const renderBoutonGenerer = () => (
+    <>
+    <button
+      type="button"
+      onClick={genererPaiement}
+      disabled={statutAchat === "chargement"}
+      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
+    >
+      {statutAchat === "chargement" ? (
+        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
+      ) : (
+        <i className="fa-solid fa-qrcode"></i>
+      )}
+      {libelleBoutonPaiement(estMobile, `Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`)}
+    </button>
+    {aideBoutonPaiement(estMobile) && (
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">{aideBoutonPaiement(estMobile)}</p>
+    )}
+
+    </>
+  );
 
   const nouvelEssai = () => {
     setPaiement(null);
@@ -237,65 +296,23 @@ export default function FormationRedactionCvClient() {
                     </p>
                   </div>
                 ) : statutAchat === "attente" && paiement ? (
-                  <div className="text-center">
-                    {paiement.qrCodeBase64 && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`data:image/png;base64,${paiement.qrCodeBase64}`}
-                        alt="QR code de paiement Orange Money"
-                        className="w-48 h-48 mx-auto rounded-xl border border-gray-200 dark:border-gray-800"
-                      />
-                    )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                      {paiement.montantXof.toLocaleString("fr-FR")} FCFA
-                      <br />
-                      Scannez ce QR code avec Orange Money ou MAXIT, ou ouvrez directement votre application :
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                      {paiement.deepLinkOm && (
-                        <a
-                          href={paiement.deepLinkOm}
-                          className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 text-white font-extrabold text-sm hover:bg-orange-600 transition-colors"
-                        >
-                          Ouvrir Orange Money
-                        </a>
-                      )}
-                      {paiement.deepLinkMaxit && (
-                        <a
-                          href={paiement.deepLinkMaxit}
-                          className="flex-1 py-3 px-4 rounded-2xl bg-gray-900 text-white font-extrabold text-sm hover:bg-black transition-colors"
-                        >
-                          Ouvrir MAXIT
-                        </a>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-4 flex items-center justify-center gap-2">
-                      <span className="w-3 h-3 border-2 border-gray-300 dark:border-gray-700 border-t-transparent rounded-full animate-spin"></span>
-                      En attente de confirmation du paiement…
-                    </p>
-                    <button
-                      type="button"
-                      onClick={nouvelEssai}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline mt-4"
-                    >
-                      QR expiré ? Générer un nouveau code
-                    </button>
-                  </div>
+                  <AttentePaiementQr
+                    paiement={paiement}
+                    resume={`${paiement.montantXof.toLocaleString("fr-FR")} FCFA`}
+                    estMobile={estMobile}
+                    reste={reste}
+                    qrExpire={qrExpire}
+                    libelleBoutonOrdinateur={`Payer ${MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money`}
+                    boutonRecommencer={renderBoutonGenerer()}
+                    onNouveauCode={nouvelEssai}
+                  />
+                ) : !orangeActif ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">
+                    Le paiement en ligne sera bientôt disponible.
+                  </p>
                 ) : (
                   <div>
-                    <button
-                      type="button"
-                      onClick={genererPaiement}
-                      disabled={statutAchat === "chargement"}
-                      className="w-full py-3.5 px-6 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-colors"
-                    >
-                      {statutAchat === "chargement" ? (
-                        <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
-                      ) : (
-                        <i className="fa-solid fa-qrcode"></i>
-                      )}
-                      Payer {MONTANT_XOF.toLocaleString("fr-FR")} FCFA avec Orange Money
-                    </button>
+                    {renderBoutonGenerer()}
                     {erreurAchat && (
                       <p className="text-xs text-red-600 dark:text-red-400 text-center mt-3">{erreurAchat}</p>
                     )}
