@@ -8,7 +8,7 @@ import { WebView } from 'react-native-webview';
 
 import BoutonAction from '@/components/BoutonAction';
 import FaciliteHeader from '@/components/FaciliteHeader';
-import { AIDE_VIDEO_VIDE, chargerAideVideo, type AideVideo } from '@/lib/aideVideo';
+import { AIDE_VIDEO_VIDE, aideVideoOutil, chargerAideVideo, type AideVideo } from '@/lib/aideVideo';
 
 // « Vidéo d'explication pour postuler » — page ouverte par le bouton « Aide »
 // des publications (elle remplace le « J'aime »). Même contenu que la page du
@@ -26,20 +26,24 @@ function LecteurFichier({ url }: { url: string }) {
 
 export default function AideVideoScreen() {
   const router = useRouter();
-  const { titre, lien } = useLocalSearchParams<{ titre?: string; lien?: string }>();
+  const { titre, lien, outil } = useLocalSearchParams<{ titre?: string; lien?: string; outil?: string }>();
   const [AIDE_VIDEO, setAideVideo] = useState<AideVideo>(AIDE_VIDEO_VIDE);
+  // Ouvert depuis le bouton « Aide » d'un outil de « Fonctionnalités » (paramètre `outil`) : la vidéo de l'outil, pas celle pour postuler.
+  const pourUnOutil = typeof outil === 'string' && outil.length > 0;
   useEffect(() => {
     let annule = false;
     chargerAideVideo().then((v) => {
-      if (!annule) setAideVideo(v);
+      if (!annule) setAideVideo(pourUnOutil ? aideVideoOutil(String(outil), v) : v);
     });
     return () => {
       annule = true;
     };
-  }, []);
+  }, [outil, pourUnOutil]);
   const lienOfficiel = typeof lien === 'string' && /^https?:\/\//.test(lien) ? lien : null;
 
-  const message = `Bonjour Facilité, j'ai besoin d'aide pour postuler${titre ? ` à « ${titre} »` : ''}.`;
+  const message = pourUnOutil
+    ? `Bonjour Facilité, j'ai besoin d'aide pour utiliser l'outil${titre ? ` « ${titre} »` : ''}.`
+    : `Bonjour Facilité, j'ai besoin d'aide pour postuler${titre ? ` à « ${titre} »` : ''}.`;
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
@@ -66,18 +70,24 @@ export default function AideVideoScreen() {
               <View className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#DCFCE7' }}>
                 <Ionicons name="play" size={16} color="#166534" />
               </View>
-              <Text className="flex-1 text-[17px] font-black text-[#1A1A1A]">Vidéo d&apos;explication pour postuler</Text>
+              <Text className="flex-1 text-[17px] font-black text-[#1A1A1A]">{pourUnOutil ? `Comment utiliser « ${titre ?? 'cet outil'} »` : "Vidéo d'explication pour postuler"}</Text>
             </View>
 
-            <Text className="text-[13.5px]" style={{ color: 'rgba(0,0,0,0.6)', lineHeight: 20 }}>
-              Regardez cette courte vidéo pour réussir votre candidature
-              {titre ? (
-                <>
-                  {' '}à <Text className="font-extrabold text-[#1A1A1A]">{titre}</Text>
-                </>
-              ) : null}
-              .
-            </Text>
+            {pourUnOutil ? (
+              <Text className="text-[13.5px]" style={{ color: 'rgba(0,0,0,0.6)', lineHeight: 20 }}>
+                Regardez cette courte vidéo pour savoir comment utiliser cet outil.
+              </Text>
+            ) : (
+              <Text className="text-[13.5px]" style={{ color: 'rgba(0,0,0,0.6)', lineHeight: 20 }}>
+                Regardez cette courte vidéo pour réussir votre candidature
+                {titre ? (
+                  <>
+                    {' '}à <Text className="font-extrabold text-[#1A1A1A]">{titre}</Text>
+                  </>
+                ) : null}
+                .
+              </Text>
+            )}
 
             {/* Cadre du lecteur */}
             <View className="overflow-hidden items-center justify-center" style={{ width: '100%', aspectRatio: 16 / 10, borderRadius: 16, backgroundColor: AIDE_VIDEO.type === 'aucune' ? '#F3F4F6' : '#000' }}>
@@ -110,7 +120,9 @@ export default function AideVideoScreen() {
               ) : null}
             </View>
 
-            <Text className="text-[12px] font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>Astuces pour maximiser votre sélection</Text>
+            {pourUnOutil ? null : (
+              <Text className="text-[12px] font-semibold" style={{ color: 'rgba(0,0,0,0.5)' }}>Astuces pour maximiser votre sélection</Text>
+            )}
 
             {lienOfficiel ? (
               <BoutonAction titre="Postuler sur le site officiel" sousTitre="Continuer vers l'offre" icone="open-outline" onPress={() => Linking.openURL(lienOfficiel).catch(() => {})} />
