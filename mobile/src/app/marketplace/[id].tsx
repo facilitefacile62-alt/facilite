@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CommandeRapideModal from '@/components/CommandeRapideModal';
 import EnteteMarketplace from '@/components/EnteteMarketplace';
 import MarketplaceHeader from '@/components/MarketplaceHeader';
+import SignalerAnnonceModal from '@/components/SignalerAnnonceModal';
 import { useAuth } from '@/context/AuthContext';
 import { ratioAffichage } from '@/lib/formatImage';
 import {
@@ -68,6 +69,7 @@ export default function ArticleScreen() {
   // Rapport réel (largeur / hauteur) de chaque photo, mesuré au chargement : la galerie prend le format de la photo affichée.
   const [ratiosPhotos, setRatiosPhotos] = useState<Record<string, number>>({});
   const [ouverture, setOuverture] = useState(false);
+  const [signalementOuvert, setSignalementOuvert] = useState(false);
   const [onglet, setOnglet] = useState<Onglet>('article');
   const [commandeOuverte, setCommandeOuverte] = useState(false);
 
@@ -121,6 +123,15 @@ export default function ArticleScreen() {
   const stock = enStock(article);
   const peuRestant = stock && article.quantite > 0 && article.quantite <= 5;
   const nbVignettes = article.photos.length + (article.urlVideo ? 1 : 0);
+
+  // « Signaler cette annonce » : connexion requise (la fonction signaler_annonce l'exige aussi côté base), jamais sur sa propre annonce.
+  function signaler() {
+    if (!user?.id) {
+      router.push('/login');
+      return;
+    }
+    setSignalementOuvert(true);
+  }
 
   function toggleFavori() {
     if (!user?.id) {
@@ -425,6 +436,13 @@ export default function ArticleScreen() {
                 {article.description || 'Aucune description détaillée renseignée pour cet article.'}
               </Text>
             </View>
+
+            {!estMonArticle ? (
+              <Pressable onPress={signaler} accessibilityRole="button" className="mx-3 mt-3 flex-row items-center justify-center gap-2 rounded-[14px] bg-white" style={{ minHeight: 52, borderWidth: 1, borderColor: BORDURE_CARTE }}>
+                <Ionicons name="flag-outline" size={17} color="#DC2626" />
+                <Text className="text-[14px] font-extrabold" style={{ color: '#DC2626' }}>Signaler cette annonce</Text>
+              </Pressable>
+            ) : null}
           </>
         ) : onglet === 'commentaires' ? (
           <View className="m-3 items-center rounded-[20px] bg-white p-8" style={{ borderWidth: 1, borderColor: BORDURE_CARTE }}>
@@ -496,6 +514,8 @@ export default function ArticleScreen() {
           ) : null}
         </View>
       </View>
+
+      <SignalerAnnonceModal visible={signalementOuvert} annonceId={article.id} titre={article.titre} onFermer={() => setSignalementOuvert(false)} />
 
       <CommandeRapideModal
         visible={commandeOuverte}
