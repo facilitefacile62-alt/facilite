@@ -6,14 +6,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import PhoneAuthForm from "@/components/PhoneAuthForm";
+import { useConnexionTelephoneOuverte } from "@/lib/connexionTelephoneInterrupteur";
 import PhoneSignupEmailPrompt from "@/components/PhoneSignupEmailPrompt";
 
-// Désactivé tant que Twilio n'est pas branché en production (même
-// convention que PHONE_LOGIN_ENABLED, login/page.js) : masque l'onglet
-// Téléphone sans toucher au code, à repasser à `true` une fois un envoi
-// SMS réel testé de bout en bout. Envisager de réactiver PHONE_LOGIN_ENABLED
-// au même moment.
-const PHONE_SIGNUP_ENABLED = false;
+// L'onglet Téléphone est commandé par l'interrupteur feat_connexion_telephone (même que la connexion, login/page.js) : FERMÉ par défaut et en cas de doute.
 
 function RegisterForm() {
   const [nom, setNom] = useState("");
@@ -31,6 +27,7 @@ function RegisterForm() {
   // numéro + code) puis 'email_prompt' si le compte créé n'a pas d'e-mail
   // (voir PhoneAuthForm mode="signup" onNeedsEmail).
   const [authMethod, setAuthMethod] = useState("email");
+  const PHONE_SIGNUP_ENABLED = useConnexionTelephoneOuverte();
   const [phoneSignupStep, setPhoneSignupStep] = useState("formulaire");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -191,7 +188,7 @@ function RegisterForm() {
           )}
 
           {/* Onglets E-mail / Téléphone — Téléphone masqué tant que Twilio
-              n'est pas configuré (PHONE_SIGNUP_ENABLED en tête de fichier) */}
+              est fermé (interrupteur feat_connexion_telephone) */}
           {PHONE_SIGNUP_ENABLED && (
             <div className="flex bg-gray-100 rounded-xl p-1 mb-4" role="tablist" aria-label="Méthode d'inscription">
               <button

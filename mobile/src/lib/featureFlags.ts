@@ -32,6 +32,8 @@ const PAR_DEFAUT: Record<string, Interrupteur> = {
   feat_diagnostic_cv: actif(),
   feat_voice_assistant: coupe({ user: false, recruiter: false, visitor: false }),
   feat_marketplace_ia: coupe(),
+  // Connexion et inscription par téléphone (SMS) : FERMÉES par défaut et tant que la table est illisible — seuls « Continuer avec Google » et l'e-mail sont proposés.
+  feat_connexion_telephone: coupe(),
 };
 
 let etat: Record<string, Interrupteur> = { ...PAR_DEFAUT };

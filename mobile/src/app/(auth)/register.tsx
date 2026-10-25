@@ -16,6 +16,7 @@ import {
   numeroValide,
   verifierCodeSms,
 } from '@/lib/connexionSms';
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { LIBELLE_UTILISER_EMAIL, MESSAGE_CODE_TARDE, libelleRenvoi } from '@/lib/messagesCode';
 import { seConnecterAvecGoogle } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
@@ -34,7 +35,10 @@ type Methode = 'telephone' | 'email';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [methode, setMethode] = useState<Methode>('email');
+  const [methodeChoisie, setMethode] = useState<Methode>('email');
+  // Interrupteur feat_connexion_telephone (fermé par défaut) : fermé, l'inscription se fait par Google ou par e-mail seulement.
+  const telephoneOuvert = useFonctionnalite('feat_connexion_telephone');
+  const methode: Methode = telephoneOuvert ? methodeChoisie : 'email';
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
@@ -219,6 +223,7 @@ export default function RegisterScreen() {
           </View>
 
           {/* Sélecteur segmenté Téléphone | E-mail (E-mail par défaut) */}
+          {telephoneOuvert ? (
           <View className="flex-row rounded-[14px] p-1 mt-4" style={{ backgroundColor: '#EEECE7' }}>
             {(
               [
@@ -245,6 +250,7 @@ export default function RegisterScreen() {
               );
             })}
           </View>
+          ) : null}
 
           {methode === 'email' ? (
             <>
