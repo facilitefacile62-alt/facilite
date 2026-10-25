@@ -96,6 +96,12 @@ export default function ParametresScreen() {
                 onPress={() => router.push('/mon-profil/coordonnees' as Href)}
               />
               <CarteMenu
+                icone="id-card-outline"
+                titre={t('Informations du compte')}
+                sous={t("Changer ou retirer le téléphone et l'e-mail")}
+                onPress={() => router.push('/mon-profil/informations-compte' as Href)}
+              />
+              <CarteMenu
                 icone="lock-closed-outline"
                 titre={t('Sécurité & Connexion')}
                 sous={t('Mot de passe, appareils')}

@@ -110,6 +110,7 @@ export default function ReglagesMarketplaceScreen() {
           <View className="px-4">
             <GroupeCartes>
               <CarteMenu icone="id-card-outline" titre="Coordonnées" sous="Téléphone, e-mail et adresse" onPress={() => router.push('/marketplace/coordonnees' as Href)} />
+              <CarteMenu icone="shield-checkmark-outline" titre="Informations du compte" sous="Changer ou retirer le téléphone et l'e-mail" onPress={() => router.push('/marketplace/informations-compte' as Href)} />
               <CarteMenu icone="help-circle-outline" titre="Foire aux questions" sous="Les réponses à vos questions" onPress={() => router.push('/web/faq')} />
               <CarteMenu icone="language-outline" titre="Changer la langue" sous={libelleLangue(langue)} onPress={() => router.push('/marketplace/langue' as Href)} />
             </GroupeCartes>
