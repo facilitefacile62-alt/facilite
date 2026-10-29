@@ -23,7 +23,6 @@ import {
 } from '@/lib/documents';
 import { useFonctionnalites } from '@/lib/featureFlags';
 import { OUTILS } from '@/lib/outils';
-import { definirUserMode } from '@/lib/userMode';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 import { useT } from '@/lib/i18n';
 
@@ -50,11 +49,6 @@ export default function ProfilScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
 
-  // « Locaux » : ouvre l'autre espace (même geste que le sélecteur Facilité | Locaux du menu ☰).
-  function allerLocaux() {
-    definirUserMode('business').catch(() => {});
-    router.replace('/marketplace' as Href);
-  }
   const achatsNumeriquesAutorises = usePaiementsAutorises();
   const autorise = useFonctionnalites();
   const fonctionnalitesOuvertes = autorise(['nav_plus_fonctionnalites', 'feat_app_fonctionnalites']);
@@ -213,8 +207,7 @@ export default function ProfilScreen() {
               ...(fonctionnalitesOuvertes ? [{ id: 'fonctionnalites' as const, label: 'Fonctionnalités', icone: 'flash-outline' as const }] : []),
               ...(achatsNumeriquesAutorises ? [{ id: 'achat-cv' as const, label: 'Achat de CV', icone: 'bag-handle-outline' as const }] : []),
             ];
-            // + le bouton « Locaux » (il ouvre l'autre espace, ce n'est pas un onglet).
-            const nb = liste.length + 1;
+            const nb = liste.length;
             const marge = nb > 2 ? 8 : 16;
             const espace = nb > 2 ? 6 : 10;
             const largeur = Math.max(112, Math.floor((largeurEcran - marge * 2 - espace * (nb - 1)) / nb));
@@ -246,14 +239,6 @@ export default function ProfilScreen() {
                     </Pressable>
                   );
                 })}
-                <Pressable
-                  onPress={allerLocaux}
-                  accessibilityRole="button"
-                  className="flex-row items-center justify-center gap-1.5 rounded-xl py-3"
-                  style={{ width: largeur, backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
-                  <Ionicons name="storefront-outline" size={14} color="#1A1A1A" />
-                  <Text className="text-[13px] font-semibold text-[#1A1A1A]" numberOfLines={1}>{t('Locaux')}</Text>
-                </Pressable>
               </ScrollView>
             );
           })()}
