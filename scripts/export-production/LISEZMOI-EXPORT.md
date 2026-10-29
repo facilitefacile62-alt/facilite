@@ -13,15 +13,23 @@ Lecture seule sur Supabase. Résultat : une archive chiffrée **hors du dépôt*
 Réglages du tableau de bord Supabase : fournisseurs de connexion (Google), URL de redirection, modèles d'e-mails, SMTP, hook SMS, secrets des fonctions, clés API. Ils ne sont pas dans la base.
 
 ## Prérequis
-- Node 22, `tar` (Windows 10+).
-- **pg_dump et pg_restore en version 17** : la base est en PostgreSQL 17.6. Le plus simple : télécharger l'archive « binaries » Windows de PostgreSQL 17 (EnterpriseDB), la décompresser (aucune installation) et définir `EXPORT_PG_BIN` vers son dossier `bin`. Ou : `winget install PostgreSQL.PostgreSQL.17` (installe aussi le serveur, on peut le laisser éteint).
-- `.env.local` à la racine (clé de service lue localement pour télécharger les fichiers ; jamais affichée).
+- Node 22, `tar` (Windows 10+), `.env.local` à la racine (clé de service lue localement pour télécharger les fichiers ; jamais affichée).
+- **pg_dump et pg_restore en version 17** (la base est en PostgreSQL 17.6). Installés sur ce PC dans `C:\Users\gta\Outils\postgresql-17\bin` (archive officielle EnterpriseDB, outils en ligne de commande seulement, sans serveur) ; la variable utilisateur `EXPORT_PG_BIN` pointe dessus, le script la trouve seul.
 
-## Lancer
+## Essai à blanc (aucune connexion, aucun secret)
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1 -EssaiABlanc
+```
+Vérifie les outils, le dossier de sortie hors dépôt, la place disque et le chiffrement aller-retour. Ne se connecte à rien.
+
+## Lancer l'export
+1. Dans le tableau de bord Supabase : bouton **Connect**, adresse **Session pooler** (port 5432). Remplacez `[YOUR-PASSWORD]` par le mot de passe de la base, puis **copiez** l'adresse complète (presse-papiers).
+2. Lancez :
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1
 ```
-Le script demande, sans rien afficher : l'adresse de connexion à la base, puis une phrase secrète (12 caractères minimum, tapée deux fois). **Notez la phrase secrète à part** : sans elle, l'archive est irrécupérable.
+Le script lit l'adresse dans le presse-papiers **sans l'afficher** et le vide aussitôt (le mot de passe n'y reste pas). Il refuse une adresse qui contient encore `[YOUR-PASSWORD]` ou qui est celle du Transaction pooler (port 6543). Si le presse-papiers ne contient pas d'adresse, il la demande en saisie masquée. `-DepuisEnvLocal` lit à la place `SUPABASE_DATABASE_URL` de `.env.local`.
+3. Il demande ensuite une phrase secrète (12 caractères minimum), tapée deux fois, masquée. **Notez-la à part** : sans elle, l'archive est irrécupérable.
 
 Il refuse de chiffrer si la vérification trouve un écart (lignes, fichiers, structure). Il relit l'archive chiffrée avant de supprimer le dossier en clair (`-GarderEnClair` pour le conserver).
 

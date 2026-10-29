@@ -3,6 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
+const { execFileSync } = require("child_process");
 const { Readable } = require("stream");
 
 /**
@@ -123,7 +124,7 @@ test.describe("exporter.ps1 -EssaiABlanc", () => {
     expect(ps).toContain("[switch]$EssaiABlanc");
     expect(bloc.length).toBeGreaterThan(500);
     expect(bloc).toContain("exit 0");
-    expect(ps.indexOf("if ($EssaiABlanc) {")).toBeLessThan(ps.indexOf("Lire-Secret \"Adresse"));
+    expect(ps.indexOf("if ($EssaiABlanc) {")).toBeLessThan(ps.indexOf("$adresse = Lire-Adresse"));
   });
   test("le bloc ne se connecte à rien : ni pg_dump sur une adresse, ni stockage, ni vérification, ni adresse de connexion", () => {
     expect(bloc).not.toMatch(/--dbname|EXPORT_DB_URL|stockage\.mjs'\)|verifier\.mjs'\)|metadonnees\.mjs'\)|Invoke-WebRequest|Invoke-RestMethod|curl/);
@@ -132,6 +133,45 @@ test.describe("exporter.ps1 -EssaiABlanc", () => {
     expect(bloc).toContain("RNGCryptoServiceProvider");
     expect(bloc).not.toMatch(/Write-Host.*EXPORT_PASSPHRASE/);
     expect(bloc).toContain("Remove-Item $essai -Recurse -Force");
+  });
+});
+
+test.describe("adresse de connexion : presse-papiers, contrôle sans affichage", () => {
+  const helper = path.join(__dirname, "../../scripts/export-production/outils-adresse.ps1");
+  // Fausses adresses : aucune ne correspond à une vraie base.
+  const MDP = "Fausse-Valeur-42";
+  const HOTE = "aws-0-test.pooler.supabase.com";
+  const controler = (adresse) => {
+    const cmd = `. '${helper}'; try { (Controler-Adresse '${adresse}') | ConvertTo-Json -Compress } catch { 'ERR:' + $_.Exception.Message }`;
+    return execFileSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8" }).trim();
+  };
+  test("session pooler (port 5432) accepté ; adresse directe reconnue", () => {
+    expect(JSON.parse(controler(`postgresql://postgres.abcdef:${MDP}@${HOTE}:5432/postgres`))).toEqual({ Type: "session-pooler", Port: 5432 });
+    expect(JSON.parse(controler(`postgresql://postgres:${MDP}@db.abcdef.supabase.co:5432/postgres`))).toEqual({ Type: "direct", Port: 5432 });
+  });
+  test("refus clairs : espace réservé du mot de passe, Transaction pooler (6543), mot de passe absent, autre schéma", () => {
+    expect(controler(`postgresql://postgres.abcdef:[YOUR-PASSWORD]@${HOTE}:5432/postgres`)).toMatch(/^ERR:.*espace reserve du mot de passe/);
+    expect(controler(`postgresql://postgres.abcdef:${MDP}@${HOTE}:6543/postgres`)).toMatch(/^ERR:.*Transaction pooler/);
+    expect(controler(`postgresql://postgres.abcdef@${HOTE}:5432/postgres`)).toMatch(/^ERR:.*illisible/);
+    expect(controler("https://exemple.test/x")).toMatch(/^ERR:.*adresse de connexion Postgres/);
+  });
+  test("aucun message d'erreur ne répète le mot de passe ni l'hôte", () => {
+    for (const a of [`postgresql://postgres.abcdef:${MDP}@${HOTE}:6543/postgres`, `postgresql://postgres.abcdef:[YOUR-PASSWORD]@${HOTE}:5432/postgres`]) {
+      const r = controler(a);
+      expect(r).not.toContain(MDP);
+      expect(r).not.toContain(HOTE);
+    }
+  });
+  test("le script lit le presse-papiers puis le vide ; n'affiche que le type et le port ; saisie masquée en repli", () => {
+    const h = lire("scripts/export-production/outils-adresse.ps1");
+    expect(h).toContain("Get-Clipboard -Raw");
+    expect(h).toContain("Set-Clipboard -Value $null");
+    expect(h).toContain("-AsSecureString");
+    const ps = lire("scripts/export-production/exporter.ps1");
+    expect(ps).toContain("$adresse = Lire-Adresse $DepuisEnvLocal");
+    expect(ps).toContain("Adresse de connexion lue (non affichee) : type {0}, port {1}.");
+    expect(ps).not.toMatch(/Write-Host[^\n]*\$adresse\b|Write-Host[^\n]*EXPORT_DB_URL/);
+    expect(/^[\x00-\x7F]*$/.test(h)).toBe(true);
   });
 });
 

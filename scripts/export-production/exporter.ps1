@@ -4,8 +4,11 @@
 # Lancer depuis la racine du depot :
 #   powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1
 #
-# Le script demande, sans rien afficher a l'ecran : (1) l'adresse de connexion a la base, (2) une phrase secrete de chiffrement (12 caracteres minimum).
-# Ni l'une ni l'autre ne s'ecrit sur le disque ni dans la console. Notez la phrase secrete a part : sans elle, l'archive est irrecuperable.
+# L'adresse de connexion a la base est LUE DANS LE PRESSE-PAPIERS (copiez l'adresse 'Session pooler', mot de passe inclus, avant de lancer) : elle n'est
+# jamais affichee, et le presse-papiers est vide juste apres la lecture. Si le presse-papiers ne contient pas d'adresse, saisie masquee.
+# Le script demande ensuite une phrase secrete de chiffrement (12 caracteres minimum), saisie masquee et tapee deux fois.
+# Rien de tout cela ne s'ecrit sur le disque ni dans la console. Notez la phrase secrete a part : sans elle, l'archive est irrecuperable.
+# -DepuisEnvLocal : lit l'adresse dans SUPABASE_DATABASE_URL de .env.local au lieu du presse-papiers (si cette variable est bien celle de production).
 # Prerequis : Node 22, tar (Windows 10+), et pg_dump / pg_restore en version 17 (voir LISEZMOI-EXPORT.md si absents).
 #
 # -EssaiABlanc : verifie que tout demarre (outils, dossier de sortie hors depot, chiffrement aller-retour) SANS aucune connexion a la production
@@ -13,11 +16,13 @@
 param(
   [string]$Sortie = (Join-Path $env:USERPROFILE 'Exports-Facilite'),
   [switch]$GarderEnClair,
-  [switch]$EssaiABlanc
+  [switch]$EssaiABlanc,
+  [switch]$DepuisEnvLocal
 )
 $ErrorActionPreference = 'Stop'
 $depot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $outils = Join-Path $depot 'scripts\export-production'
+. (Join-Path $outils 'outils-adresse.ps1')
 
 # 0. Le dossier de sortie doit etre HORS du depot (jamais de donnees personnelles a cote du code).
 New-Item -ItemType Directory -Force -Path $Sortie | Out-Null
@@ -68,6 +73,15 @@ if ($EssaiABlanc) {
     & node --check (Join-Path $outils "$f.mjs")
     Verif "Script $f.mjs : syntaxe" ($LASTEXITCODE -eq 0) ''
   }
+  $etatPresse = 'vide ou autre contenu (normal avant l etape de copie)'
+  try {
+    $pp = ((Get-Clipboard -Raw -ErrorAction Stop) | Out-String).Trim()
+    if ($pp -match '^postgres(?:ql)?://') {
+      try { $i = Controler-Adresse $pp; $etatPresse = "adresse Postgres detectee, type $($i.Type), port $($i.Port) (non affichee, non videe)" } catch { $etatPresse = "adresse Postgres detectee mais a corriger : $($_.Exception.Message)" }
+    }
+  } catch { $etatPresse = 'illisible' }
+  $pp = $null
+  Write-Host "  [INFO ] Presse-papiers : $etatPresse"
   $libreGo = [math]::Round((Get-PSDrive -Name ($Sortie.Substring(0, 1))).Free / 1GB, 1)
   Verif 'Place libre sur le disque de sortie (5 Go minimum)' ($libreGo -ge 5) "$libreGo Go"
 
@@ -103,8 +117,12 @@ if ($EssaiABlanc) {
 }
 
 # 2. Saisies masquees
-$env:EXPORT_DB_URL = Lire-Secret "Adresse de connexion a la base (collez-la, rien ne s'affiche) puis Entree"
-if ($env:EXPORT_DB_URL -notmatch '^postgres(ql)?://') { throw "Ce n'est pas une adresse de connexion Postgres (elle doit commencer par postgresql://)." }
+$adresse = Lire-Adresse $DepuisEnvLocal (Join-Path $depot '.env.local')
+$infoAdresse = Controler-Adresse $adresse
+Write-Host ("Adresse de connexion lue (non affichee) : type {0}, port {1}." -f $infoAdresse.Type, $infoAdresse.Port)
+if ($infoAdresse.Type -eq 'direct') { Write-Host "Attention : adresse DIRECTE (souvent IPv6 seulement). Si la connexion echoue, utilisez l'adresse 'Session pooler'." }
+$env:EXPORT_DB_URL = $adresse
+$adresse = $null
 $p1 = Lire-Secret "Phrase secrete de chiffrement (12 caracteres minimum)"
 $p2 = Lire-Secret "Retapez la phrase secrete"
 if ($p1 -ne $p2 -or $p1.Length -lt 12) { throw "Les deux phrases secretes different, ou font moins de 12 caracteres." }
