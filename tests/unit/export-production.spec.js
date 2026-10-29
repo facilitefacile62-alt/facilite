@@ -110,6 +110,9 @@ test.describe("script exporter.ps1 : garde-fous", () => {
     expect(ps.indexOf("dechiffrer $enc")).toBeGreaterThan(0);
     expect(ps.indexOf("dechiffrer $enc")).toBeLessThan(ps.indexOf("Remove-Item $clair -Recurse"));
   });
+  test("pg_dump est aussi cherché dans le dossier d'installation de l'utilisateur, sans dépendre de la variable", () => {
+    expect(ps).toContain('Outils\\postgresql-17\\bin\\$nom.exe');
+  });
   test("pg_dump 17 exigé ; trois schémas (comptes inclus) ; ASCII seulement (PowerShell 5.1)", () => {
     expect(ps).toContain("[int]$Matches[1] -lt 17");
     expect(ps).toContain("--schema=auth");

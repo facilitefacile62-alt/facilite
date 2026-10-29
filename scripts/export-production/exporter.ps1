@@ -42,6 +42,8 @@ function Trouver-Outil([string]$nom) {
   $c = Get-Command $nom -ErrorAction SilentlyContinue
   if ($c) { return $c.Source }
   if ($env:EXPORT_PG_BIN -and (Test-Path (Join-Path $env:EXPORT_PG_BIN "$nom.exe"))) { return (Join-Path $env:EXPORT_PG_BIN "$nom.exe") }
+  $local = Join-Path $env:USERPROFILE "Outils\postgresql-17\bin\$nom.exe"
+  if (Test-Path $local) { return $local }
   $trouve = Get-ChildItem "$env:ProgramFiles\PostgreSQL\*\bin\$nom.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
   if ($trouve) { return $trouve.FullName }
   return $null
