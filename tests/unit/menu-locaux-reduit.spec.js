@@ -11,8 +11,10 @@ test.describe("menu ☰ de Locaux réduit à Réglages", () => {
     expect(menu).toContain("const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES] : TUILES_LOCAUX);");
     expect(menu).toContain("route: '/marketplace/reglages'");
   });
-  test("la carte « Vos espaces » (Locaux / nom du compte, Profil, Boutique) n'est plus affichée dans le menu de Locaux ; celle de Facilité reste", () => {
-    expect(menu).toContain("{espacesDeplies && !(MENU_LOCAUX_REDUIT && page === 1) ? (");
+  test("la carte « Vos espaces » est PLIÉE par défaut (Facilité comme Locaux) et se déplie par le chevron", () => {
+    expect(menu).toContain("const [espacesDeplies, setEspacesDeplies] = useState(false);");
+    expect(menu).toContain("{espacesDeplies ? (");
+    expect(menu).toContain("onPress={() => setEspacesDeplies((v) => !v)}");
   });
   test("l'espace vendeur (Mes annonces, Commandes reçues, Mes livraisons) est masqué, pas supprimé", () => {
     expect(menu).toContain("!MENU_LOCAUX_REDUIT && mode === 'locaux' && boutique");

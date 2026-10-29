@@ -89,7 +89,8 @@ export default function MenuScreen() {
   const pageCourante = useRef(pageDepart);
   const [largeurOnglets, setLargeurOnglets] = useState(0);
   // « Vos espaces » : déplié à l'ouverture, replié quand on fait défiler vers le bas.
-  const [espacesDeplies, setEspacesDeplies] = useState(true);
+  // « VOS ESPACES » : la carte (Facilité / Locaux, Profil, Boutique) est PLIÉE par défaut, dans les deux espaces ; le chevron la déplie.
+  const [espacesDeplies, setEspacesDeplies] = useState(false);
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
   const userId = user?.id;
 
@@ -324,7 +325,7 @@ export default function MenuScreen() {
           {[tuilesFacilite, tuilesLocaux].map((liste, page) => (
             <View key={page} style={{ width: largeur }}>
               <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-                {espacesDeplies && !(MENU_LOCAUX_REDUIT && page === 1) ? (
+                {espacesDeplies ? (
                   <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
                     {page === 0 ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
                     <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
