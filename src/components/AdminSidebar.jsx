@@ -49,6 +49,7 @@ const NAV_SECTIONS = [
       { type: "link", href: "/admin/litiges-livraison", icon: "⚠️", label: "Livraisons bloquées" },
       { type: "link", href: "/admin/tarif-livraison", icon: "💰", label: "Tarif de livraison" },
       { type: "link", href: "/admin/stories", icon: "🖼️", label: "Stories" },
+      { type: "link", href: "/admin/modeles-documents", icon: "📄", label: "Modèles de documents" },
     ],
   },
   {
