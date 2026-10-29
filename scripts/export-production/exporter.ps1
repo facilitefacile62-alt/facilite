@@ -13,11 +13,17 @@
 #
 # -EssaiABlanc : verifie que tout demarre (outils, dossier de sortie hors depot, chiffrement aller-retour) SANS aucune connexion a la production
 #                et sans demander aucun secret. A lancer d'abord.
+# -Reprendre   : reprend dans le dernier dossier 'clair-...' (ou celui de -Dossier) : le dump de la base n'est PAS refait ; seuls les fichiers manquants
+#                ou echoues sont retelecharges ; puis verification (5/6) et chiffrement (6/6). L'adresse et la phrase secrete sont redemandees.
+# Fichiers 'absents a la source' (listes par la base, introuvables dans le stockage) : jamais contournes en silence. Ils sont inscrits dans le rapport et
+#                l'export ne continue qu'apres votre choix explicite (taper CONTINUER SANS ABSENTS).
 param(
   [string]$Sortie = (Join-Path $env:USERPROFILE 'Exports-Facilite'),
   [switch]$GarderEnClair,
   [switch]$EssaiABlanc,
-  [switch]$DepuisEnvLocal
+  [switch]$DepuisEnvLocal,
+  [switch]$Reprendre,
+  [string]$Dossier = ''
 )
 $ErrorActionPreference = 'Stop'
 $depot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -35,6 +41,37 @@ function Lire-Secret([string]$invite) {
   $s = Read-Host $invite -AsSecureString
   $b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)
   try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
+}
+
+# Dossier d'une reprise : celui de -Dossier, sinon le plus recent 'clair-...' de $Sortie. Doit etre hors du depot et contenir les trois fichiers du dump.
+function Trouver-DossierReprise() {
+  if ($Dossier) { $d = (Resolve-Path $Dossier).Path }
+  else {
+    $dernier = Get-ChildItem $Sortie -Directory -Filter 'clair-*' -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+    if (-not $dernier) { throw "Aucun dossier 'clair-...' a reprendre dans $Sortie. Lancez l'export sans -Reprendre." }
+    $d = $dernier.FullName
+  }
+  if ($d.TrimEnd('\') -eq $depot.TrimEnd('\') -or $d.StartsWith($depot.TrimEnd('\') + '\')) { throw "Le dossier de reprise est DANS le depot ($d) : refuse." }
+  foreach ($f in 'structure.sql', 'donnees.dump', 'metadonnees.json') {
+    $chemin = Join-Path $d $f
+    if (-not (Test-Path $chemin) -or (Get-Item $chemin).Length -eq 0) { throw "Dossier de reprise incomplet : $f manquant ou vide. Lancez l'export complet sans -Reprendre." }
+  }
+  return $d
+}
+
+# Fichiers LISTES par la base mais INTROUVABLES dans le stockage : choix explicite obligatoire, enregistre dans decision-absents.json (avec l'empreinte de la liste).
+function Demander-Decision-Absents([string]$dossierStockage) {
+  $absents = Get-Content (Join-Path $dossierStockage 'absents-source.json') -Raw | ConvertFrom-Json
+  $n = [int]$absents.nombre
+  Write-Host ""
+  Write-Host "ATTENTION : $n fichier(s) sont LISTES par la base mais INTROUVABLES dans le stockage Supabase (absents a la source)."
+  Write-Host "Ils ne peuvent pas etre exportes. Ils seront inscrits dans le rapport comme 'absents a la source' : rien n'est contourne en silence."
+  Write-Host "Pour continuer SANS ces fichiers, tapez exactement : CONTINUER SANS ABSENTS"
+  Write-Host "Toute autre reponse arrete l'export (rien n'est chiffre ni supprime ; relancez avec -Reprendre une fois la question reglee)."
+  $reponse = Read-Host "Votre choix"
+  if ($reponse -cne 'CONTINUER SANS ABSENTS') { throw "Arret : choix non confirme pour les fichiers absents a la source. Rien n'est chiffre ni supprime." }
+  @{ accepte = $true; nombre = $n; empreinte = $absents.empreinte; date = (Get-Date).ToString('s') } | ConvertTo-Json | Set-Content (Join-Path $dossierStockage 'decision-absents.json') -Encoding UTF8
+  Write-Host "Choix enregistre : l'export continue SANS $n fichier(s) absent(s) a la source (inscrits dans le rapport)."
 }
 
 # 1. pg_dump / pg_restore 17
@@ -98,6 +135,20 @@ if ($EssaiABlanc) {
   } catch { $etatPresse = 'illisible' }
   $pp = $null
   Write-Host "  [INFO ] Presse-papiers : $etatPresse"
+  if ($Reprendre) {
+    # Etat du dossier de reprise, lu sur le disque seulement (aucune connexion) : des nombres, jamais un nom de fichier.
+    try {
+      $dr = Trouver-DossierReprise
+      Verif "Reprise : dossier $(Split-Path $dr -Leaf), structure.sql / donnees.dump / metadonnees.json presents" $true ''
+      $mf = Join-Path $dr 'stockage\manifeste-stockage.json'
+      if (Test-Path $mf) {
+        $m = Get-Content $mf -Raw | ConvertFrom-Json
+        $ok = @($m | Where-Object { $_.sha256 }).Count
+        $ko = @($m | Where-Object { -not $_.sha256 }).Count
+        Write-Host "  [INFO ] Reprise : manifeste de $(@($m).Count) fichier(s), $ok deja telecharge(s) et verifiables, $ko a retelecharger"
+      } else { Write-Host "  [INFO ] Reprise : pas de manifeste, tous les fichiers seront retelecharges" }
+    } catch { Verif 'Reprise : dossier utilisable' $false $_.Exception.Message }
+  }
   $libreGo = [math]::Round((Get-PSDrive -Name ($Sortie.Substring(0, 1))).Free / 1GB, 1)
   Verif 'Place libre sur le disque de sortie (5 Go minimum)' ($libreGo -ge 5) "$libreGo Go"
 
@@ -166,13 +217,21 @@ $p1 = $null; $p2 = $null
 
 try {
   $horo = Get-Date -Format 'yyyyMMdd-HHmm'
-  $clair = Join-Path $Sortie "clair-$horo"
-  New-Item -ItemType Directory -Force -Path $clair | Out-Null
+  if ($Reprendre) {
+    $clair = Trouver-DossierReprise
+    Write-Host "REPRISE dans $clair : le dump de la base n'est PAS refait ; seuls les fichiers manquants ou echoues sont retelecharges."
+  } else {
+    $clair = Join-Path $Sortie "clair-$horo"
+    New-Item -ItemType Directory -Force -Path $clair | Out-Null
+  }
   $schemas = @('--schema=public', '--schema=auth', '--schema=storage')
   $structure = Join-Path $clair 'structure.sql'
   $donnees = Join-Path $clair 'donnees.dump'
   $envLocal = Join-Path $depot '.env.local'
 
+  if ($Reprendre) {
+    Write-Host "`n[1/6] [2/6] [3/6] deja faits (reprise) : structure, donnees et metadonnees conservees."
+  } else {
   Write-Host "`n[1/6] Structure (structure.sql)"
   & $pgDump --dbname=$env:EXPORT_DB_URL --schema-only --no-owner @schemas --file=$structure
   if ($LASTEXITCODE -ne 0) { throw "pg_dump (structure) a echoue." }
@@ -185,10 +244,17 @@ try {
   node (Join-Path $outils 'metadonnees.mjs') (Join-Path $clair 'metadonnees.json')
   if ($LASTEXITCODE -ne 0) { throw "Releve des metadonnees echoue." }
   Copy-Item (Join-Path $depot 'supabase\migrations') (Join-Path $clair 'migrations') -Recurse
+  }
 
   Write-Host "[4/6] Fichiers du stockage (peut prendre plusieurs minutes)"
-  node "--env-file=$envLocal" (Join-Path $outils 'stockage.mjs') (Join-Path $clair 'stockage')
-  if ($LASTEXITCODE -ne 0) { throw "Telechargement du stockage incomplet : voir les echecs ci-dessus. Rien n'est chiffre ni supprime." }
+  $argsStockage = @("--env-file=$envLocal", (Join-Path $outils 'stockage.mjs'), (Join-Path $clair 'stockage'))
+  if ($Reprendre) { $argsStockage += '--reprendre' }
+  & node @argsStockage
+  $codeStockage = $LASTEXITCODE
+  if ($codeStockage -eq 3) { throw "La base et les fichiers ne sont pas le meme projet : arret. Rien n'est chiffre ni supprime." }
+  if ($codeStockage -eq 2) { throw "Telechargement incomplet (fichiers en echec listes ci-dessus). Rien n'est chiffre ni supprime. Relancez la meme commande avec -Reprendre : seuls les fichiers manquants ou echoues seront retelecharges (le dump de la base n'est pas refait)." }
+  if ($codeStockage -eq 4) { Demander-Decision-Absents (Join-Path $clair 'stockage') }
+  elseif ($codeStockage -ne 0) { throw "Telechargement du stockage en erreur (code $codeStockage). Rien n'est chiffre ni supprime." }
 
   Write-Host "`n[5/6] Verification contre la production"
   node (Join-Path $outils 'verifier.mjs') $clair

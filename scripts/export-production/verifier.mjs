@@ -11,6 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import pg from "pg";
+import { empreinteAbsents, masquerChemin } from "./projet.mjs";
 
 // Tables qui bougent en continu pendant l'export (sessions, jetons, présence, journaux) : un petit écart est normal, pas une perte.
 export const TABLES_VIVANTES = new Set([
@@ -57,7 +58,7 @@ async function main() {
     console.error("Usage : EXPORT_DB_URL=… node verifier.mjs <dossier-export>");
     process.exit(1);
   }
-  const rapport = { tables: [], stockage: [], structure: {}, problemes: [] };
+  const rapport = { tables: [], stockage: [], structure: {}, absents_a_la_source: [], decision_absents: null, problemes: [] };
   const client = new pg.Client({ connectionString: process.env.EXPORT_DB_URL, ssl: { rejectUnauthorized: false } });
   await client.connect();
 
@@ -80,11 +81,28 @@ async function main() {
   // 2. Stockage : manifeste contre storage.objects, puis relecture des fichiers sur le disque.
   const manifeste = JSON.parse(fs.readFileSync(path.join(dossier, "stockage", "manifeste-stockage.json"), "utf8"));
   const objets = (await client.query("SELECT bucket_id, count(*)::int AS n, COALESCE(sum((metadata->>'size')::bigint),0)::bigint AS octets FROM storage.objects GROUP BY bucket_id")).rows;
+  // Fichiers LISTÉS par la base mais introuvables dans le stockage (« absents à la source ») : jamais acceptés en silence. Ils ne comptent comme
+  // conformes que si la personne a confirmé explicitement son choix (decision-absents.json, écrit par exporter.ps1) pour CE nombre de fichiers.
+  let decision = null;
+  try {
+    decision = JSON.parse(fs.readFileSync(path.join(dossier, "stockage", "decision-absents.json"), "utf8"));
+  } catch {}
+  const absentsManifeste = manifeste.filter((f) => f.statut === "absent_source");
+  const nbAbsents = absentsManifeste.length;
+  const decisionValide = decision?.accepte === true && Number(decision.nombre) === nbAbsents && decision.empreinte === empreinteAbsents(absentsManifeste);
+  rapport.decision_absents = nbAbsents === 0 ? null : decisionValide ? { accepte: true, nombre: nbAbsents, date: decision.date } : { accepte: false, nombre: nbAbsents };
+  if (nbAbsents > 0 && !decisionValide) rapport.problemes.push(`${nbAbsents} fichier(s) absent(s) à la source : choix explicite de la personne requis (decision-absents.json absent, ou donné pour une autre liste de fichiers).`);
   const parBucket = new Map();
   for (const f of manifeste) {
-    if (!parBucket.has(f.bucket)) parBucket.set(f.bucket, { n: 0, octets: 0, erreurs: 0, relus: 0 });
+    if (!parBucket.has(f.bucket)) parBucket.set(f.bucket, { n: 0, octets: 0, erreurs: 0, relus: 0, absents: 0, octetsAbsents: 0 });
     const b = parBucket.get(f.bucket);
     b.n += 1;
+    if (f.statut === "absent_source") {
+      b.absents += 1;
+      b.octetsAbsents += f.octets;
+      rapport.absents_a_la_source.push({ bucket: f.bucket, chemin_masque: masquerChemin(f.chemin), octets_listes: f.octets, erreur: f.erreur });
+      continue;
+    }
     if (f.erreur) {
       b.erreurs += 1;
       continue;
@@ -101,10 +119,10 @@ async function main() {
     } else b.erreurs += 1;
   }
   for (const o of objets) {
-    const b = parBucket.get(o.bucket_id) || { n: 0, octets: 0, erreurs: 0, relus: 0 };
-    const egal = b.n === o.n && b.octets === Number(o.octets) && b.erreurs === 0 && b.relus === o.n;
-    rapport.stockage.push({ bucket: o.bucket_id, production: o.n, fichiers_relus: b.relus, erreurs: b.erreurs, octets_production: Number(o.octets), octets_exportes: b.octets, etat: egal ? "égal" : "ÉCART" });
-    if (!egal) rapport.problemes.push(`bucket ${o.bucket_id} : production ${o.n} fichier(s) / ${o.octets} o, export ${b.relus} relu(s) / ${b.octets} o, ${b.erreurs} erreur(s)`);
+    const b = parBucket.get(o.bucket_id) || { n: 0, octets: 0, erreurs: 0, relus: 0, absents: 0, octetsAbsents: 0 };
+    const egal = b.n === o.n && b.octets + b.octetsAbsents === Number(o.octets) && b.erreurs === 0 && b.relus + b.absents === o.n && (b.absents === 0 || decisionValide);
+    rapport.stockage.push({ bucket: o.bucket_id, production: o.n, fichiers_relus: b.relus, absents_a_la_source: b.absents, erreurs: b.erreurs, octets_production: Number(o.octets), octets_exportes: b.octets, etat: egal ? (b.absents > 0 ? "égal, avec absents acceptés" : "égal") : "ÉCART" });
+    if (!egal) rapport.problemes.push(`bucket ${o.bucket_id} : production ${o.n} fichier(s) / ${o.octets} o, export ${b.relus} relu(s) / ${b.octets} o, ${b.erreurs} erreur(s), ${b.absents} absent(s) à la source`);
   }
 
   // 3. Structure : lisible, et autant de tables / politiques / fonctions / déclencheurs que la production.
@@ -134,7 +152,7 @@ async function main() {
   const nT = rapport.tables.length;
   console.log(`Tables : ${nT} (${rapport.tables.filter((t) => t.etat === "égal").length} égales, ${rapport.tables.filter((t) => t.etat.startsWith("écart toléré")).length} écart toléré, ${rapport.tables.filter((t) => t.etat === "ÉCART" || t.etat === "ABSENT du dump").length} en problème) — ${rapport.tables.reduce((s, t) => s + (t.dump ?? 0), 0)} lignes dans le dump.`);
   for (const t of rapport.tables.filter((t) => t.etat.startsWith("écart toléré"))) console.log(`  écart toléré : ${t.table} production ${t.production} / dump ${t.dump}`);
-  for (const b of rapport.stockage) console.log(`Stockage ${b.bucket.padEnd(20)} production ${String(b.production).padStart(5)} · relus ${String(b.fichiers_relus).padStart(5)} · ${b.etat}`);
+  for (const b of rapport.stockage) console.log(`Stockage ${b.bucket.padEnd(20)} production ${String(b.production).padStart(5)} · relus ${String(b.fichiers_relus).padStart(5)}${b.absents_a_la_source ? ` · absents à la source ${b.absents_a_la_source}` : ""} · ${b.etat}`);
   for (const [k, v] of Object.entries(rapport.structure)) console.log(`Structure ${k.padEnd(13)} production ${String(v.production).padStart(4)} · fichier ${String(v.structure_sql).padStart(4)} · ${v.etat}`);
   fs.writeFileSync(path.join(dossier, "rapport-verification.json"), JSON.stringify(rapport, null, 1));
   if (rapport.problemes.length > 0) {
