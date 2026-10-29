@@ -94,7 +94,7 @@ export async function televerserAudioOffre(supabase, userId, file) {
   if (!file) return "";
   const ext = ((file.name || "audio.mp3").split(".").pop() || "mp3").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
   const chemin = `${userId}/audio-offre-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("job-offers").upload(chemin, file, { contentType: file.type || "audio/mpeg" });
+  const { error } = await supabase.storage.from("job-offers").upload(chemin, file, { contentType: file.type || "audio/mpeg", cacheControl: "31536000" });
   if (error) return "";
   const { data } = supabase.storage.from("job-offers").getPublicUrl(chemin);
   return data?.publicUrl || "";

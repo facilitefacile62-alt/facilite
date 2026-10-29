@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { preparerImagePourEnvoi } from "@/lib/imageUpload";
+import { televerserImagePubliee } from "@/lib/imagePubliee";
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -401,20 +401,9 @@ export default function AdminOffresPage() {
     if (offerImageFiles.length > 0) {
       for (let i = 0; i < offerImageFiles.length; i++) {
         // Redimensionnée et convertie en WebP avant l'envoi : une affiche brute pèse 2 à 5 Mo.
-        const file = await preparerImagePourEnvoi(offerImageFiles[i]);
-        const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
-        const storagePath = `${userSession.user.id}/admin-offers-${Date.now()}-${i}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(storagePath, file, { contentType: file.type || "image/jpeg" });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
-          if (publicUrlData?.publicUrl) {
-            uploadedUrls.push(publicUrlData.publicUrl);
-          }
-        }
+        // WebP + variantes 480/960 px + cache d'un an (src/lib/imagePubliee.js).
+        const { url } = await televerserImagePubliee(supabase, "job-offers", `${userSession.user.id}/admin-offers-${Date.now()}-${i}`, offerImageFiles[i]);
+        if (url) uploadedUrls.push(url);
       }
     }
 

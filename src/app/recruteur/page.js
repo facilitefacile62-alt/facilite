@@ -4,7 +4,7 @@
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import { messagePublication } from "@/lib/messagePublication";
-import { preparerImagePourEnvoi } from "@/lib/imageUpload";
+import { televerserImagePubliee } from "@/lib/imagePubliee";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
@@ -687,23 +687,18 @@ export default function RecruteurDashboardPage() {
       // via ses policies RLS existantes) plutôt que d'en créer un nouveau
       // rien que pour le logo/la bannière.
       if (logoFile) {
-        const ext = logoFile.name.split(".").pop().toLowerCase();
-        const path = buildStoragePath(userSession.user.id, ext, { folder: "branding", prefix: "logo" });
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(path, logoFile, { upsert: true, contentType: logoFile.type });
-        if (uploadError) throw uploadError;
-        logoUrl = supabase.storage.from("job-offers").getPublicUrl(path).data?.publicUrl || "";
+        // Le nom contient un horodatage : un nouveau logo est un nouveau fichier, le cache d'un an ne sert jamais l'ancien.
+        const base = `${userSession.user.id}/branding/logo-${Date.now()}`;
+        const { url } = await televerserImagePubliee(supabase, "job-offers", base, logoFile, { largeurMax: 512, variantes: false });
+        if (!url) throw new Error("Échec du téléversement du logo.");
+        logoUrl = url;
       }
 
       if (bannerFile) {
-        const ext = bannerFile.name.split(".").pop().toLowerCase();
-        const path = buildStoragePath(userSession.user.id, ext, { folder: "branding", prefix: "banner" });
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(path, bannerFile, { upsert: true, contentType: bannerFile.type });
-        if (uploadError) throw uploadError;
-        bannerUrl = supabase.storage.from("job-offers").getPublicUrl(path).data?.publicUrl || "";
+        const base = `${userSession.user.id}/branding/banner-${Date.now()}`;
+        const { url } = await televerserImagePubliee(supabase, "job-offers", base, bannerFile, { variantes: false });
+        if (!url) throw new Error("Échec du téléversement de la bannière.");
+        bannerUrl = url;
       }
 
       const payload = {
@@ -903,16 +898,9 @@ export default function RecruteurDashboardPage() {
     if (offerImageFiles.length > 0) {
       for (let i = 0; i < offerImageFiles.length; i++) {
         // Redimensionnée et convertie en WebP avant l'envoi : une affiche brute pèse 2 à 5 Mo.
-        const file = await preparerImagePourEnvoi(offerImageFiles[i]);
-        const ext = (file.name || "poster.jpg").split(".").pop().toLowerCase();
-        const storagePath = `${userSession.user.id}/offers-${Date.now()}-${i}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("job-offers")
-          .upload(storagePath, file, { contentType: file.type || "image/jpeg" });
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage.from("job-offers").getPublicUrl(storagePath);
-          if (publicUrlData?.publicUrl) uploadedUrls.push(publicUrlData.publicUrl);
-        }
+        // WebP + variantes 480/960 px + cache d'un an (src/lib/imagePubliee.js).
+        const { url } = await televerserImagePubliee(supabase, "job-offers", `${userSession.user.id}/offers-${Date.now()}-${i}`, offerImageFiles[i]);
+        if (url) uploadedUrls.push(url);
       }
     }
     const existingRemoteUrls = offerImagePreviews.filter((p) => p && p.startsWith("http"));
