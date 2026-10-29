@@ -1,5 +1,6 @@
 import { canonicalMetadata } from "@/lib/staticPageMetadata";
 import { getSupabasePublicClient } from "@/lib/supabase";
+import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import HomeClient from "./HomeClient";
 
@@ -11,7 +12,7 @@ async function getInitialOffers() {
     const supabase = getSupabasePublicClient();
     const { data, error } = await supabase
       .from("job_offers")
-      .select("*")
+      .select(SELECT_LISTE_OFFRES)
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(30);

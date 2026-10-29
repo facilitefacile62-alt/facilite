@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import ApplyModal from "@/components/ApplyModal";
 
@@ -184,7 +185,7 @@ function RechercheContent() {
       try {
         const { data: jobData } = await supabase
           .from("job_offers")
-          .select("*")
+          .select(SELECT_LISTE_OFFRES)
           .ilike("recherche_norm", `%${mot}%`)
           .order("created_at", { ascending: false });
 

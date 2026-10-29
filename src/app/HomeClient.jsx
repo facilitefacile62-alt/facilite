@@ -7,6 +7,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { useAuth } from "@/context/AuthContext";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
@@ -363,7 +364,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
       try {
         const { data, error } = await supabase
           .from("job_offers")
-          .select("*")
+          .select(SELECT_LISTE_OFFRES)
           .eq("is_active", true)
           .order("created_at", { ascending: false })
           .limit(limiteChargement);

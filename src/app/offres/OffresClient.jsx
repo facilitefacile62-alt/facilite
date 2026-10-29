@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
@@ -198,7 +199,7 @@ function OffresContent({ listingType } = {}) {
     async (debut, fin) => {
       let query = supabase
         .from("job_offers")
-        .select("*", { count: "exact" })
+        .select(SELECT_LISTE_OFFRES, { count: "exact" })
         .order("created_at", { ascending: false });
       if (listingType) {
         query = query.eq("listing_type", listingType);
