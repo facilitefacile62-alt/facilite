@@ -18,14 +18,25 @@ test.describe("Modèles de documents (WhatsApp) à la place de l'achat de CV", (
   });
   test("le composant n'a ni prix, ni achat, ni paiement ; il ouvre WhatsApp avec le nom du modèle", () => {
     const c = lire("mobile/src/components/CatalogueModelesDocuments.tsx");
-    for (const interdit of ["prixFcfa", "prixXof", "achat-cv-payer", "creerPaiementCv", "Acheter", "FCFA", "lienTelechargementCv"]) expect(c, interdit).not.toContain(interdit);
+    for (const interdit of ["prixFcfa", "prixXof", "prix_xof", "achat-cv-payer", "creerPaiementCv", "Acheter", "FCFA", "lienTelechargementCv", "achatCv", "lister_modeles_cv"]) expect(c, interdit).not.toContain(interdit);
+    expect(c).toContain("chargerModelesDocuments()");
+    expect(c).toContain("source={{ uri: m.imageUrl }}");
     expect(c).toContain("https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(messageDemandeModele(m.nom))}");
     expect(c).toContain("Demander ce modèle");
   });
-  test("le message contient le nom du modèle", async () => {
-    const nom = "Modèle Classique";
-    const message = `Bonjour Facilité, je souhaite le modèle de document « ${nom} » que j'ai vu dans l'application.`;
-    expect(lire("mobile/src/components/CatalogueModelesDocuments.tsx")).toContain("je souhaite le modèle de document « ${nom} »");
-    expect(encodeURIComponent(message)).toContain(encodeURIComponent(nom));
+  test("le catalogue lit modeles_documents (modèles actifs, rang croissant), sans prix ; une ligne illisible est ignorée", async () => {
+    const l = lire("mobile/src/lib/modelesDocuments.ts");
+    expect(l).toContain(".from('modeles_documents')");
+    expect(l).toContain(".eq('actif', true)");
+    expect(l).not.toContain("prix");
+    const { lireModeleDocument } = await import("../../mobile/src/lib/modelesDocumentsLogique.ts");
+    const ok = { id: "1", type: "lettre", nom: " Lettre simple ", description: " courte ", image_url: "https://x.supabase.co/a.webp", ordre: 1 };
+    expect(lireModeleDocument(ok)).toEqual({ id: "1", type: "lettre", nom: "Lettre simple", description: "courte", imageUrl: "https://x.supabase.co/a.webp" });
+    expect(lireModeleDocument({ ...ok, type: "autre" }).type).toBe("cv");
+    for (const mauvais of [null, "x", {}, { ...ok, nom: "" }, { ...ok, image_url: "http://x/a.jpg" }, { ...ok, image_url: undefined }, { ...ok, id: 3 }]) expect(lireModeleDocument(mauvais)).toBeNull();
+  });
+  test("le message WhatsApp contient le nom du modèle", async () => {
+    const { messageDemandeModele } = await import("../../mobile/src/lib/modelesDocumentsLogique.ts");
+    expect(messageDemandeModele("Modèle Classique")).toBe("Bonjour Facilité, je souhaite le modèle de document « Modèle Classique » que j'ai vu dans l'application.");
   });
 });

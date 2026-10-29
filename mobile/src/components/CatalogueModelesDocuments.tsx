@@ -4,29 +4,25 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Text, View, Pressable } from 'react-native';
 
-import { chargerModelesCv, urlApercuPage, useEnteteImages } from '@/lib/achatCv';
-import type { ModeleCv } from '@/lib/achatCvLogique';
 import { WHATSAPP_FACILITE } from '@/lib/configFacilite';
+import { chargerModelesDocuments } from '@/lib/modelesDocuments';
+import { messageDemandeModele, type ModeleDocument } from '@/lib/modelesDocumentsLogique';
 
 // Onglet « Modèles de documents » du Profil de Facilité, affiché À LA PLACE de « Achat de CV » tant que les paiements de l'application sont fermés
-// (feat_paiements_application) : même liste de modèles, mais ni prix, ni achat, ni paiement. Un modèle choisi ouvre WhatsApp vers Facilité avec son
-// nom, pour que l'équipe prépare le document à la main.
+// (feat_paiements_application) : les modèles de CV et de lettres publiés par l'administrateur (table modeles_documents), côte à côte comme le fil de
+// Locaux ; ni prix, ni achat, ni paiement. Un modèle choisi ouvre WhatsApp vers Facilité avec son nom, pour que l'équipe prépare le document à la main.
 const CARTE = '#FFFFFF';
 const BORDURE = 'rgba(0,0,0,0.06)';
 const VERT = '#10B981';
 
-export const messageDemandeModele = (nom: string): string =>
-  `Bonjour Facilité, je souhaite le modèle de document « ${nom} » que j'ai vu dans l'application.`;
-
 export default function CatalogueModelesDocuments() {
-  const entete = useEnteteImages();
-  const [modeles, setModeles] = useState<ModeleCv[] | null>(null);
+  const [modeles, setModeles] = useState<ModeleDocument[] | null>(null);
   const [erreur, setErreur] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let annule = false;
-      chargerModelesCv()
+      chargerModelesDocuments()
         .then((m) => {
           if (annule) return;
           setModeles(m);
@@ -41,7 +37,7 @@ export default function CatalogueModelesDocuments() {
     }, [])
   );
 
-  const demander = (m: ModeleCv) =>
+  const demander = (m: ModeleDocument) =>
     Linking.openURL(`https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(messageDemandeModele(m.nom))}`).catch(() =>
       Alert.alert('WhatsApp', "Impossible d'ouvrir WhatsApp.")
     );
@@ -76,15 +72,10 @@ export default function CatalogueModelesDocuments() {
       ) : (
         <View className="flex-row flex-wrap mt-3" style={{ gap: 12 }}>
           {(modeles ?? []).map((m) => {
-            const miniature = entete && m.nbPages > 0 ? urlApercuPage(m.id, 1) : null;
             return (
               <View key={m.id} className="rounded-2xl overflow-hidden" style={{ width: '47.5%', backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
                 <View className="w-full aspect-[3/4] items-center justify-center" style={{ backgroundColor: '#E8E4DA' }}>
-                  {miniature ? (
-                    <Image source={{ uri: miniature, headers: entete ?? undefined }} alt={`Aperçu du modèle ${m.nom}`} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
-                  ) : (
-                    <Ionicons name="document-text-outline" size={40} color="rgba(0,0,0,0.25)" />
-                  )}
+                  <Image source={{ uri: m.imageUrl }} alt={`Aperçu du modèle ${m.nom}`} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
                 </View>
                 <View className="p-2.5">
                   <Text className="text-[14px] font-black text-[#1A1A1A]" numberOfLines={1}>{m.nom}</Text>
