@@ -324,7 +324,7 @@ export default function MenuScreen() {
           {[tuilesFacilite, tuilesLocaux].map((liste, page) => (
             <View key={page} style={{ width: largeur }}>
               <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-                {espacesDeplies ? (
+                {espacesDeplies && !(MENU_LOCAUX_REDUIT && page === 1) ? (
                   <View className="bg-white" style={{ borderRadius: 20, padding: 14, marginTop: 6 }}>
                     {page === 0 ? <>{ligneFacilite}{ligneLocaux}</> : <>{ligneLocaux}{ligneFacilite}</>}
                     <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginVertical: 8 }} />
