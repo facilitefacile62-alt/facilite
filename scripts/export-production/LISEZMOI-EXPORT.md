@@ -45,6 +45,23 @@ Il refuse de chiffrer si la vérification trouve un écart (lignes, fichiers, st
 
 Réglages du tableau de bord à noter à la main : voir `docs/reglages-supabase-tableau-de-bord.md`.
 
+## Si le téléchargement des fichiers échoue ou est incomplet
+
+Le script classe chaque erreur et ne contourne rien en silence :
+
+- **Erreur passagère** (par exemple « Too many connections issued to the database », délai dépassé) : le fichier est redemandé avec une attente croissante (1, 2, 4, 8, 16, 30 s ; 2 téléchargements à la fois). Si cela échoue encore, il est listé comme **échec**.
+- **Échec** : à la fin, le script liste les fichiers non récupérés (bucket, chemin **masqué** : identifiants raccourcis, nom réduit à sa forme, référence courte), l'erreur exacte, et s'arrête **sans rien chiffrer ni supprimer**. Le dossier en clair est conservé.
+- **Taille reçue différente de la taille annoncée** par la base : échec, jamais accepté tel quel.
+
+### Reprendre
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1 -DepuisEnvLocal -Reprendre
+```
+Reprend dans le dernier dossier `clair-…` de `Exports-Facilite` (ou celui de `-Dossier <chemin>`). Le **dump de la base n'est pas refait** (étapes 1/6 à 3/6 conservées). Chaque fichier déjà téléchargé, de même taille et de même empreinte SHA-256 que le manifeste, **n'est pas retéléchargé** ; seuls les fichiers manquants, échoués ou absents à la source sont redemandés. Puis la vérification (5/6) et le chiffrement (6/6) continuent. L'adresse de connexion et la phrase secrète sont redemandées (rien n'est conservé entre deux lancements). `-EssaiABlanc -Reprendre` indique, sans connexion, combien de fichiers seraient retéléchargés.
+
+### Fichiers « absents à la source »
+Un fichier **listé** par la base mais que Supabase répond **introuvable** (confirmé deux fois) est inscrit `absent_source` dans le manifeste, dans `stockage/absents-source.json` et dans le rapport `rapport-verification-….json` (rubrique `absents_a_la_source`, chemins masqués). Le script s'arrête alors et exige un **choix explicite** : taper exactement `CONTINUER SANS ABSENTS`. Toute autre réponse arrête l'export. Le choix est enregistré (`decision-absents.json`, nombre et empreinte de la liste précise) et reporté dans le rapport (`decision_absents`) ; un choix donné pour une autre liste de fichiers n'est pas valable. Sans choix valable, la vérification échoue et rien n'est chiffré.
+
 ## Déchiffrer
 ```powershell
 $env:EXPORT_PASSPHRASE = Read-Host "Phrase secrete"
