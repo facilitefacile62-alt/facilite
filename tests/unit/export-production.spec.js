@@ -104,14 +104,34 @@ test.describe("script exporter.ps1 : garde-fous", () => {
     expect(ps).toContain("Remove-Item Env:\\EXPORT_DB_URL, Env:\\EXPORT_PASSPHRASE");
   });
   test("ne chiffre et ne supprime rien si la vérification échoue ; relit l'archive chiffrée avant de supprimer le dossier en clair", () => {
-    expect(ps.indexOf("verifier.mjs")).toBeLessThan(ps.indexOf("chiffrement.mjs') chiffrer"));
+    expect(ps.indexOf("chiffrement.mjs') chiffrer $tar")).toBeGreaterThan(ps.indexOf("verifier.mjs') $clair"));
     expect(ps).toContain("La verification a trouve des ecarts : rien n'est chiffre ni supprime");
+    expect(ps.indexOf("dechiffrer $enc")).toBeGreaterThan(0);
     expect(ps.indexOf("dechiffrer $enc")).toBeLessThan(ps.indexOf("Remove-Item $clair -Recurse"));
   });
   test("pg_dump 17 exigé ; trois schémas (comptes inclus) ; ASCII seulement (PowerShell 5.1)", () => {
     expect(ps).toContain("[int]$Matches[1] -lt 17");
     expect(ps).toContain("--schema=auth");
     expect(/^[\x00-\x7F]*$/.test(ps)).toBe(true);
+  });
+});
+
+test.describe("exporter.ps1 -EssaiABlanc", () => {
+  const ps = lire("scripts/export-production/exporter.ps1");
+  const bloc = ps.slice(ps.indexOf("if ($EssaiABlanc) {"), ps.indexOf("# 2. Saisies masquees"));
+  test("le mode existe, s'arrête avant toute saisie de secret et toute connexion", () => {
+    expect(ps).toContain("[switch]$EssaiABlanc");
+    expect(bloc.length).toBeGreaterThan(500);
+    expect(bloc).toContain("exit 0");
+    expect(ps.indexOf("if ($EssaiABlanc) {")).toBeLessThan(ps.indexOf("Lire-Secret \"Adresse"));
+  });
+  test("le bloc ne se connecte à rien : ni pg_dump sur une adresse, ni stockage, ni vérification, ni adresse de connexion", () => {
+    expect(bloc).not.toMatch(/--dbname|EXPORT_DB_URL|stockage\.mjs'\)|verifier\.mjs'\)|metadonnees\.mjs'\)|Invoke-WebRequest|Invoke-RestMethod|curl/);
+  });
+  test("la phrase de l'essai est aléatoire, jamais affichée ; le dossier de test est supprimé", () => {
+    expect(bloc).toContain("RNGCryptoServiceProvider");
+    expect(bloc).not.toMatch(/Write-Host.*EXPORT_PASSPHRASE/);
+    expect(bloc).toContain("Remove-Item $essai -Recurse -Force");
   });
 });
 
