@@ -131,13 +131,12 @@ test.describe("entrées masquées dans l'application (aucune ne reste visible)",
     expect(lire("mobile/src/app/fonctionnalites.tsx")).toContain(".filter((o) => autorise(o.interrupteur))");
     expect(lire("mobile/src/app/(tabs)/profil.tsx")).toContain("OUTILS.filter((o) => autorise(o.interrupteur))");
   });
-  test("profil de Facilité : onglet « Fonctionnalités » derrière son interrupteur, onglet « Documents » toujours là, bouton « Locaux » ajouté", () => {
+  test("profil de Facilité : onglet « Fonctionnalités » derrière son interrupteur, onglet « Documents » toujours là, aucun bouton « Locaux » ajouté", () => {
     const p = lire("mobile/src/app/(tabs)/profil.tsx");
     expect(p).toContain("...(fonctionnalitesOuvertes ? [{ id: 'fonctionnalites' as const");
     expect(p).toContain("{ id: 'documents' as const, label: 'Documents'");
-    expect(p).toContain("definirUserMode('business')");
-    expect(p).toContain("router.replace('/marketplace' as Href)");
-    expect(p).toContain("{t('Locaux')}");
+    expect(p).not.toContain("allerLocaux");
+    expect(p).not.toContain("{t('Locaux')}");
     expect(p).toContain("ongletDemande === 'fonctionnalites' && fonctionnalitesOuvertes");
     expect(p).toContain("onglet === 'fonctionnalites' && fonctionnalitesOuvertes");
   });
