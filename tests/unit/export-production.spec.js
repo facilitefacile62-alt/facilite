@@ -122,7 +122,7 @@ test.describe("script exporter.ps1 : garde-fous", () => {
 
 test.describe("exporter.ps1 -EssaiABlanc", () => {
   const ps = lire("scripts/export-production/exporter.ps1");
-  const bloc = ps.slice(ps.indexOf("if ($EssaiABlanc) {"), ps.indexOf("# 2. Saisies masquees"));
+  const bloc = ps.slice(ps.indexOf("if ($EssaiABlanc) {"), ps.indexOf("# 2. Adresse de connexion"));
   test("le mode existe, s'arrête avant toute saisie de secret et toute connexion", () => {
     expect(ps).toContain("[switch]$EssaiABlanc");
     expect(bloc.length).toBeGreaterThan(500);
@@ -140,6 +140,7 @@ test.describe("exporter.ps1 -EssaiABlanc", () => {
 });
 
 test.describe("adresse de connexion : presse-papiers, contrôle sans affichage", () => {
+  test.describe.configure({ timeout: 180000 });
   const helper = path.join(__dirname, "../../scripts/export-production/outils-adresse.ps1");
   // Fausses adresses : aucune ne correspond à une vraie base.
   const MDP = "Fausse-Valeur-42";
@@ -149,8 +150,8 @@ test.describe("adresse de connexion : presse-papiers, contrôle sans affichage",
     return execFileSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8" }).trim();
   };
   test("session pooler (port 5432) accepté ; adresse directe reconnue", () => {
-    expect(JSON.parse(controler(`postgresql://postgres.abcdef:${MDP}@${HOTE}:5432/postgres`))).toEqual({ Type: "session-pooler", Port: 5432 });
-    expect(JSON.parse(controler(`postgresql://postgres:${MDP}@db.abcdef.supabase.co:5432/postgres`))).toEqual({ Type: "direct", Port: 5432 });
+    expect(JSON.parse(controler(`postgresql://postgres.abcdef:${MDP}@${HOTE}:5432/postgres`))).toMatchObject({ Type: "session-pooler", Port: 5432 });
+    expect(JSON.parse(controler(`postgresql://postgres:${MDP}@db.abcdef.supabase.co:5432/postgres`))).toMatchObject({ Type: "direct", Port: 5432 });
   });
   test("refus clairs : espace réservé du mot de passe, Transaction pooler (6543), mot de passe absent, autre schéma", () => {
     expect(controler(`postgresql://postgres.abcdef:[YOUR-PASSWORD]@${HOTE}:5432/postgres`)).toMatch(/^ERR:.*espace reserve du mot de passe/);
@@ -171,10 +172,148 @@ test.describe("adresse de connexion : presse-papiers, contrôle sans affichage",
     expect(h).toContain("Set-Clipboard -Value $null");
     expect(h).toContain("-AsSecureString");
     const ps = lire("scripts/export-production/exporter.ps1");
-    expect(ps).toContain("$adresse = Lire-Adresse $DepuisEnvLocal");
+    expect(ps).toMatch(/\$adresse = Lire-Adresse\r?\n/);
     expect(ps).toContain("Adresse de connexion lue (non affichee) : type {0}, port {1}.");
     expect(ps).not.toMatch(/Write-Host[^\n]*\$adresse\b|Write-Host[^\n]*EXPORT_DB_URL/);
     expect(/^[\x00-\x7F]*$/.test(h)).toBe(true);
+  });
+});
+
+const PROD = "ocfhzwwjvljintabxxlg";
+const AUTRE = "abcdefghijklmnopqrst"; // un autre projet (comme facilite-e2e-test) : 20 caractères, faux
+const MDP_FAUX = "Fausse-Valeur-42";
+const HOTE_FAUX = "aws-0-test.pooler.supabase.com";
+const ps1 = (cmd) => execFileSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8" }).trim();
+const aide = path.join(__dirname, "../../scripts/export-production/outils-adresse.ps1");
+
+test.describe("projet : l'export ne lit que la production", () => {
+  test.describe.configure({ timeout: 180000 });
+  test("la référence de production est la même dans le module Node, le script PowerShell et les tests existants", () => {
+    expect(lire("scripts/export-production/projet.mjs")).toContain(`REF_PRODUCTION = "${PROD}"`);
+    expect(lire("scripts/export-production/outils-adresse.ps1")).toContain(`$script:REF_PRODUCTION = '${PROD}'`);
+    expect(lire("tests/helpers/testEnv.js")).toContain(`PROD_REF = "${PROD}"`);
+  });
+  test("lecture du ref : pooler (utilisateur postgres.<ref>), direct (db.<ref>.supabase.co), API ; sinon null", async () => {
+    const { refDepuisAdresseDb, refDepuisUrlApi, exigerMemeProjet } = await import("../../scripts/export-production/projet.mjs");
+    expect(refDepuisAdresseDb(`postgresql://postgres.${PROD}:x@${HOTE_FAUX}:5432/postgres`)).toBe(PROD);
+    expect(refDepuisAdresseDb(`postgresql://postgres:x@db.${PROD}.supabase.co:5432/postgres`)).toBe(PROD);
+    expect(refDepuisAdresseDb("postgresql://postgres:x@localhost:5432/postgres")).toBeNull();
+    expect(refDepuisUrlApi(`https://${PROD}.supabase.co`)).toBe(PROD);
+    expect(refDepuisUrlApi("https://exemple.test")).toBeNull();
+    expect(() => exigerMemeProjet(PROD, PROD)).not.toThrow();
+    expect(() => exigerMemeProjet(PROD, AUTRE)).toThrow(/deux projets différents/);
+    expect(() => exigerMemeProjet(null, PROD)).toThrow(/introuvable/);
+  });
+  test("PowerShell et Node lisent le même ref sur les mêmes adresses", () => {
+    const cas = [`postgresql://postgres.${AUTRE}:x@${HOTE_FAUX}:5432/postgres`, `postgresql://postgres:x@db.${PROD}.supabase.co:5432/postgres`, "postgresql://u:x@localhost:5432/p"];
+    for (const a of cas) {
+      const r = ps1(`. '${aide}'; $r = Extraire-Ref '${a}'; if ($r) { $r } else { 'NULL' }`);
+      const attendu = (/^postgres(?:ql)?:\/\/postgres\.([a-z0-9]{20}):/.exec(a) || /@db\.([a-z0-9]{20})\.supabase\.co[:/]/.exec(a) || [null, "NULL"])[1];
+      expect(r).toBe(attendu);
+    }
+    expect(ps1(`. '${aide}'; Extraire-RefApi 'https://${PROD}.supabase.co'`)).toBe(PROD);
+  });
+  test("exporter.ps1 : refs vérifiés (base ET fichiers) AVANT la phrase secrète et AVANT tout pg_dump", () => {
+    const ps = lire("scripts/export-production/exporter.ps1");
+    const premierDump = ps.indexOf("& $pgDump --dbname");
+    expect(premierDump).toBeGreaterThan(0);
+    for (const marque of ["Verifier-Projet $infoAdresse.Ref", "Verifier-Projet $refApi", 'Lire-Secret "Phrase secrete']) {
+      expect(ps.indexOf(marque), marque).toBeGreaterThan(0);
+      expect(ps.indexOf(marque), marque).toBeLessThan(premierDump);
+    }
+    expect(ps.indexOf("Verifier-Projet $refApi")).toBeLessThan(ps.indexOf('Lire-Secret "Phrase secrete'));
+    expect(ps).toContain("IDENTIQUE a la production");
+  });
+  test("une adresse d'un autre projet : arrêt avec un message qui donne les deux refs, sans mot de passe ni hôte", () => {
+    const r = ps1(`. '${aide}'; try { Verifier-Projet '${AUTRE}' "l'adresse de connexion" } catch { 'ERR:' + $_.Exception.Message }`);
+    expect(r).toMatch(/^ERR:ARRET/);
+    expect(r).toContain(AUTRE);
+    expect(r).toContain(PROD);
+    expect(r).toContain("Rien n'a ete lance");
+    expect(ps1(`. '${aide}'; try { Verifier-Projet $null "l'adresse" } catch { 'ERR:' + $_.Exception.Message }`)).toMatch(/^ERR:Impossible de lire la reference/);
+  });
+  test("stockage.mjs refuse de télécharger si la base et l'API sont deux projets différents (code 3), accepte le même projet", () => {
+    const script = path.join(__dirname, "../../scripts/export-production/stockage.mjs");
+    const d = dossierTemp();
+    const vide = path.join(d, "objets.json");
+    fs.writeFileSync(vide, "[]");
+    const lancer = (refDb, refApi) => {
+      try {
+        const sortie = execFileSync(process.execPath, [script, path.join(d, "out"), "--liste", `--objets=${vide}`], {
+          encoding: "utf8",
+          env: { ...process.env, EXPORT_DB_URL: `postgresql://postgres.${refDb}:${MDP_FAUX}@${HOTE_FAUX}:5432/postgres`, NEXT_PUBLIC_SUPABASE_URL: `https://${refApi}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "fausse-cle" },
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+        return { code: 0, texte: sortie };
+      } catch (e) {
+        return { code: e.status, texte: String(e.stderr) };
+      }
+    };
+    const refus = lancer(PROD, AUTRE);
+    expect(refus.code).toBe(3);
+    expect(refus.texte).toContain("deux projets différents");
+    expect(refus.texte).not.toContain(MDP_FAUX);
+    expect(lancer(PROD, PROD).code).toBe(0);
+    fs.rmSync(d, { recursive: true, force: true });
+  });
+});
+
+test.describe("-DepuisEnvLocal : conversion du Transaction pooler (6543) en Session pooler (5432), en mémoire", () => {
+  test.describe.configure({ timeout: 180000 });
+  const lireEnv = (lignes, attendu = "") => {
+    const d = dossierTemp();
+    const f = path.join(d, ".env.test");
+    fs.writeFileSync(f, lignes.join("\n"));
+    const cmd = `. '${aide}'; try { $l = Lire-AdresseEnv '${f}'; [pscustomobject]@{ Nom = $l.Nom; Type = $l.Type; Port = $l.Port; Ref = $l.Ref; Converti = $l.Converti; Attendu = ($l.Adresse -eq '${attendu}') } | ConvertTo-Json -Compress } catch { 'ERR:' + $_.Exception.Message }`;
+    const r = ps1(cmd);
+    fs.rmSync(d, { recursive: true, force: true });
+    return r;
+  };
+  const base = (ref, port, fin = "/postgres") => `postgresql://postgres.${ref}:${MDP_FAUX}@${HOTE_FAUX}:${port}${fin}`;
+
+  test("pooler 6543 du projet de production : converti en 5432, même hôte/utilisateur/mot de passe ; l'option pgbouncer est retirée", () => {
+    const r = JSON.parse(lireEnv([`SUPABASE_DATABASE_URL=${base(PROD, 6543, "/postgres?pgbouncer=true")}`], base(PROD, 5432)));
+    expect(r).toEqual({ Nom: "SUPABASE_DATABASE_URL", Type: "session-pooler", Port: 5432, Ref: PROD, Converti: true, Attendu: true });
+  });
+  test("les autres options sont conservées (sslmode)", () => {
+    const r = JSON.parse(lireEnv([`SUPABASE_DATABASE_URL="${base(PROD, 6543, "/postgres?pgbouncer=true&sslmode=require")}"`], base(PROD, 5432, "/postgres?sslmode=require")));
+    expect(r.Attendu).toBe(true);
+    expect(r.Converti).toBe(true);
+  });
+  test("une adresse déjà en 5432 n'est pas touchée (Converti faux)", () => {
+    const r = JSON.parse(lireEnv([`SUPABASE_DATABASE_URL=${base(PROD, 5432)}`], base(PROD, 5432)));
+    expect(r).toMatchObject({ Port: 5432, Converti: false, Attendu: true });
+  });
+  test("variable écartée puis suivante acceptée : le NOM de la variable utilisée est DATABASE_URL", () => {
+    const r = JSON.parse(lireEnv([`SUPABASE_DATABASE_URL=postgresql://postgres.${PROD}:[YOUR-PASSWORD]@${HOTE_FAUX}:5432/postgres`, `DATABASE_URL=${base(PROD, 6543)}`], base(PROD, 5432)));
+    expect(r).toMatchObject({ Nom: "DATABASE_URL", Converti: true, Attendu: true });
+  });
+  test("un autre projet (même converti) reste refusé : le ref de production est exigé, message avec les deux refs", () => {
+    const r = lireEnv([`SUPABASE_DATABASE_URL=${base(AUTRE, 6543)}`]);
+    expect(r).toMatch(/^ERR:Aucune variable/);
+    expect(r).toContain(AUTRE);
+    expect(r).toContain(PROD);
+    expect(r).not.toContain(MDP_FAUX);
+    expect(r).not.toContain(HOTE_FAUX);
+  });
+  test("les autres cas gardent le refus : 6543 sur l'hôte direct, sur un hôte non Supabase, mot de passe absent", () => {
+    const direct = lireEnv([`SUPABASE_DATABASE_URL=postgresql://postgres:${MDP_FAUX}@db.${PROD}.supabase.co:6543/postgres`]);
+    expect(direct).toMatch(/^ERR:/);
+    expect(direct).toContain("Transaction pooler");
+    expect(lireEnv([`SUPABASE_DATABASE_URL=postgresql://postgres.${PROD}:${MDP_FAUX}@exemple.test:6543/postgres`])).toContain("Transaction pooler");
+    expect(lireEnv([`SUPABASE_DATABASE_URL=postgresql://postgres.${PROD}@${HOTE_FAUX}:5432/postgres`])).toContain("illisible");
+  });
+  test("le presse-papiers garde le refus du 6543 (aucune conversion hors .env.local)", () => {
+    expect(ps1(`. '${aide}'; try { Controler-Adresse '${base(PROD, 6543)}' } catch { 'ERR:' + $_.Exception.Message }`)).toContain("Transaction pooler");
+    const h = lire("scripts/export-production/outils-adresse.ps1");
+    const lireAdresse = h.slice(h.indexOf("function Lire-Adresse()"), h.indexOf("# Transaction pooler Supabase"));
+    expect(lireAdresse).not.toContain("Convertir-Session");
+  });
+  test("le script dit « converti 6543 -> 5432 » sans afficher la valeur ni modifier .env.local", () => {
+    const ps = lire("scripts/export-production/exporter.ps1");
+    expect(ps).toContain("converti 6543 -> 5432 (Transaction pooler -> Session pooler, en memoire, rien n'est modifie dans .env.local)");
+    expect(ps).not.toMatch(/Set-Content[^\n]*envLocal|Out-File[^\n]*envLocal|Add-Content[^\n]*envLocal/);
+    expect(ps).not.toMatch(/Write-Host[^\n]*\$lu\.Adresse|Write-Host[^\n]*\$adresse\b/);
   });
 });
 

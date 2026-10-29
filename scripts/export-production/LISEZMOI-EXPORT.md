@@ -23,15 +23,27 @@ powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1 
 Vérifie les outils, le dossier de sortie hors dépôt, la place disque et le chiffrement aller-retour. Ne se connecte à rien.
 
 ## Lancer l'export
-1. Dans le tableau de bord Supabase : bouton **Connect**, adresse **Session pooler** (port 5432). Remplacez `[YOUR-PASSWORD]` par le mot de passe de la base, puis **copiez** l'adresse complète (presse-papiers).
-2. Lancez :
+Deux façons de fournir l'adresse de connexion (jamais affichée) :
+
+**A. Depuis `.env.local`** (si l'adresse de production y figure) :
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1
+powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1 -DepuisEnvLocal
 ```
-Le script lit l'adresse dans le presse-papiers **sans l'afficher** et le vide aussitôt (le mot de passe n'y reste pas). Il refuse une adresse qui contient encore `[YOUR-PASSWORD]` ou qui est celle du Transaction pooler (port 6543). Si le presse-papiers ne contient pas d'adresse, il la demande en saisie masquée. `-DepuisEnvLocal` lit à la place `SUPABASE_DATABASE_URL` de `.env.local`.
-3. Il demande ensuite une phrase secrète (12 caractères minimum), tapée deux fois, masquée. **Notez-la à part** : sans elle, l'archive est irrécupérable.
+Le script essaie `SUPABASE_DATABASE_URL` puis `DATABASE_URL` et dit **laquelle il utilise** (le nom seulement), avec son type et son port. Un **Transaction pooler** (port 6543, hôte `*.pooler.supabase.com`, utilisateur `postgres.<ref>`) est **converti en mémoire** en Session pooler (port 5432), même hôte, même utilisateur, même mot de passe, et le script écrit seulement « converti 6543 -> 5432 » : `.env.local` n'est jamais modifié. Tout autre cas inadapté reste refusé avec une explication.
+
+**B. Depuis le presse-papiers** :
+1. Tableau de bord Supabase : bouton **Connect**, adresse **Session pooler** (port 5432). Remplacez `[YOUR-PASSWORD]` par le mot de passe de la base, puis **copiez** l'adresse complète.
+2. Lancez `exporter.ps1` (sans option). Le script lit le presse-papiers **sans l'afficher** et le vide aussitôt. Si le presse-papiers ne contient pas d'adresse, saisie masquée.
+
+**Garde-fou du projet (dans les deux cas)** : le script lit la **référence du projet** (le « ref », 20 caractères, pas un secret) dans l'adresse, l'affiche et la compare à celle de la production. Si elle est différente (par exemple le projet de test), il **s'arrête avant tout `pg_dump`** et avant la phrase secrète. Il vérifie aussi que l'API des fichiers (`NEXT_PUBLIC_SUPABASE_URL` de `.env.local`) est **le même projet** que la base ; `stockage.mjs` le re-vérifie. Les contrôles de lignes et de fichiers interrogent la base de la même adresse que le dump.
+
+Le script demande ensuite une phrase secrète (12 caractères minimum), tapée deux fois, masquée. **Notez-la à part** : sans elle, l'archive est irrécupérable.
+
+`-EssaiABlanc` accepte aussi `-DepuisEnvLocal` : il contrôle l'adresse de `.env.local` (variable, type, port, projet, conversion) **sans aucune connexion**.
 
 Il refuse de chiffrer si la vérification trouve un écart (lignes, fichiers, structure). Il relit l'archive chiffrée avant de supprimer le dossier en clair (`-GarderEnClair` pour le conserver).
+
+Réglages du tableau de bord à noter à la main : voir `docs/reglages-supabase-tableau-de-bord.md`.
 
 ## Déchiffrer
 ```powershell

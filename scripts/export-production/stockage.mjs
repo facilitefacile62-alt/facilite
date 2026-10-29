@@ -11,6 +11,7 @@
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import pg from "pg";
+import { exigerMemeProjet, refDepuisAdresseDb, refDepuisUrlApi } from "./projet.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -21,6 +22,15 @@ const cle = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!dossier || !url || !cle) {
   console.error("Usage : node --env-file=.env.local stockage.mjs <dossier> [--liste]  (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY requises)");
   process.exit(1);
+}
+// Garde-fou : les fichiers sont téléchargés par l'API de CE projet ; la liste vient de la base de l'adresse EXPORT_DB_URL. Les deux doivent être le même projet.
+if (process.env.EXPORT_DB_URL) {
+  try {
+    exigerMemeProjet(refDepuisAdresseDb(process.env.EXPORT_DB_URL), refDepuisUrlApi(url));
+  } catch (e) {
+    console.error(e.message);
+    process.exit(3);
+  }
 }
 const admin = createClient(url, cle, { auth: { persistSession: false } });
 const PARALLELE = 4;

@@ -71,6 +71,20 @@ if ($EssaiABlanc) {
   Verif 'tar disponible' ([bool](Get-Command tar -ErrorAction SilentlyContinue)) ''
   $envLocal = Join-Path $depot '.env.local'
   Verif '.env.local : adresse du projet et cle de service presentes (valeurs non lues a l ecran)' ((Test-Path $envLocal) -and [bool](Select-String -Path $envLocal -Pattern '^NEXT_PUBLIC_SUPABASE_URL=.+' -Quiet) -and [bool](Select-String -Path $envLocal -Pattern '^SUPABASE_SERVICE_ROLE_KEY=.+' -Quiet)) ''
+  $ligneApi = if (Test-Path $envLocal) { Get-Content $envLocal | Where-Object { $_ -match '^NEXT_PUBLIC_SUPABASE_URL=' } | Select-Object -First 1 } else { $null }
+  $refApiEssai = if ($ligneApi) { Extraire-RefApi (($ligneApi -replace '^NEXT_PUBLIC_SUPABASE_URL=', '').Trim().Trim('"').Trim("'")) } else { $null }
+  Verif 'Projet des fichiers (NEXT_PUBLIC_SUPABASE_URL de .env.local) = production' ($refApiEssai -eq $script:REF_PRODUCTION) $(if ($refApiEssai -eq $script:REF_PRODUCTION) { '' } else { 'DIFFERENT de la production ou illisible' })
+  if ($DepuisEnvLocal) {
+    # Controle de l'adresse de .env.local, sans connexion : nom de la variable, type, port, projet. Jamais la valeur.
+    try {
+      $lu = Lire-AdresseEnv $envLocal
+      Verif "Adresse de .env.local (-DepuisEnvLocal) : variable $($lu.Nom), type $($lu.Type), port $($lu.Port), projet $($lu.Ref)" $true 'identique a la production'
+      if ($lu.Converti) { Write-Host "  [INFO ] converti 6543 -> 5432 (en memoire ; .env.local n'est pas modifie)" }
+      foreach ($r in $lu.Rejets) { Write-Host "  [INFO ] ecartee : $r" }
+    } catch {
+      Verif 'Adresse de .env.local (-DepuisEnvLocal)' $false ($_.Exception.Message -replace "`r?`n", ' | ')
+    }
+  }
   foreach ($f in 'chiffrement', 'stockage', 'verifier', 'metadonnees') {
     & node --check (Join-Path $outils "$f.mjs")
     Verif "Script $f.mjs : syntaxe" ($LASTEXITCODE -eq 0) ''
@@ -79,7 +93,7 @@ if ($EssaiABlanc) {
   try {
     $pp = ((Get-Clipboard -Raw -ErrorAction Stop) | Out-String).Trim()
     if ($pp -match '^postgres(?:ql)?://') {
-      try { $i = Controler-Adresse $pp; $etatPresse = "adresse Postgres detectee, type $($i.Type), port $($i.Port) (non affichee, non videe)" } catch { $etatPresse = "adresse Postgres detectee mais a corriger : $($_.Exception.Message)" }
+      try { $i = Controler-Adresse $pp; $etatPresse = "adresse Postgres detectee, type $($i.Type), port $($i.Port), projet $(if ($i.Ref -eq $script:REF_PRODUCTION) { 'production' } else { 'AUTRE QUE LA PRODUCTION' }) (adresse non affichee, non videe)" } catch { $etatPresse = "adresse Postgres detectee mais a corriger : $($_.Exception.Message)" }
     }
   } catch { $etatPresse = 'illisible' }
   $pp = $null
@@ -118,13 +132,32 @@ if ($EssaiABlanc) {
   exit 0
 }
 
-# 2. Saisies masquees
-$adresse = Lire-Adresse $DepuisEnvLocal (Join-Path $depot '.env.local')
-$infoAdresse = Controler-Adresse $adresse
-Write-Host ("Adresse de connexion lue (non affichee) : type {0}, port {1}." -f $infoAdresse.Type, $infoAdresse.Port)
+# 2. Adresse de connexion (jamais affichee) et verification du PROJET avant toute chose.
+$envLocal = Join-Path $depot '.env.local'
+if ($DepuisEnvLocal) {
+  $lu = Lire-AdresseEnv $envLocal
+  $adresse = $lu.Adresse
+  $infoAdresse = [pscustomobject]@{ Type = $lu.Type; Port = $lu.Port; Ref = $lu.Ref }
+  Write-Host ("Variable de .env.local utilisee : {0} (type {1}, port {2}). Valeur non affichee." -f $lu.Nom, $lu.Type, $lu.Port)
+  if ($lu.Converti) { Write-Host "  converti 6543 -> 5432 (Transaction pooler -> Session pooler, en memoire, rien n'est modifie dans .env.local)" }
+  foreach ($r in $lu.Rejets) { Write-Host "  ecartee : $r" }
+} else {
+  $adresse = Lire-Adresse
+  $infoAdresse = Controler-Adresse $adresse
+  Write-Host ("Adresse de connexion lue (non affichee) : type {0}, port {1}." -f $infoAdresse.Type, $infoAdresse.Port)
+}
 if ($infoAdresse.Type -eq 'direct') { Write-Host "Attention : adresse DIRECTE (souvent IPv6 seulement). Si la connexion echoue, utilisez l'adresse 'Session pooler'." }
+Verifier-Projet $infoAdresse.Ref "l'adresse de connexion"
+Write-Host "Projet de la base (reference lue dans l'adresse) : $($infoAdresse.Ref) - IDENTIQUE a la production ($($script:REF_PRODUCTION))."
+# Les fichiers sont telecharges par l'API du projet de .env.local : ce doit etre le MEME projet que la base exportee.
+$ligneApi = if (Test-Path $envLocal) { Get-Content $envLocal | Where-Object { $_ -match '^NEXT_PUBLIC_SUPABASE_URL=' } | Select-Object -First 1 } else { $null }
+$refApi = if ($ligneApi) { Extraire-RefApi (($ligneApi -replace '^NEXT_PUBLIC_SUPABASE_URL=', '').Trim().Trim('"').Trim("'")) } else { $null }
+Verifier-Projet $refApi "NEXT_PUBLIC_SUPABASE_URL de .env.local (fichiers)"
+Write-Host "Projet des fichiers (API de .env.local) : $refApi - IDENTIQUE a la production."
 $env:EXPORT_DB_URL = $adresse
 $adresse = $null
+
+# 3. Phrase secrete (saisie masquee, deux fois)
 $p1 = Lire-Secret "Phrase secrete de chiffrement (12 caracteres minimum)"
 $p2 = Lire-Secret "Retapez la phrase secrete"
 if ($p1 -ne $p2 -or $p1.Length -lt 12) { throw "Les deux phrases secretes different, ou font moins de 12 caracteres." }
