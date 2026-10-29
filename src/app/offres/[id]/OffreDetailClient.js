@@ -5,6 +5,7 @@ import { TexteAvecLiens } from "@/lib/liens";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { televerserImagePubliee } from "@/lib/imagePubliee";
 import ApplyModal from "@/components/ApplyModal";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import SocialShareButtons from "@/components/SocialShareButtons";
@@ -141,23 +142,11 @@ export default function OffreDetailClient({ initialOffer }) {
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop().toLowerCase();
-      const storagePath = `${userId}/${Date.now()}.${ext}`;
+      // WebP + variantes + cache d'un an (src/lib/imagePubliee.js).
+      const { url } = await televerserImagePubliee(supabase, "job-offers", `${userId}/${Date.now()}`, file);
+      if (!url) throw new Error("envoi impossible, réessayez.");
 
-      const { error: uploadError } = await supabase.storage
-        .from("job-offers")
-        .upload(storagePath, file, {
-          upsert: true,
-          contentType: file.type,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase.storage
-        .from("job-offers")
-        .getPublicUrl(storagePath);
-
-      setImageUrl(publicUrlData?.publicUrl || "");
+      setImageUrl(url);
     } catch (err) {
       console.error("Erreur upload:", err);
       alert("Erreur lors du téléversement de l'image : " + err.message);

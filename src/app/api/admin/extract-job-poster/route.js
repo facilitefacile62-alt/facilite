@@ -83,6 +83,8 @@ export async function POST(req) {
           .upload(storageKey, bufferStocke, {
             contentType: mimeStocke,
             upsert: true,
+            // Nom horodaté : un nouveau fichier ne remplace jamais un ancien, un cache d'un an est sans risque.
+            cacheControl: "31536000",
           });
 
         if (!uploadError) {
@@ -92,7 +94,7 @@ export async function POST(req) {
                 const variante = await sharp(bufferStocke).resize({ width: largeur, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
                 await supabaseAdmin.storage
                   .from("job-offers")
-                  .upload(storageKey.replace("-w1280.webp", `-w${largeur}.webp`), variante, { contentType: "image/webp", upsert: true });
+                  .upload(storageKey.replace("-w1280.webp", `-w${largeur}.webp`), variante, { contentType: "image/webp", upsert: true, cacheControl: "31536000" });
               } catch (varianteErr) {
                 console.warn("[Poster variante]", largeur, varianteErr?.message);
               }

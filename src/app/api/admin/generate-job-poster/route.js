@@ -78,6 +78,8 @@ export async function POST(req) {
       .upload(`ai-generated/${fileName}`, imageBuffer, {
         contentType: "image/jpeg",
         upsert: true,
+        // Nom horodaté (voir extract-job-poster) : cache d'un an sans risque.
+        cacheControl: "31536000",
       });
 
     if (!uploadErr && uploadData?.path) {
