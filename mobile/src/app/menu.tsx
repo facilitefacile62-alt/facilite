@@ -61,6 +61,11 @@ const TUILES_LOCAUX: Tuile[] = [
   { id: 'etablissements', emoji: '🏥', teinte: '#DCE8FD', titre: 'Établissements ouverts', sous: 'Points Wave, pharmacies, cliniques', tag: { texte: 'NOUVEAU', fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/web/etablissements', interrupteur: 'nav_marketplace' },
 ];
 
+// Menu ☰ de Locaux réduit à « Réglages » : « Marketplace », « Mon activité », « Établissements ouverts » et l'espace vendeur (« Mes annonces »,
+// « Commandes reçues », « Mes livraisons ») ne sont plus proposés ici (ils restent dans le code, rien n'est supprimé). Remettre à false pour les rétablir.
+const MENU_LOCAUX_REDUIT = true;
+const TUILE_REGLAGES: Tuile = { id: 'reglages', emoji: '⚙️', teinte: '#EDEBE6', titre: 'Réglages', sous: 'Boutique & compte', route: '/marketplace/reglages' };
+
 export default function MenuScreen() {
   const t = useT();
   const router = useRouter();
@@ -156,13 +161,13 @@ export default function MenuScreen() {
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (achatsNumeriquesAutorises || !tu.paiementNumerique) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
   const tuilesFacilite = filtre(TUILES_FACILITE);
-  const tuilesLocaux = filtre(TUILES_LOCAUX);
+  const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES] : TUILES_LOCAUX);
 
   // Espace vendeur (mode Locaux, compte avec boutique) : gestion de la boutique, tuiles de la même taille.
   const commandesOuvertes = ouvert('feat_marketplace_commandes');
   const livraisonOuverte = ouvert('nav_marketplace_livreur');
   const tuilesVendeur: Tuile[] =
-    mode === 'locaux' && boutique
+    !MENU_LOCAUX_REDUIT && mode === 'locaux' && boutique
       ? [
           { id: 'annonces', emoji: '🏷️', teinte: '#DCE8FD', titre: 'Mes annonces', sous: 'Articles en vente', route: '/marketplace/vendre/annonces' },
           ...(commandesOuvertes ? [{ id: 'commandes', emoji: '📦', teinte: '#FDEEDC', titre: 'Commandes reçues', sous: 'À préparer & envoyer', route: `/marketplace/vendre/commandes-recues?storeId=${boutique.id}` }] : []),
