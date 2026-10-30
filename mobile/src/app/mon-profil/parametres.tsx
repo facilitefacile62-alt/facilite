@@ -8,6 +8,7 @@ import { CarteMenu, GroupeCartes } from '@/components/CarteMenu';
 import EnteteModifierInfos from '@/components/EnteteModifierInfos';
 import GlisserEntreOnglets from '@/components/GlisserEntreOnglets';
 import { useThemeApp } from '@/context/ThemeApp';
+import { viderCache } from '@/lib/cacheImages';
 import { lireLangue, libelleLangue, type CodeLangue, type ThemeChoisi } from '@/lib/preferencesConnexion';
 import { useT } from '@/lib/i18n';
 
@@ -19,6 +20,12 @@ export default function ParametresScreen() {
   const router = useRouter();
   const [langue, setLangue] = useState<CodeLangue>('fr');
   const { theme, appliquer } = useThemeApp();
+  // « Vider le cache » : images et listes gardées sur le téléphone (rien du compte n'est touché).
+  const [cacheEtat, setCacheEtat] = useState<'repos' | 'en-cours' | 'vide' | 'echec'>('repos');
+  const vider = async () => {
+    setCacheEtat('en-cours');
+    setCacheEtat((await viderCache()) ? 'vide' : 'echec');
+  };
   useFocusEffect(
     useCallback(() => {
       lireLangue().then(setLangue);
@@ -106,6 +113,24 @@ export default function ParametresScreen() {
                 titre={t('Sécurité & Connexion')}
                 sous={t('Mot de passe, appareils')}
                 onPress={() => router.push('/mon-profil/securite' as Href)}
+              />
+            </GroupeCartes>
+
+            <GroupeCartes>
+              <CarteMenu
+                icone="trash-outline"
+                titre={t('Vider le cache')}
+                sous={
+                  cacheEtat === 'en-cours'
+                    ? t('Nettoyage en cours…')
+                    : cacheEtat === 'vide'
+                      ? t('Cache vidé')
+                      : cacheEtat === 'echec'
+                        ? t('Impossible de vider le cache')
+                        : t('Images et listes gardées sur ce téléphone')
+                }
+                onPress={vider}
+                sansFleche
               />
             </GroupeCartes>
           </View>

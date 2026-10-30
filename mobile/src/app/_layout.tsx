@@ -10,12 +10,14 @@ import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { fondSombre } from '@/components/themeSombre';
 import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
+import { configurerCacheImages } from '@/lib/cacheImages';
 import { LangueProvider } from '@/lib/i18n';
 import { bienvenueDejaVue, ETAPES_INSCRIPTION, etapeEmailVue, etapeInscriptionMemorisee, memoriserEtapeInscription, etapeMotDePasseVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
 
 import '../global.css';
 
 SplashScreen.preventAutoHideAsync();
+configurerCacheImages();
 
 /**
  * Garde d'authentification — redirige entre le groupe (auth) (login,
