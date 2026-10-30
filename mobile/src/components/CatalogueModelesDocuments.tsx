@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Modal, Text, View, Pressable } from 'react-native';
+import { Alert, Dimensions, FlatList, Linking, Modal, Text, View, Pressable } from 'react-native';
 
 import { WHATSAPP_FACILITE } from '@/lib/configFacilite';
 import { chargerModelesDocuments } from '@/lib/modelesDocuments';
@@ -18,8 +18,11 @@ const VERT = '#10B981';
 export default function CatalogueModelesDocuments() {
   const [modeles, setModeles] = useState<ModeleDocument[] | null>(null);
   const [erreur, setErreur] = useState(false);
-  // Vue d'ensemble : toucher un modèle ouvre son affiche en grand (entière), avec le bouton « Demander ce modèle ».
-  const [ouvert, setOuvert] = useState<ModeleDocument | null>(null);
+  // Vue d'ensemble : toucher un modèle ouvre son affiche en grand (entière), avec le bouton « Demander ce modèle ». On passe d'un modèle à l'autre
+  // en faisant glisser l'affiche de gauche à droite (ou de droite à gauche).
+  const [indexOuvert, setIndexOuvert] = useState<number | null>(null);
+  const largeur = Dimensions.get('window').width;
+  const ouvert = indexOuvert !== null ? (modeles ?? [])[indexOuvert] ?? null : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -73,11 +76,11 @@ export default function CatalogueModelesDocuments() {
         </View>
       ) : (
         <View className="flex-row flex-wrap mt-3" style={{ gap: 12 }}>
-          {(modeles ?? []).map((m) => {
+          {(modeles ?? []).map((m, i) => {
             return (
               <View key={m.id} className="rounded-2xl overflow-hidden" style={{ width: '47.5%', backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
                 <Pressable
-                  onPress={() => setOuvert(m)}
+                  onPress={() => setIndexOuvert(i)}
                   accessibilityRole="button"
                   accessibilityLabel={`Voir le modèle ${m.nom} en grand`}
                   className="w-full aspect-[3/4] items-center justify-center"
@@ -85,7 +88,7 @@ export default function CatalogueModelesDocuments() {
                   <Image source={{ uri: m.imageUrl }} alt={`Aperçu du modèle ${m.nom}`} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
                 </Pressable>
                 <View className="p-2.5">
-                  <Pressable onPress={() => setOuvert(m)} accessibilityRole="button" accessibilityLabel={`Voir le modèle ${m.nom} en grand`}>
+                  <Pressable onPress={() => setIndexOuvert(i)} accessibilityRole="button" accessibilityLabel={`Voir le modèle ${m.nom} en grand`}>
                     <Text className="text-[14px] font-black text-[#1A1A1A]" numberOfLines={1}>{m.nom}</Text>
                     {m.description ? <Text className="text-[12px] text-black/50 mt-0.5" numberOfLines={1}>{m.description}</Text> : null}
                   </Pressable>
@@ -103,14 +106,17 @@ export default function CatalogueModelesDocuments() {
         </View>
       )}
 
-      <Modal visible={ouvert !== null} transparent animationType="fade" onRequestClose={() => setOuvert(null)}>
+      <Modal visible={ouvert !== null} transparent animationType="fade" onRequestClose={() => setIndexOuvert(null)}>
         <View className="flex-1" style={{ backgroundColor: 'rgba(0,0,0,0.92)' }}>
           {ouvert ? (
             <>
               <View className="flex-row items-center px-4" style={{ paddingTop: 48, paddingBottom: 8 }}>
                 <Text className="flex-1 text-[16px] font-black text-white" numberOfLines={1}>{ouvert.nom}</Text>
+                {(modeles ?? []).length > 1 ? (
+                  <Text className="text-[13px] font-bold text-white/70 mr-3">{(indexOuvert ?? 0) + 1} / {(modeles ?? []).length}</Text>
+                ) : null}
                 <Pressable
-                  onPress={() => setOuvert(null)}
+                  onPress={() => setIndexOuvert(null)}
                   accessibilityRole="button"
                   accessibilityLabel="Fermer"
                   hitSlop={10}
@@ -119,8 +125,29 @@ export default function CatalogueModelesDocuments() {
                   <Ionicons name="close" size={22} color="#FFFFFF" />
                 </Pressable>
               </View>
-              <View className="flex-1 px-3">
-                <Image source={{ uri: ouvert.imageUrl }} alt={`Modèle ${ouvert.nom}`} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
+              <View className="flex-1">
+                <FlatList
+                  data={modeles ?? []}
+                  keyExtractor={(m) => m.id}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  initialScrollIndex={indexOuvert ?? 0}
+                  getItemLayout={(_d, i) => ({ length: largeur, offset: largeur * i, index: i })}
+                  onMomentumScrollEnd={(e) => setIndexOuvert(Math.max(0, Math.min((modeles ?? []).length - 1, Math.round(e.nativeEvent.contentOffset.x / largeur))))}
+                  renderItem={({ item }) => (
+                    <View style={{ width: largeur, height: '100%', paddingHorizontal: 12 }}>
+                      <Image source={{ uri: item.imageUrl }} alt={`Modèle ${item.nom}`} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
+                    </View>
+                  )}
+                />
+                {(modeles ?? []).length > 1 ? (
+                  <View className="flex-row justify-center" style={{ gap: 6, paddingTop: 8 }}>
+                    {(modeles ?? []).map((m, i) => (
+                      <View key={m.id} style={{ width: i === indexOuvert ? 18 : 6, height: 6, borderRadius: 3, backgroundColor: i === indexOuvert ? '#FFFFFF' : 'rgba(255,255,255,0.35)' }} />
+                    ))}
+                  </View>
+                ) : null}
               </View>
               <View className="px-4" style={{ paddingTop: 10, paddingBottom: 28 }}>
                 {ouvert.description ? <Text className="text-[12.5px] text-white/80 mb-2.5" numberOfLines={3}>{ouvert.description}</Text> : null}

@@ -46,9 +46,13 @@ test.describe("Modèles de documents (WhatsApp) à la place de l'achat de CV", (
 test.describe("Modèle cliquable : vue d'ensemble", () => {
   test("toucher l'image ou le nom ouvre l'affiche entière dans une fenêtre, avec « Demander ce modèle » et un bouton Fermer", () => {
     const c = lire("mobile/src/components/CatalogueModelesDocuments.tsx");
-    expect(c).toContain("onPress={() => setOuvert(m)}");
+    expect(c).toContain("onPress={() => setIndexOuvert(i)}");
     expect(c).toContain("<Modal visible={ouvert !== null}");
     expect(c).toContain('contentFit="contain"');
+    // Plusieurs modèles : on passe de l'un à l'autre en faisant glisser l'affiche (pagination horizontale), avec « 2 / 5 » et des points.
+    expect(c).toContain("horizontal");
+    expect(c).toContain("pagingEnabled");
+    expect(c).toContain("initialScrollIndex={indexOuvert ?? 0}");
     expect(c).toContain("onPress={() => demander(ouvert)}");
     expect(c).toContain('accessibilityLabel="Fermer"');
   });
