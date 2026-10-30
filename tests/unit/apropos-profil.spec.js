@@ -23,12 +23,16 @@ test.describe("glissement entre onglets", () => {
     expect(geste(-30, 40, false)).toBeNull();
   });
 
-  test("À propos glisse vers Paramètres, Paramètres glisse vers À propos", () => {
-    expect(lire("mobile/src/app/mon-profil/a-propos.tsx")).toContain("<GlisserEntreOnglets versDroite={'/mon-profil/parametres' as Href}>");
-    expect(lire("mobile/src/app/mon-profil/parametres.tsx")).toContain("<GlisserEntreOnglets versGauche={'/mon-profil/a-propos' as Href}>");
-    const c = lire("mobile/src/components/GlisserEntreOnglets.tsx");
-    expect(c).toContain("sens === 'gauche' && versDroite");
-    expect(c).toContain("sens === 'droite' && versGauche");
+  test("À propos et Paramètres sont deux pages d'UN glisseur qui suit le doigt, comme Facilité | Locaux du menu ☰", () => {
+    expect(lire("mobile/src/app/mon-profil/a-propos.tsx")).toContain("<ModifierInfosPager depart={0} />");
+    expect(lire("mobile/src/app/mon-profil/parametres.tsx")).toContain("<ModifierInfosPager depart={1} />");
+    const p = lire("mobile/src/components/ModifierInfosPager.tsx");
+    expect(p).toContain("Animated.spring(position, { toValue: index, useNativeDriver: true, bounciness: 0, speed: 16 })");
+    expect(p).toContain("position.setValue(");
+    expect(p).toContain("<ContenuAPropos />");
+    expect(p).toContain("<ContenuParametres />");
+    expect(p).toContain("surChoix={aller}");
+    expect(lire("mobile/src/components/EnteteModifierInfos.tsx")).toContain("surChoix ? surChoix(1)");
   });
 });
 

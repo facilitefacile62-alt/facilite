@@ -10,7 +10,7 @@ import { useT } from '@/lib/i18n';
 // la ligne « ← Retour  Modifier infos », puis les trois onglets
 // À propos · Scanner (pastille verte) · Paramètres. L'onglet actif est
 // souligné et en gras.
-export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'parametres' }) {
+export default function EnteteModifierInfos({ actif, surChoix }: { actif: 'apropos' | 'parametres'; surChoix?: (page: 0 | 1) => void }) {
   const t = useT();
   const router = useRouter();
   const scanOuvert = useFonctionnalite('feat_scanner_document');
@@ -31,7 +31,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
 
       <View className="flex-row items-center px-4 gap-5" style={{ borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
         <Pressable
-          onPress={() => router.replace('/mon-profil/a-propos' as Href)}
+          onPress={() => (surChoix ? surChoix(0) : router.replace('/mon-profil/a-propos' as Href))}
           style={{ paddingBottom: 10, borderBottomWidth: actif === 'apropos' ? 2 : 0, borderBottomColor: '#1A1A1A', marginBottom: -1 }}>
           <Text
             className="text-[15px]"
@@ -49,7 +49,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
         </Pressable>
         ) : null}
         <Pressable
-          onPress={() => router.replace('/mon-profil/parametres' as Href)}
+          onPress={() => (surChoix ? surChoix(1) : router.replace('/mon-profil/parametres' as Href))}
           style={{ paddingBottom: 10, borderBottomWidth: actif === 'parametres' ? 2 : 0, borderBottomColor: '#1A1A1A', marginBottom: -1 }}>
           <Text
             className="text-[15px]"
