@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFonctionnalite } from '@/lib/featureFlags';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { RUBRIQUES, type Rubrique } from '@/lib/rubriquesCvLogique';
 
@@ -15,6 +16,7 @@ const VERSIONS = '/mon-profil/versions-cv' as Href;
 
 export default function EcranRubriqueCv({ titre, cle, vide, children }: { titre: string; cle: Rubrique; vide: boolean; children?: ReactNode }) {
   const router = useRouter();
+  const scanOuvert = useFonctionnalite('feat_scanner_document');
   const rubrique = RUBRIQUES.find((r) => r.cle === cle);
 
   return (
@@ -29,6 +31,7 @@ export default function EcranRubriqueCv({ titre, cle, vide, children }: { titre:
               <Text className="text-[14.5px] text-center mt-2" style={{ color: 'rgba(0,0,0,0.6)' }}>
                 Ajoutez-le : vos {rubrique?.pluriel ?? 'informations'} se remplissent toutes seules.
               </Text>
+              {scanOuvert ? (
               <Pressable
                 onPress={() => router.push(SCANNER)}
                 accessibilityRole="button"
@@ -36,6 +39,7 @@ export default function EcranRubriqueCv({ titre, cle, vide, children }: { titre:
                 style={{ minHeight: 56, borderRadius: 16, backgroundColor: '#10B981' }}>
                 <Text className="text-[16px] font-extrabold text-white">Créer ou importer mon CV</Text>
               </Pressable>
+              ) : null}
             </View>
           ) : (
             <>
@@ -45,11 +49,11 @@ export default function EcranRubriqueCv({ titre, cle, vide, children }: { titre:
                   <Text className="flex-1 text-[14px] font-bold text-[#1A1A1A]">Ces informations viennent de votre CV.</Text>
                 </View>
                 <Pressable
-                  onPress={() => router.push(SCANNER)}
+                  onPress={() => router.push(scanOuvert ? SCANNER : ('/mon-profil/choisir-cv' as Href))}
                   accessibilityRole="button"
                   className="items-center justify-center mt-3"
                   style={{ minHeight: 48, borderRadius: 14, backgroundColor: '#F2F0EA', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' }}>
-                  <Text className="text-[14px] font-extrabold text-[#1A1A1A]">Mettre à jour avec un nouveau CV</Text>
+                  <Text className="text-[14px] font-extrabold text-[#1A1A1A]">{scanOuvert ? 'Mettre à jour avec un nouveau CV' : 'Mettre à jour avec un de mes CV'}</Text>
                 </Pressable>
               </View>
               {children}

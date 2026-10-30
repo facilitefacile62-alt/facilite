@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import ImageVariante from '@/components/ImageVariante';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Modal, PanResponder, Pressable, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,7 +138,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
             ))}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
-            <Image source={{ uri: story.imageUrl }} alt="" style={{ width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#34D399' }} contentFit="cover" />
+            <ImageVariante uri={story.imageUrl} largeur={480} alt="" style={{ width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#34D399' }} contentFit="cover" />
             <View style={{ flex: 1 }}>
               <Text numberOfLines={1} style={{ color: '#fff', fontSize: 14.5, fontWeight: '800' }}>{story.titre}</Text>
               <Text numberOfLines={1} style={{ color: 'rgba(255,255,255,0.72)', fontSize: 11.5, fontWeight: '700' }}>par ffacilite · {ilYA(story.creeLe)}</Text>

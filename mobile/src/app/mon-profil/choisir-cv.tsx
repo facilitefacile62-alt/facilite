@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFonctionnalite } from '@/lib/featureFlags';
 import EnteteRubrique from '@/components/EnteteRubrique';
 import { useAuth } from '@/context/AuthContext';
 import { listerMesCv, memoriserCvChoisi } from '@/lib/mesCv';
@@ -18,6 +19,7 @@ type Ligne = { cv: CvEnregistre; donnees: DonneesExtraites };
 
 export default function ChoisirCvScreen() {
   const router = useRouter();
+  const scanOuvert = useFonctionnalite('feat_scanner_document');
   const { user } = useAuth();
   const userId = user?.id;
   const [lignes, setLignes] = useState<Ligne[] | null>(null);
@@ -69,6 +71,7 @@ export default function ChoisirCvScreen() {
               <Ionicons name="document-text-outline" size={36} color="rgba(0,0,0,0.3)" />
               <Text className="text-[17px] font-black text-center text-[#1A1A1A] mt-3">Aucun CV prêt à servir.</Text>
               <Text className="text-[14.5px] text-center mt-2" style={{ color: 'rgba(0,0,0,0.6)' }}>Créez un CV ou importez-en un : il apparaîtra ici.</Text>
+              {scanOuvert ? (
               <Pressable
                 onPress={() => router.replace('/mon-profil/scanner-document' as Href)}
                 accessibilityRole="button"
@@ -76,6 +79,7 @@ export default function ChoisirCvScreen() {
                 style={{ minHeight: 56, borderRadius: 16, backgroundColor: '#10B981' }}>
                 <Text className="text-[16px] font-extrabold text-white">Créer ou importer mon CV</Text>
               </Pressable>
+              ) : null}
             </View>
           ) : (
             lignes.map((l) => (

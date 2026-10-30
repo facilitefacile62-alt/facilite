@@ -1,12 +1,12 @@
 import BoutonAudioOffre from '@/components/BoutonAudioOffre';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
 
 import BadgeMatchingOffre from '@/components/BadgeMatchingOffre';
 import CandidatureRapide from '@/components/CandidatureRapide';
+import ImageVariante from '@/components/ImageVariante';
 import OfferMediaView from '@/components/OfferMediaView';
 import { resoudreActionOffre } from '@/lib/actionOffre';
 import type { OffreReelle } from '@/lib/useOffresReelles';
@@ -83,8 +83,9 @@ export default function CarteOffre({
       {/* 1. EN-TÊTE DE LA CARTE : logo entreprise + nom (bleu) + date */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {offre.posterUri && !logoErreur ? (
-          <Image
-            source={{ uri: offre.posterUri }}
+          <ImageVariante
+            uri={offre.posterUri}
+            largeur={960}
             alt={offre.entreprise}
             style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#E8E4DA' }}
             contentFit="cover"
@@ -161,7 +162,7 @@ export default function CarteOffre({
       )}
 
       {/* 6. AFFICHE RÉELLE DE L'OFFRE */}
-      <OfferMediaView media={offre.rawImage || offre.posterUri} dark={false} onPress={() => router.push(`/offre/${offre.id}`)} />
+      <OfferMediaView media={offre.rawImage || offre.posterUri} largeurImage={960} dark={false} onPress={() => router.push(`/offre/${offre.id}`)} />
 
       {/* 7. PIED : candidats */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 12, paddingHorizontal: 2 }}>

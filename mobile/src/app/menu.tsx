@@ -6,7 +6,7 @@ import { Alert, Animated, Dimensions, Linking, PanResponder, Pressable, ScrollVi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import { contientSansAccent } from '@/lib/texte';
 import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import { definirUserMode } from '@/lib/userMode';
@@ -36,7 +36,7 @@ type Tuile = {
   route?: string;
   lien?: string;
   // Interrupteur du site (Administration → Fonctionnalités) qui commande cette tuile.
-  interrupteur?: string;
+  interrupteur?: string | string[];
   // Page dont le but est un paiement de bien numérique : masquée sur iOS (règle Apple 3.1.1).
   paiementNumerique?: boolean;
 };
@@ -44,14 +44,14 @@ type Tuile = {
 const NB_ENTREPRISES = SPONTANEOUS_COMPANIES.length;
 
 const TUILES_FACILITE: Tuile[] = [
-  { id: 'diagnostic', emoji: '🔍', teinte: '#DCE8FD', titre: 'Diagnostic CV', sous: 'Score ATS & mots-clés', tag: { texte: 'GRATUIT', fond: '#D1FAE5', couleur: '#047857' }, route: '/web/importer-cv', interrupteur: 'feat_diagnostic_cv' },
-  { id: 'fonctionnalites', emoji: '🛠️', teinte: '#EDE7FB', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E7E5E4', couleur: '#44403C' }, route: '/profil?onglet=fonctionnalites&retour=menu', interrupteur: 'nav_plus_fonctionnalites' },
+  { id: 'diagnostic', emoji: '🔍', teinte: '#DCE8FD', titre: 'Diagnostic CV', sous: 'Score ATS & mots-clés', tag: { texte: 'GRATUIT', fond: '#D1FAE5', couleur: '#047857' }, route: '/web/importer-cv', interrupteur: ['feat_diagnostic_cv', 'feat_app_diagnostic_cv'] },
+  { id: 'fonctionnalites', emoji: '🛠️', teinte: '#EDE7FB', titre: 'Fonctionnalités', sous: 'Tous les outils & modèles', tag: { texte: 'TOUS', fond: '#E7E5E4', couleur: '#44403C' }, route: '/profil?onglet=fonctionnalites&retour=menu', interrupteur: ['nav_plus_fonctionnalites', 'feat_app_fonctionnalites'] },
   { id: 'candidature', emoji: '🏢', teinte: '#DCE8FD', titre: 'Candidature Spontanée', sous: 'Grandes entreprises', tag: { texte: `${NB_ENTREPRISES} ENTR.`, fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/candidature-spontanee', interrupteur: 'nav_plus_recrutement_spontane' },
   { id: 'depots', emoji: '📍', teinte: '#EDE7FB', titre: 'Dépôts Physiques', sous: 'Stations & Adresses', route: '/web/recrutement-journalier', interrupteur: 'nav_plus_depots' },
   { id: 'concours', emoji: '🏅', teinte: '#FDEEDC', titre: 'Concours', sous: 'Avis & Examens', tag: { texte: 'PUBLIC', fond: '#FDEEDC', couleur: '#9A3412' }, route: '/web/concours', interrupteur: 'nav_plus_concours' },
   { id: 'formation', emoji: '🎓', teinte: '#D7F2EA', titre: 'Formation', sous: 'Certifications & Cours', tag: { texte: 'PRO', fond: '#D7F2EA', couleur: '#0d3b34' }, route: '/web/formations', interrupteur: 'nav_plus_formation', paiementNumerique: true },
   { id: 'telecharger', emoji: '📲', teinte: '#EDEBE6', titre: "Télécharger l'application", sous: 'Installez Facilité en un geste', tag: { texte: 'NOUVEAU', fond: '#EDEBE6', couleur: '#44403C' }, lien: 'https://ffacilite.com/telecharger-android' },
-  { id: 'idees', emoji: '💡', teinte: '#FDF3D0', titre: 'Boîte à idées', sous: 'Vos suggestions', route: '/web/boite-a-idees', interrupteur: 'nav_plus_boite_idees' },
+  { id: 'idees', emoji: '💡', teinte: '#FDF3D0', titre: 'Boîte à idées', sous: 'Vos suggestions', route: '/web/boite-a-idees', interrupteur: ['nav_plus_boite_idees', 'feat_app_boite_idees'] },
   { id: 'faq', emoji: '❓', teinte: '#D7F2EA', titre: 'FAQ & Centre d’aide', sous: 'Questions fréquentes', route: '/web/faq' },
 ];
 
@@ -61,12 +61,18 @@ const TUILES_LOCAUX: Tuile[] = [
   { id: 'etablissements', emoji: '🏥', teinte: '#DCE8FD', titre: 'Établissements ouverts', sous: 'Points Wave, pharmacies, cliniques', tag: { texte: 'NOUVEAU', fond: '#DCE8FD', couleur: '#1E3A8A' }, route: '/web/etablissements', interrupteur: 'nav_marketplace' },
 ];
 
+// Menu ☰ de Locaux réduit à « Réglages » : « Marketplace », « Mon activité », « Établissements ouverts » et l'espace vendeur (« Mes annonces »,
+// « Commandes reçues », « Mes livraisons ») ne sont plus proposés ici (ils restent dans le code, rien n'est supprimé). Remettre à false pour les rétablir.
+const MENU_LOCAUX_REDUIT = true;
+const TUILE_REGLAGES: Tuile = { id: 'reglages', emoji: '⚙️', teinte: '#EDEBE6', titre: 'Réglages', sous: 'Boutique & compte', route: '/marketplace/reglages' };
+
 export default function MenuScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile, signOut } = useAuth();
   const ouvert = useFonctionnalites();
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
   const [rechercheOuverte, setRechercheOuverte] = useState(false);
   const [terme, setTerme] = useState('');
   // Mode affiché (Facilité | Locaux) : on part de la plateforme où l'on se trouve (☰ ouvert depuis Locaux → Locaux, depuis Facilité →
@@ -83,7 +89,8 @@ export default function MenuScreen() {
   const pageCourante = useRef(pageDepart);
   const [largeurOnglets, setLargeurOnglets] = useState(0);
   // « Vos espaces » : déplié à l'ouverture, replié quand on fait défiler vers le bas.
-  const [espacesDeplies, setEspacesDeplies] = useState(true);
+  // « VOS ESPACES » : la carte (Facilité / Locaux, Profil, Boutique) est PLIÉE par défaut, dans les deux espaces ; le chevron la déplie.
+  const [espacesDeplies, setEspacesDeplies] = useState(false);
   const [boutique, setBoutique] = useState<MaBoutique | null>(null);
   const userId = user?.id;
 
@@ -155,13 +162,13 @@ export default function MenuScreen() {
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (achatsNumeriquesAutorises || !tu.paiementNumerique) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
   const tuilesFacilite = filtre(TUILES_FACILITE);
-  const tuilesLocaux = filtre(TUILES_LOCAUX);
+  const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES] : TUILES_LOCAUX);
 
   // Espace vendeur (mode Locaux, compte avec boutique) : gestion de la boutique, tuiles de la même taille.
   const commandesOuvertes = ouvert('feat_marketplace_commandes');
   const livraisonOuverte = ouvert('nav_marketplace_livreur');
   const tuilesVendeur: Tuile[] =
-    mode === 'locaux' && boutique
+    !MENU_LOCAUX_REDUIT && mode === 'locaux' && boutique
       ? [
           { id: 'annonces', emoji: '🏷️', teinte: '#DCE8FD', titre: 'Mes annonces', sous: 'Articles en vente', route: '/marketplace/vendre/annonces' },
           ...(commandesOuvertes ? [{ id: 'commandes', emoji: '📦', teinte: '#FDEEDC', titre: 'Commandes reçues', sous: 'À préparer & envoyer', route: `/marketplace/vendre/commandes-recues?storeId=${boutique.id}` }] : []),

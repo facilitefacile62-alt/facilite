@@ -9,6 +9,7 @@ import ConteneurClavier, { useClavierOuvert } from '@/components/ConteneurClavie
 import FaciliteBottomBar from '@/components/FaciliteBottomBar';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { fondSombre } from '@/components/themeSombre';
+import { useGardeEcransMasques } from '@/lib/gardeEcransMasques';
 import { ThemeAppProvider, ThemeFrontiere, useThemeApp } from '@/context/ThemeApp';
 import { LangueProvider } from '@/lib/i18n';
 import { bienvenueDejaVue, ETAPES_INSCRIPTION, etapeEmailVue, etapeInscriptionMemorisee, memoriserEtapeInscription, etapeMotDePasseVue, nomDejaConfirme, sessionAFermerAuDemarrage } from '@/lib/preferencesConnexion';
@@ -149,6 +150,8 @@ function BarreFaciliteHorsOnglets() {
 
 /** Contenu racine : navigation et écrans, aux couleurs du thème choisi (clair, sombre ou automatique). */
 function ContenuRacine() {
+  // Écrans masqués (interrupteurs fermés) : renvoyés à l'accueil, quelle que soit la façon d'y arriver (lien profond, notification, bouton).
+  useGardeEcransMasques();
   const clavierOuvert = useClavierOuvert();
   const { sombre } = useThemeApp();
   const fond = sombre ? fondSombre('#F2F0EA') : '#F2F0EA';

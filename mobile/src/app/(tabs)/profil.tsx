@@ -7,12 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ApercuDocument from '@/components/ApercuDocument';
 import AvatarProfil from '@/components/AvatarProfil';
 import CatalogueCv from '@/components/CatalogueCv';
+import CatalogueModelesDocuments from '@/components/CatalogueModelesDocuments';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import { useImportDocument } from '@/components/FeuilleImportDocument';
 import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import LigneOutil from '@/components/LigneOutil';
 import { useAuth } from '@/context/AuthContext';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import {
   badgeDocument,
   chargerMesDocuments,
@@ -21,6 +22,7 @@ import {
   urlDocument,
   type DocumentProfil,
 } from '@/lib/documents';
+import { useFonctionnalites } from '@/lib/featureFlags';
 import { OUTILS } from '@/lib/outils';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 import { useT } from '@/lib/i18n';
@@ -40,7 +42,7 @@ const BORDURE = 'rgba(0,0,0,0.06)';
 const BLEU = '#2563EB';
 const VERT = '#10B981';
 
-type Onglet = 'documents' | 'fonctionnalites' | 'achat-cv';
+type Onglet = 'documents' | 'fonctionnalites' | 'achat-cv' | 'modeles-documents';
 
 export default function ProfilScreen() {
   const t = useT();
@@ -48,10 +50,15 @@ export default function ProfilScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
 
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
+  const autorise = useFonctionnalites();
+  const fonctionnalitesOuvertes = autorise(['nav_plus_fonctionnalites', 'feat_app_fonctionnalites']);
+  const outilsVisibles = OUTILS.filter((o) => autorise(o.interrupteur));
+
   // Ouvert depuis le menu ☰ (tuile « Fonctionnalités ») : l'onglet Fonctionnalités s'affiche d'emblée, avec un bouton Retour vers là d'où l'on vient.
   const { onglet: ongletDemande, retour: retourDemande } = useLocalSearchParams<{ onglet?: string; retour?: string }>();
   const [onglet, setOnglet] = useState<Onglet>(
-    ongletDemande === 'fonctionnalites' ? 'fonctionnalites' : ongletDemande === 'achat-cv' && achatsNumeriquesAutorises ? 'achat-cv' : 'documents'
+    ongletDemande === 'fonctionnalites' && fonctionnalitesOuvertes ? 'fonctionnalites' : ongletDemande === 'achat-cv' && achatsNumeriquesAutorises ? 'achat-cv' : 'documents'
   );
   const { width: largeurEcran } = useWindowDimensions();
   const rangeeOnglets = useRef<ScrollView>(null);
@@ -198,12 +205,15 @@ export default function ProfilScreen() {
           {(() => {
             const liste = [
               { id: 'documents' as const, label: 'Documents', icone: 'document-text-outline' as const },
-              { id: 'fonctionnalites' as const, label: 'Fonctionnalités', icone: 'flash-outline' as const },
+              ...(fonctionnalitesOuvertes ? [{ id: 'fonctionnalites' as const, label: 'Fonctionnalités', icone: 'flash-outline' as const }] : []),
               ...(achatsNumeriquesAutorises ? [{ id: 'achat-cv' as const, label: 'Achat de CV', icone: 'bag-handle-outline' as const }] : []),
+              // Paiements fermés : « Modèles de documents » prend la place de « Achat de CV » (pas de prix ; un modèle choisi ouvre WhatsApp vers Facilité).
+              ...(!achatsNumeriquesAutorises ? [{ id: 'modeles-documents' as const, label: 'Modèles de documents', icone: 'document-text-outline' as const }] : []),
             ];
-            const marge = liste.length > 2 ? 8 : 16;
-            const espace = liste.length > 2 ? 6 : 10;
-            const largeur = Math.max(112, Math.floor((largeurEcran - marge * 2 - espace * (liste.length - 1)) / liste.length));
+            const nb = liste.length;
+            const marge = nb > 2 ? 8 : 16;
+            const espace = nb > 2 ? 6 : 10;
+            const largeur = Math.max(112, Math.floor((largeurEcran - marge * 2 - espace * (nb - 1)) / nb));
             return (
               <ScrollView
                 ref={rangeeOnglets}
@@ -289,16 +299,18 @@ export default function ProfilScreen() {
             </View>
           ) : onglet === 'achat-cv' && achatsNumeriquesAutorises ? (
             <CatalogueCv />
-          ) : (
+          ) : onglet === 'modeles-documents' && !achatsNumeriquesAutorises ? (
+            <CatalogueModelesDocuments />
+          ) : onglet === 'fonctionnalites' && fonctionnalitesOuvertes ? (
             <FlatList
               scrollEnabled={false}
-              data={OUTILS}
+              data={outilsVisibles}
               keyExtractor={(item) => item.id}
               contentContainerClassName="px-4 py-3"
               ItemSeparatorComponent={() => <View className="h-2.5" />}
               renderItem={({ item, index }) => <LigneOutil outil={item} vedette={index === 0} onPress={() => item.ouvrir(router)} />}
             />
-          )}
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>

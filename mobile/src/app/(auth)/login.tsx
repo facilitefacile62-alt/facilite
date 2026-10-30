@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
 
+import ConnexionEmailScreen from './connexion-email';
+
 import { BoutonContinuer, CaseRonde, CasesCode } from '@/components/CasesCode';
 import EcranConnexion, { CHAMP } from '@/components/EcranConnexion';
 import EcranConnexionRefonte, { CHAMP_BLANC, FORME, GRIS_BOUTON, VERT } from '@/components/EcranConnexionRefonte';
@@ -43,7 +45,8 @@ import { memoriserGarderSession } from '@/lib/preferencesConnexion';
 type Onglet = 'telephone' | 'email';
 type Etape = 'saisie' | 'code' | 'motdepasse';
 
-export default function LoginScreen() {
+// Connexion par code (téléphone ou e-mail) : écran complet, réservé au cas où l'interrupteur feat_app_connexion_sans_mot_de_passe est ouvert.
+function LoginParCode() {
   const router = useRouter();
   const [onglet, setOnglet] = useState<Onglet>('telephone');
   const [etape, setEtape] = useState<Etape>('saisie');
@@ -467,4 +470,14 @@ export default function LoginScreen() {
       </Pressable>
     </EcranConnexionRefonte>
   );
+}
+
+/**
+ * Écran de connexion de l'application. Par défaut (interrupteur feat_app_connexion_sans_mot_de_passe fermé, ou illisible) : « Continuer avec Google » en grand, puis
+ * e-mail et mot de passe pour les comptes existants — ni inscription, ni « mot de passe oublié », ni code par SMS ou par e-mail. Les personnes déjà inscrites par
+ * e-mail et mot de passe se connectent ici ; celles qui ont oublié leur mot de passe le réinitialisent sur le site.
+ */
+export default function LoginScreen() {
+  const codeOuvert = useFonctionnalite('feat_app_connexion_sans_mot_de_passe');
+  return codeOuvert ? <LoginParCode /> : <ConnexionEmailScreen racine />;
 }
