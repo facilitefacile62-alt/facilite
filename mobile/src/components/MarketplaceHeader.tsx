@@ -6,6 +6,8 @@ import { Pressable, Text, View } from 'react-native';
 import BasculePlateforme from '@/components/BasculePlateforme';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
+import PastilleMiseAJour from '@/components/PastilleMiseAJour';
+import { useMiseAJour } from '@/lib/miseAJour';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 
 // En-tête de la plateforme Marketplace (maquettes 15, 16, 17, 28 à 32, 36) :
@@ -19,6 +21,7 @@ const BLEU = '#2563EB';
 
 export default function MarketplaceHeader() {
   const router = useRouter();
+  const maj = useMiseAJour();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const compteurs = useCompteursNonLus();
 
@@ -51,6 +54,7 @@ export default function MarketplaceHeader() {
       </Pressable>
       <Pressable onPress={() => router.push('/marketplace/menu' as Href)} accessibilityLabel="Menu" hitSlop={8}>
         <Ionicons name="menu" size={22} color="#1A1A1A" />
+        <PastilleMiseAJour visible={Boolean(maj.disponible)} fond="#e3dbcc" />
       </Pressable>
 
       <PanneauNotifications visible={notifsOuvertes} onFermer={() => setNotifsOuvertes(false)} />

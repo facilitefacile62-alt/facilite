@@ -429,6 +429,6 @@ export const config = {
     //     le binaire de /telecharger-android — trouvé le 13/09/2026, un
     //     visiteur anonyme recevait la page /login en HTML à la place du
     //     paquet Android ("Erreur d'analyse" à l'installation).
-    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?|apk)$).*)",
+    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|app-version\\.json|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?|apk)$).*)",
   ],
 };
