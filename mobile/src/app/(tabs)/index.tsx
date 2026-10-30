@@ -11,6 +11,7 @@ import FaciliteHeader from '@/components/FaciliteHeader';
 import StoryViewer from '@/components/StoryViewer';
 import { useAuth } from '@/context/AuthContext';
 import { surRemontee } from '@/lib/remonterFil';
+import BandeauMiseAJour from '@/components/BandeauMiseAJour';
 import { useStoriesVues } from '@/lib/storiesVues';
 import { chargerStories, type Story } from '@/lib/stories';
 import { useCandidateMatchScores } from '@/lib/useCandidateMatchScores';
@@ -148,7 +149,10 @@ export default function AccueilScreen() {
             onEndReachedThreshold={0.6}
             removeClippedSubviews={false}
             ListHeaderComponent={
-              // Rangée des stories (maquette 08) : cercles avec photo, anneau VERT tant que la story n'est pas vue,
+              <>
+                {/* Mise à jour disponible : information en tête du fil (disparaît s'il n'y en a pas, ou si on la ferme). */}
+                <BandeauMiseAJour />
+                {              // Rangée des stories (maquette 08) : cercles avec photo, anneau VERT tant que la story n'est pas vue,
               // GRIS une fois vue ; pas de « Ma story » ni d'« Ajouter une story ». Elle disparaît au défilement
               // (les non vues passent près du logo, voir l'en-tête).
               rangee.length === 0 ? null : <View style={{ marginHorizontal: 0, marginTop: 6, marginBottom: 6, paddingVertical: 6 }}>
@@ -167,7 +171,8 @@ export default function AccueilScreen() {
                     );
                   })}
                 </ScrollView>
-              </View>
+              </View>}
+              </>
             }
             ListEmptyComponent={
               <View

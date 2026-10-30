@@ -12,6 +12,7 @@ import { SPONTANEOUS_COMPANIES } from '@/lib/spontaneousData';
 import { definirUserMode } from '@/lib/userMode';
 import { chargerMesBoutiques, type MaBoutique } from '@/lib/vendeur';
 import { useT } from '@/lib/i18n';
+import { useMiseAJour } from '@/lib/miseAJour';
 
 // Menu « ☰ » (maquettes 01 à 03 du dossier Menu et Publier) : une PAGE (la barre du bas reste visible, « ‹ Menu » revient à
 // l'écran d'origine). En haut, sous le titre, le sélecteur FIXE « Facilité | Locaux » qui change les tuiles SANS quitter la
@@ -39,6 +40,8 @@ type Tuile = {
   interrupteur?: string | string[];
   // Page dont le but est un paiement de bien numérique : masquée sur iOS (règle Apple 3.1.1).
   paiementNumerique?: boolean;
+  /** Tuile « Mise à jour » : grisée et sans action tant qu'aucune nouvelle version n'est disponible. */
+  miseAJour?: boolean;
 };
 
 const NB_ENTREPRISES = SPONTANEOUS_COMPANIES.length;
@@ -64,6 +67,7 @@ const TUILES_LOCAUX: Tuile[] = [
 // Menu ☰ de Locaux réduit à « Réglages » : « Marketplace », « Mon activité », « Établissements ouverts » et l'espace vendeur (« Mes annonces »,
 // « Commandes reçues », « Mes livraisons ») ne sont plus proposés ici (ils restent dans le code, rien n'est supprimé). Remettre à false pour les rétablir.
 const MENU_LOCAUX_REDUIT = true;
+const TUILE_MAJ: Tuile = { id: 'maj', emoji: '⬇️', teinte: '#DCE8FD', titre: 'Mise à jour', sous: 'Installer la dernière version', miseAJour: true };
 const TUILE_REGLAGES: Tuile = { id: 'reglages', emoji: '⚙️', teinte: '#EDEBE6', titre: 'Réglages', sous: 'Boutique & compte', route: '/marketplace/reglages' };
 
 export default function MenuScreen() {
@@ -149,7 +153,12 @@ export default function MenuScreen() {
     ]);
   }
 
+  const maj = useMiseAJour();
   function ouvrirTuile(tu: Tuile) {
+    if (tu.miseAJour) {
+      maj.ouvrir();
+      return;
+    }
     if (tu.lien) Linking.openURL(tu.lien).catch(() => {});
     else if (tu.route) router.push(tu.route as Href);
   }
@@ -161,8 +170,8 @@ export default function MenuScreen() {
   const q = terme.trim();
   const filtre = (liste: Tuile[]) =>
     liste.filter((tu) => ouvert(tu.interrupteur) && (achatsNumeriquesAutorises || !tu.paiementNumerique) && (!q || contientSansAccent(`${t(tu.titre)} ${t(tu.sous)} ${tu.titre} ${tu.sous}`, q)));
-  const tuilesFacilite = filtre(TUILES_FACILITE);
-  const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES] : TUILES_LOCAUX);
+  const tuilesFacilite = filtre([...TUILES_FACILITE, TUILE_MAJ]);
+  const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES, TUILE_MAJ] : [...TUILES_LOCAUX, TUILE_MAJ]);
 
   // Espace vendeur (mode Locaux, compte avec boutique) : gestion de la boutique, tuiles de la même taille.
   const commandesOuvertes = ouvert('feat_marketplace_commandes');
@@ -215,14 +224,20 @@ export default function MenuScreen() {
         <Pressable
           key={tu.id}
           onPress={() => ouvrirTuile(tu)}
+          disabled={tu.miseAJour && !maj.disponible}
           accessibilityRole="button"
+          accessibilityState={{ disabled: Boolean(tu.miseAJour && !maj.disponible) }}
           className="bg-white"
-          style={{ width: '48%', borderRadius: 18, padding: 14, height: 132, justifyContent: 'space-between' }}>
+          style={{ width: '48%', borderRadius: 18, padding: 14, height: 132, justifyContent: 'space-between', opacity: tu.miseAJour && !maj.disponible ? 0.45 : 1 }}>
           <View className="flex-row items-start justify-between">
             <View className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: tu.teinte }}>
               <Text style={{ fontSize: 19 }}>{tu.emoji}</Text>
             </View>
-            {tu.tag ? (
+            {tu.miseAJour ? (
+              <View style={{ backgroundColor: maj.disponible ? '#DCE8FD' : '#E7E5E4', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                <Text className="text-[10px] font-black" style={{ color: maj.disponible ? '#1E3A8A' : '#57534E' }}>{maj.disponible ? t('DISPONIBLE') : t('À JOUR')}</Text>
+              </View>
+            ) : tu.tag ? (
               <View style={{ backgroundColor: tu.tag.fond, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
                 <Text className="text-[10px] font-black" style={{ color: tu.tag.couleur }}>{t(tu.tag.texte)}</Text>
               </View>
@@ -230,7 +245,7 @@ export default function MenuScreen() {
           </View>
           <View>
             <Text className="text-[14.5px] font-black text-[#1A1A1A]" numberOfLines={2}>{t(tu.titre)}</Text>
-            <Text className="text-[12px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={2}>{t(tu.sous)}</Text>
+            <Text className="text-[12px] mt-0.5" style={{ color: 'rgba(0,0,0,0.5)' }} numberOfLines={2}>{tu.miseAJour && maj.disponible ? t('Version') + ' ' + maj.disponible.version : t(tu.sous)}</Text>
           </View>
         </Pressable>
       ))}

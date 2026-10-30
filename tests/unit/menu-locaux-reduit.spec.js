@@ -8,7 +8,7 @@ const menu = fs.readFileSync(path.join(__dirname, "../../mobile/src/app/menu.tsx
 test.describe("menu ☰ de Locaux réduit à Réglages", () => {
   test("la liste de Locaux ne contient que « Réglages » tant que MENU_LOCAUX_REDUIT est vrai", () => {
     expect(menu).toContain("const MENU_LOCAUX_REDUIT = true;");
-    expect(menu).toContain("const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES] : TUILES_LOCAUX);");
+    expect(menu).toContain("const tuilesLocaux = filtre(MENU_LOCAUX_REDUIT ? [TUILE_REGLAGES, TUILE_MAJ] : [...TUILES_LOCAUX, TUILE_MAJ]);"); // « Réglages » + la tuile « Mise à jour » (grisée sans mise à jour)
     expect(menu).toContain("route: '/marketplace/reglages'");
   });
   test("la carte « Vos espaces » est PLIÉE par défaut (Facilité comme Locaux) et se déplie par le chevron", () => {
