@@ -26,8 +26,20 @@ test("le schéma de redirection de connexion ne dépend pas de l'identifiant And
   expect(JSON.stringify(expo.android)).not.toContain("com.ffacilite.mobile");
 });
 
-test("aucune version numérique n'est écrite en dur dans app.json : EAS gère le versionCode à distance", () => {
+test("versions : nom 2.0.0, code 10 (supérieur au code 3 publié sur Google Play), écrits dans app.json ; EAS lit la version en local, sans incrément automatique en production", () => {
   const { expo } = json("mobile/app.json");
-  expect(expo.android.versionCode).toBeUndefined();
-  expect(json("mobile/eas.json").cli.appVersionSource).toBe("remote");
+  expect(expo.version).toBe("2.0.0");
+  expect(expo.android.versionCode).toBe(10);
+  expect(expo.android.versionCode).toBeGreaterThan(3);
+  const eas = json("mobile/eas.json");
+  expect(eas.cli.appVersionSource).toBe("local");
+  expect(eas.build.production.autoIncrement).toBeUndefined();
+});
+
+test("le profil de production fabrique un .aab (pas d'APK), en distribution store, avec l'environnement production d'EAS", () => {
+  const prod = json("mobile/eas.json").build.production;
+  expect(prod.distribution).toBe("store");
+  expect(prod.environment).toBe("production");
+  expect(prod.android?.buildType).toBeUndefined(); // par défaut : app-bundle (.aab)
+  expect(json("mobile/eas.json").build.preview.android.buildType).toBe("apk");
 });
