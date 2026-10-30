@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
@@ -26,7 +26,7 @@ export default function CarteArticleMarketplace({ article, onPress }: { article:
       className="flex-1 bg-white rounded-2xl border border-black/[0.06] overflow-hidden active:opacity-90">
       <View className="w-full aspect-square bg-[#F2F0EA] items-center justify-center">
         {photo ? (
-          <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={150} />
+          <ImagePublique source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" transition={150} />
         ) : (
           <Ionicons name="image-outline" size={32} color="#9CA3AF" />
         )}

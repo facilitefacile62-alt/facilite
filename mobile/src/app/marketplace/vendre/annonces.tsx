@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useFocusEffect, useRouter, useLocalSearchParams, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
@@ -35,7 +35,7 @@ function LigneAnnonce({ article, storeId, onChange }: { article: MonArticle; sto
     <View className="flex-row items-center gap-3 bg-white" style={{ borderRadius: 18, padding: 10 }}>
       <View style={{ width: 58, height: 58, borderRadius: 12, backgroundColor: '#E9E4D8', overflow: 'hidden' }}>
         {photo ? (
-          <Image source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <ImagePublique source={{ uri: photo }} alt={article.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
           <Svg width="100%" height="100%">
             {Array.from({ length: 8 }, (_, i) => (

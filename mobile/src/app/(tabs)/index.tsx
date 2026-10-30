@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native';
@@ -159,7 +159,7 @@ export default function AccueilScreen() {
                       <Pressable key={st.id} onPress={() => setStoryOuverte(i)} accessibilityLabel={`Story : ${st.titre}`} style={{ alignItems: 'center', gap: 6, width: 70 }}>
                         <View style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 3, borderColor: vue ? '#C4C4C4' : '#10E688', padding: 2, backgroundColor: 'transparent' }}>
                           <View style={{ flex: 1, borderRadius: 30, overflow: 'hidden', backgroundColor: '#E5E7EB' }}>
-                            <Image source={{ uri: st.imageUrl }} alt={st.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                            <ImagePublique source={{ uri: st.imageUrl }} alt={st.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                           </View>
                         </View>
                         <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: '600', color: '#374151' }}>{st.titre}</Text>

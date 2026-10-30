@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Modal, PanResponder, Pressable, Share, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { WHATSAPP_FACILITE } from '@/lib/configFacilite';
+import { candidatsImage } from '@/lib/imagesPubliques';
 import { ilYA, type Story } from '@/lib/stories';
 import { marquerStoryVue } from '@/lib/storiesVues';
 
@@ -66,7 +68,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
   useEffect(() => {
     if (idStory) marquerStoryVue(idStory);
     const suivante = stories[index + 1];
-    if (suivante) Image.prefetch(suivante.imageUrl).catch(() => {});
+    if (suivante) Image.prefetch(candidatsImage(suivante.imageUrl)[0] ?? suivante.imageUrl, 'disk').catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idStory]);
 
@@ -104,7 +106,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
       <View style={{ flex: 1, backgroundColor: '#0A0A0A' }} {...geste.panHandlers}>
         {/* Visuel, ratio conservé */}
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-          <Image source={{ uri: story.imageUrl }} alt={story.titre} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+          <ImagePublique source={{ uri: story.imageUrl }} alt={story.titre} style={{ width: '100%', height: '100%' }} contentFit="contain" />
         </View>
 
         {/* Zones de toucher : tiers gauche = précédente, le reste = suivante ; appui long = pause */}
@@ -137,7 +139,7 @@ export default function StoryViewer({ stories, debut, onFermer }: { stories: Sto
             ))}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
-            <Image source={{ uri: story.imageUrl }} alt="" style={{ width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#34D399' }} contentFit="cover" />
+            <ImagePublique source={{ uri: story.imageUrl }} alt="" style={{ width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#34D399' }} contentFit="cover" />
             <View style={{ flex: 1 }}>
               <Text numberOfLines={1} style={{ color: '#fff', fontSize: 14.5, fontWeight: '800' }}>{story.titre}</Text>
               <Text numberOfLines={1} style={{ color: 'rgba(255,255,255,0.72)', fontSize: 11.5, fontWeight: '700' }}>par ffacilite · {ilYA(story.creeLe)}</Text>

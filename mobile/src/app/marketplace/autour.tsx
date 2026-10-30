@@ -1,6 +1,6 @@
 import { contientTousLesMots } from '@/lib/texte';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -558,7 +558,7 @@ export default function AutourDeMoiScreen() {
                         className="items-center justify-center rounded-full overflow-hidden"
                         style={{ width: actif ? 52 : 46, height: actif ? 52 : 46, backgroundColor: '#111827', borderWidth: actif ? 3 : 2, borderColor: actif ? '#fff' : 'rgba(255,255,255,0.55)' }}>
                         {photosRecherche.get(item.id) ? (
-                          <Image source={{ uri: photosRecherche.get(item.id) }} alt={item.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                          <ImagePublique source={{ uri: photosRecherche.get(item.id) }} alt={item.nom} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                         ) : avatars.get(item.id)?.xml ? (
                           <SvgXml xml={avatars.get(item.id)!.xml!} width="100%" height="100%" />
                         ) : (
@@ -592,7 +592,7 @@ export default function AutourDeMoiScreen() {
                 <Pressable onPress={() => router.push(`/marketplace/${item.id}` as Href)} style={{ width: 104 }}>
                   <View className="rounded-[14px] overflow-hidden items-center justify-center" style={{ width: 104, height: 70, backgroundColor: '#E4DED2' }}>
                     {item.photos[0] ? (
-                      <Image source={{ uri: item.photos[0] }} alt={item.titre} style={{ width: 104, height: 70 }} contentFit="cover" />
+                      <ImagePublique source={{ uri: item.photos[0] }} alt={item.titre} style={{ width: 104, height: 70 }} contentFit="cover" />
                     ) : (
                       <Ionicons name="image-outline" size={20} color="rgba(0,0,0,0.3)" />
                     )}

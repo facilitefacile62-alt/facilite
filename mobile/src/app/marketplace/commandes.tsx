@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
@@ -59,7 +59,7 @@ function CarteCommande({
       <View className="flex-row gap-3">
         <View className="rounded-[14px] overflow-hidden items-center justify-center" style={{ width: 56, height: 56, backgroundColor: '#E8E4DA' }}>
           {photo ? (
-            <Image source={{ uri: photo }} alt={commande.item?.titre ?? 'Article'} style={{ width: 56, height: 56 }} contentFit="cover" />
+            <ImagePublique source={{ uri: photo }} alt={commande.item?.titre ?? 'Article'} style={{ width: 56, height: 56 }} contentFit="cover" />
           ) : (
             <Ionicons name="image-outline" size={20} color="rgba(0,0,0,0.25)" />
           )}

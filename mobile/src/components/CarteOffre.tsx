@@ -1,6 +1,6 @@
 import BoutonAudioOffre from '@/components/BoutonAudioOffre';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
@@ -83,7 +83,7 @@ export default function CarteOffre({
       {/* 1. EN-TÊTE DE LA CARTE : logo entreprise + nom (bleu) + date */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {offre.posterUri && !logoErreur ? (
-          <Image
+          <ImagePublique largeur={480}
             source={{ uri: offre.posterUri }}
             alt={offre.entreprise}
             style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#E8E4DA' }}

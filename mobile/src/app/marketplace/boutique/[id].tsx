@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
@@ -151,7 +152,7 @@ export default function BoutiquePubliqueScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
         {/* Photo de couverture choisie par le vendeur (visible de tous les visiteurs de la boutique) */}
         {boutique.cover_photo ? (
-          <Image source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 150 }} contentFit="cover" />
+          <ImagePublique source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 150 }} contentFit="cover" />
         ) : null}
 
         {/* Retour */}
@@ -166,7 +167,7 @@ export default function BoutiquePubliqueScreen() {
           <View className="flex-row items-center gap-3">
             <View className="w-[72px] h-[72px] rounded-full bg-[#E8E4DA] items-center justify-center overflow-hidden">
               {logo ? (
-                <Image source={{ uri: logo }} alt={boutique.nom} style={{ width: 72, height: 72 }} contentFit="cover" />
+                <ImagePublique source={{ uri: logo }} alt={boutique.nom} style={{ width: 72, height: 72 }} contentFit="cover" />
               ) : avatar ? (
                 <Image source={{ uri: avatar }} alt={boutique.nom} style={{ width: 72, height: 72 }} contentFit="cover" />
               ) : (
@@ -239,7 +240,7 @@ export default function BoutiquePubliqueScreen() {
                     style={{ width: '47.5%', backgroundColor: CARTE, borderWidth: 1, borderColor: BORDURE }}>
                     <View className="w-full aspect-square bg-[#E8E4DA] items-center justify-center">
                       {a.photos[0] ? (
-                        <Image source={{ uri: a.photos[0] }} alt={a.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                        <ImagePublique source={{ uri: a.photos[0] }} alt={a.titre} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
                         <Ionicons name="image-outline" size={30} color="rgba(0,0,0,0.3)" />
                       )}

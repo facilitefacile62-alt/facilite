@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -42,7 +42,7 @@ export default function CarteArticleMessage({ articleId }: { articleId: string }
       style={{ width: 230, borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }}>
       <View style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}>
         {photo ? (
-          <Image source={{ uri: photo }} alt={article?.titre ?? 'Article'} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          <ImagePublique source={{ uri: photo }} alt={article?.titre ?? 'Article'} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         ) : (
           <Ionicons name="pricetag-outline" size={30} color="rgba(0,0,0,0.25)" />
         )}

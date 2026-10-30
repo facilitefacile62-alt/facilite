@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -109,7 +110,7 @@ export default function OfferMediaView({
 
               {/* Image Plein Écran (entière, quel que soit son format) */}
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 8 }}>
-                <Image
+                <ImagePublique
                   source={{ uri: images[lightboxIndex] }}
                   alt="Affiche de recrutement"
                   style={{ width: '100%', height: '100%' }}
@@ -170,7 +171,7 @@ export default function OfferMediaView({
         <Pressable
           onPress={() => handlePressImage(indexValide)}
           style={{ width: '100%', aspectRatio: ratioDe(uriActive) ?? RATIO_ATTENTE, position: 'relative' }}>
-          <Image
+          <ImagePublique
             source={{ uri: uriActive }}
             alt="Affiche de recrutement"
             style={{ width: '100%', height: '100%' }}
@@ -253,7 +254,7 @@ export default function OfferMediaView({
                   borderColor: idx === indexValide ? '#10E688' : 'transparent',
                   opacity: idx === indexValide ? 1 : 0.7,
                 }}>
-                <Image
+                <ImagePublique largeur={480}
                   source={{ uri }}
                   alt={`Photo ${idx + 1}`}
                   style={{ width: '100%', height: '100%' }}

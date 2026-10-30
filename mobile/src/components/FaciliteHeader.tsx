@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { Pressable, Text, View } from 'react-native';
 
 import BasculePlateforme from '@/components/BasculePlateforme';
@@ -64,7 +64,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
                 accessibilityLabel={`Story : ${s.titre}`}
                 hitSlop={4}
                 style={{ marginLeft: i === 0 ? 0 : -7, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: s.vue ? '#C4C4C4' : '#10E688', backgroundColor: '#E5E7EB', overflow: 'hidden' }}>
-                <Image source={{ uri: s.imageUrl }} alt="" style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                <ImagePublique source={{ uri: s.imageUrl }} alt="" style={{ width: '100%', height: '100%' }} contentFit="cover" />
               </Pressable>
             ))}
           </View>

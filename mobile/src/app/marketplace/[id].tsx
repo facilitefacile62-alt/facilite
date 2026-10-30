@@ -1,6 +1,6 @@
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImagePublique from '@/components/ImagePublique';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -226,7 +226,7 @@ export default function ArticleScreen() {
             <Text className="text-[10px] font-bold text-white mt-0.5">Vidéo</Text>
           </>
         ) : (
-          <Image source={{ uri: article.photos[indice] }} alt={`Photo ${indice + 1}`} style={{ width: 62, height: 62 }} contentFit="cover" />
+          <ImagePublique source={{ uri: article.photos[indice] }} alt={`Photo ${indice + 1}`} style={{ width: 62, height: 62 }} contentFit="cover" />
         )}
       </Pressable>
     );
@@ -315,7 +315,7 @@ export default function ArticleScreen() {
                     onMomentumScrollEnd={surDefilement}
                     extraData={hauteurGalerie}
                     renderItem={({ item }) => (
-                      <Image
+                      <ImagePublique
                         source={{ uri: item }}
                         alt={article.titre}
                         style={{ width: largeurCadre, height: hauteurGalerie }}
