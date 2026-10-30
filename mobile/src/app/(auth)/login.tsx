@@ -269,17 +269,13 @@ export default function LoginScreen() {
         onPress={google}
         disabled={googleEnCours}
         accessibilityRole="button"
-        className="flex-row items-center justify-center gap-3 bg-white"
-        style={{ height: 54, borderRadius: 27, borderWidth: 1.5, borderColor: '#E5E2DC', opacity: googleEnCours ? 0.6 : 1 }}>
-        <IconGoogle size={20} />
-        <Text className="text-[17px] font-black text-[#111]">Continuer avec Google</Text>
+        className="flex-row items-center justify-center gap-3"
+        style={{ height: 58, borderRadius: 16, backgroundColor: '#F2F2F2', opacity: googleEnCours ? 0.6 : 1 }}>
+        <IconGoogle size={22} />
+        <Text className="text-[17px] font-semibold text-[#111]">Continuer avec Google</Text>
       </Pressable>
 
-      <View className="flex-row items-center gap-3 mt-5">
-        <View className="flex-1" style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
-        <Text className="text-[13px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>ou</Text>
-        <View className="flex-1" style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
-      </View>
+      <Text className="text-[14px] text-center mt-5" style={{ color: 'rgba(0,0,0,0.5)' }}>OU</Text>
 
       {telephoneOuvert ? (
       <View className="flex-row mt-4" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
@@ -310,7 +306,7 @@ export default function LoginScreen() {
 
       <View
         className="flex-row items-center mt-4"
-        style={{ height: 52, borderRadius: 12, backgroundColor: CHAMP, paddingHorizontal: 14 }}>
+        style={{ height: 58, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E2DC', paddingHorizontal: 16 }}>
         {parTelephone ? (
           <>
             <Pressable
@@ -344,7 +340,7 @@ export default function LoginScreen() {
                 setEmail(t);
                 if (erreur) setErreur('');
               }}
-              placeholder="E-mail ou nom d'utilisateur"
+              placeholder="Saisissez votre e-mail"
               placeholderTextColor="rgba(0,0,0,0.45)"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -374,7 +370,7 @@ export default function LoginScreen() {
       {erreur ? <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreur}</Text> : null}
 
       <View className="mt-4">
-        <BoutonContinuer onPress={envoyer} actif={saisieValide} chargement={chargement} />
+        <BoutonContinuer onPress={envoyer} actif={saisieValide} chargement={chargement} noir libelle={parTelephone ? 'Continuer' : "Continuer avec l'e-mail"} />
       </View>
     </EcranConnexion>
   );
