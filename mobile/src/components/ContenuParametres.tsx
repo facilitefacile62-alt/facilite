@@ -99,6 +99,13 @@ export default function ContenuParametres() {
                 sous={t('Mot de passe, appareils')}
                 onPress={() => router.push('/mon-profil/securite' as Href)}
               />
+              <CarteMenu
+                icone="trash-outline"
+                titre={t('Supprimer mon compte')}
+                sous={t('Supprimer le compte et les données')}
+                rouge
+                onPress={() => router.push('/web/suppression-compte' as Href)}
+              />
             </GroupeCartes>
           </View>
         </ScrollView>
