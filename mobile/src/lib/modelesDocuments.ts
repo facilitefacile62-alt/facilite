@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 export async function chargerModelesDocuments(): Promise<ModeleDocument[]> {
   const { data, error } = await supabase
     .from('modeles_documents')
-    .select('id, type, nom, description, image_url, ordre')
+    .select('id, type, nom, description, image_url, ordre, message_whatsapp')
     .eq('actif', true)
     .order('ordre', { ascending: true });
   if (error) throw new Error(error.message);
