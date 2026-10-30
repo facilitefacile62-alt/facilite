@@ -40,7 +40,7 @@ import { memoriserGarderSession } from '@/lib/preferencesConnexion';
 // Le clavier ne s'ouvre jamais seul : aucun autoFocus. Le bouton « Continuer »
 // reste à sa place (voir EcranConnexion).
 type Onglet = 'telephone' | 'email';
-type Etape = 'saisie' | 'code';
+type Etape = 'saisie' | 'code' | 'motdepasse';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -63,6 +63,7 @@ export default function LoginScreen() {
   const [motDePasse, setMotDePasse] = useState('');
   const [erreurMdp, setErreurMdp] = useState('');
   const [mdpEnCours, setMdpEnCours] = useState(false);
+  const [mdpVisible, setMdpVisible] = useState(false);
 
   // Compte à rebours avant de pouvoir redemander un code.
   useEffect(() => {
@@ -78,10 +79,19 @@ export default function LoginScreen() {
 
   async function envoyer() {
     if (!saisieValide || chargement || verrouEnvoi.current) return;
+    // E-mail : AUCUN code n'est envoyé (les envois d'e-mails sont limités). La page suivante est celle du mot de passe.
+    if (!parTelephone) {
+      setErreur('');
+      setErreurMdp('');
+      setMotDePasse('');
+      setMdpVisible(false);
+      setEtape('motdepasse');
+      return;
+    }
     verrouEnvoi.current = true;
     setChargement(true);
     setErreur('');
-    const probleme = parTelephone ? await envoyerCodeSmsConnexion(chiffres) : await envoyerCodeEmail(email);
+    const probleme = await envoyerCodeSmsConnexion(chiffres);
     verrouEnvoi.current = false;
     setChargement(false);
     if (probleme) {
@@ -166,6 +176,65 @@ export default function LoginScreen() {
     } finally {
       setGoogleEnCours(false);
     }
+  }
+
+  // ------------------------------------------------------ page « mot de passe »
+  if (etape === 'motdepasse') {
+    return (
+      <EcranConnexion
+        retour={() => {
+          setEtape('saisie');
+          setMotDePasse('');
+          setErreurMdp('');
+        }}>
+        <Text className="text-[26px] font-black text-[#111] mt-1">Ton mot de passe</Text>
+        <Text className="text-[15px] mt-1.5 mb-5" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 21 }}>
+          Pour {email.trim()}
+        </Text>
+
+        <View
+          className="flex-row items-center"
+          style={{ height: 58, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E2DC', paddingHorizontal: 16 }}>
+          <TextInput
+            value={motDePasse}
+            onChangeText={(t) => {
+              setMotDePasse(t);
+              if (erreurMdp) setErreurMdp('');
+            }}
+            placeholder="Mot de passe"
+            placeholderTextColor="rgba(0,0,0,0.45)"
+            secureTextEntry={!mdpVisible}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="current-password"
+            textContentType="password"
+            accessibilityLabel="Mot de passe"
+            onSubmitEditing={connexionMotDePasse}
+            style={[{ flex: 1, fontSize: 16, color: '#111' }, { outlineStyle: 'none' } as object]}
+          />
+          <Pressable
+            onPress={() => setMdpVisible((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={mdpVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            hitSlop={10}>
+            <Ionicons name={mdpVisible ? 'eye-off-outline' : 'eye-outline'} size={24} color="rgba(0,0,0,0.55)" />
+          </Pressable>
+        </View>
+
+        {erreurMdp ? <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreurMdp}</Text> : null}
+
+        <View className="mt-4">
+          <BoutonContinuer onPress={connexionMotDePasse} actif={motDePasse.length > 0} chargement={mdpEnCours} noir libelle="Me connecter" />
+        </View>
+
+        <Pressable onPress={() => router.push('/forgot-password')} hitSlop={6} className="mt-5 self-start">
+          <Text className="text-[15px] font-black" style={{ color: '#2563EB' }}>Mot de passe oublié ?</Text>
+        </Pressable>
+        <Text className="text-[13px] mt-3" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 19 }}>
+          Pas de mot de passe ? Reviens en arrière et choisis « Continuer avec Google ».
+        </Text>
+      </EcranConnexion>
+    );
   }
 
   // ------------------------------------------------------------ page « code »
