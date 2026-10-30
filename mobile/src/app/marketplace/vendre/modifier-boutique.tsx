@@ -49,6 +49,11 @@ function decouperNom(nomComplet: string | null | undefined): { prenom: string; n
 }
 
 export default function ModifierBoutiqueScreen() {
+  return <ModifierBoutique />;
+}
+
+/** `integre` : page « Modifier profil » du glisseur « Modifier infos » (sans en-tête propre ; « Enregistrer » en bas de la page). */
+export function ModifierBoutique({ integre = false }: { integre?: boolean }) {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
@@ -57,6 +62,13 @@ export default function ModifierBoutiqueScreen() {
   const [prenom, setPrenom] = useState(connu.prenom);
   const [nom, setNom] = useState(connu.nom);
   const [whatsapp, setWhatsapp] = useState('');
+  // « Numéro d'appel » (personnel) = profiles.phone, même case et même chemin d'écriture que « Coordonnées » ; sans confirmation.
+  const phoneProfil = typeof profile?.phone === 'string' ? profile.phone : '';
+  const [appel, setAppel] = useState(phoneProfil);
+  const [appelModifie, setAppelModifie] = useState(false);
+  useEffect(() => {
+    if (!appelModifie) setAppel(phoneProfil);
+  }, [phoneProfil, appelModifie]);
   const [ville, setVille] = useState('');
   const dateFixee = typeof profile?.date_naissance === 'string' && profile.date_naissance.length > 0;
   const [naissance, setNaissance] = useState(typeof profile?.date_naissance === 'string' ? profile.date_naissance : '');
@@ -170,6 +182,8 @@ export default function ModifierBoutiqueScreen() {
         // renseignée ne change jamais (la base la verrouille) : on ne la renvoie pas.
         ...(dateFixee ? {} : { date_naissance: naissance.trim() || null }),
         gender: sexe.trim() || null,
+        // Le numéro d'appel n'est renvoyé que s'il a changé (on ne retouche pas un numéro de compte qu'on n'a pas modifié).
+        ...(appel.trim() !== phoneProfil.trim() ? { phone: appel.trim() || null } : {}),
       });
       if (boutique) {
         await modifierBoutique(boutique.id, {
@@ -191,9 +205,10 @@ export default function ModifierBoutiqueScreen() {
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <MarketplaceHeader />
+      <SafeAreaView className="flex-1" edges={integre ? [] : ['top']}>
+        {integre ? null : <MarketplaceHeader />}
 
+        {integre ? null : (
         <View className="flex-row items-center gap-3 px-4 py-3 bg-white border-b border-black/[0.06]">
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/vendre'))}
@@ -222,6 +237,7 @@ export default function ModifierBoutiqueScreen() {
             <Text className="text-[12.5px] font-bold text-[#047857]">Enregistrer</Text>
           </Pressable>
         </View>
+        )}
 
         {chargement ? (
           <View className="flex-1 items-center justify-center">
@@ -231,7 +247,7 @@ export default function ModifierBoutiqueScreen() {
           <ScrollView
             ref={defilement}
             contentContainerClassName="px-4 pt-5 gap-3"
-            contentContainerStyle={{ paddingBottom: clavier + 60 }}
+            contentContainerStyle={{ paddingBottom: clavier + (integre ? 90 : 60) }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
             {boutique ? (
@@ -294,6 +310,17 @@ export default function ModifierBoutiqueScreen() {
               indication="Contact direct"
               clavier="phone-pad"
               onLayout={suivre('whatsapp')}
+              onFocus={faireVoir('whatsapp')}
+            />
+            <ChampEncadre
+              libelle="Numéro d'appel"
+              valeur={appel}
+              onChange={(t) => {
+                setAppelModifie(true);
+                setAppel(t);
+              }}
+              indication="Numéro personnel"
+              clavier="phone-pad"
               onFocus={faireVoir('whatsapp')}
             />
 
@@ -388,6 +415,17 @@ export default function ModifierBoutiqueScreen() {
             </View>
           </ScrollView>
         )}
+        {integre && !chargement ? (
+          <Pressable
+            onPress={enregistrer}
+            disabled={enregistrement}
+            accessibilityRole="button"
+            className="flex-row items-center justify-center gap-2 rounded-full"
+            style={{ position: 'absolute', left: 16, right: 16, bottom: 12, height: 46, borderWidth: 1.5, borderColor: '#34D399', backgroundColor: '#F3FBF7', opacity: enregistrement ? 0.6 : 1 }}>
+            {enregistrement ? <ActivityIndicator color="#047857" size="small" /> : <Ionicons name="checkmark" size={16} color="#047857" />}
+            <Text className="text-[14px] font-black text-[#047857]">Enregistrer</Text>
+          </Pressable>
+        ) : null}
       </SafeAreaView>
     </View>
   );

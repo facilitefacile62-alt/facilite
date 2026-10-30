@@ -108,7 +108,8 @@ export default function ProfilSecuriteScreen() {
         const { data } = await supabase.auth.getSession();
         const jeton = data.session?.access_token;
         if (!jeton) throw new Error('session');
-        const reponse = await fetch(`${SITE_URL}/api/auth/has-password`, { headers: { Authorization: `Bearer ${jeton}` } });
+        // Délai maximal : sans réponse en 10 s, on propose « Réessayer » au lieu de laisser « Vérification en cours… » indéfiniment.
+        const reponse = await fetch(`${SITE_URL}/api/auth/has-password`, { headers: { Authorization: `Bearer ${jeton}` }, signal: AbortSignal.timeout(10000) });
         const corps = await reponse.json();
         if (!annule) setAUnMotDePasse(typeof corps?.hasPassword === 'boolean' ? corps.hasPassword : 'echec');
       } catch {
@@ -366,6 +367,15 @@ export default function ProfilSecuriteScreen() {
                     <Text className="text-[12px] text-black/45 mt-0.5">{aUnMotDePasse === true ? 'Vous serez déconnecté de tous vos appareils' : 'Connexion par e-mail'}</Text>
                   </View>
                 </Pressable>
+                {!peutEnregistrer && !enCours ? (
+                  <Text className="text-[12px] mt-2" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 17 }}>
+                    {aUnMotDePasse === true && !actuelVerifie
+                      ? "Vérifiez d'abord votre mot de passe actuel pour activer ce bouton."
+                      : !assezLong
+                        ? `Saisissez au moins ${LONGUEUR_MIN} caractères pour activer ce bouton.`
+                        : 'Confirmez le même mot de passe pour activer ce bouton.'}
+                  </Text>
+                ) : null}
               </>
             ) : null}
           </View>

@@ -7,6 +7,7 @@ import ConnexionEmailScreen from './connexion-email';
 
 import { BoutonContinuer, CaseRonde, CasesCode } from '@/components/CasesCode';
 import EcranConnexion, { CHAMP } from '@/components/EcranConnexion';
+import EcranConnexionRefonte, { CHAMP_BLANC, FORME, GRIS_BOUTON, VERT } from '@/components/EcranConnexionRefonte';
 import { IconGoogle } from '@/components/facilite-icons';
 import {
   DELAI_RENVOI_EMAIL_S,
@@ -42,7 +43,7 @@ import { memoriserGarderSession } from '@/lib/preferencesConnexion';
 // Le clavier ne s'ouvre jamais seul : aucun autoFocus. Le bouton « Continuer »
 // reste à sa place (voir EcranConnexion).
 type Onglet = 'telephone' | 'email';
-type Etape = 'saisie' | 'code';
+type Etape = 'saisie' | 'code' | 'motdepasse';
 
 // Connexion par code (téléphone ou e-mail) : écran complet, réservé au cas où l'interrupteur feat_app_connexion_sans_mot_de_passe est ouvert.
 function LoginParCode() {
@@ -66,6 +67,8 @@ function LoginParCode() {
   const [motDePasse, setMotDePasse] = useState('');
   const [erreurMdp, setErreurMdp] = useState('');
   const [mdpEnCours, setMdpEnCours] = useState(false);
+  const [mdpVisible, setMdpVisible] = useState(false);
+  const [mdpActif, setMdpActif] = useState(false);
 
   // Compte à rebours avant de pouvoir redemander un code.
   useEffect(() => {
@@ -81,10 +84,19 @@ function LoginParCode() {
 
   async function envoyer() {
     if (!saisieValide || chargement || verrouEnvoi.current) return;
+    // E-mail : AUCUN code n'est envoyé (les envois d'e-mails sont limités). La page suivante est celle du mot de passe.
+    if (!parTelephone) {
+      setErreur('');
+      setErreurMdp('');
+      setMotDePasse('');
+      setMdpVisible(false);
+      setEtape('motdepasse');
+      return;
+    }
     verrouEnvoi.current = true;
     setChargement(true);
     setErreur('');
-    const probleme = parTelephone ? await envoyerCodeSmsConnexion(chiffres) : await envoyerCodeEmail(email);
+    const probleme = await envoyerCodeSmsConnexion(chiffres);
     verrouEnvoi.current = false;
     setChargement(false);
     if (probleme) {
@@ -169,6 +181,84 @@ function LoginParCode() {
     } finally {
       setGoogleEnCours(false);
     }
+  }
+
+  // ------------------------------------------------------ page « mot de passe »
+  if (etape === 'motdepasse') {
+    const adresse = email.trim();
+    return (
+      <EcranConnexionRefonte
+        retour={() => {
+          setEtape('saisie');
+          setMotDePasse('');
+          setErreurMdp('');
+        }}>
+        <View>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: '#111' }}>Saisissez votre mot de passe</Text>
+          <Text style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.55)', marginTop: 4 }}>pour vous connecter à votre compte</Text>
+        </View>
+
+        <View className="flex-row items-center" style={{ ...CHAMP_BLANC, paddingHorizontal: 14, gap: 10 }}>
+          <View className="items-center justify-center" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#D1FAE5' }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#047857' }}>{(adresse.charAt(0) || '?').toUpperCase()}</Text>
+          </View>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ flex: 1, fontSize: 14.5, color: '#111' }}>{adresse}</Text>
+          <Pressable
+            onPress={() => {
+              setEtape('saisie');
+              setMotDePasse('');
+              setErreurMdp('');
+            }}
+            accessibilityRole="button"
+            hitSlop={8}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#059669' }}>Modifier</Text>
+          </Pressable>
+        </View>
+
+        <View
+          className="flex-row items-center"
+          style={{ ...CHAMP_BLANC, paddingHorizontal: 16, borderColor: mdpActif ? VERT : 'rgba(0,0,0,0.12)', borderWidth: mdpActif ? 1.5 : 1 }}>
+          <TextInput
+            value={motDePasse}
+            onChangeText={(t) => {
+              setMotDePasse(t);
+              if (erreurMdp) setErreurMdp('');
+            }}
+            onFocus={() => setMdpActif(true)}
+            onBlur={() => setMdpActif(false)}
+            placeholder="Mot de passe"
+            placeholderTextColor="rgba(0,0,0,0.4)"
+            secureTextEntry={!mdpVisible}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="current-password"
+            textContentType="password"
+            accessibilityLabel="Mot de passe"
+            onSubmitEditing={connexionMotDePasse}
+            style={[{ flex: 1, fontSize: 16, color: '#111' }, { outlineStyle: 'none' } as object]}
+          />
+          <Pressable
+            onPress={() => setMdpVisible((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={mdpVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            hitSlop={10}>
+            <Ionicons name={mdpVisible ? 'eye-off-outline' : 'eye-outline'} size={24} color="rgba(0,0,0,0.5)" />
+          </Pressable>
+        </View>
+
+        {erreurMdp ? <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626' }}>{erreurMdp}</Text> : null}
+
+        <Pressable
+          onPress={connexionMotDePasse}
+          disabled={motDePasse.length === 0 || mdpEnCours}
+          accessibilityRole="button"
+          className="items-center justify-center"
+          style={{ ...FORME, backgroundColor: VERT, opacity: motDePasse.length === 0 || mdpEnCours ? 0.55 : 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>{mdpEnCours ? '…' : 'Se connecter'}</Text>
+        </Pressable>
+        {/* « Mot de passe oublié » et « Recevoir un code » : absents de cet écran (maquette du 30/10/2026). */}
+      </EcranConnexionRefonte>
+    );
   }
 
   // ------------------------------------------------------------ page « code »
@@ -267,53 +357,42 @@ function LoginParCode() {
 
   // ----------------------------------------------------------- page de saisie
   return (
-    <EcranConnexion>
+    <EcranConnexionRefonte>
       <Pressable
         onPress={google}
         disabled={googleEnCours}
         accessibilityRole="button"
-        className="flex-row items-center justify-center gap-3 bg-white"
-        style={{ height: 54, borderRadius: 27, borderWidth: 1.5, borderColor: '#E5E2DC', opacity: googleEnCours ? 0.6 : 1 }}>
-        <IconGoogle size={20} />
-        <Text className="text-[17px] font-black text-[#111]">Continuer avec Google</Text>
+        className="flex-row items-center justify-center"
+        style={{ ...CHAMP_BLANC, gap: 12, opacity: googleEnCours ? 0.6 : 1 }}>
+        <IconGoogle size={22} />
+        <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#111' }}>Continuer avec Google</Text>
       </Pressable>
 
-      <View className="flex-row items-center gap-3 mt-5">
-        <View className="flex-1" style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
-        <Text className="text-[13px] font-bold" style={{ color: 'rgba(0,0,0,0.45)' }}>ou</Text>
-        <View className="flex-1" style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
-      </View>
+      <Text style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)', textAlign: 'center' }}>OU</Text>
 
       {telephoneOuvert ? (
-      <View className="flex-row mt-4" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
-        {(['telephone', 'email'] as const).map((o) => {
-          const actif = onglet === o;
-          return (
-            <Pressable
-              key={o}
-              onPress={() => {
-                setOnglet(o);
-                setErreur('');
-              }}
-              className="flex-1 items-center"
-              style={{ paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: actif ? '#111' : 'transparent', marginBottom: -2 }}>
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-                className="text-[16px]"
-                style={{ fontWeight: actif ? '900' : '700', color: actif ? '#111' : 'rgba(0,0,0,0.45)' }}>
-                {o === 'telephone' ? 'Téléphone' : "E-mail/nom d'utilisateur"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <View className="flex-row mt-4" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
+          {(['telephone', 'email'] as const).map((o) => {
+            const actif = onglet === o;
+            return (
+              <Pressable
+                key={o}
+                onPress={() => {
+                  setOnglet(o);
+                  setErreur('');
+                }}
+                className="flex-1 items-center"
+                style={{ paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: actif ? '#111' : 'transparent', marginBottom: -2 }}>
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: actif ? '900' : '700', color: actif ? '#111' : 'rgba(0,0,0,0.45)' }}>
+                  {o === 'telephone' ? 'Téléphone' : 'E-mail'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       ) : null}
 
-      <View
-        className="flex-row items-center mt-4"
-        style={{ height: 52, borderRadius: 12, backgroundColor: CHAMP, paddingHorizontal: 14 }}>
+      <View className="flex-row items-center" style={{ ...CHAMP_BLANC, paddingHorizontal: 16 }}>
         {parTelephone ? (
           <>
             <Pressable
@@ -347,7 +426,7 @@ function LoginParCode() {
                 setEmail(t);
                 if (erreur) setErreur('');
               }}
-              placeholder="E-mail ou nom d'utilisateur"
+              placeholder="Saisissez votre e-mail"
               placeholderTextColor="rgba(0,0,0,0.45)"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -366,20 +445,30 @@ function LoginParCode() {
         )}
       </View>
 
-      <View className="mt-4">
-        <CaseRonde
-          cochee={garder}
-          onChange={setGarder}
-          texte="Enregistre tes informations de connexion pour te connecter automatiquement la prochaine fois."
-        />
-      </View>
+      <Pressable onPress={() => setGarder(!garder)} className="flex-row items-center" style={{ gap: 12 }} accessibilityRole="checkbox" accessibilityState={{ checked: garder }}>
+        <View
+          className="items-center justify-center"
+          style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: garder ? VERT : 'transparent', borderWidth: garder ? 0 : 1.5, borderColor: 'rgba(0,0,0,0.3)' }}>
+          {garder ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
+        </View>
+        <Text style={{ flex: 1, fontSize: 11.5, color: 'rgba(0,0,0,0.65)', lineHeight: 17 }}>
+          Enregistre tes informations de connexion pour te connecter automatiquement la prochaine fois.
+        </Text>
+      </Pressable>
 
-      {erreur ? <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreur}</Text> : null}
+      {erreur ? <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626' }}>{erreur}</Text> : null}
 
-      <View className="mt-4">
-        <BoutonContinuer onPress={envoyer} actif={saisieValide} chargement={chargement} />
-      </View>
-    </EcranConnexion>
+      <Pressable
+        onPress={envoyer}
+        disabled={!saisieValide || chargement}
+        accessibilityRole="button"
+        className="items-center justify-center"
+        style={{ ...FORME, backgroundColor: saisieValide ? VERT : GRIS_BOUTON }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>
+          {chargement ? '…' : parTelephone ? 'Continuer' : "Continuer avec l'e-mail"}
+        </Text>
+      </Pressable>
+    </EcranConnexionRefonte>
   );
 }
 

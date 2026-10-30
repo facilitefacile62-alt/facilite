@@ -39,6 +39,11 @@ function Groupe({ titre, enfants }: { titre?: string; enfants: React.ReactNode }
 
 
 export default function ReglagesMarketplaceScreen() {
+  return <ReglagesMarketplace />;
+}
+
+/** `integre` : page « Réglages » du glisseur « Modifier infos » (sans en-tête propre, même corps). */
+export function ReglagesMarketplace({ integre = false }: { integre?: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
@@ -92,10 +97,13 @@ export default function ReglagesMarketplaceScreen() {
   if (userId && !chargement && estVendeur) {
     return (
       <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
-        <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
-          <MarketplaceHeader />
-        </View>
+        {integre ? null : (
+          <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
+            <MarketplaceHeader />
+          </View>
+        )}
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
+          {integre ? null : (
           <View className="flex-row items-center px-4 py-3">
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'))}
@@ -106,6 +114,8 @@ export default function ReglagesMarketplaceScreen() {
             </Pressable>
             <Text className="flex-1 text-center text-[15px] font-black tracking-widest" style={{ marginRight: 44 }} numberOfLines={1}>{(boutique?.nom ?? 'Réglages').toUpperCase()}</Text>
           </View>
+
+          )}
 
           <View className="px-4">
             <GroupeCartes>
@@ -131,7 +141,7 @@ export default function ReglagesMarketplaceScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
-        <EnteteMarketplace titre="Réglages" sousTitre={estVendeur ? 'Boutique' : undefined} />
+        {integre ? null : <EnteteMarketplace titre="Réglages" sousTitre={estVendeur ? 'Boutique' : undefined} />}
 
         {!userId ? (
           <View className="flex-1 items-center justify-center px-8">

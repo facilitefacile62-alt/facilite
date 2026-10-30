@@ -18,11 +18,16 @@ function decouperNom(nomComplet: string | null | undefined): { prenom: string; n
 // Le formulaire est remonté quand le profil arrive : ouvert directement par un
 // lien, il se remplit quand même avec le prénom et le nom du compte.
 export default function ModifierProfilVisiteurScreen() {
-  const { profile } = useAuth();
-  return <Formulaire key={(profile?.id as string | undefined) ?? 'chargement'} />;
+  return <FormulaireProfilVisiteur />;
 }
 
-function Formulaire() {
+/** `integre` : page « Modifier profil » du glisseur « Modifier infos » (sans en-tête propre). */
+export function FormulaireProfilVisiteur({ integre = false }: { integre?: boolean }) {
+  const { profile } = useAuth();
+  return <Formulaire key={(profile?.id as string | undefined) ?? 'chargement'} integre={integre} />;
+}
+
+function Formulaire({ integre }: { integre: boolean }) {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const connu = decouperNom(profile?.full_name as string | undefined);
@@ -55,7 +60,7 @@ function Formulaire() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
-        <EnteteMarketplace titre="Modifier le profil" />
+        {integre ? null : <EnteteMarketplace titre="Modifier le profil" />}
 
         <View className="px-5 pt-2 gap-3.5">
           <View className="gap-1.5">

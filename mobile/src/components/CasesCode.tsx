@@ -92,11 +92,14 @@ export function BoutonContinuer({
   actif,
   chargement,
   libelle = 'Continuer',
+  noir = false,
 }: {
   onPress: () => void;
   actif: boolean;
   chargement?: boolean;
   libelle?: string;
+  /** Variante de la page de connexion : bouton noir, coins arrondis (pas vert). */
+  noir?: boolean;
 }) {
   return (
     <Pressable
@@ -104,7 +107,7 @@ export function BoutonContinuer({
       disabled={!actif || chargement}
       accessibilityRole="button"
       className="items-center justify-center"
-      style={{ height: 56, borderRadius: 28, backgroundColor: actif ? '#10B981' : '#BDEFD9' }}>
+      style={noir ? { height: 58, borderRadius: 16, backgroundColor: actif ? '#1A1A1A' : '#B9B7B2' } : { height: 56, borderRadius: 28, backgroundColor: actif ? '#10B981' : '#BDEFD9' }}>
       <Text className="text-[17px] font-black text-white">{chargement ? '…' : libelle}</Text>
     </Pressable>
   );

@@ -324,14 +324,8 @@ export default function MaBoutiqueScreen() {
               <View className="flex-1 items-center px-2" pointerEvents="none">
                 <Text className="text-[14px] font-black tracking-widest text-white rounded-full px-3 py-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(17,17,17,0.9)' }} numberOfLines={1}>{boutique.nom.toUpperCase()}</Text>
               </View>
-              <Pressable
-                onPress={() => router.push('/marketplace/reglages' as Href)}
-                accessibilityRole="button"
-                accessibilityLabel="Réglages de la boutique"
-                className="items-center justify-center"
-                style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.9)' }}>
-                <Ionicons name="pencil" size={17} color="#FFFFFF" />
-              </Pressable>
+              {/* Le crayon « Réglages de la boutique » est retiré : « Modifier infos » (sous le nom) est le seul bouton de modification ; les Réglages restent dans le menu ☰. */}
+              <View style={{ width: 44, height: 44 }} />
             </View>
             <View className="absolute items-center justify-center rounded-full bg-white" style={{ right: 12, bottom: 6, width: 30, height: 30 }} pointerEvents="none">
               <Ionicons name={couvertureOuverte ? 'chevron-up' : 'image'} size={16} color="#1A1A1A" />
@@ -393,7 +387,7 @@ export default function MaBoutiqueScreen() {
             </View>
 
             <Pressable
-              onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)}
+              onPress={() => router.push('/marketplace/modifier-infos?boutique=1' as Href)}
               className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5"
               style={{ borderWidth: 1, borderColor: BORDURE }}>
               <Ionicons name="pencil" size={13} color="#1A1A1A" />
