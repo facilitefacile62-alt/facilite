@@ -333,6 +333,11 @@ export function brouillonArticle(article: Pick<ArticleMarketplace, 'id' | 'titre
   ].join('\n');
 }
 
+/** Premier message d'une discussion sur un article : seulement la référence (rendue en CARTE avec la photo), sans question toute faite ; la personne écrit ensuite le sien. */
+export function referenceArticle(article: Pick<ArticleMarketplace, 'id' | 'titre' | 'prixXof'>): string {
+  return brouillonArticle(article).split('\n').slice(0, 2).join('\n');
+}
+
 export function lienWhatsapp(article: ArticleMarketplace): string | null {
   const numero = normaliserWhatsapp(article.whatsapp);
   if (!numero) return null;

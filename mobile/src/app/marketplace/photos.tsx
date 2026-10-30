@@ -55,7 +55,6 @@ export default function PhotosArticleScreen() {
           id: conversationId,
           contexte: 'marketplace',
           nom: article.boutiqueNom,
-          brouillon: brouillonArticle(article),
           article: article.id,
         },
       });

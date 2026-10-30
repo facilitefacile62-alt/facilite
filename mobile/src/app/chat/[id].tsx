@@ -39,7 +39,7 @@ import MarketplaceHeader from '@/components/MarketplaceHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useFavori } from '@/lib/favoris';
 import { useMarquesMessages } from '@/lib/marquesMessages';
-import { normaliserWhatsapp } from '@/lib/marketplace';
+import { normaliserWhatsapp, obtenirArticle, referenceArticle, type ArticleMarketplace } from '@/lib/marketplace';
 import { supabase } from '@/lib/supabase';
 import { envoyerPieceJointeChat, urlPieceJointeSignee, type TypePieceJointe } from '@/lib/chatAttachments';
 import { useChatThread } from '@/lib/useChatThread';
@@ -134,7 +134,25 @@ export default function ChatDetailScreen() {
   }, [marketplace, autreId]);
   const idArticle = typeof articleParam === 'string' ? articleParam : undefined;
   const { favori, basculer: basculerFavori } = useFavori(marketplace ? idArticle : undefined, user?.id);
+  // Discussion ouverte depuis un article : la zone d'écriture est VIDE (la personne écrit son message) ; l'article est montré en carte au-dessus et sa
+  // référence part avec le premier message, pour que le vendeur sache de quel produit il s'agit.
   const [brouillon, setBrouillon] = useState(typeof brouillonParam === 'string' ? brouillonParam : '');
+  const [articleContexte, setArticleContexte] = useState<ArticleMarketplace | null>(null);
+  const [referenceEnvoyee, setReferenceEnvoyee] = useState(false);
+  useEffect(() => {
+    if (!marketplace || !idArticle) return;
+    let annule = false;
+    obtenirArticle(idArticle)
+      .then((a) => {
+        if (!annule) setArticleContexte(a);
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [marketplace, idArticle]);
+  const referenceDejaDansLeFil = Boolean(idArticle) && (messages ?? []).some((m) => articleDuMessage(m.text) === idArticle);
+  const afficherCarteArticle = Boolean(articleContexte) && !referenceEnvoyee && !referenceDejaDansLeFil;
   const listeRef = useRef<FlatList<ChatMessage>>(null);
   // Clavier ouvert : il recouvre déjà la barre système, inutile de garder sa marge sous la zone d'envoi.
   const [clavierOuvert, setClavierOuvert] = useState(false);
@@ -278,6 +296,10 @@ export default function ChatDetailScreen() {
     const texte = reponseA ? `↪ « ${extraitPourReponse(reponseA)} »\n${brouillon}` : brouillon;
     setBrouillon('');
     setReponseA(null);
+    if (articleContexte && afficherCarteArticle) {
+      setReferenceEnvoyee(true);
+      await envoyer(referenceArticle(articleContexte));
+    }
     await envoyer(texte);
   }
 
@@ -535,7 +557,7 @@ export default function ChatDetailScreen() {
                 )}
                 ListEmptyComponent={
                   <Text style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.4)', fontWeight: '500', textAlign: 'center', marginBottom: 24 }}>
-                    {termeRecherche.trim() ? 'Aucun message ne correspond à cette recherche.' : 'Aucun message pour l&apos;instant — dites bonjour 👋'}
+                    {termeRecherche.trim() ? 'Aucun message ne correspond à cette recherche.' : "Aucun message pour l'instant — dites bonjour 👋"}
                   </Text>
                 }
               />
@@ -691,6 +713,13 @@ export default function ChatDetailScreen() {
               <Pressable onPress={() => setReponseA(null)} accessibilityLabel="Annuler la réponse" hitSlop={10}>
                 <Ionicons name="close" size={22} color="#374151" />
               </Pressable>
+            </View>
+          ) : null}
+
+          {afficherCarteArticle && articleContexte ? (
+            <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: 'rgba(0,0,0,0.5)', marginBottom: 6 }}>Votre message concerne cet article :</Text>
+              <CarteArticleMessage articleId={articleContexte.id} />
             </View>
           ) : null}
 
