@@ -196,8 +196,8 @@ test.describe("fichiers absents à la source : choix explicite, rapport, garde-f
     expect(ps).toContain("if ($codeStockage -eq 2)");
     expect(ps).toContain("Relancez la meme commande avec -Reprendre");
     expect(ps).toContain("if ($codeStockage -eq 4) { Demander-Decision-Absents");
-    expect(ps.indexOf("$codeStockage -eq 4")).toBeLessThan(ps.indexOf("verifier.mjs') $clair"));
-    expect(ps.indexOf("verifier.mjs') $clair")).toBeLessThan(ps.indexOf("chiffrement.mjs') chiffrer $tar"));
+    expect(ps.indexOf("$codeStockage -eq 4")).toBeLessThan(ps.indexOf("$argsVerif = @((Join-Path $outils 'verifier.mjs'), $clair"));
+    expect(ps.indexOf("$argsVerif = @((Join-Path $outils 'verifier.mjs'), $clair")).toBeLessThan(ps.indexOf("chiffrement.mjs') chiffrer $tar"));
   });
   test("le choix est une phrase exacte (sensible à la casse), enregistrée avec le nombre et l'empreinte de la liste", () => {
     expect(ps).toContain("$reponse -cne 'CONTINUER SANS ABSENTS'");
@@ -212,7 +212,7 @@ test.describe("fichiers absents à la source : choix explicite, rapport, garde-f
     expect(verif).toContain("decision.empreinte === empreinteAbsents(absentsManifeste)");
     expect(verif).toContain("choix explicite de la personne requis");
     expect(verif).toContain("(b.absents === 0 || decisionValide)");
-    expect(verif).toContain("chemin_masque: masquerChemin(f.chemin)");
+    expect(verif).toContain("chemin_masque: masquer(f.chemin)");
   });
   test("l'empreinte de la liste ne dépend pas de l'ordre et change si la liste change", async () => {
     const { empreinteAbsents } = await import("../../scripts/export-production/projet.mjs");

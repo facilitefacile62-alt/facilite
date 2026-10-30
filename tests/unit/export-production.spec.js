@@ -105,7 +105,7 @@ test.describe("script exporter.ps1 : garde-fous", () => {
     expect(ps).toContain("Remove-Item Env:\\EXPORT_DB_URL, Env:\\EXPORT_PASSPHRASE");
   });
   test("ne chiffre et ne supprime rien si la vérification échoue ; relit l'archive chiffrée avant de supprimer le dossier en clair", () => {
-    expect(ps.indexOf("chiffrement.mjs') chiffrer $tar")).toBeGreaterThan(ps.indexOf("verifier.mjs') $clair"));
+    expect(ps.indexOf("chiffrement.mjs') chiffrer $tar")).toBeGreaterThan(ps.indexOf("$argsVerif = @((Join-Path $outils 'verifier.mjs'), $clair"));
     expect(ps).toContain("La verification a trouve des ecarts : rien n'est chiffre ni supprime");
     expect(ps.indexOf("dechiffrer $enc")).toBeGreaterThan(0);
     expect(ps.indexOf("dechiffrer $enc")).toBeLessThan(ps.indexOf("Remove-Item $clair -Recurse"));
