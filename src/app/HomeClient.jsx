@@ -1719,7 +1719,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                     <div className="flex items-center gap-3">
                       {job.logo ? (
                         <img
-                          src={job.logo}
+                          src={adresseImage(job.logo)}
                           alt={job.company}
                           className="w-10 h-10 rounded-full object-contain p-1 border border-gray-200 bg-white shadow-2xs flex-shrink-0"
                         />
@@ -2801,7 +2801,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
             onClick={() => setViewImageModal({ isOpen: false, url: null })}
           >
             <img
-              src={viewImageModal.url}
+              src={adresseImage(viewImageModal.url)}
               alt="Aperçu plein écran"
               className="max-w-full max-h-full object-contain shadow-2xl rounded-sm cursor-default"
               onClick={(e) => e.stopPropagation()} // Prevent click from closing when clicking exactly on the image
