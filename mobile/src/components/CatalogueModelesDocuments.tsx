@@ -43,7 +43,7 @@ export default function CatalogueModelesDocuments() {
   );
 
   const demander = (m: ModeleDocument) =>
-    Linking.openURL(`https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(messageDemandeModele(m.nom, m.imageUrl))}`).catch(() =>
+    Linking.openURL(`https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(messageDemandeModele(m.nom, m.imageUrl, m.messageWhatsapp))}`).catch(() =>
       Alert.alert('WhatsApp', "Impossible d'ouvrir WhatsApp.")
     );
 
