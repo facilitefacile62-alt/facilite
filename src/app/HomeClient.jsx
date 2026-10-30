@@ -21,7 +21,7 @@ import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 import { variantesImage } from "@/lib/variantesImage";
-import { adresseImage } from "@/lib/imagesPubliques";
+import { adresseImage, proprietesAvatar } from "@/lib/imagesPubliques";
 
 // Fenêtres et modules affichés seulement après un geste (ou en mode « Autour de moi ») : chargés à la demande pour alléger
 // le JavaScript du premier écran (20/10/2026, Lighthouse : 2,3 s d'évaluation de scripts, rendu de l'image principale retardé).
@@ -1719,7 +1719,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                     <div className="flex items-center gap-3">
                       {job.logo ? (
                         <img
-                          src={adresseImage(job.logo)}
+                          {...proprietesAvatar(job.logo)}
                           alt={job.company}
                           className="w-10 h-10 rounded-full object-contain p-1 border border-gray-200 bg-white shadow-2xs flex-shrink-0"
                         />

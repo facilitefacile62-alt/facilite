@@ -38,6 +38,25 @@ export function adresseSupabase(valeur, hote = HOTE_IMAGES) {
 }
 
 /**
+ * Propriétés d'un AVATAR de carte (40 px) qui affiche l'affiche d'une offre (job.logo = image_url) : interrupteur FERMÉ = { src } inchangé, comme avant.
+ * Ouvert : adresse du Worker, variante 480 px choisie par le navigateur (srcSet : le petit rond n'a pas besoin des 1280 px de l'affiche) et chargement différé
+ * (les cartes hors écran ne chargent rien). Les variantes -w480 / -w960 existent pour chaque affiche nommée « -w1280.webp » (même hypothèse que ImageAdaptative).
+ */
+export function proprietesAvatar(url, taille = 40, hote = HOTE_IMAGES) {
+  const src = adresseImage(url, hote);
+  const h = lireHote(hote);
+  if (!h) return { src };
+  // Variantes seulement pour une affiche réellement servie par le Worker (jamais pour une image externe qui porterait le même suffixe).
+  const v = typeof src === "string" && src.startsWith(`${h}/`) ? /^(.*)-w1280\.webp$/i.exec(src) : null;
+  return {
+    src,
+    ...(v ? { srcSet: `${v[1]}-w480.webp 480w, ${v[1]}-w960.webp 960w, ${src} 1280w`, sizes: `${taille}px` } : {}),
+    loading: "lazy",
+    decoding: "async",
+  };
+}
+
+/**
  * Repli automatique : un élément <img>, <audio>, <video> ou <source> servi par le Worker a échoué (Worker indisponible, quota dépassé, fichier introuvable) :
  * on le remet sur Supabase, UNE seule fois. Renvoie true si l'élément a été corrigé. Fonction pure sur l'élément (testable sans navigateur).
  */

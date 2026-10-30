@@ -126,8 +126,8 @@ test.describe("accueil et page Offres : chaque image venant d'une offre passe pa
     test(`${fichier} : aucune source d'image d'offre sans adresseImage()`, () => {
       const code = lire(fichier);
       const expressions = [...code.matchAll(/\bsrc=\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g)].map((m) => m[1].trim());
-      // Garde-fou du test lui-même : l'extraction doit bien trouver les sources connues (accueil : 8, page Offres : 2).
-      expect(expressions.length).toBeGreaterThanOrEqual(fichier.endsWith("HomeClient.jsx") ? 8 : 2);
+      // Garde-fou du test lui-même : l'extraction doit bien trouver les sources connues (accueil : 7, page Offres : 2).
+      expect(expressions.length).toBeGreaterThanOrEqual(fichier.endsWith("HomeClient.jsx") ? 7 : 2);
       const fautives = expressions.filter((e) => !e.includes("adresseImage(") && !AUTORISEES.some((r) => r.test(e)) && e !== "offerImg");
       expect(fautives).toEqual([]);
     });
@@ -137,7 +137,7 @@ test.describe("accueil et page Offres : chaque image venant d'une offre passe pa
   });
   test("accueil : l'avatar des cartes (affiche de l'offre) et la visionneuse sont couverts ; les DONNÉES des offres gardent leur adresse Supabase", () => {
     const code = lire("src/app/HomeClient.jsx");
-    expect(code).toContain("src={adresseImage(job.logo)}");
+    expect(code).toContain("{...proprietesAvatar(job.logo)}");
     expect(code).toContain("src={adresseImage(viewImageModal.url)}");
     expect(code).not.toMatch(/(logo|image|image_url):\s*adresseImage/);
     expect(code).not.toMatch(/src=\{job\.logo\}|src=\{viewImageModal\.url\}/);

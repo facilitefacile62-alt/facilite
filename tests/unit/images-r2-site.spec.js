@@ -130,7 +130,8 @@ test.describe("branchement dans le site", () => {
   test("accueil : les données des offres gardent leurs adresses Supabase ; l'aide n'est appliquée qu'à l'affichage (stories, avatar des cartes, visionneuse)", () => {
     const code = lire("src/app/HomeClient.jsx");
     const lignes = code.split("\n").filter((l) => l.includes("adresseImage(") && !l.includes("import "));
-    expect(lignes).toHaveLength(3);
+    expect(lignes).toHaveLength(2); // ronds de stories, visionneuse ; l'avatar des cartes passe par proprietesAvatar()
+    expect(code).toContain("{...proprietesAvatar(job.logo)}");
     expect(code).not.toMatch(/(logo|image|image_url):\s*adresseImage/);
   });
   test("galerie d'affiches et image adaptative : remplacement à l'affichage, variantes 480/960 construites sur l'adresse du Worker", () => {
