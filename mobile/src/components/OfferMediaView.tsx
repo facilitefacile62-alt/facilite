@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RATIO_ATTENTE, ratioAffichage } from '@/lib/formatImage';
+import ImageVariante from '@/components/ImageVariante';
 import { parseOfferImages } from '@/lib/offerMedia';
+import type { LargeurVariante } from '@/lib/variantesImageLogique';
 
 // Rapport connu de chaque image, GARDÉ ENTRE deux affichages : la liste démonte les cartes qui sortent de l'écran, et
 // sans cette mémoire chaque retour d'une affiche repartait du cadre provisoire puis « sautait » à sa vraie taille — c'est
@@ -17,6 +19,8 @@ interface OfferMediaViewProps {
   onPress?: () => void;
   dark?: boolean;
   enableLightbox?: boolean;
+  /** Variante à télécharger pour l'affichage (480 ou 960 px) ; absent = image d'origine. La visionneuse plein écran garde toujours l'originale. */
+  largeurImage?: LargeurVariante;
 }
 
 /**
@@ -32,6 +36,7 @@ export default function OfferMediaView({
   onPress,
   dark = false,
   enableLightbox = true,
+  largeurImage,
 }: OfferMediaViewProps) {
   const images = parseOfferImages(media);
   const [indexActif, setIndexActif] = useState(0);
@@ -170,8 +175,9 @@ export default function OfferMediaView({
         <Pressable
           onPress={() => handlePressImage(indexValide)}
           style={{ width: '100%', aspectRatio: ratioDe(uriActive) ?? RATIO_ATTENTE, position: 'relative' }}>
-          <Image
-            source={{ uri: uriActive }}
+          <ImageVariante
+            uri={uriActive}
+            largeur={largeurImage}
             alt="Affiche de recrutement"
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
@@ -253,8 +259,9 @@ export default function OfferMediaView({
                   borderColor: idx === indexValide ? '#10E688' : 'transparent',
                   opacity: idx === indexValide ? 1 : 0.7,
                 }}>
-                <Image
-                  source={{ uri }}
+                <ImageVariante
+                  uri={uri}
+                  largeur={largeurImage ? 480 : undefined}
                   alt={`Photo ${idx + 1}`}
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"

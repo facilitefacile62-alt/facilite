@@ -17,6 +17,8 @@ const DIAGNOSTIC = ['feat_diagnostic_cv', 'feat_app_diagnostic_cv'];
 const BOITE_IDEES = ['nav_plus_boite_idees', 'feat_app_boite_idees'];
 const CREER_CV = ['feat_app_creer_cv'];
 const MODELES_CV = ['feat_app_modeles_cv'];
+const INSCRIPTION = ['feat_app_inscription'];
+const MOT_DE_PASSE_OUBLIE = ['feat_app_mot_de_passe_oublie'];
 
 export const REGLES_ECRANS: RegleEcran[] = [
   { chemins: ['/extracteur'], interrupteurs: EXTRACTEUR },
@@ -24,6 +26,9 @@ export const REGLES_ECRANS: RegleEcran[] = [
   { chemins: ['/web/creer-cv'], interrupteurs: CREER_CV },
   { chemins: ['/web/modeles'], interrupteurs: MODELES_CV },
   { chemins: ['/web/boite-a-idees'], interrupteurs: BOITE_IDEES },
+  // Connexion : pas d'inscription ni de « mot de passe oublié » dans l'application (liens profonds, écrans de retour d'e-mail compris).
+  { chemins: ['/register', '/verifiez-votre-email'], interrupteurs: INSCRIPTION },
+  { chemins: ['/forgot-password', '/nouveau-mot-de-passe'], interrupteurs: MOT_DE_PASSE_OUBLIE },
   // Le diagnostic est une entrée de la page d'import de CV : seule l'entrée « diagnostic » est masquée (voir outils.ts et menu.tsx).
   { chemins: ['/web/importer-cv'], interrupteurs: DIAGNOSTIC, quand: (p) => String(p.aide ?? '') === 'diagnostic_cv' },
 ];

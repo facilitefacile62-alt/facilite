@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImageVariante from '@/components/ImageVariante';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRechercheOffres, useRecherchesRecentes, type ResultatRecherche } from '@/lib/useRechercheOffres';
@@ -133,8 +133,9 @@ function CarteResultat({ resultat }: { resultat: ResultatRecherche }) {
       className="bg-white rounded-3xl p-4 flex-row gap-3 items-start"
       style={{ borderWidth: 1, borderColor: '#D9D1C1' }}>
       {resultat.posterUri && !logoErreur ? (
-        <Image
-          source={{ uri: resultat.posterUri }}
+        <ImageVariante
+          uri={resultat.posterUri}
+          largeur={480}
           alt={resultat.entreprise}
           style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#F2F0EA' }}
           contentFit="cover"

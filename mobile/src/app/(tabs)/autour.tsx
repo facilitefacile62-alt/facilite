@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import ImageVariante from '@/components/ImageVariante';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -479,7 +479,7 @@ export default function AutourFaciliteScreen() {
                 <Pressable onPress={() => router.push(`/offre/${item.id}` as Href)} style={{ width: 124 }}>
                   <View className="rounded-[14px] overflow-hidden items-center justify-center" style={{ width: 124, height: 70, backgroundColor: '#E4DED2' }}>
                     {item.affiche && !item.affiche.startsWith('data:') ? (
-                      <Image source={{ uri: item.affiche }} alt={item.titre} style={{ width: 124, height: 70 }} contentFit="cover" />
+                      <ImageVariante uri={item.affiche} largeur={480} alt={item.titre} style={{ width: 124, height: 70 }} contentFit="cover" />
                     ) : (
                       <Ionicons name="briefcase-outline" size={22} color="rgba(0,0,0,0.3)" />
                     )}
