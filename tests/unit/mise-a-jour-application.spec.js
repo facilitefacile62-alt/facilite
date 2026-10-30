@@ -87,3 +87,9 @@ test.describe("le code", () => {
     expect(Object.keys(pkg.dependencies)).not.toEqual(expect.arrayContaining(["expo-application", "expo-updates", "react-native-version-check"]));
   });
 });
+
+test("le fichier de version est public : le proxy d'authentification l'exclut (sinon l'application anonyme recevrait la page /login)", () => {
+  const p = lire("src/proxy.js");
+  const bs = String.fromCharCode(92);
+  expect(p).toContain("manifest" + bs + bs + ".webmanifest|app-version" + bs + bs + ".json|robots");
+});
