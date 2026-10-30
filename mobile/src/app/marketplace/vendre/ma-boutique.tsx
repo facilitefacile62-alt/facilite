@@ -2,6 +2,7 @@ import { useFonctionnalite } from '@/lib/featureFlags';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
@@ -145,7 +146,7 @@ export default function MaBoutiqueScreen() {
   // Logo de la boutique : photo choisie dans la galerie, recadrée en carré, envoyée dans le bucket des photos.
   async function changerLogo() {
     if (!boutique || !userId || envoiLogo) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', 'Facilité a besoin d’accéder à vos photos pour choisir le logo de la boutique.');
       return;

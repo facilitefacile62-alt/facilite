@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -106,7 +107,7 @@ export default function ScannerDocumentScreen() {
   }
 
   async function choisirPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', "Facilité a besoin d'accéder à vos photos.");
       return;

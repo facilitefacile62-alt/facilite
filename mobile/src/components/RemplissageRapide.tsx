@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 
@@ -86,7 +87,7 @@ function RemplissageRapideContenu({ onRempli }: { onRempli: (infos: InfosScannee
 
   async function photo(source: 'camera' | 'galerie') {
     if (enCours) return;
-    const permission = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', source === 'camera' ? "Facilité a besoin d'accéder à l'appareil photo." : "Facilité a besoin d'accéder à vos photos.");
       return;

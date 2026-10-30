@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   RecordingPresets,
@@ -332,7 +333,7 @@ export default function ChatDetailScreen() {
 
   async function choisirDansGalerie() {
     setMenuJointOuvert(false);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', "Facilité a besoin d'accéder à vos photos.");
       return;

@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { supabase } from '@/lib/supabase';
@@ -408,7 +409,7 @@ export { urlPhoto };
 
 /** Choisit une image dans la galerie (recadrée au format voulu) et l'envoie dans le bucket des photos. Renvoie le chemin, ou null si annulé. */
 export async function choisirEtEnvoyerPhotoBoutique(userId: string, aspect: [number, number]): Promise<string | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const permission = await permissionGalerie();
   if (!permission.granted) throw new Error('Facilité a besoin d’accéder à vos photos pour choisir cette image.');
   const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect });
   if (choix.canceled) return null;
