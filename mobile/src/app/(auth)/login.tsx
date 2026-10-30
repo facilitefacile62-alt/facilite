@@ -368,7 +368,7 @@ export default function LoginScreen() {
       <Text style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)', textAlign: 'center' }}>OU</Text>
 
       {telephoneOuvert ? (
-        <View className="flex-row" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
+        <View className="flex-row mt-4" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
           {(['telephone', 'email'] as const).map((o) => {
             const actif = onglet === o;
             return (
