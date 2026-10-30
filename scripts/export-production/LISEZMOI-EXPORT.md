@@ -22,6 +22,11 @@ powershell -ExecutionPolicy Bypass -File scripts\export-production\exporter.ps1 
 ```
 Vérifie les outils, le dossier de sortie hors dépôt, la place disque et le chiffrement aller-retour. Ne se connecte à rien.
 
+## Deux modes : Leger et Complet
+`-Mode Leger` (par défaut) : base de données seulement (comptes inclus), dump compressé, quelques dizaines de Mo. `-Mode Complet` : base + fichiers des buckets **privés** ; les 3 buckets publics (déjà dans R2) sont exclus sauf `-AvecImagesPubliques` ; seuls les fichiers nouveaux ou modifiés depuis le dernier export sont téléchargés (`-Reference <archive .tar.enc>` la première fois).
+
+Avant tout, le script affiche une **estimation d'egress** (tailles lues seulement) et exige de taper exactement `OUI` ; sinon rien n'est exporté. Calendrier, commandes exactes et règle « page Usage avant/après » : `docs/calendrier-exports.md`.
+
 ## Lancer l'export
 Deux façons de fournir l'adresse de connexion (jamais affichée) :
 
