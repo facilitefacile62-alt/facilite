@@ -203,13 +203,90 @@ test.describe("programme en ligne de commande et garde-fous", () => {
     expect(code).not.toMatch(/process\.env\.R2_|\.env\.local|dotenv|loadEnvFile/);
     expect(code).not.toMatch(/supabase.co|createClient|@supabase|SERVICE_ROLE/i);
   });
-  test("envoyer.ps1 : saisies masquées, variables effacées, ASCII seulement (PowerShell 5.1)", () => {
+  test("envoyer.ps1 : lecture par le presse-papiers en 3 étapes, rien de secret affiché, variables effacées, ASCII seulement (PowerShell 5.1)", () => {
     const ps = lire("scripts/r2-images/envoyer.ps1");
-    expect(ps).toContain("Read-Host $invite -AsSecureString");
-    expect(ps.match(/Lire-Secret "/g)).toHaveLength(2);
+    const outils = lire("scripts/r2-images/outils-presse-papiers.ps1");
+    expect(ps.match(/Demander-Valeur "/g)).toHaveLength(3);
+    expect(ps).not.toMatch(/Read-Host|AsSecureString/);
     expect(ps).toContain("Remove-Item Env:\\R2IMG_ENDPOINT, Env:\\R2IMG_KEY_ID, Env:\\R2IMG_SECRET");
+    expect(ps).toContain("Adresse lue : $adresse (non secrete). Presse-papiers vide.");
+    // Access Key ID et secret : seulement leur longueur est affichée.
+    expect(ps).not.toMatch(/Write-Host[^\n]*\$(cleId|secret)\b(?!\.Length)/);
+    expect(ps).toContain("$($cleId.Length) caracteres, forme correcte (non affiche)");
+    expect(ps).toContain("$($secret.Length) caracteres, forme correcte (non affiche)");
     expect(ps).not.toMatch(/Write-Host[^\n]*\$env:R2IMG/);
-    expect(ps).not.toMatch(/(Set-Content|Out-File|Add-Content)[^\n]*R2IMG/);
+    expect(ps).not.toMatch(/(Set-Content|Out-File|Add-Content)[^\n]*(R2IMG|cleId|secret)/);
+    expect(outils).toContain("Set-Clipboard -Value $null");
     expect(/^[\x00-\x7F]*$/.test(ps)).toBe(true);
+    expect(/^[\x00-\x7F]*$/.test(outils)).toBe(true);
+  });
+});
+
+test.describe("lecture par le presse-papiers (presse-papiers SIMULÉ : le vrai presse-papiers n'est pas touché)", () => {
+  test.describe.configure({ timeout: 120000 });
+  const aide = path.join(racine, "scripts/r2-images/outils-presse-papiers.ps1");
+  const HEX16 = "0123456789abcdef";
+  const ADRESSE = "https://" + HEX16.repeat(2) + ".r2.cloudflarestorage.com";
+  const FAUX_ID = "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6"; // 32 caractères, faux
+  const FAUX_SECRET = HEX16.repeat(4); // 64 caractères, faux
+
+  // Exécute `corps` dans PowerShell avec un presse-papiers simulé (file de valeurs), un effaceur qui compte, et sans attente de la touche Entrée.
+  function simuler(valeurs, corps) {
+    const file = valeurs.map((v) => `$script:file.Enqueue('${v}')`).join("; ");
+    const cmd = `. '${aide}'; $script:file = New-Object System.Collections.Queue; ${file}; $script:vidages = 0; ` +
+      `$script:LecteurPresse = { if ($script:file.Count -gt 0) { [string]$script:file.Dequeue() } else { '' } }; ` +
+      `$script:EffaceurPresse = { $script:vidages++ }; $script:Attente = { }; ${corps}`;
+    const r = spawnSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8" });
+    return { sortie: r.stdout, erreur: r.stderr, code: r.status };
+  }
+  const aides = (s) => s.split(/\r?\n/).filter((l) => l.startsWith("  -> "));
+
+  test("adresse : vide, mauvais hôte, nom de bucket, espaces refusés avec une ligne d'aide chacun ; la bonne est lue, le presse-papiers vidé UNE fois", () => {
+    const r = simuler(["", "https://exemple.test", ADRESSE + "/facilite-images", "https://avec un espace", ADRESSE + "/"],
+      `$v = Demander-Valeur 'copiez' { param($x) Controler-AdresseR2 $x } -MaxEssais 8; 'LU=' + ($v -ceq '${ADRESSE}/'); 'VIDAGES=' + $script:vidages`);
+    expect(r.code).toBe(0);
+    expect(aides(r.sortie)).toHaveLength(4);
+    expect(r.sortie).toContain("LU=True");
+    expect(r.sortie).toContain("VIDAGES=1");
+    expect(r.sortie).toContain("Le presse-papiers est vide");
+    expect(r.sortie).toContain("nom de bucket");
+    expect(r.sortie).not.toContain(HEX16.repeat(2)); // la valeur lue n'est jamais affichée par la fonction
+  });
+  test("Access Key ID : vide, adresse copiée par erreur, trop court, espaces refusés ; le bon est lu sans jamais être affiché", () => {
+    const r = simuler(["", ADRESSE, "trop-court", "A1b2C3d4E5f6G7h8 I9j0K1l2M3n4O5p6", FAUX_ID],
+      `$v = Demander-Valeur 'copiez' { param($x) Controler-CleId $x } -MaxEssais 8; 'LU=' + ($v -ceq '${FAUX_ID}'); 'LONGUEUR=' + $v.Length; 'VIDAGES=' + $script:vidages`);
+    expect(r.code).toBe(0);
+    expect(aides(r.sortie)).toHaveLength(4);
+    expect(r.sortie).toContain("Vous avez copie une adresse");
+    expect(r.sortie).toContain("LU=True");
+    expect(r.sortie).toContain("LONGUEUR=32");
+    expect(r.sortie).toContain("VIDAGES=1");
+    expect(r.sortie).not.toContain(FAUX_ID);
+  });
+  test("Secret Access Key : refuse la même valeur que l'Access Key ID, une valeur de 63 caractères, une adresse ; la bonne est lue sans jamais être affichée", () => {
+    const r = simuler([FAUX_ID, FAUX_SECRET.slice(0, 63), "https://exemple.test", FAUX_SECRET],
+      `$cleId = '${FAUX_ID}'; $v = Demander-Valeur 'copiez' { param($x) Controler-Secret $x $cleId } -MaxEssais 8; 'LU=' + ($v -ceq '${FAUX_SECRET}'); 'LONGUEUR=' + $v.Length; 'VIDAGES=' + $script:vidages`);
+    expect(r.code).toBe(0);
+    expect(aides(r.sortie)).toHaveLength(3);
+    expect(r.sortie).toContain("meme valeur que l'Access Key ID");
+    expect(r.sortie).toContain("LU=True");
+    expect(r.sortie).toContain("LONGUEUR=64");
+    expect(r.sortie).toContain("VIDAGES=1");
+    expect(r.sortie).not.toContain(FAUX_SECRET);
+    expect(r.sortie).not.toContain(FAUX_ID);
+  });
+  test("une valeur refusée ne vide PAS le presse-papiers ; les messages d'aide ne répètent jamais la valeur lue", () => {
+    const r = simuler(["secret-faux-trop-court-xyz", "autre-faux-abc"],
+      `try { Demander-Valeur 'copiez' { param($x) Controler-Secret $x '' } -MaxEssais 2 | Out-Null } catch { 'ERR:' + $_.Exception.Message }; 'VIDAGES=' + $script:vidages`);
+    expect(r.sortie).toContain("ERR:Trop d'essais");
+    expect(r.sortie).toContain("VIDAGES=0");
+    expect(r.sortie).not.toContain("secret-faux-trop-court-xyz");
+    expect(r.sortie).not.toContain("autre-faux-abc");
+  });
+  test("le script ne plante pas sur une valeur vide ou mauvaise : il redemande (aucune exception avant le plafond de test)", () => {
+    const r = simuler(["", "", "", FAUX_ID], `$v = Demander-Valeur 'copiez' { param($x) Controler-CleId $x } -MaxEssais 10; 'FINI=' + ($v -ceq '${FAUX_ID}')`);
+    expect(r.code).toBe(0);
+    expect(r.sortie).toContain("FINI=True");
+    expect(r.erreur.trim()).toBe("");
   });
 });
