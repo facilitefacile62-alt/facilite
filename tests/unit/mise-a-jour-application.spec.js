@@ -93,3 +93,13 @@ test("le fichier de version est public : le proxy d'authentification l'exclut (s
   const bs = String.fromCharCode(92);
   expect(p).toContain("manifest" + bs + bs + ".webmanifest|app-version" + bs + bs + ".json|robots");
 });
+
+test("pastille rouge sur l'icône ☰ des en-têtes de Facilité et de Locaux quand une mise à jour est disponible", () => {
+  const p = lire("mobile/src/components/PastilleMiseAJour.tsx");
+  expect(p).toContain("if (!visible) return null;");
+  for (const f of ["mobile/src/components/FaciliteHeader.tsx", "mobile/src/components/MarketplaceHeader.tsx"]) {
+    const c = lire(f);
+    expect(c, f).toContain("const maj = useMiseAJour();");
+    expect(c, f).toContain("<PastilleMiseAJour visible={Boolean(maj.disponible)}");
+  }
+});

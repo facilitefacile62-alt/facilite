@@ -8,6 +8,8 @@ import BasculePlateforme from '@/components/BasculePlateforme';
 import { CleVectorielle } from '@/components/EcranConnexion';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
+import PastilleMiseAJour from '@/components/PastilleMiseAJour';
+import { useMiseAJour } from '@/lib/miseAJour';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 
 // En-tête de la plateforme Facilité (maquettes 01, 03, 05, 14, 42, 47...) :
@@ -30,6 +32,7 @@ export type PetiteStory = { id: string; imageUrl: string; titre: string; index: 
 // (maquette 09) ; vide = rien à afficher (aucun doublon quand tout est vu, maquette 16).
 export default function FaciliteHeader({ petitesStories = [], onStory, accueil = false }: { petitesStories?: PetiteStory[]; onStory?: (index: number) => void; accueil?: boolean } = {}) {
   const router = useRouter();
+  const maj = useMiseAJour();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const compteurs = useCompteursNonLus();
 
@@ -91,6 +94,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
 
           <Pressable onPress={() => router.push('/menu')} accessibilityLabel="Menu" hitSlop={10}>
             <Ionicons name="menu" size={22} color={ICONE} />
+            <PastilleMiseAJour visible={Boolean(maj.disponible)} fond={FOND} />
           </Pressable>
         </View>
       </View>
