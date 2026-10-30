@@ -5,7 +5,7 @@ dans VOTRE terminal, jamais dans un fichier du dépôt. Rien ci-dessous ne se la
 
 ## 0. Ce qui est préparé dans le dépôt
 
-- `app.json` : `bundleIdentifier` `com.ffacilite.mobile` (le même que le package Android), iPad pris en charge, textes d'autorisation
+- `app.json` : `bundleIdentifier` `com.ffacilite.mobile` (depuis le 30/10/2026 il n'est plus le même que le package Android, qui est `com.ffacilite.app` : l'application déjà publiée sur Google Play), iPad pris en charge, textes d'autorisation
   (appareil photo, photos, micro, position), `ITSAppUsesNonExemptEncryption: false`, icône iOS `assets/images/icon-ios.png`
   (1024 × 1024, sans canal alpha).
 - `eas.json` : `appVersionSource: remote` ; profils `testflight` (distribution « store », variables d'environnement EAS « preview »)
