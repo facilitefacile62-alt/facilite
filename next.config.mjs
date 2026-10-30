@@ -32,6 +32,12 @@ import { withBotId } from "botid/next/config";
  */
 const isDev = process.env.NODE_ENV !== "production";
 
+// Images publiques servies par le Worker Cloudflare « facilite-images » : interrupteur NEXT_PUBLIC_IMAGES_HOTE (adresse https du Worker, sans chemin).
+// Absente ou invalide = interrupteur fermé : la politique reste EXACTEMENT celle d'avant. Ouverte : l'adresse est ajoutée à img-src et media-src (affiches, stories, audios).
+const hoteImagesBrut = String(process.env.NEXT_PUBLIC_IMAGES_HOTE || "").trim().replace(/\/+$/, "");
+const hoteImages = /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(hoteImagesBrut) ? hoteImagesBrut : "";
+const ajoutHoteImages = hoteImages ? ` ${hoteImages}` : "";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   // clarity.ms ajouté le 2026-08-28 : le script Microsoft Clarity est chargé
@@ -53,8 +59,8 @@ const contentSecurityPolicy = [
   // silencieusement par la CSP, laissant la carte vide malgré un code
   // fonctionnel. Confirmé par les violations CSP réelles observées en
   // production avant ce correctif.
-  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms https://c.bing.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com",
-  "media-src 'self' blob: data: https://*.supabase.co",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://images.unsplash.com https://flagcdn.com https://*.clarity.ms https://c.clarity.ms https://c.bing.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com" + ajoutHoteImages,
+  "media-src 'self' blob: data: https://*.supabase.co" + ajoutHoteImages,
   // Clarity renvoie ses mesures par fetch/beacon vers *.clarity.ms : sans
   // cette entrée, le script se chargerait mais n'enverrait toujours rien.
   // tiles.openfreemap.org : conservé même si GlobeExplorateurBoutiques.jsx

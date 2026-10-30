@@ -15,6 +15,7 @@ import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import { adresseImage } from "@/lib/imagesPubliques";
 // Import manquant depuis l'ajout des bascules de fonctionnalités sur cette
 // page : les trois symboles étaient utilisés sans jamais être importés, et
 // /offres tombait en production sur « ReferenceError: DEFAULT_FEATURE_TREE
@@ -660,7 +661,7 @@ function OffresContent({ listingType } = {}) {
             {feedOffers.map((offer, idx) => {
               const isFormation = offer.listing_type === "formation" || listingType === "formation";
               const isExpired = isOfferExpired(offer);
-              const offerImg = getOfferImage(offer, idx);
+              const offerImg = adresseImage(getOfferImage(offer, idx));
               const offerDetailHref = offer.external_link && isFormation
                 ? offer.external_link
                 : `/offres/${offer.id}`;
@@ -989,7 +990,7 @@ function OffresContent({ listingType } = {}) {
               <i className="fa-solid fa-xmark"></i>
             </button>
             <img
-              src={viewImageModal.url}
+              src={adresseImage(viewImageModal.url)}
               alt="Affiche agrandie"
               className="w-full h-auto max-h-[85vh] object-contain rounded-2xl"
             />

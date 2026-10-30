@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- visuels publics Supabase, plein écran */
 
 import { useCallback, useEffect, useState } from "react";
+import { adresseImage } from "@/lib/imagesPubliques";
 
 // Lecteur plein écran des stories du fil d'actualité (maquette « Story » :
 // barres de progression en haut, titre + « il y a X h », croix, flèches
@@ -88,7 +89,7 @@ export default function StoryViewer({ stories, debut = 0, onClose }) {
 
         {/* En-tête */}
         <div className="absolute top-3 left-0 right-0 z-20 flex items-center gap-2.5 px-3 pt-3 pb-6 bg-gradient-to-b from-black/70 to-transparent">
-          <img src={story.image_url} alt="" className="w-9 h-9 rounded-full object-cover border-2 border-emerald-400" />
+          <img src={adresseImage(story.image_url)} alt="" className="w-9 h-9 rounded-full object-cover border-2 border-emerald-400" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-extrabold text-white truncate">{story.titre}</p>
             <p className="text-[11px] font-bold text-white/70">{ilYA(story.created_at)}</p>
@@ -100,7 +101,7 @@ export default function StoryViewer({ stories, debut = 0, onClose }) {
 
         {/* Visuel */}
         <div className="flex-1 flex items-center justify-center">
-          <img src={story.image_url} alt={story.titre} className="max-w-full max-h-full object-contain select-none" draggable={false} />
+          <img src={adresseImage(story.image_url)} alt={story.titre} className="max-w-full max-h-full object-contain select-none" draggable={false} />
         </div>
 
         {/* Zones de toucher gauche / droite */}

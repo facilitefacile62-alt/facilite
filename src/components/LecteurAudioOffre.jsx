@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { adresseImage } from "@/lib/imagesPubliques";
 
 // Un seul audio d'offre joue à la fois : lancer une offre arrête celle qui jouait.
 let arreterLecteurActif = null;
@@ -34,7 +35,9 @@ export default function LecteurAudioOffre({ url, className = "" }) {
     if (!audio) {
       audio = new Audio();
       audio.preload = "none";
-      audio.src = url;
+      // Interrupteur images-Worker ouvert : l'audio vient du Worker ; sinon (ou en cas d'échec, voir « error » plus bas) de Supabase, comme avant.
+      audio.src = adresseImage(url);
+      let repli = false;
       audio.addEventListener("playing", () => setEtat("lecture"));
       audio.addEventListener("waiting", () => setEtat("chargement"));
       audio.addEventListener("pause", () => setEtat((s) => (s === "lecture" || s === "chargement" ? "pause" : s)));
@@ -42,7 +45,16 @@ export default function LecteurAudioOffre({ url, className = "" }) {
         setEtat("repos");
         setProgression(0);
       });
-      audio.addEventListener("error", () => setEtat("erreur"));
+      audio.addEventListener("error", () => {
+        // Un élément Audio créé par script n'est pas dans la page : le filet global ne le voit pas. Une seule nouvelle tentative sur l'adresse Supabase d'origine.
+        if (!repli && adresseImage(url) !== url) {
+          repli = true;
+          audio.src = url;
+          audio.play().catch(() => setEtat("erreur"));
+          return;
+        }
+        setEtat("erreur");
+      });
       audio.addEventListener("timeupdate", () => {
         if (audio.duration > 0) setProgression(Math.min(100, (audio.currentTime / audio.duration) * 100));
       });

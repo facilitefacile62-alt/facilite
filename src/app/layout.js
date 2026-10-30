@@ -8,6 +8,7 @@ import GlobalModals from "@/components/GlobalModals";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import ImagesRepliSupabase from "@/components/ImagesRepliSupabase";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -238,6 +239,7 @@ export default async function RootLayout({ children }) {
           </ThemeProvider>
         </div>
         <ServiceWorkerRegistration />
+        <ImagesRepliSupabase />
         {process.env.NODE_ENV === "production" && (
           <>
             <Script id="clarity-script" strategy="lazyOnload">
