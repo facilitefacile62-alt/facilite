@@ -131,7 +131,7 @@ export default function ProfilMarketplaceScreen() {
                   ) : null}
                 </>
               )}
-              <LigneMenu emoji="✏️" titre="Modifier infos" derniere onPress={() => router.push('/marketplace/a-propos')} />
+              <LigneMenu emoji="✏️" titre="Modifier infos" derniere onPress={() => router.push('/marketplace/modifier-infos' as Href)} />
             </View>
           </ScrollView>
         )}

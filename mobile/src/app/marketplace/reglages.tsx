@@ -39,6 +39,11 @@ function Groupe({ titre, enfants }: { titre?: string; enfants: React.ReactNode }
 
 
 export default function ReglagesMarketplaceScreen() {
+  return <ReglagesMarketplace />;
+}
+
+/** `integre` : page « Réglages » du glisseur « Modifier infos » (sans en-tête propre, même corps). */
+export function ReglagesMarketplace({ integre = false }: { integre?: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
@@ -89,7 +94,7 @@ export default function ReglagesMarketplaceScreen() {
 
   const estVendeur = Boolean(boutique);
 
-  if (userId && !chargement && estVendeur) {
+  if (!integre && userId && !chargement && estVendeur) {
     return (
       <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
         <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
@@ -131,7 +136,7 @@ export default function ReglagesMarketplaceScreen() {
   return (
     <View className="flex-1 bg-[#F2F0EA]">
       <View className="flex-1">
-        <EnteteMarketplace titre="Réglages" sousTitre={estVendeur ? 'Boutique' : undefined} />
+        {integre ? null : <EnteteMarketplace titre="Réglages" sousTitre={estVendeur ? 'Boutique' : undefined} />}
 
         {!userId ? (
           <View className="flex-1 items-center justify-center px-8">
