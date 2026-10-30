@@ -5,6 +5,7 @@ import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
 
 import { BoutonContinuer, CaseRonde, CasesCode } from '@/components/CasesCode';
 import EcranConnexion, { CHAMP } from '@/components/EcranConnexion';
+import EcranConnexionRefonte, { CHAMP_BLANC, FORME, GRIS_BOUTON, VERT } from '@/components/EcranConnexionRefonte';
 import { IconGoogle } from '@/components/facilite-icons';
 import {
   DELAI_RENVOI_EMAIL_S,
@@ -64,6 +65,7 @@ export default function LoginScreen() {
   const [erreurMdp, setErreurMdp] = useState('');
   const [mdpEnCours, setMdpEnCours] = useState(false);
   const [mdpVisible, setMdpVisible] = useState(false);
+  const [mdpActif, setMdpActif] = useState(false);
 
   // Compte à rebours avant de pouvoir redemander un code.
   useEffect(() => {
@@ -180,29 +182,49 @@ export default function LoginScreen() {
 
   // ------------------------------------------------------ page « mot de passe »
   if (etape === 'motdepasse') {
+    const adresse = email.trim();
     return (
-      <EcranConnexion
+      <EcranConnexionRefonte
         retour={() => {
           setEtape('saisie');
           setMotDePasse('');
           setErreurMdp('');
         }}>
-        <Text className="text-[26px] font-black text-[#111] mt-1">Ton mot de passe</Text>
-        <Text className="text-[15px] mt-1.5 mb-5" style={{ color: 'rgba(0,0,0,0.55)', lineHeight: 21 }}>
-          Pour {email.trim()}
-        </Text>
+        <View>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: '#111' }}>Saisissez votre mot de passe</Text>
+          <Text style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.55)', marginTop: 4 }}>pour vous connecter à votre compte</Text>
+        </View>
+
+        <View className="flex-row items-center" style={{ ...CHAMP_BLANC, paddingHorizontal: 14, gap: 10 }}>
+          <View className="items-center justify-center" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#D1FAE5' }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#047857' }}>{(adresse.charAt(0) || '?').toUpperCase()}</Text>
+          </View>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ flex: 1, fontSize: 14.5, color: '#111' }}>{adresse}</Text>
+          <Pressable
+            onPress={() => {
+              setEtape('saisie');
+              setMotDePasse('');
+              setErreurMdp('');
+            }}
+            accessibilityRole="button"
+            hitSlop={8}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#059669' }}>Modifier</Text>
+          </Pressable>
+        </View>
 
         <View
           className="flex-row items-center"
-          style={{ height: 58, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E2DC', paddingHorizontal: 16 }}>
+          style={{ ...CHAMP_BLANC, paddingHorizontal: 16, borderColor: mdpActif ? VERT : 'rgba(0,0,0,0.12)', borderWidth: mdpActif ? 1.5 : 1 }}>
           <TextInput
             value={motDePasse}
             onChangeText={(t) => {
               setMotDePasse(t);
               if (erreurMdp) setErreurMdp('');
             }}
+            onFocus={() => setMdpActif(true)}
+            onBlur={() => setMdpActif(false)}
             placeholder="Mot de passe"
-            placeholderTextColor="rgba(0,0,0,0.45)"
+            placeholderTextColor="rgba(0,0,0,0.4)"
             secureTextEntry={!mdpVisible}
             autoCapitalize="none"
             autoCorrect={false}
@@ -217,21 +239,22 @@ export default function LoginScreen() {
             accessibilityRole="button"
             accessibilityLabel={mdpVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             hitSlop={10}>
-            <Ionicons name={mdpVisible ? 'eye-off-outline' : 'eye-outline'} size={24} color="rgba(0,0,0,0.55)" />
+            <Ionicons name={mdpVisible ? 'eye-off-outline' : 'eye-outline'} size={24} color="rgba(0,0,0,0.5)" />
           </Pressable>
         </View>
 
-        {erreurMdp ? <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreurMdp}</Text> : null}
+        {erreurMdp ? <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626' }}>{erreurMdp}</Text> : null}
 
-        <View className="mt-4">
-          <BoutonContinuer onPress={connexionMotDePasse} actif={motDePasse.length > 0} chargement={mdpEnCours} noir libelle="Me connecter" />
-        </View>
-
-        {/* « Mot de passe oublié » et « S'inscrire » sont retirés tant que les e-mails de confirmation ne sont pas réglés : on invite à continuer avec Google. À rétablir sur feu vert du propriétaire. */}
-        <Text className="text-[13px] mt-5" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 19 }}>
-          Mot de passe oublié ou pas encore de compte ? Reviens en arrière et choisis « Continuer avec Google ».
-        </Text>
-      </EcranConnexion>
+        <Pressable
+          onPress={connexionMotDePasse}
+          disabled={motDePasse.length === 0 || mdpEnCours}
+          accessibilityRole="button"
+          className="items-center justify-center"
+          style={{ ...FORME, backgroundColor: VERT, opacity: motDePasse.length === 0 || mdpEnCours ? 0.55 : 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>{mdpEnCours ? '…' : 'Se connecter'}</Text>
+        </Pressable>
+        {/* « Mot de passe oublié » et « Recevoir un code » : absents de cet écran (maquette du 30/10/2026). */}
+      </EcranConnexionRefonte>
     );
   }
 
@@ -331,49 +354,42 @@ export default function LoginScreen() {
 
   // ----------------------------------------------------------- page de saisie
   return (
-    <EcranConnexion>
+    <EcranConnexionRefonte>
       <Pressable
         onPress={google}
         disabled={googleEnCours}
         accessibilityRole="button"
-        className="flex-row items-center justify-center gap-3"
-        style={{ height: 58, borderRadius: 16, backgroundColor: '#F2F2F2', opacity: googleEnCours ? 0.6 : 1 }}>
+        className="flex-row items-center justify-center"
+        style={{ ...CHAMP_BLANC, gap: 12, opacity: googleEnCours ? 0.6 : 1 }}>
         <IconGoogle size={22} />
-        <Text className="text-[17px] font-semibold text-[#111]">Continuer avec Google</Text>
+        <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#111' }}>Continuer avec Google</Text>
       </Pressable>
 
-      <Text className="text-[14px] text-center mt-5" style={{ color: 'rgba(0,0,0,0.5)' }}>OU</Text>
+      <Text style={{ fontSize: 11, color: 'rgba(0,0,0,0.5)', textAlign: 'center' }}>OU</Text>
 
       {telephoneOuvert ? (
-      <View className="flex-row mt-4" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
-        {(['telephone', 'email'] as const).map((o) => {
-          const actif = onglet === o;
-          return (
-            <Pressable
-              key={o}
-              onPress={() => {
-                setOnglet(o);
-                setErreur('');
-              }}
-              className="flex-1 items-center"
-              style={{ paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: actif ? '#111' : 'transparent', marginBottom: -2 }}>
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-                className="text-[16px]"
-                style={{ fontWeight: actif ? '900' : '700', color: actif ? '#111' : 'rgba(0,0,0,0.45)' }}>
-                {o === 'telephone' ? 'Téléphone' : "E-mail/nom d'utilisateur"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <View className="flex-row" style={{ borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' }}>
+          {(['telephone', 'email'] as const).map((o) => {
+            const actif = onglet === o;
+            return (
+              <Pressable
+                key={o}
+                onPress={() => {
+                  setOnglet(o);
+                  setErreur('');
+                }}
+                className="flex-1 items-center"
+                style={{ paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: actif ? '#111' : 'transparent', marginBottom: -2 }}>
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: actif ? '900' : '700', color: actif ? '#111' : 'rgba(0,0,0,0.45)' }}>
+                  {o === 'telephone' ? 'Téléphone' : 'E-mail'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       ) : null}
 
-      <View
-        className="flex-row items-center mt-4"
-        style={{ height: 58, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E2DC', paddingHorizontal: 16 }}>
+      <View className="flex-row items-center" style={{ ...CHAMP_BLANC, paddingHorizontal: 16 }}>
         {parTelephone ? (
           <>
             <Pressable
@@ -426,19 +442,29 @@ export default function LoginScreen() {
         )}
       </View>
 
-      <View className="mt-4">
-        <CaseRonde
-          cochee={garder}
-          onChange={setGarder}
-          texte="Enregistre tes informations de connexion pour te connecter automatiquement la prochaine fois."
-        />
-      </View>
+      <Pressable onPress={() => setGarder(!garder)} className="flex-row items-center" style={{ gap: 12 }} accessibilityRole="checkbox" accessibilityState={{ checked: garder }}>
+        <View
+          className="items-center justify-center"
+          style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: garder ? VERT : 'transparent', borderWidth: garder ? 0 : 1.5, borderColor: 'rgba(0,0,0,0.3)' }}>
+          {garder ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
+        </View>
+        <Text style={{ flex: 1, fontSize: 11.5, color: 'rgba(0,0,0,0.65)', lineHeight: 17 }}>
+          Enregistre tes informations de connexion pour te connecter automatiquement la prochaine fois.
+        </Text>
+      </Pressable>
 
-      {erreur ? <Text className="text-[13px] font-bold mt-3" style={{ color: '#DC2626' }}>{erreur}</Text> : null}
+      {erreur ? <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626' }}>{erreur}</Text> : null}
 
-      <View className="mt-4">
-        <BoutonContinuer onPress={envoyer} actif={saisieValide} chargement={chargement} noir libelle={parTelephone ? 'Continuer' : "Continuer avec l'e-mail"} />
-      </View>
-    </EcranConnexion>
+      <Pressable
+        onPress={envoyer}
+        disabled={!saisieValide || chargement}
+        accessibilityRole="button"
+        className="items-center justify-center"
+        style={{ ...FORME, backgroundColor: saisieValide ? VERT : GRIS_BOUTON }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: '#FFFFFF' }}>
+          {chargement ? '…' : parTelephone ? 'Continuer' : "Continuer avec l'e-mail"}
+        </Text>
+      </Pressable>
+    </EcranConnexionRefonte>
   );
 }
