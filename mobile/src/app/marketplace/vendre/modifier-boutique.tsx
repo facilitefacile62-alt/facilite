@@ -62,6 +62,13 @@ export function ModifierBoutique({ integre = false }: { integre?: boolean }) {
   const [prenom, setPrenom] = useState(connu.prenom);
   const [nom, setNom] = useState(connu.nom);
   const [whatsapp, setWhatsapp] = useState('');
+  // « Numéro d'appel » (personnel) = profiles.phone, même case et même chemin d'écriture que « Coordonnées » ; sans confirmation.
+  const phoneProfil = typeof profile?.phone === 'string' ? profile.phone : '';
+  const [appel, setAppel] = useState(phoneProfil);
+  const [appelModifie, setAppelModifie] = useState(false);
+  useEffect(() => {
+    if (!appelModifie) setAppel(phoneProfil);
+  }, [phoneProfil, appelModifie]);
   const [ville, setVille] = useState('');
   const dateFixee = typeof profile?.date_naissance === 'string' && profile.date_naissance.length > 0;
   const [naissance, setNaissance] = useState(typeof profile?.date_naissance === 'string' ? profile.date_naissance : '');
@@ -175,6 +182,8 @@ export function ModifierBoutique({ integre = false }: { integre?: boolean }) {
         // renseignée ne change jamais (la base la verrouille) : on ne la renvoie pas.
         ...(dateFixee ? {} : { date_naissance: naissance.trim() || null }),
         gender: sexe.trim() || null,
+        // Le numéro d'appel n'est renvoyé que s'il a changé (on ne retouche pas un numéro de compte qu'on n'a pas modifié).
+        ...(appel.trim() !== phoneProfil.trim() ? { phone: appel.trim() || null } : {}),
       });
       if (boutique) {
         await modifierBoutique(boutique.id, {
@@ -301,6 +310,17 @@ export function ModifierBoutique({ integre = false }: { integre?: boolean }) {
               indication="Contact direct"
               clavier="phone-pad"
               onLayout={suivre('whatsapp')}
+              onFocus={faireVoir('whatsapp')}
+            />
+            <ChampEncadre
+              libelle="Numéro d'appel"
+              valeur={appel}
+              onChange={(t) => {
+                setAppelModifie(true);
+                setAppel(t);
+              }}
+              indication="Numéro personnel"
+              clavier="phone-pad"
               onFocus={faireVoir('whatsapp')}
             />
 
