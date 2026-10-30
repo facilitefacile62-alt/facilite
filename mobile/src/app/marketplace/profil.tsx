@@ -119,7 +119,7 @@ export default function ProfilMarketplaceScreen() {
                 </>
               ) : (
                 <>
-                  <LigneMenu emoji="ℹ️" titre="À propos" onPress={() => router.push('/marketplace/a-propos')} />
+                  {/* « À propos » et « Réglages » ne font plus qu'un seul bouton : « Modifier infos » (la page À propos garde son bouton Réglages). */}
                   {commandesOuvertes ? <LigneMenu emoji="📦" titre="Mes commandes" onPress={() => router.push('/marketplace/commandes')} /> : null}
                   {/* Seul bouton « transport » ouvert à tous : plus il y a de livreurs, plus on en trouve dans sa zone. */}
                   {livreurOuvert ? <LigneMenu emoji="🛵" titre="Devenir livreur" onPress={() => router.push('/marketplace/vendre/livreur')} /> : null}
@@ -131,7 +131,7 @@ export default function ProfilMarketplaceScreen() {
                   ) : null}
                 </>
               )}
-              <LigneMenu emoji="⚙️" titre="Réglages" derniere onPress={() => router.push('/marketplace/reglages')} />
+              <LigneMenu emoji="✏️" titre="Modifier infos" derniere onPress={() => router.push('/marketplace/a-propos')} />
             </View>
           </ScrollView>
         )}
