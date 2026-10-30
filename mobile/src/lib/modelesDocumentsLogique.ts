@@ -25,4 +25,7 @@ export function lireModeleDocument(ligne: unknown): ModeleDocument | null {
 }
 
 /** Message WhatsApp envoyé à Facilité pour demander un modèle. */
-export const messageDemandeModele = (nom: string): string => `Bonjour Facilité, je souhaite le modèle de document « ${nom} » que j'ai vu dans l'application.`;
+/** Avec `imageUrl`, le lien de l'affiche suit le message : WhatsApp ne permet pas de joindre une image par lien, mais il affiche l'aperçu de l'affiche. */
+export const messageDemandeModele = (nom: string, imageUrl?: string): string =>
+  `Bonjour Facilité, je souhaite le modèle de document « ${nom} » que j'ai vu dans l'application.` +
+  (imageUrl && /^https:\/\//i.test(imageUrl) ? `\nVoici l'affiche : ${imageUrl}` : '');
