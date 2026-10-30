@@ -1,6 +1,19 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getPrimaryOfferImage } from '@/lib/offerMedia';
+import {
+  appliquerChangement,
+  cleCacheOffres,
+  COLONNES_OFFRES,
+  estFraiche,
+  lireCopie,
+  serialiser,
+  statutClos,
+  type CopieListe,
+  type EtatOffres,
+  type LigneOffre,
+} from '@/lib/cacheListeLogique';
 
 // Disponible / expirée — même règle que le site (src/lib/offerExpiration.js,
 // isOfferExpired) : une offre est EXPIRÉE si son statut est explicitement
@@ -13,9 +26,7 @@ import { getPrimaryOfferImage } from '@/lib/offerMedia';
 // posé côté serveur pour que la pagination reste juste ; le statut explicite
 // est vérifié en plus après lecture (toutes les offres sont « approved »
 // aujourd'hui, c'est une garde pour la suite).
-export type EtatOffres = 'disponibles' | 'expirees';
-
-const STATUTS_CLOS = ['expired', 'closed', 'archive', 'archived', 'expiree', 'expirée'];
+export type { EtatOffres };
 
 /** « 2026-10-09 » : date du jour de l'appareil (colonne deadline de type date). */
 export function aujourdhuiISO(): string {
@@ -23,10 +34,6 @@ export function aujourdhuiISO(): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const jj = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${mm}-${jj}`;
-}
-
-function statutClos(statut: unknown): boolean {
-  return STATUTS_CLOS.includes(String(statut ?? '').toLowerCase().trim());
 }
 
 // Le constructeur de requête de supabase-js est générique et son typage
@@ -99,6 +106,51 @@ function dateRelative(iso: string): string {
   return `il y a ${mois} mois`;
 }
 
+function mapperOffre(o: Record<string, any>, idx: number): OffreReelle {
+  return {
+    id: o.id,
+    entreprise: o.company || 'Entreprise',
+    logoTeinte: TEINTES[idx % TEINTES.length],
+    logoInitiales: initiales(o.company || ''),
+    date: dateRelative(o.created_at),
+    dateFormatee: o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR') : 'Récemment',
+    titre: o.title || 'Offre',
+    localisation: o.location || 'Sénégal',
+    contrat: o.contract_type || 'CDI',
+    salaire: o.salary_range || undefined,
+    posterUri: getPrimaryOfferImage(o.image_url),
+    rawImage: o.image_url,
+    audioUrl: (o.audio_url as string | null) ?? undefined,
+    description: o.description || undefined,
+    contactEmail: o.contact_email || undefined,
+    contactPhone: o.contact_phone || undefined,
+    contactWhatsapp: o.contact_whatsapp || undefined,
+    externalLink: o.external_link || undefined,
+    applicationUrl: o.application_url || undefined,
+    applicationEmail: o.application_email || undefined,
+    deadline: o.deadline || undefined,
+    listingType: o.listing_type || 'offre_emploi',
+    // job_offers n'a PAS de colonnes sector / category / positions_count (erreur 42703 constatée
+    // le 24/09/2026 : la base refusait toute la requête, d'où « Impossible de charger les offres »).
+    sector: 'Opportunité',
+    viewCount: o.view_count || 0,
+  };
+}
+
+// Copie de la liste gardée sur le téléphone (voir cacheListeLogique.ts) : montrée tout de suite, rechargée seulement si elle a plus de
+// DUREE_FRAICHE_MS, et mise à jour offre par offre quand le temps réel signale un changement (au lieu de relire toute la liste).
+async function lireCopieLocale(etat: EtatOffres, limite: number): Promise<CopieListe | null> {
+  try {
+    return lireCopie(await AsyncStorage.getItem(cleCacheOffres(etat, limite)), Date.now());
+  } catch {
+    return null;
+  }
+}
+
+function ecrireCopieLocale(etat: EtatOffres, limite: number, lignes: LigneOffre[]) {
+  AsyncStorage.setItem(cleCacheOffres(etat, limite), serialiser(lignes, Date.now())).catch(() => {});
+}
+
 export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') {
   const [offres, setOffres] = useState<OffreReelle[] | null>(null);
   const [erreur, setErreur] = useState(false);
@@ -114,78 +166,91 @@ export function useOffresReelles(limite = 30, etat: EtatOffres = 'disponibles') 
 
   useEffect(() => {
     let annule = false;
+    // Lignes brutes actuellement affichées (copie de travail du temps réel).
+    let courantes: LigneOffre[] = [];
+    let minuterie: ReturnType<typeof setTimeout> | null = null;
+
+    function afficher(lignes: LigneOffre[]) {
+      courantes = lignes;
+      if (!annule) {
+        setOffres(lignes.map(mapperOffre));
+        setErreur(false);
+      }
+    }
 
     async function charger() {
       try {
         const { data: lignes, error } = await appliquerEtat(
-          supabase
-            .from('job_offers')
-            .select('id, title, company, location, contract_type, salary_range, description, contact_email, contact_phone, contact_whatsapp, external_link, application_url, application_email, deadline, image_url, audio_url, created_at, listing_type, view_count, status'),
+          supabase.from('job_offers').select(COLONNES_OFFRES.join(', ')),
           etat
         )
           .order('created_at', { ascending: false })
           .limit(limite);
-        const data = ((lignes ?? []) as Array<Record<string, any>>).filter((o) => {
+        const data = ((lignes ?? []) as unknown as LigneOffre[]).filter((o) => {
           if (String(o.status ?? '').toLowerCase().trim() === 'draft') return false;
           return etat === 'expirees' ? true : !statutClos(o.status);
         });
 
         if (error || !lignes) {
-          if (!annule) setErreur(true);
+          if (!annule && courantes.length === 0) setErreur(true);
           return;
         }
-
-        const mapped: OffreReelle[] = data.map((o, idx) => ({
-          id: o.id,
-          entreprise: o.company || 'Entreprise',
-          logoTeinte: TEINTES[idx % TEINTES.length],
-          logoInitiales: initiales(o.company || ''),
-          date: dateRelative(o.created_at),
-          dateFormatee: o.created_at ? new Date(o.created_at).toLocaleDateString('fr-FR') : 'Récemment',
-          titre: o.title || 'Offre',
-          localisation: o.location || 'Sénégal',
-          contrat: o.contract_type || 'CDI',
-          salaire: o.salary_range || undefined,
-          posterUri: getPrimaryOfferImage(o.image_url),
-          rawImage: o.image_url,
-          audioUrl: (o.audio_url as string | null) ?? undefined,
-          description: o.description || undefined,
-          contactEmail: o.contact_email || undefined,
-          contactPhone: o.contact_phone || undefined,
-          contactWhatsapp: o.contact_whatsapp || undefined,
-          externalLink: o.external_link || undefined,
-          applicationUrl: o.application_url || undefined,
-          applicationEmail: o.application_email || undefined,
-          deadline: o.deadline || undefined,
-          listingType: o.listing_type || 'offre_emploi',
-          // job_offers n'a PAS de colonnes sector / category / positions_count (erreur 42703 constatée
-          // le 24/09/2026 : la base refusait toute la requête, d'où « Impossible de charger les offres »).
-          sector: 'Opportunité',
-          viewCount: o.view_count || 0,
-        }));
-
-        if (!annule) {
-          setOffres(mapped);
-          setErreur(false);
-        }
+        afficher(data);
+        ecrireCopieLocale(etat, limite, data);
       } catch (err) {
         console.error('Exception chargement des offres réelles:', err);
-        if (!annule) setErreur(true);
+        if (!annule && courantes.length === 0) setErreur(true);
       }
     }
 
-    charger();
+    // Plusieurs relectures demandées coup sur coup (rafale de changements) n'en font qu'une.
+    function rechargerPlusTard() {
+      if (minuterie) clearTimeout(minuterie);
+      minuterie = setTimeout(() => {
+        minuterie = null;
+        charger();
+      }, 2000);
+    }
 
-    // Abonnement temps réel pour synchroniser immédiatement toute modification/nouvelle offre du site
+    // 1. La copie du téléphone s'affiche immédiatement ; 2. la lecture réseau n'a lieu que si elle est périmée (ou demandée : tirer pour actualiser).
+    (async () => {
+      const copie = version === 0 ? await lireCopieLocale(etat, limite) : null;
+      if (annule) return;
+      if (copie && copie.lignes.length > 0) {
+        afficher(copie.lignes);
+        if (estFraiche(copie, Date.now())) return;
+      }
+      charger();
+    })();
+
+    // Abonnement temps réel : le changement reçu est appliqué à la copie ; la liste n'est relue que si la ligne reçue est insuffisante.
     const channel = supabase
       .channel(`realtime_job_offers_mobile_${idInstance}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_offers' }, () => {
-        charger();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_offers' }, (payload: any) => {
+        // Pas encore de liste de départ (premier chargement en cours) : un changement isolé ne ferait qu'une liste d'une offre.
+        if (courantes.length === 0) {
+          rechargerPlusTard();
+          return;
+        }
+        const r = appliquerChangement(
+          courantes,
+          { type: payload.eventType, nouveau: payload.new, ancien: payload.old },
+          etat,
+          aujourdhuiISO(),
+          limite,
+        );
+        if (r.recharger) {
+          rechargerPlusTard();
+          return;
+        }
+        afficher(r.lignes);
+        ecrireCopieLocale(etat, limite, r.lignes);
       })
       .subscribe();
 
     return () => {
       annule = true;
+      if (minuterie) clearTimeout(minuterie);
       supabase.removeChannel(channel);
     };
   }, [limite, etat, version, idInstance]);
