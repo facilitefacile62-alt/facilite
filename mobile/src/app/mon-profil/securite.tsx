@@ -379,6 +379,21 @@ export default function ProfilSecuriteScreen() {
               </>
             ) : null}
           </View>
+
+          {/* Suppression du compte (exigée par Google Play) : ouvre la page ffacilite.com/suppression-compte. */}
+          <Pressable
+            onPress={() => router.push('/web/suppression-compte' as Href)}
+            accessibilityRole="button"
+            className="flex-row items-center gap-3 bg-white rounded-2xl p-3.5 mt-3.5">
+            <View className="w-9 h-9 rounded-full items-center justify-center" style={{ backgroundColor: '#FBE0E0' }}>
+              <Ionicons name="trash-outline" size={17} color="#DC2626" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[14px] font-bold" style={{ color: '#DC2626' }}>Supprimer mon compte</Text>
+              <Text className="text-[12px] text-black/50 mt-0.5">Demander la suppression de votre compte et de vos données</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="rgba(0,0,0,0.35)" />
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </View>
