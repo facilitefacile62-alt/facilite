@@ -6,6 +6,8 @@ import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
+import { creerRafraichissement } from "@/lib/rafraichissementAccueil";
 import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
 import { useAuth } from "@/context/AuthContext";
 import ApplyModal from "@/components/ApplyModal";
@@ -199,7 +201,7 @@ function OffresContent({ listingType } = {}) {
     async (debut, fin) => {
       let query = supabase
         .from("job_offers")
-        .select("*", { count: "exact" })
+        .select(SELECT_LISTE_OFFRES, { count: "exact" })
         .order("created_at", { ascending: false });
       if (listingType) {
         query = query.eq("listing_type", listingType);
@@ -286,7 +288,14 @@ function OffresContent({ listingType } = {}) {
         setLoading(false);
       }
     }
-    loadData();
+    // Événements temps réel regroupés (une seule requête 5 s après le dernier) et différés tant que l'onglet est caché ; pas de sondage (il n'y en avait pas).
+    const rafraichissement = creerRafraichissement({
+      charger: loadData,
+      estVisible: () => document.visibilityState === "visible",
+      intervalleVisibleMs: null,
+      ecartMinimalMs: null,
+    });
+    rafraichissement.demarrer();
 
     // Abonnement Realtime Supabase sur la table job_offers
     const channel = supabase
@@ -295,13 +304,20 @@ function OffresContent({ listingType } = {}) {
         "postgres_changes",
         { event: "*", schema: "public", table: "job_offers" },
         () => {
-          loadData();
+          rafraichissement.surChangement();
         }
       )
       .subscribe();
 
+    const handleVisibility = () => {
+      rafraichissement.surVisibilite();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      rafraichissement.arreter();
     };
     // requeteOffres est mémoïsée sur listingType : sans elle dans les
     // dépendances, loadData garderait une fermeture obsolète et pourrait

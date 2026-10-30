@@ -7,6 +7,8 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase, handleGlobalSignOut } from "@/lib/supabase";
+import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
+import { creerRafraichissement } from "@/lib/rafraichissementAccueil";
 import { useAuth } from "@/context/AuthContext";
 import RoleNavLink from "@/components/RoleNavLink";
 import UnreadBadge from "@/components/UnreadBadge";
@@ -364,7 +366,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
       try {
         const { data, error } = await supabase
           .from("job_offers")
-          .select("*")
+          .select(SELECT_LISTE_OFFRES)
           .eq("is_active", true)
           .order("created_at", { ascending: false })
           .limit(limiteChargement);
@@ -429,7 +431,13 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
       }
     } catch {}
 
-    loadDynamicJobs();
+    // Rechargement économe (src/lib/rafraichissementAccueil.js) : rien tant que l'onglet est caché, sondage lent (5 min) quand il est visible,
+    // événements temps réel regroupés (une seule requête 5 s après le dernier). Avant : toutes les 60 s, même onglet caché, et à chaque événement.
+    const rafraichissement = creerRafraichissement({
+      charger: loadDynamicJobs,
+      estVisible: () => document.visibilityState === "visible",
+    });
+    rafraichissement.demarrer();
 
     const jobsChannel = supabase
       .channel("public-job-offers-feed")
@@ -437,23 +445,20 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
         "postgres_changes",
         { event: "*", schema: "public", table: "job_offers" },
         () => {
-          loadDynamicJobs();
+          rafraichissement.surChangement();
         }
       )
       .subscribe();
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        loadDynamicJobs();
-      }
+      rafraichissement.surVisibilite();
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    const pollInterval = setInterval(loadDynamicJobs, 60000);
 
     return () => {
       supabase.removeChannel(jobsChannel);
       document.removeEventListener("visibilitychange", handleVisibility);
-      clearInterval(pollInterval);
+      rafraichissement.arreter();
     };
   }, [limiteChargement]);
 
