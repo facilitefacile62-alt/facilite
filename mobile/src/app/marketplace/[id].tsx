@@ -161,7 +161,6 @@ export default function ArticleScreen() {
           id: conversationId,
           contexte: 'marketplace',
           nom: article.boutiqueNom,
-          brouillon: brouillonArticle(article),
           article: article.id,
         },
       });
