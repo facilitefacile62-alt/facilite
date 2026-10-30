@@ -3,6 +3,7 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import FaciliteHeader from '@/components/FaciliteHeader';
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { useT } from '@/lib/i18n';
 
 // En-tête de « Modifier infos » (maquettes 40 et 41) : l'en-tête Facilité,
@@ -12,6 +13,7 @@ import { useT } from '@/lib/i18n';
 export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'parametres' }) {
   const t = useT();
   const router = useRouter();
+  const scanOuvert = useFonctionnalite('feat_scanner_document');
   return (
     <>
       <FaciliteHeader />
@@ -37,6 +39,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
             {t('À propos')}
           </Text>
         </Pressable>
+        {scanOuvert ? (
         <Pressable
           onPress={() => router.push('/mon-profil/scanner-document')}
           className="flex-row items-center gap-2"
@@ -44,6 +47,7 @@ export default function EnteteModifierInfos({ actif }: { actif: 'apropos' | 'par
           <Ionicons name="scan-outline" size={16} color="#1A1A1A" />
           <Text className="text-[14px] font-black text-[#1A1A1A]">{t('Scanner')}</Text>
         </Pressable>
+        ) : null}
         <Pressable
           onPress={() => router.replace('/mon-profil/parametres' as Href)}
           style={{ paddingBottom: 10, borderBottomWidth: actif === 'parametres' ? 2 : 0, borderBottomColor: '#1A1A1A', marginBottom: -1 }}>

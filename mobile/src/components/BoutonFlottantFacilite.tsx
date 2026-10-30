@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 //    Toucher le voile ou le « × » referme.
 // L'Assistant vocal n'est pas encore branché dans l'application (interrupteur feat_voice_assistant coupé) : tant
 // qu'il l'est, sa pilule n'est pas proposée plutôt que de simuler un assistant.
-type Action = { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; couleur: string; agir: () => void; interrupteur?: string };
+type Action = { id: string; libelle: string; icone: keyof typeof Ionicons.glyphMap; couleur: string; agir: () => void; interrupteur?: string | string[] };
 
 export default function BoutonFlottantFacilite() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function BoutonFlottantFacilite() {
     { id: 'document', libelle: 'Importer un document', icone: 'cloud-upload', couleur: '#7C3AED', agir: importerDocument },
     { id: 'email', libelle: 'Écrire un e-mail', icone: 'mail', couleur: '#2563EB', agir: () => router.push('/messages?ecrire=1' as Href) },
     { id: 'assistant', libelle: 'Assistant vocal', icone: 'mic', couleur: '#065F46', agir: () => Alert.alert('Assistant vocal', 'Cette fonctionnalité arrive dans une prochaine mise à jour.'), interrupteur: 'feat_voice_assistant' },
-    { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur'), interrupteur: 'nav_extracteur' },
+    { id: 'extracteur', libelle: 'Extracteur', icone: 'flash', couleur: '#F59E0B', agir: () => router.push('/extracteur'), interrupteur: ['nav_extracteur', 'feat_app_extracteur'] },
   ];
   const actions = toutesActions.filter((a) => autorise(a.interrupteur));
 

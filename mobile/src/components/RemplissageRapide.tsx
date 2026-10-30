@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 
+import { useFonctionnalite } from '@/lib/featureFlags';
 import { analyserDocument, scannerPieceIdentite } from '@/lib/scanDocument';
 
 // Remplissage rapide du profil vendeur par scan : carte d'identité (recto puis verso), passeport, CV ou autre document. Rien n'est enregistré
@@ -18,7 +19,7 @@ const TYPES: { cle: TypeDoc; libelle: string; icone: keyof typeof Ionicons.glyph
   { cle: 'cv', libelle: 'CV / autre', icone: 'document-text-outline' },
 ];
 
-export default function RemplissageRapide({ onRempli }: { onRempli: (infos: InfosScannees) => void }) {
+function RemplissageRapideContenu({ onRempli }: { onRempli: (infos: InfosScannees) => void }) {
   const [ouvert, setOuvert] = useState(false);
   const [type, setType] = useState<TypeDoc>('cni');
   const [face, setFace] = useState<'recto' | 'verso'>('recto');
@@ -198,4 +199,10 @@ export default function RemplissageRapide({ onRempli }: { onRempli: (infos: Info
       </Text>
     </View>
   );
+}
+
+/** Remplissage rapide par photo (IA payante) : masqué tant que feat_scanner_document est fermé. */
+export default function RemplissageRapide(props: { onRempli: (infos: InfosScannees) => void }) {
+  const scanOuvert = useFonctionnalite('feat_scanner_document');
+  return scanOuvert ? <RemplissageRapideContenu {...props} /> : null;
 }

@@ -7,7 +7,7 @@ const { test, expect } = require("@playwright/test");
 const logique = () => import("../../mobile/src/lib/featureFlagsLogique.ts");
 
 // Interrupteurs de CETTE PR et des suivantes : la liste complète est vérifiée quand tous sont déclarés (voir la fin du fichier).
-const DECLARES = ["feat_paiements_application"];
+const DECLARES = ["feat_paiements_application", "feat_scanner_document", "feat_app_extracteur", "feat_app_fonctionnalites", "feat_app_diagnostic_cv", "feat_app_boite_idees", "feat_app_creer_cv", "feat_app_modeles_cv"];
 
 test.describe("fermés par défaut et si la table est illisible", () => {
   test("chaque interrupteur déclaré est fermé pour tous les rôles sauf l'administrateur", async () => {

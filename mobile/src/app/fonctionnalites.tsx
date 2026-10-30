@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import LigneOutil from '@/components/LigneOutil';
+import { useFonctionnalites } from '@/lib/featureFlags';
 import { ONGLETS_OUTILS, filtrerOutils, type TypeOutil } from '@/lib/outils';
 
 // Écran « Fonctionnalités » — maquette 13. En-tête propre (badge outil,
@@ -19,7 +20,8 @@ const VERT = '#10B981';
 export default function FonctionnalitesScreen() {
   const router = useRouter();
   const [ongletActif, setOngletActif] = useState<TypeOutil>('tous');
-  const outilsAffiches = useMemo(() => filtrerOutils(ongletActif), [ongletActif]);
+  const autorise = useFonctionnalites();
+  const outilsAffiches = filtrerOutils(ongletActif).filter((o) => autorise(o.interrupteur));
 
   return (
     <View className="flex-1 bg-[#F2F0EA]">

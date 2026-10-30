@@ -20,6 +20,8 @@ export type Outil = {
   titre: string;
   sous: string;
   ouvrir: (router: ReturnType<typeof useRouter>) => void;
+  /** Interrupteurs (tous ouverts) qui commandent cette entrée dans l'application ; absent : suit l'écran « Fonctionnalités » lui-même. */
+  interrupteur?: string[];
 };
 
 // Chaque outil PDF ouvre DIRECTEMENT son outil sur le site (« Compresser PDF » → la page « Compresser le fichier PDF »), jamais la liste des
@@ -90,6 +92,7 @@ export const OUTILS: Outil[] = [
     titre: 'Extracteur 1-Click',
     sous: 'Outil IA',
     ouvrir: (router) => router.push('/extracteur'),
+    interrupteur: ['nav_extracteur', 'feat_app_extracteur'],
   },
   {
     id: 'boite_idees',
@@ -99,6 +102,7 @@ export const OUTILS: Outil[] = [
     titre: 'Boîte à idées',
     sous: 'Collaboratif',
     ouvrir: (router) => router.push('/web/boite-a-idees?aide=boite_idees'),
+    interrupteur: ['nav_plus_boite_idees', 'feat_app_boite_idees'],
   },
   {
     id: 'diagnostic_cv',
@@ -108,6 +112,7 @@ export const OUTILS: Outil[] = [
     titre: 'Diagnostic CV Gratuit',
     sous: 'Analyse ATS et mots-clés',
     ouvrir: (router) => router.push('/web/importer-cv?aide=diagnostic_cv'),
+    interrupteur: ['feat_diagnostic_cv', 'feat_app_diagnostic_cv'],
   },
   {
     id: 'services_modeles',
@@ -117,6 +122,7 @@ export const OUTILS: Outil[] = [
     titre: 'Studio Services & Modèles',
     sous: 'CV, lettres et modèles prêts',
     ouvrir: (router) => router.push('/web/modeles?aide=services_modeles'),
+    interrupteur: ['feat_app_modeles_cv'],
   },
 ];
 
