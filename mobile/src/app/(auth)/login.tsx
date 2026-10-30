@@ -227,11 +227,9 @@ export default function LoginScreen() {
           <BoutonContinuer onPress={connexionMotDePasse} actif={motDePasse.length > 0} chargement={mdpEnCours} noir libelle="Me connecter" />
         </View>
 
-        <Pressable onPress={() => router.push('/forgot-password')} hitSlop={6} className="mt-5 self-start">
-          <Text className="text-[15px] font-black" style={{ color: '#2563EB' }}>Mot de passe oublié ?</Text>
-        </Pressable>
-        <Text className="text-[13px] mt-3" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 19 }}>
-          Pas de mot de passe ? Reviens en arrière et choisis « Continuer avec Google ».
+        {/* « Mot de passe oublié » et « S'inscrire » sont retirés tant que les e-mails de confirmation ne sont pas réglés : on invite à continuer avec Google. À rétablir sur feu vert du propriétaire. */}
+        <Text className="text-[13px] mt-5" style={{ color: 'rgba(0,0,0,0.5)', lineHeight: 19 }}>
+          Mot de passe oublié ou pas encore de compte ? Reviens en arrière et choisis « Continuer avec Google ».
         </Text>
       </EcranConnexion>
     );
