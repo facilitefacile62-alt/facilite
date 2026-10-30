@@ -103,3 +103,10 @@ test("pastille rouge sur l'icône ☰ des en-têtes de Facilité et de Locaux qu
     expect(c, f).toContain("<PastilleMiseAJour visible={Boolean(maj.disponible)}");
   }
 });
+
+test("menu ☰ : plus de tuile « Télécharger l'application » (la mise à jour a la sienne)", () => {
+  const m = lire("mobile/src/app/menu.tsx");
+  expect(m).not.toContain("id: 'telecharger'");
+  expect(m).not.toContain("titre: \"Télécharger l'application\"");
+  expect(m).toContain("const TUILE_MAJ: Tuile =");
+});
