@@ -21,6 +21,7 @@ import { openFaciliteWhatsApp, getFaciliteWhatsAppUrl } from "@/lib/whatsappHelp
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { LISTING_TYPE_LABELS } from "@/lib/listingTypes";
 import { variantesImage } from "@/lib/variantesImage";
+import { adresseImage, proprietesAvatar } from "@/lib/imagesPubliques";
 
 // Fenêtres et modules affichés seulement après un geste (ou en mode « Autour de moi ») : chargés à la demande pour alléger
 // le JavaScript du premier écran (20/10/2026, Lighthouse : 2,3 s d'évaluation de scripts, rendu de l'image principale retardé).
@@ -1657,7 +1658,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                   >
                     <span className="w-16 h-16 rounded-full p-[2.5px] bg-gradient-to-tr from-[#10E688] to-blue-500 flex-shrink-0">
                       <span className="block w-full h-full rounded-full border-2 border-white overflow-hidden bg-gray-100">
-                        <img src={st.image_url} {...(variantesImage(st.image_url).srcSet ? { srcSet: variantesImage(st.image_url).srcSet, sizes: "96px" } : {})} alt="" loading={i < 4 ? "eager" : "lazy"} decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                        <img src={adresseImage(st.image_url)} {...(variantesImage(adresseImage(st.image_url)).srcSet ? { srcSet: variantesImage(adresseImage(st.image_url)).srcSet, sizes: "96px" } : {})} alt="" loading={i < 4 ? "eager" : "lazy"} decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition" />
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{st.titre}</span>
@@ -1718,7 +1719,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                     <div className="flex items-center gap-3">
                       {job.logo ? (
                         <img
-                          src={job.logo}
+                          {...proprietesAvatar(job.logo)}
                           alt={job.company}
                           className="w-10 h-10 rounded-full object-contain p-1 border border-gray-200 bg-white shadow-2xs flex-shrink-0"
                         />
@@ -2800,7 +2801,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
             onClick={() => setViewImageModal({ isOpen: false, url: null })}
           >
             <img
-              src={viewImageModal.url}
+              src={adresseImage(viewImageModal.url)}
               alt="Aperçu plein écran"
               className="max-w-full max-h-full object-contain shadow-2xl rounded-sm cursor-default"
               onClick={(e) => e.stopPropagation()} // Prevent click from closing when clicking exactly on the image
