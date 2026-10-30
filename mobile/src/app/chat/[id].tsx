@@ -1219,7 +1219,7 @@ function ImagePieceJointe({ chemin }: { chemin: string }) {
         accessibilityLabel="Agrandir la photo"
         style={{ width: 230, height: Math.max(130, Math.min(320, Math.round(230 / ratio))), borderRadius: 11, overflow: 'hidden', backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}>
         {url ? (
-          <Image source={{ uri: url }} alt="Photo envoyée" style={{ width: '100%', height: '100%' }} contentFit="cover" onLoad={(e) => e.source.width && e.source.height && setRatio(e.source.width / e.source.height)} />
+          <Image source={{ uri: url }} cachePolicy="memory" alt="Photo envoyée" style={{ width: '100%', height: '100%' }} contentFit="cover" onLoad={(e) => e.source.width && e.source.height && setRatio(e.source.width / e.source.height)} />
         ) : (
           <ActivityIndicator color="#6B7280" />
         )}
@@ -1229,7 +1229,7 @@ function ImagePieceJointe({ chemin }: { chemin: string }) {
           onPress={() => setOuverte(false)}
           accessibilityLabel="Fermer"
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' }}>
-          {url && <Image source={{ uri: url }} alt="Photo envoyée" style={{ width: '100%', height: '80%' }} contentFit="contain" />}
+          {url && <Image source={{ uri: url }} cachePolicy="memory" alt="Photo envoyée" style={{ width: '100%', height: '80%' }} contentFit="contain" />}
         </Pressable>
       </Modal>
     </>

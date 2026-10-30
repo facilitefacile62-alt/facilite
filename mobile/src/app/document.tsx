@@ -69,7 +69,7 @@ export default function VisionneuseDocumentScreen() {
               <Text className="text-white/70 text-[13px] text-center">Document introuvable.</Text>
             </View>
           ) : estImage ? (
-            <Image source={{ uri: lien }} alt={titre || 'Document'} style={{ flex: 1 }} contentFit="contain" />
+            <Image source={{ uri: lien }} cachePolicy="memory" alt={titre || 'Document'} style={{ flex: 1 }} contentFit="contain" />
           ) : (
             <WebView source={{ uri: urlAffichage(lien) }} style={{ flex: 1, backgroundColor: FOND_SOMBRE }} />
           )}

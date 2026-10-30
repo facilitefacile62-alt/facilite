@@ -55,7 +55,7 @@ export default function ApercuDocument({ document }: { document: DocumentProfil 
     <View className="absolute inset-0 items-center justify-center" pointerEvents="none">
       <Ionicons name={document.estImage ? 'image-outline' : 'document-text-outline'} size={30} color="rgba(0,0,0,0.3)" />
       {url && document.estImage ? (
-        <Image source={{ uri: url }} alt={document.titre} style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
+        <Image source={{ uri: url }} cachePolicy="memory" alt={document.titre} style={{ position: 'absolute', width: '100%', height: '100%' }} contentFit="cover" />
       ) : null}
       {html ? (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: pret ? 1 : 0, backgroundColor: '#fff' }}>

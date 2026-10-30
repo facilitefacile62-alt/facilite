@@ -17,7 +17,7 @@ export default function AvatarProfil({ valeur, nom, taille, fond = '#E4DED2' }: 
   if (valeur && /^(https?:|data:)/.test(valeur)) {
     return (
       <View style={[rond, { backgroundColor: fond }]}>
-        <Image source={{ uri: valeur }} alt="Photo de profil" style={{ width: taille, height: taille }} contentFit="cover" />
+        <Image source={{ uri: valeur }} cachePolicy="memory" alt="Photo de profil" style={{ width: taille, height: taille }} contentFit="cover" />
       </View>
     );
   }
