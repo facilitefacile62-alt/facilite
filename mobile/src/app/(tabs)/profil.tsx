@@ -12,7 +12,7 @@ import { useImportDocument } from '@/components/FeuilleImportDocument';
 import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
 import LigneOutil from '@/components/LigneOutil';
 import { useAuth } from '@/context/AuthContext';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 import {
   badgeDocument,
   chargerMesDocuments,
@@ -47,6 +47,7 @@ export default function ProfilScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const userId = user?.id;
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
 
   // Ouvert depuis le menu ☰ (tuile « Fonctionnalités ») : l'onglet Fonctionnalités s'affiche d'emblée, avec un bouton Retour vers là d'où l'on vient.
   const { onglet: ongletDemande, retour: retourDemande } = useLocalSearchParams<{ onglet?: string; retour?: string }>();

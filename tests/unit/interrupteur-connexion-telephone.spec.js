@@ -44,7 +44,7 @@ test.describe("site : connexion et inscription", () => {
 
 test.describe("application", () => {
   test("interrupteur fermé par défaut dans l'application (aussi tant que la table est illisible)", () => {
-    expect(lire("mobile/src/lib/featureFlags.ts")).toContain("feat_connexion_telephone: coupe(),");
+    expect(lire("mobile/src/lib/featureFlagsLogique.ts")).toContain("feat_connexion_telephone: coupe(),");
   });
   test("connexion : onglet Téléphone masqué et jamais utilisé quand c'est fermé", () => {
     const l = lire("mobile/src/app/(auth)/login.tsx");

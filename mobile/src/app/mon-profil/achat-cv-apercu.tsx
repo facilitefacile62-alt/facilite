@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import IndisponibleNeutre from '@/components/IndisponibleNeutre';
 import { chargerModelesCv, lienTelechargementCv, urlApercuPage, useEnteteImages } from '@/lib/achatCv';
 import { grilleFiligrane, messageAchatCv, pageDepuisDecalage, prixFcfa, TEXTE_FILIGRANE, texteBoutonApercu, textePage, type ModeleCv } from '@/lib/achatCvLogique';
-import { achatsNumeriquesAutorises } from '@/lib/biensNumeriques';
+import { usePaiementsAutorises } from '@/lib/biensNumeriques';
 
 // Aperçu PROTÉGÉ d'un modèle de CV (maquette du 24/10/2026) : plein écran sombre, pages défilées de gauche à droite (aimantation au centre, bord de la page
 // suivante visible), filigrane diagonal répété « APERÇU · FACILITÉ », image basse définition légèrement floue, AUCUN bouton Télécharger / Partager /
@@ -20,6 +20,7 @@ const VERT = '#10B981';
 const ECART = 12;
 
 export default function AchatCvApercu() {
+  const achatsNumeriquesAutorises = usePaiementsAutorises();
   return achatsNumeriquesAutorises ? <ApercuContenu /> : <IndisponibleNeutre retour={'/profil' as Href} />;
 }
 
