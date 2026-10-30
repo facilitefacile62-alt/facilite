@@ -387,7 +387,7 @@ export default function MaBoutiqueScreen() {
             </View>
 
             <Pressable
-              onPress={() => router.push('/marketplace/vendre/modifier-boutique' as Href)}
+              onPress={() => router.push('/marketplace/modifier-infos?boutique=1' as Href)}
               className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5"
               style={{ borderWidth: 1, borderColor: BORDURE }}>
               <Ionicons name="pencil" size={13} color="#1A1A1A" />

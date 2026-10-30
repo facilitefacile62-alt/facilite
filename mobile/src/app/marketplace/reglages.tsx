@@ -94,13 +94,16 @@ export function ReglagesMarketplace({ integre = false }: { integre?: boolean }) 
 
   const estVendeur = Boolean(boutique);
 
-  if (!integre && userId && !chargement && estVendeur) {
+  if (userId && !chargement && estVendeur) {
     return (
       <View className="flex-1" style={{ backgroundColor: FOND_CARTES }}>
-        <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
-          <MarketplaceHeader />
-        </View>
+        {integre ? null : (
+          <View style={{ backgroundColor: '#e3dbcc', paddingTop: insets.top }}>
+            <MarketplaceHeader />
+          </View>
+        )}
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
+          {integre ? null : (
           <View className="flex-row items-center px-4 py-3">
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/marketplace/profil'))}
@@ -111,6 +114,8 @@ export function ReglagesMarketplace({ integre = false }: { integre?: boolean }) 
             </Pressable>
             <Text className="flex-1 text-center text-[15px] font-black tracking-widest" style={{ marginRight: 44 }} numberOfLines={1}>{(boutique?.nom ?? 'Réglages').toUpperCase()}</Text>
           </View>
+
+          )}
 
           <View className="px-4">
             <GroupeCartes>
