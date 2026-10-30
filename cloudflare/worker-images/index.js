@@ -106,7 +106,7 @@ async function recuperer(chemin, url, requete, env, ctx) {
   return new Response(requete.method === "HEAD" ? null : octets, { status: 200, headers: h });
 }
 
-export default {
+const travailleur = {
   async fetch(requete, env, ctx) {
     const url = new URL(requete.url);
     if (requete.method === "OPTIONS") {
@@ -125,3 +125,5 @@ export default {
     return recuperer(chemin, url, requete, env, ctx);
   },
 };
+
+export default travailleur;
