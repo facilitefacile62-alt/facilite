@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 
 import { supabase } from '@/lib/supabase';
 
@@ -149,7 +150,7 @@ type FichierChoisi = { uri: string; name?: string | null; size?: number | null; 
 export async function ajouterDocument(userId: string, source: SourceDocument = 'pdf'): Promise<DocumentProfil | null> {
   let fichier: FichierChoisi;
   if (source === 'photo' || source === 'camera') {
-    const permission = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await permissionGalerie();
     if (!permission.granted) throw new Error(source === 'camera' ? "Autorisez l'accès à l'appareil photo pour prendre une photo." : "Autorisez l'accès à vos photos pour en choisir une.");
     const choix =
       source === 'camera'

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -114,7 +115,7 @@ export default function PublierArticleScreen() {
 
   async function ajouterPhotos() {
     if (photos.length >= maxPhotos) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', 'Facilité a besoin d’accéder à vos photos pour illustrer votre article.');
       return;
@@ -148,7 +149,7 @@ export default function PublierArticleScreen() {
   }
 
   async function choisirVideo() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', 'Facilité a besoin d’accéder à votre galerie pour ajouter une vidéo.');
       return;

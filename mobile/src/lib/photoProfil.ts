@@ -1,5 +1,6 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 
 import { supabase } from '@/lib/supabase';
 
@@ -20,7 +21,7 @@ export async function urlPhotoProfil(valeur: string | null | undefined): Promise
 
 /** Choisit une photo dans la galerie et l'enregistre. Renvoie false si l'utilisateur annule ou refuse l'accès. */
 export async function changerPhotoProfil(userId: string): Promise<boolean> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const permission = await permissionGalerie();
   if (!permission.granted) throw new Error('Facilité a besoin d’accéder à vos photos pour choisir votre photo de profil.');
   const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: true, aspect: [1, 1] });
   if (choix.canceled) return false;
@@ -55,7 +56,7 @@ export async function urlPhotoCouverture(valeur: string | null | undefined): Pro
 
 /** Choisit une photo de couverture dans la galerie et l'enregistre. Renvoie false si l'utilisateur annule. */
 export async function changerPhotoCouverture(userId: string): Promise<boolean> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const permission = await permissionGalerie();
   if (!permission.granted) throw new Error('Facilité a besoin d’accéder à vos photos pour choisir votre photo de couverture.');
   const choix = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: true, aspect: [16, 7] });
   if (choix.canceled) return false;

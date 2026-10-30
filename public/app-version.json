@@ -1,5 +1,5 @@
 {
-  "android": { "version": "2.0.0", "url": "https://play.google.com/store/apps/details?id=com.ffacilite.app" },
-  "ios": { "version": "2.0.0", "url": "" },
-  "apk": { "version": "2.0.0", "url": "https://ffacilite.com/telecharger-android" }
+  "android": { "version": "2.0.1", "url": "https://play.google.com/store/apps/details?id=com.ffacilite.app" },
+  "ios": { "version": "2.0.1", "url": "" },
+  "apk": { "version": "2.0.1", "url": "https://ffacilite.com/telecharger-android" }
 }

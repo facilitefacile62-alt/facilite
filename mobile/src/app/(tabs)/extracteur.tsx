@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { permissionGalerie } from '@/lib/galerie';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -35,7 +36,7 @@ export default function ExtracteurScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   async function choisirPhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await permissionGalerie();
     if (!permission.granted) {
       Alert.alert('Autorisation requise', "Facilité a besoin d'accéder à vos photos pour importer l'annonce.");
       return;
