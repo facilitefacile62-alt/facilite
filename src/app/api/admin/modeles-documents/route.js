@@ -15,7 +15,14 @@ const BUCKET = "modeles-documents";
 const TAILLE_MAX = 5 * 1024 * 1024;
 const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const TYPES_DOCUMENT = ["cv", "lettre"];
-const COLONNES = "id, type, nom, description, prix_xof, image_url, actif, ordre, story_id, created_at, updated_at";
+const COLONNES = "id, type, nom, description, prix_xof, image_url, actif, ordre, story_id, message_whatsapp, created_at, updated_at";
+
+// Message WhatsApp d'un modèle : la phrase de l'administrateur (ou la phrase par défaut), puis le lien de l'affiche. {nom} = nom du modèle.
+function messagePourModele(nom, phrase, urlAffiche) {
+  const perso = String(phrase || "").trim().replace(/\{nom\}/g, nom);
+  if (perso) return `${perso}\n${urlAffiche}`;
+  return `Bonjour, je souhaite le modèle de document : ${nom}.\nVoici l'affiche : ${urlAffiche}`;
+}
 
 async function autoriserAdmin(req) {
   const { user, identifier, error: authError } = await requireUser(req, { logDenials: true });
@@ -73,6 +80,11 @@ function lireChamps(body) {
     const prix = Number(body.prix_xof);
     if (!Number.isInteger(prix) || prix < 0 || prix > 1000000) return { erreur: "Le prix doit être un nombre entier de FCFA (0 à 1 000 000)." };
     champs.prix_xof = prix;
+  }
+  if (body?.message_whatsapp !== undefined) {
+    const phrase = String(body.message_whatsapp ?? "").trim();
+    if (phrase.length > 300) return { erreur: "La phrase WhatsApp doit faire 300 caractères au maximum." };
+    champs.message_whatsapp = phrase || null;
   }
   if (body?.actif !== undefined) champs.actif = body.actif === true;
   if (body?.ordre !== undefined) {
@@ -149,7 +161,7 @@ export async function POST(req) {
         lien: `https://wa.me/${FACILITE_WHATSAPP_NUMBER}`,
         type: "cv",
         // Le lien de l'affiche suit le message : WhatsApp en affiche l'aperçu (un lien wa.me ne peut pas joindre une image).
-        message_whatsapp: `Bonjour, je souhaite le modèle de document : ${champs.nom}.\nVoici l'affiche : ${affiche.url}`,
+        message_whatsapp: messagePourModele(champs.nom, champs.message_whatsapp, affiche.url),
         bouton_visible: true,
         ordre: (derniereStory?.[0]?.ordre ?? 0) + 1,
         actif: true,
@@ -176,6 +188,7 @@ export async function POST(req) {
       actif: champs.actif !== false,
       ordre,
       story_id: storyId,
+      message_whatsapp: champs.message_whatsapp ?? null,
       created_by: user.id,
     })
     .select(COLONNES)
@@ -212,6 +225,10 @@ export async function PATCH(req) {
     return NextResponse.json({ error: "Impossible de modifier ce modèle." }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: "Modèle introuvable." }, { status: 404 });
+  // La story liée garde le même message que le modèle : on la met à jour quand la phrase change.
+  if (data.story_id && lu.champs.message_whatsapp !== undefined) {
+    await admin.from("stories").update({ message_whatsapp: messagePourModele(data.nom, data.message_whatsapp, data.image_url) }).eq("id", data.story_id);
+  }
   return NextResponse.json({ modele: data });
 }
 

@@ -14,7 +14,7 @@ const TAILLE_MAX = 5 * 1024 * 1024;
 const LIBELLE_TYPE = { cv: "CV", lettre: "Lettre de motivation" };
 // Prix indicatifs proposés au départ ; toujours modifiables.
 const PRIX_PAR_DEFAUT = { cv: "1500", lettre: "1000" };
-const VIDE = { type: "cv", nom: "", description: "", prix_xof: PRIX_PAR_DEFAUT.cv, publier_story: false };
+const VIDE = { type: "cv", nom: "", description: "", prix_xof: PRIX_PAR_DEFAUT.cv, message_whatsapp: "", publier_story: false };
 
 const formaterPrix = (n) => `${new Intl.NumberFormat("fr-FR").format(n)} FCFA`;
 
@@ -103,6 +103,7 @@ export default function AdminModelesDocumentsPage() {
         nom: form.nom,
         description: form.description,
         prix_xof: Number(form.prix_xof) || 0,
+        message_whatsapp: form.message_whatsapp,
         path: signee.path,
         publier_story: form.publier_story,
       });
@@ -134,6 +135,22 @@ export default function AdminModelesDocumentsPage() {
     try {
       await appeler("PATCH", { id: m.id, prix_xof: Number(saisie) });
       await recharger();
+    } catch (e) {
+      setMessage({ ok: false, texte: e.message });
+    }
+  }
+
+  async function changerPhrase(m) {
+    const saisie = window.prompt(
+      `Phrase qui accompagne la demande WhatsApp de « ${m.nom} » (le lien de l'affiche est ajouté automatiquement après la phrase ; {nom} = nom du modèle ; vide = phrase par défaut) :`,
+      m.message_whatsapp || ""
+    );
+    if (saisie === null) return;
+    setMessage(null);
+    try {
+      await appeler("PATCH", { id: m.id, message_whatsapp: saisie });
+      await recharger();
+      setMessage({ ok: true, texte: "Phrase WhatsApp enregistrée." });
     } catch (e) {
       setMessage({ ok: false, texte: e.message });
     }
@@ -273,6 +290,24 @@ export default function AdminModelesDocumentsPage() {
             />
           </div>
 
+          <div className="space-y-2">
+            <label htmlFor="modele-phrase" className="block text-xs font-bold text-gray-700">
+              Phrase qui accompagne la demande WhatsApp (facultative, 300 caractères maximum)
+            </label>
+            <textarea
+              id="modele-phrase"
+              rows={3}
+              value={form.message_whatsapp}
+              maxLength={300}
+              placeholder="Bonjour, je souhaite le modèle {nom}."
+              onChange={(e) => setForm({ ...form, message_whatsapp: e.target.value })}
+              className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm"
+            />
+            <p className="text-[11px] text-gray-500">
+              Le lien de l&apos;affiche est ajouté automatiquement après la phrase. {"{nom}"} est remplacé par le nom du modèle. Laissez vide pour la phrase par défaut.
+            </p>
+          </div>
+
           <label htmlFor="modele-story" className="flex items-start gap-2.5 cursor-pointer">
             <input
               id="modele-story"
@@ -330,6 +365,9 @@ export default function AdminModelesDocumentsPage() {
                   </button>
                   <button type="button" onClick={() => changerPrix(m)} className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-800 cursor-pointer">
                     Prix
+                  </button>
+                  <button type="button" onClick={() => changerPhrase(m)} className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-800 cursor-pointer">
+                    Phrase WhatsApp
                   </button>
                   <button type="button" onClick={() => supprimer(m)} className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-50 text-red-600 cursor-pointer">
                     Supprimer
