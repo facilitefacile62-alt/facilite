@@ -148,7 +148,8 @@ export async function POST(req) {
         libelle_bouton: "Commander via WhatsApp",
         lien: `https://wa.me/${FACILITE_WHATSAPP_NUMBER}`,
         type: "cv",
-        message_whatsapp: `Bonjour, je souhaite le modèle de document : ${champs.nom}.`,
+        // Le lien de l'affiche suit le message : WhatsApp en affiche l'aperçu (un lien wa.me ne peut pas joindre une image).
+        message_whatsapp: `Bonjour, je souhaite le modèle de document : ${champs.nom}.\nVoici l'affiche : ${affiche.url}`,
         bouton_visible: true,
         ordre: (derniereStory?.[0]?.ordre ?? 0) + 1,
         actif: true,

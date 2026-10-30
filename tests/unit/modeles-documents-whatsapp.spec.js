@@ -21,7 +21,7 @@ test.describe("Modèles de documents (WhatsApp) à la place de l'achat de CV", (
     for (const interdit of ["prixFcfa", "prixXof", "prix_xof", "achat-cv-payer", "creerPaiementCv", "Acheter", "FCFA", "lienTelechargementCv", "achatCv", "lister_modeles_cv"]) expect(c, interdit).not.toContain(interdit);
     expect(c).toContain("chargerModelesDocuments()");
     expect(c).toContain("source={{ uri: m.imageUrl }}");
-    expect(c).toContain("https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(messageDemandeModele(m.nom))}");
+    expect(c).toContain("https://wa.me/${WHATSAPP_FACILITE}?text=${encodeURIComponent(messageDemandeModele(m.nom, m.imageUrl))}");
     expect(c).toContain("Demander ce modèle");
   });
   test("le catalogue lit modeles_documents (modèles actifs, rang croissant), sans prix ; une ligne illisible est ignorée", async () => {
@@ -37,6 +37,19 @@ test.describe("Modèles de documents (WhatsApp) à la place de l'achat de CV", (
   });
   test("le message WhatsApp contient le nom du modèle", async () => {
     const { messageDemandeModele } = await import("../../mobile/src/lib/modelesDocumentsLogique.ts");
+    expect(messageDemandeModele("Modèle Classique", "https://x.supabase.co/a.webp")).toBe("Bonjour Facilité, je souhaite le modèle de document « Modèle Classique » que j'ai vu dans l'application.\nVoici l'affiche : https://x.supabase.co/a.webp");
+    expect(messageDemandeModele("Modèle Classique", "http://x/a.jpg")).not.toContain("affiche");
     expect(messageDemandeModele("Modèle Classique")).toBe("Bonjour Facilité, je souhaite le modèle de document « Modèle Classique » que j'ai vu dans l'application.");
+  });
+});
+
+test.describe("Modèle cliquable : vue d'ensemble", () => {
+  test("toucher l'image ou le nom ouvre l'affiche entière dans une fenêtre, avec « Demander ce modèle » et un bouton Fermer", () => {
+    const c = lire("mobile/src/components/CatalogueModelesDocuments.tsx");
+    expect(c).toContain("onPress={() => setOuvert(m)}");
+    expect(c).toContain("<Modal visible={ouvert !== null}");
+    expect(c).toContain('contentFit="contain"');
+    expect(c).toContain("onPress={() => demander(ouvert)}");
+    expect(c).toContain('accessibilityLabel="Fermer"');
   });
 });
