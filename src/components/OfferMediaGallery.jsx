@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import ImageAdaptative from "@/components/ImageAdaptative";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import { parseOfferImages } from "@/lib/offerMedia";
+import { adresseImage } from "@/lib/imagesPubliques";
 
 export default function OfferMediaGallery({
   media,
@@ -17,7 +18,8 @@ export default function OfferMediaGallery({
   // Valeur par défaut « eager » : une fiche d'offre ouverte seule affiche son affiche immédiatement.
   loadingCouverture = "eager",
 }) {
-  const images = parseOfferImages(media);
+  // Affichage seulement : avec l'interrupteur images-Worker ouvert, l'adresse Supabase devient celle du Worker ; sinon inchangée.
+  const images = parseOfferImages(media).map((u) => adresseImage(u));
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   // Gestion des touches du clavier pour naviguer dans la visionneuse

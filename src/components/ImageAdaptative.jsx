@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import { ratioAffichage, RATIO_ATTENTE } from "@/lib/formatImage";
 import { variantesImage } from "@/lib/variantesImage";
+import { adresseImage } from "@/lib/imagesPubliques";
 
 /**
  * Image publiée affichée à SON rapport (largeur / hauteur) : ni bandes sur les
@@ -49,8 +50,8 @@ export default function ImageAdaptative({
         ref={(el) => {
           if (el && el.complete && ratio === null) lire(el);
         }}
-        src={src}
-        {...(variantesImage(src).srcSet ? { srcSet: variantesImage(src).srcSet, sizes } : {})}
+        src={adresseImage(src)}
+        {...(variantesImage(adresseImage(src)).srcSet ? { srcSet: variantesImage(adresseImage(src)).srcSet, sizes } : {})}
         alt={alt}
         loading={loading}
         decoding="async"
