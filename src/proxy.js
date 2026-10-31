@@ -108,6 +108,9 @@ const PUBLIC_BROWSABLE_ROUTES = [
   "/recrutement-journalier",
   "/boite-a-idees",
   "/aide-candidature",
+  // Pages de conseils (/conseils et /conseils/<slug>) : texte public pour les visiteurs et les moteurs de recherche. Sans cette entrée, le refus par défaut
+  // redirigerait un visiteur anonyme vers /login.
+  "/conseils",
   // Même trouvaille que les entrées ci-dessus, trouvée le 2026-08-22 :
   // aucune route de recherche visible pour un visiteur anonyme (barre du
   // header comme page dédiée) ne doit forcer une redirection /login avant
