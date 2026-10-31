@@ -1,6 +1,7 @@
 import { getSupabasePublicClient } from "@/lib/supabase";
 import { offreHorsReferencement } from "@/lib/offreReferencement";
 import { chargerProduitsEligibles } from "@/lib/produitsServeur";
+import { PAGES_CONSEILS } from "@/lib/conseils";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -26,6 +27,9 @@ const STATIC_ROUTES = [
   { path: "/recrutement-journalier", changeFrequency: "daily", priority: 0.8 },
   { path: "/fonctionnalites", changeFrequency: "weekly", priority: 0.9 },
   { path: "/boite-a-idees", changeFrequency: "monthly", priority: 0.6 },
+  // Pages de conseils (index et cinq guides) : texte public, rendu côté serveur.
+  { path: "/conseils", changeFrequency: "monthly", priority: 0.7 },
+  ...PAGES_CONSEILS.map((p) => ({ path: `/conseils/${p.slug}`, changeFrequency: "monthly", priority: 0.7 })),
   { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
   // Exigée par Google Play et devant rester atteignable sans compte : elle
   // doit donc aussi être annoncée aux moteurs comme les autres pages légales.

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PAGES_CONSEILS } from "@/lib/conseils";
 
 // Pied de page global, rendu sur tout le site (voir layout.js, même garde
 // !dansAppMobile que <Header />) — avant ce composant, /confidentialite
@@ -53,6 +54,17 @@ export default function Footer() {
           Conditions d&apos;utilisation
         </Link>
       </div>
+      {/* Conseils : l'index puis les cinq guides (pied de page seulement, la navigation principale ne change pas). */}
+      <nav aria-label="Conseils" className="max-w-6xl mx-auto mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-bold text-gray-500 dark:text-gray-400">
+        <Link href="/conseils" className="hover:text-emerald-600 dark:hover:text-[#10E688] transition">
+          Conseils
+        </Link>
+        {PAGES_CONSEILS.map((p) => (
+          <Link key={p.slug} href={`/conseils/${p.slug}`} className="font-semibold hover:text-emerald-600 dark:hover:text-[#10E688] transition">
+            {p.court}
+          </Link>
+        ))}
+      </nav>
     </footer>
   );
 }
