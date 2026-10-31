@@ -165,7 +165,7 @@ export const PAGES_CONSEILS = [
         h2: "Première option : le créateur de CV de Facilité",
         paragraphes: [
           "Le créateur de CV de Facilité fonctionne dans le navigateur de votre téléphone, sans installer d'application. Vous ouvrez [[/creer-cv|la page de création de CV]], vous vous connectez avec votre compte, vous choisissez un modèle puis vous remplissez les rubriques une par une. L'aperçu vous montre le résultat avant de continuer.",
-          "Soyons clairs sur le prix : le téléchargement du CV final est payant, et le tarif s'affiche avant que vous payiez. Rien n'est débité sans votre accord. Si vous préférez ne rien payer, passez à la deuxième option.",
+          "Soyons clairs sur le prix : le téléchargement du CV final est payant, et le tarif s'affiche avant que vous payiez. Si vous préférez ne rien payer, passez à la deuxième option.",
         ],
       },
       {
