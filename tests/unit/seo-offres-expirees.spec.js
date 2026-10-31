@@ -80,3 +80,18 @@ test("plan du site : plus d'offre clôturée, pages fixes à date stable, offre 
   const bloc = fiche.slice(fiche.indexOf(`"${secours[1]}": {`));
   expect(/deadline: "([^"]+)"/.exec(bloc)[1]).toBe(secours[2]);
 });
+
+test("JobPosting : la ville vient du lieu (jamais recopié en rue ni en région) ; type de contrat omis quand il n'est pas renseigné", async () => {
+  const { adresseJobPosting } = await ref();
+  expect(adresseJobPosting("Dakar, Sénégal")).toEqual({ "@type": "PostalAddress", addressLocality: "Dakar", addressCountry: "SN" });
+  expect(adresseJobPosting("Tivaouane Peulh, Sénégal").addressLocality).toBe("Tivaouane Peulh");
+  expect(adresseJobPosting("Dakar / Diamniadio, Sénégal").addressLocality).toBe("Dakar");
+  expect(adresseJobPosting("Auchan Hypermarché Mermoz, Dakar").addressLocality).toBe("Auchan Hypermarché Mermoz");
+  expect(adresseJobPosting("Sénégal")).toEqual({ "@type": "PostalAddress", addressCountry: "SN" });
+  expect(adresseJobPosting("")).toEqual({ "@type": "PostalAddress", addressCountry: "SN" });
+  expect(adresseJobPosting(null).addressLocality).toBeUndefined();
+  const page = lire("src/app/offres/[id]/page.js");
+  expect(page).toContain("address: adresseJobPosting(offer.location),");
+  expect(page).not.toMatch(/streetAddress:|addressRegion:/);
+  expect(page).toContain("if (!normalized.trim()) return undefined;");
+});
