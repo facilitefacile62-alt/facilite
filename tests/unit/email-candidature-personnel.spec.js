@@ -22,7 +22,7 @@ const base = {
 test("objet, expéditeur et réponse : le nom du candidat, aucune marque dans l'objet ni dans le nom ; « Répondre » va au candidat", async () => {
   const { construireEmailRecruteur } = await module_();
   const m = construireEmailRecruteur(base);
-  expect(m.subject).toBe("Candidature au poste de Agent de sécurité – Awa Diop");
+  expect(m.subject).toBe("Candidature au poste d'Agent de sécurité – Awa Diop");
   expect(m.from).toBe("Awa Diop <recrutement@ffacilite.com>");
   expect(m.replyTo).toBe("awa.diop@example.com");
   expect(m.subject + m.from.split("<")[0]).not.toMatch(/facilit/i);
@@ -31,7 +31,7 @@ test("objet, expéditeur et réponse : le nom du candidat, aucune marque dans l'
 test("corps : message du candidat, pièces jointes, adresse de réponse, signature ; aucune mention de la plateforme (texte et HTML)", async () => {
   const { construireEmailRecruteur } = await module_();
   const m = construireEmailRecruteur(base);
-  expect(m.text).toContain("Je me permets de vous adresser ma candidature pour le poste de Agent de sécurité au sein de Groupe Sahel Sécurité.");
+  expect(m.text).toContain("Je me permets de vous adresser ma candidature pour le poste d'Agent de sécurité au sein de Groupe Sahel Sécurité.");
   expect(m.text).toContain("Bonjour, je suis très intéressée.\nJe suis disponible immédiatement.");
   expect(m.text).toContain("Vous trouverez en pièces jointes mon CV et ma lettre de motivation.");
   expect(construireEmailRecruteur({ ...base, nomsPieces: ["CV.pdf", "Diplome.pdf"] }).text).toContain("mon CV et mes documents");
@@ -41,6 +41,15 @@ test("corps : message du candidat, pièces jointes, adresse de réponse, signatu
   expect(m.html).not.toMatch(/facilit|plateforme|#10E688/i);
   expect(construireEmailRecruteur({ ...base, nomsPieces: ["CV.pdf"] }).text).toContain("Vous trouverez en pièce jointe mon CV.");
   expect(construireEmailRecruteur({ ...base, message: "" }).text).not.toContain("undefined");
+});
+
+test("élision : « d' » devant une voyelle ou un h, « de » devant une consonne", async () => {
+  const { construireEmailRecruteur, deElision } = await module_();
+  expect(deElision("Agent")).toBe("d'");
+  expect(deElision("Hôtesse d'accueil")).toBe("d'");
+  expect(deElision("Électricien")).toBe("d'");
+  expect(deElision("Technicien")).toBe("de ");
+  expect(construireEmailRecruteur({ ...base, poste: "Technicien réseau" }).subject).toBe("Candidature au poste de Technicien réseau – Awa Diop");
 });
 
 test("sécurité : le HTML est échappé, aucun retour à la ligne dans l'expéditeur ou l'objet (pas d'injection d'en-tête)", async () => {
