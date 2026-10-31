@@ -33,7 +33,15 @@ test("moins de stories que de places : on n'en invente pas ; aucune story : rien
 test("l'en-tête utilise ce calcul : ronds limités à ce qui tient, mot retiré au besoin, groupe de droite non comprimé", () => {
   const h = lire("mobile/src/components/FaciliteHeader.tsx");
   expect(h).toContain("placeStories(largeurEcran, petitesStories.length)");
-  expect(h).toContain("petitesStories.slice(0, place.ronds)");
-  expect(h).toContain("{serre && place.sansMot ? null : <Text");
+  expect(h).toContain("petitesStories.slice(0, rondsAffiches)");
+  expect(h).toContain("{serre && sansMot ? null : <Text");
   expect(h).toContain("flexShrink: 0");
+});
+
+test("largeur mesurée après la mise en page : un conteneur de ronds trop étroit (police ou affichage agrandis) retire le mot, aucun bout de rond coincé contre la bascule", () => {
+  const h = lire("mobile/src/components/FaciliteHeader.tsx");
+  expect(h).toContain("onLayout={(e) => {");
+  expect(h).toContain("if (l < ROND && !sansMotMesure) setSansMotMesure(true);");
+  expect(h).toContain("rondsQuiTiennent(largeurRonds)");
+  expect(h).toContain("maxFontSizeMultiplier={1}");
 });

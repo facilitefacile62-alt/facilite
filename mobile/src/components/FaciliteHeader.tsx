@@ -9,7 +9,7 @@ import { CleVectorielle } from '@/components/EcranConnexion';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import PastilleMiseAJour from '@/components/PastilleMiseAJour';
-import { placeStories } from '@/lib/entetePlaceLogique';
+import { placeStories, ROND, rondsQuiTiennent } from '@/lib/entetePlaceLogique';
 import { useMiseAJour } from '@/lib/miseAJour';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 
@@ -41,6 +41,12 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
   const { width: largeurEcran } = useWindowDimensions();
   const serre = accueil && petitesStories.length > 0;
   const place = placeStories(largeurEcran, petitesStories.length);
+  // Largeur RÉELLEMENT libre pour les ronds, mesurée après la mise en page : corrige l'estimation quand le téléphone a une police ou un affichage agrandis
+  // (Huawei Y9s : un bout de rond restait coincé contre la bascule). Un conteneur trop étroit retire le mot « ffacilite » puis se remesure.
+  const [largeurRonds, setLargeurRonds] = useState<number | null>(null);
+  const [sansMotMesure, setSansMotMesure] = useState(false);
+  const sansMot = place.sansMot || sansMotMesure;
+  const rondsAffiches = largeurRonds === null ? place.ronds : Math.min(petitesStories.length, rondsQuiTiennent(largeurRonds));
 
   return (
     <View style={{ backgroundColor: FOND, borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
@@ -57,7 +63,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#C4F3DD', alignItems: 'center', justifyContent: 'center' }}>
             <CleVectorielle hauteur={20} />
           </View>
-          {serre && place.sansMot ? null : <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>}
+          {serre && sansMot ? null : <Text maxFontSizeMultiplier={1} style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>}
         </Pressable>
 
         {/* Bascule Facilité ⇄ Locaux : FIXE, à droite, juste avant la loupe, sur tous les écrans (même position que dans
@@ -65,8 +71,14 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
         {!accueil || petitesStories.length === 0 ? <View style={{ flex: 1 }} /> : null}
 
         {accueil && petitesStories.length > 0 ? (
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
-            {petitesStories.slice(0, place.ronds).map((s, i) => (
+          <View
+            onLayout={(e) => {
+              const l = e.nativeEvent.layout.width;
+              setLargeurRonds(l);
+              if (l < ROND && !sansMotMesure) setSansMotMesure(true);
+            }}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
+            {petitesStories.slice(0, rondsAffiches).map((s, i) => (
               <Pressable
                 key={s.id}
                 onPress={() => onStory?.(s.index)}
