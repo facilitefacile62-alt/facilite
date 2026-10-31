@@ -4,6 +4,7 @@ import { getSupabasePublicClient } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import { SELECT_FICHE_OFFRE, retirerChampsInternes } from "@/lib/colonnesOffres";
+import { adresseImage } from "@/lib/imagesPubliques";
 import { offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
 import { choisirOffresSimilaires } from "@/lib/offresSimilaires";
 import { descriptionOffre, titreOffre } from "@/lib/titresReferencement";
@@ -1155,11 +1156,15 @@ export async function generateMetadata({ params }) {
   const title = titreOffre(offer);
   const description = descriptionOffre(offer);
   const url = `${SITE_URL}/offres/${offer.id}`;
-  const imageUrl = offer.image_url
-    ? offer.image_url.startsWith("http")
-      ? offer.image_url
-      : `${SITE_URL}${offer.image_url}`
-    : `${SITE_URL}/logo.jpeg`;
+  // Aperçu de partage (WhatsApp, Facebook, Google) : l'image est servie par le Worker Cloudflare (cache d'un an) quand l'interrupteur est ouvert, sinon par
+  // Supabase comme avant. Réécriture pour l'affichage seulement : rien n'est enregistré.
+  const imageUrl = adresseImage(
+    offer.image_url
+      ? offer.image_url.startsWith("http")
+        ? offer.image_url
+        : `${SITE_URL}${offer.image_url}`
+      : `${SITE_URL}/logo.jpeg`
+  );
 
   return {
     title,
@@ -1209,11 +1214,13 @@ export default async function OffreDetailPage({ params }) {
   const datePosted = offer.created_at ? new Date(offer.created_at).toISOString() : new Date().toISOString();
   const horsReferencement = offreHorsReferencement(offer);
 
-  const logoUrl = offer.image_url
-    ? offer.image_url.startsWith("http")
-      ? offer.image_url
-      : `${SITE_URL}${offer.image_url}`
-    : `${SITE_URL}/logo.jpeg`;
+  const logoUrl = adresseImage(
+    offer.image_url
+      ? offer.image_url.startsWith("http")
+        ? offer.image_url
+        : `${SITE_URL}${offer.image_url}`
+      : `${SITE_URL}/logo.jpeg`
+  );
 
   const jobPostingSchema = {
     "@context": "https://schema.org",

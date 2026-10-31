@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { canonicalMetadata } from "@/lib/staticPageMetadata";
 import { LONGUEUR_TITRE_PAGE, tronquer } from "@/lib/titresReferencement";
+import { adresseImage } from "@/lib/imagesPubliques";
 import MarketplaceClient from "./MarketplaceClient";
 
 const SITE_URL =
@@ -27,7 +28,7 @@ async function articlePourApercu(id) {
     const [ligne] = await reponse.json();
     if (!ligne?.titre) return null;
     const brute = Array.isArray(ligne.photos) ? ligne.photos[0] : null;
-    const photo = !brute ? null : /^https?:/i.test(brute) ? brute : `${url}/storage/v1/object/public/marketplace-photos/${brute}`;
+    const photo = !brute ? null : adresseImage(/^https?:/i.test(brute) ? brute : `${url}/storage/v1/object/public/marketplace-photos/${brute}`);
     return { titre: ligne.titre, prix: Number(ligne.prix_xof) || 0, photo };
   } catch {
     return null;

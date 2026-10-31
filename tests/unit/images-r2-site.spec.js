@@ -109,6 +109,10 @@ test.describe("branchement dans le site", () => {
   test("affichage seulement : seuls les composants d'affichage importent l'aide ; aucune page qui ENREGISTRE des offres, stories ou boutiques ne l'utilise", () => {
     const attendus = [
       "src/app/HomeClient.jsx",
+      // Étape 7 : aperçus de partage (pages serveur, rien n'y est enregistré) et balises <img> des articles du Marketplace (voir seo-images-worker.spec.js).
+      "src/app/marketplace/MarketplaceClient.jsx",
+      "src/app/marketplace/page.js",
+      "src/app/offres/[id]/page.js",
       "src/app/offres/OffresClient.jsx",
       "src/components/ImageAdaptative.jsx",
       "src/components/ImagesRepliSupabase.jsx",
@@ -125,7 +129,7 @@ test.describe("branchement dans le site", () => {
       }
     };
     parcourir("src");
-    expect(trouves.filter((f) => f !== "src/lib/imagesPubliques.js").sort()).toEqual(attendus);
+    expect(trouves.filter((f) => f !== "src/lib/imagesPubliques.js").sort()).toEqual([...attendus].sort());
   });
   test("accueil : les données des offres gardent leurs adresses Supabase ; l'aide n'est appliquée qu'à l'affichage (stories, avatar des cartes, visionneuse)", () => {
     const code = lire("src/app/HomeClient.jsx");

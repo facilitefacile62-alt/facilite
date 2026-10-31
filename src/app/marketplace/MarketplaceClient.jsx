@@ -108,6 +108,7 @@ import {
   signalerLivraisonBloquee,
   chargerLitigesOuverts,
 } from "@/lib/marketplaceData";
+import { adresseImage, echecDefinitif } from "@/lib/imagesPubliques";
 
 // Boutons IA en pause : grisés, non cliquables.
 const STYLE_IA_EN_PAUSE = { filter: "grayscale(1)", opacity: 0.45, cursor: "not-allowed" };
@@ -1626,7 +1627,7 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={urlPhoto(photo)}
+            src={adresseImage(urlPhoto(photo))}
             alt={article.titre}
             className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300 ease-out"
             loading="lazy"
@@ -6162,7 +6163,7 @@ function CarteArticlesVente({ articles = [], onAjouterClick, onChange }) {
                 <div className="w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {a.photos?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={urlPhoto(a.photos[0])} alt="" className="w-full h-full object-cover" />
+                    <img src={adresseImage(urlPhoto(a.photos[0]))} alt="" className="w-full h-full object-cover" />
                   ) : (
                     a.titre.substring(0, 2).toUpperCase()
                   )}
@@ -6819,7 +6820,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                                 : "border-gray-200 dark:border-zinc-800 opacity-70 hover:opacity-100 hover:border-gray-400"
                             }`}
                           >
-                            <img src={p} alt="" className="w-full h-full object-contain block rounded-lg" />
+                            <img src={adresseImage(p)} alt="" className="w-full h-full object-contain block rounded-lg" />
                           </button>
                         ))}
                       </div>
@@ -6829,10 +6830,13 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                     <div className="relative flex-1 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 shadow-xs order-1 sm:order-2 aspect-square max-h-[380px] sm:max-h-[390px] flex items-center justify-center group">
                       {!imageErreur && photoPrincipale ? (
                         <img
-                          src={photoPrincipale}
+                          key={photoPrincipale}
+                          src={adresseImage(photoPrincipale)}
                           alt={article.titre}
                           className="w-full h-full object-contain p-2 transition duration-300 group-hover:scale-[1.02]"
-                          onError={() => setImageErreur(true)}
+                          onError={(e) => {
+                            if (echecDefinitif(e.currentTarget)) setImageErreur(true);
+                          }}
                         />
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-800 p-6 text-center">
@@ -6986,7 +6990,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
                                 : "border-gray-200 dark:border-zinc-800 opacity-80 hover:opacity-100"
                             }`}
                           >
-                            <img src={p} alt="" className="w-full h-full object-cover rounded" />
+                            <img src={adresseImage(p)} alt="" className="w-full h-full object-cover rounded" />
                           </button>
                         ))}
                       </div>
@@ -7588,7 +7592,7 @@ function ModalFicheProduit({ article, onFermer, onVoirBoutique, userId, profile,
             <i className="fa-solid fa-xmark"></i>
           </button>
           <img
-            src={photoPrincipale}
+            src={adresseImage(photoPrincipale)}
             alt={article.titre}
             className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
           />
@@ -11905,7 +11909,7 @@ function ListeMesArticles({ articles, onChange, onPublier, userId, storeId }) {
               <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-800">
                 {a.photos?.[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={urlPhoto(a.photos[0])} alt="" className="w-full h-full object-cover" />
+                  <img src={adresseImage(urlPhoto(a.photos[0]))} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300">
                     <i className="fa-solid fa-image"></i>
