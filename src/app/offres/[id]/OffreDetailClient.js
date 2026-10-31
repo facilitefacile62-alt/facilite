@@ -610,7 +610,7 @@ export default function OffreDetailClient({ initialOffer }) {
                       <i className="fa-solid fa-hourglass-end"></i>
                     </div>
                     <div>
-                      <h4 className="text-sm font-extrabold">Cette opportunité a expiré</h4>
+                      <h4 className="text-sm font-extrabold">Offre clôturée</h4>
                       <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
                         Le délai de candidature pour ce poste est dépassé. Consultez les autres offres disponibles sur Facilité pour postuler à temps !
                       </p>

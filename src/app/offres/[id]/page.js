@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { getSupabasePublicClient } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeJsonLdString } from "@/lib/jsonLd";
+import { offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
+import { choisirOffresSimilaires } from "@/lib/offresSimilaires";
 import OffreDetailClient from "./OffreDetailClient";
+import OffresSimilaires from "./OffresSimilaires";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -1113,6 +1116,22 @@ function formatJobDescriptionToHtml(text) {
   return html || `<p>${text}</p>`;
 }
 
+// Offres encore ouvertes à proposer sous une offre clôturée. Lecture publique (la règle de lecture ne laisse passer que les offres approuvées et actives) ;
+// une panne ne casse jamais la page : le bloc est simplement omis.
+async function chargerOffresSimilaires(offer) {
+  try {
+    const { data } = await getSupabasePublicClient()
+      .from("job_offers")
+      .select("id, title, company, location, listing_type, deadline, created_at, is_active")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(60);
+    return choisirOffresSimilaires(offer, data || [], 4);
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
   let offer;
@@ -1146,6 +1165,9 @@ export async function generateMetadata({ params }) {
   return {
     title,
     description,
+    // Offre clôturée ou arrivée au bout de sa validité : la page reste ouverte aux visiteurs (liens partagés, onglet « Offres expirées »)
+    // mais ne doit plus être indexée.
+    ...(offreHorsReferencement(offer) ? { robots: { index: false, follow: true } } : {}),
     keywords: [
       offer.title,
       offer.company,
@@ -1186,9 +1208,7 @@ export default async function OffreDetailPage({ params }) {
 
   const formattedDescription = formatJobDescriptionToHtml(offer.description || offer.title);
   const datePosted = offer.created_at ? new Date(offer.created_at).toISOString() : new Date().toISOString();
-  const validThrough = offer.deadline
-    ? new Date(offer.deadline).toISOString()
-    : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+  const horsReferencement = offreHorsReferencement(offer);
 
   const logoUrl = offer.image_url
     ? offer.image_url.startsWith("http")
@@ -1202,7 +1222,7 @@ export default async function OffreDetailPage({ params }) {
     title: offer.title,
     description: formattedDescription,
     datePosted: datePosted,
-    validThrough: validThrough,
+    validThrough: validThroughIso(offer),
     employmentType: mapEmploymentType(offer.contract_type),
     hiringOrganization: {
       "@type": "Organization",
@@ -1251,11 +1271,14 @@ export default async function OffreDetailPage({ params }) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLdString(jobPostingSchema) }}
-      />
+      {!horsReferencement && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdString(jobPostingSchema) }}
+        />
+      )}
       <OffreDetailClient initialOffer={offer} />
+      {offreCloturee(offer) && <OffresSimilaires offres={await chargerOffresSimilaires(offer)} />}
     </>
   );
 }

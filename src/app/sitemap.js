@@ -1,6 +1,11 @@
 import { getSupabasePublicClient } from "@/lib/supabase";
+import { offreHorsReferencement } from "@/lib/offreReferencement";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
+
+// Date de dernière modification annoncée pour les pages fixes : une valeur STABLE, à changer à la main quand leur contenu change. « Maintenant » à chaque
+// lecture disait aux moteurs que tout changeait en permanence, ce qui leur fait ignorer ce signal.
+const DATE_PAGES_FIXES = new Date("2026-10-31T00:00:00Z");
 
 // Search Console (octobre 2026) a signalé ce que le plan du site annonçait à
 // tort :
@@ -54,12 +59,18 @@ async function filtrerRoutesDesactivees(routes) {
   }
 }
 
+// Sans cette ligne, Next.js fige le plan du site au moment du build : une offre arrivée à sa date limite resterait annoncée jusqu'au prochain déploiement.
+// Régénéré au plus une fois par heure.
+export const revalidate = 3600;
+
+const OFFRE_SECOURS = { id: "9b125270-1234-4567-89ab-cdef25272026", deadline: "2026-08-28" };
+
 export default async function sitemap() {
   const now = new Date();
   const routes = await filtrerRoutesDesactivees(STATIC_ROUTES);
   const entries = routes.map((route) => ({
     url: `${SITE_URL}${route.path}`,
-    lastModified: now,
+    lastModified: DATE_PAGES_FIXES,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));
@@ -70,12 +81,14 @@ export default async function sitemap() {
     const supabase = getSupabasePublicClient();
     const { data: offers, error } = await supabase
       .from("job_offers")
-      .select("id, updated_at, created_at")
+      .select("id, updated_at, created_at, deadline, status, is_active")
       .eq("is_active", true);
 
     if (!error && offers) {
       for (const offer of offers) {
         knownOfferIds.add(offer.id);
+        // Offre clôturée ou arrivée au bout de sa validité : retirée du plan du site (sa page reste ouverte, mais en noindex).
+        if (offreHorsReferencement(offer)) continue;
         entries.push({
           url: `${SITE_URL}/offres/${offer.id}`,
           lastModified: offer.updated_at ? new Date(offer.updated_at) : (offer.created_at ? new Date(offer.created_at) : now),
@@ -88,11 +101,10 @@ export default async function sitemap() {
     console.error("[sitemap] Échec du chargement des offres d'emploi :", err.message);
   }
 
-  // Fallback static offer : Concours Enseignants
-  const fallbackId = "9b125270-1234-4567-89ab-cdef25272026";
-  if (!knownOfferIds.has(fallbackId)) {
+  // Offre statique de secours (Concours Enseignants, définie dans offres/[id]/page.js) : annoncée seulement tant que sa date limite n'est pas dépassée.
+  if (!knownOfferIds.has(OFFRE_SECOURS.id) && !offreHorsReferencement({ deadline: OFFRE_SECOURS.deadline })) {
     entries.push({
-      url: `${SITE_URL}/offres/${fallbackId}`,
+      url: `${SITE_URL}/offres/${OFFRE_SECOURS.id}`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
