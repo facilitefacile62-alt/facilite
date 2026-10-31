@@ -90,7 +90,7 @@ test("JSON-LD Product : prix en XOF, disponibilité, état, vendeur ; aucun avis
 
 test("description : texte du vendeur sans émoji ; sinon phrase faite de données réelles seulement", async () => {
   const { descriptionProduit } = await mod();
-  expect(descriptionProduit(articleOk, boutiqueOk)).toBe("Sérum Visage BIOAQUA 15ml BIOAQUA (neuf) à 3 500 FCFA, vendu par Boutique Aminata à Médina, Dakar.");
+  expect(descriptionProduit(articleOk, boutiqueOk)).toBe("Sérum Visage BIOAQUA 15ml BIOAQUA (neuf), catégorie Mode, à 3 500 FCFA, vendu par Boutique Aminata à Médina, Dakar.");
   const d = descriptionProduit({ ...articleOk, description: "🧴 Sérum visage au riz, hydrate et illumine la peau. Flacon de 15 ml, parfait pour un usage quotidien soir et matin." }, boutiqueOk);
   expect(d).toMatch(/^Sérum visage au riz/);
   expect(d).not.toMatch(/\p{Extended_Pictographic}/u);
@@ -124,4 +124,46 @@ test("plan du site : produits éligibles seulement, aucun si nav_marketplace est
   expect(s).toContain("url: `${SITE_URL}/marketplace/produit/${article.id}`,");
   expect(s).toMatch(/catch \(err\) \{\n\s+console\.error\("\[sitemap\] Échec du chargement des produits/);
   expect(s).toContain("export const revalidate = 3600;");
+});
+
+// ---------------------------------------------------------------------------
+// Correction de l'étape 4 : titres par défaut ou trop pauvres, description par défaut
+// ---------------------------------------------------------------------------
+test("titre par défaut ou trop pauvre : « Article Boutique », « Produit », « masque » refusés (ancien comportement : renvoi vers l'annonce) ; « Costume africain », « Smartphone » acceptés", async () => {
+  const { articleEligible, titreParDefaut, titreTropPauvre } = await mod();
+  for (const t of ["Article Boutique", "article boutique", "Article", "Produit", "Nouvel article", "Mon produit", "Sans titre", "Article 2"]) expect(titreParDefaut(t), t).toBe(true);
+  for (const t of ["Costume africain", "Article de luxe en cuir", "Produit de beauté bio", "Montre Rolex"]) expect(titreParDefaut(t), t).toBe(false);
+  for (const t of ["masque", "sac", "robe", "Table", "abc defg".slice(0, 3)]) expect(titreTropPauvre(t), t).toBe(true);
+  for (const t of ["Costume africain", "Smartphone", "Sac Nike", "Robe longue", "Masque visage"]) expect(titreTropPauvre(t), t).toBe(false);
+  const refus = (titre) => articleEligible({ ...articleOk, titre }, boutiqueOk, BASE);
+  expect(refus("Article Boutique")).toEqual({ eligible: false, raison: "titre par défaut" });
+  expect(refus("masque")).toEqual({ eligible: false, raison: "titre trop pauvre" });
+  expect(refus("Costume africain").eligible).toBe(true);
+  // ancien comportement conservé : la page renvoie vers l'annonce, qui reste fonctionnelle
+  expect(lire("src/app/marketplace/produit/[id]/page.js")).toContain("if (!produit.eligible) redirect(`/marketplace?article=${encodeURIComponent(id)}`);");
+});
+
+test("description par défaut (« Superbe article disponible immédiatement en stock… ») : traitée comme vide ; la page, la meta description et le JSON-LD affichent la phrase construite avec les vraies données", async () => {
+  const { descriptionParDefaut, descriptionVendeur, descriptionProduit, phraseProduit, jsonLdProduit } = await mod();
+  const modele = "Superbe article disponible immédiatement en stock. Produit de très bonne qualité, vérifié et garanti. Contactez notre boutique directement via WhatsApp ou messagerie pour valider votre commande et profiter d'une livraison rapide à Dakar et partout au Sénégal.";
+  expect(descriptionParDefaut(modele)).toBe(true);
+  expect(descriptionParDefaut("  SUPERBE ARTICLE DISPONIBLE IMMEDIATEMENT EN STOCK ! autre suite")).toBe(true);
+  expect(descriptionParDefaut("Sérum visage au riz, hydrate et illumine la peau.")).toBe(false);
+  const article = { ...articleOk, description: modele };
+  expect(descriptionVendeur(article)).toBeNull();
+  const attendu = "Sérum Visage BIOAQUA 15ml BIOAQUA (neuf), catégorie Mode, à 3 500 FCFA, vendu par Boutique Aminata à Médina, Dakar.";
+  expect(phraseProduit(article, boutiqueOk)).toBe(attendu);
+  expect(descriptionProduit(article, boutiqueOk)).toBe(attendu);
+  const ld = jsonLdProduit({ article, boutique: boutiqueOk, photos: ["https://x/1.jpg"], url: "https://ffacilite.com/marketplace/produit/" + article.id });
+  expect(ld.description).toBe(attendu);
+  expect(JSON.stringify(ld)).not.toMatch(/Superbe article|WhatsApp/i);
+  // une vraie description du vendeur reste utilisée
+  const vraie = "Sérum visage au riz, hydrate et illumine la peau. Flacon de 15 ml, parfait pour un usage quotidien soir et matin.";
+  expect(descriptionVendeur({ ...articleOk, description: vraie })).toBe(vraie);
+  expect(descriptionProduit({ ...articleOk, description: vraie }, boutiqueOk)).toMatch(/^Sérum visage au riz/);
+  // deux produits au texte par défaut n'ont jamais la même description
+  const a2 = { ...article, id: "x2", titre: "Costume africain", prix_xof: 30000 };
+  expect(descriptionProduit(a2, boutiqueOk)).not.toBe(descriptionProduit(article, boutiqueOk));
+  const page = lire("src/app/marketplace/produit/[id]/page.js");
+  expect(page).toContain("{descriptionVendeur(article) || phraseProduit(article, boutique)}");
 });

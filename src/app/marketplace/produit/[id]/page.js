@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import { chargerProduit, chargerProduitsEligibles, urlSupabasePublique } from "@/lib/produitsServeur";
-import { LIBELLES_ETAT, descriptionProduit, enStock, formaterPrix, jsonLdProduit, libelleCategorie, photosPubliques, titresProduits } from "@/lib/produitPublic";
+import { LIBELLES_ETAT, descriptionProduit, descriptionVendeur, enStock, formaterPrix, jsonLdProduit, libelleCategorie, phraseProduit, photosPubliques, titresProduits } from "@/lib/produitPublic";
 
 // Page produit publique, rendue côté serveur : titre unique, JSON-LD Product (prix en XOF), photos par le Worker, quartier et ville seulement.
 // Jamais de numéro WhatsApp, de coordonnées GPS ni d'identifiant de propriétaire (voir src/lib/produitPublic.js). Le contact reste dans /marketplace?article=<id>.
@@ -98,9 +98,10 @@ export default async function ProduitPage({ params }) {
           ))}
         </div>
 
-        {String(article.description || "").trim() && (
-          <p className="mt-6 whitespace-pre-line text-sm leading-relaxed text-gray-800 dark:text-gray-200">{article.description}</p>
-        )}
+        {/* Description du vendeur ; si elle est vide, trop courte ou si c'est le texte par défaut, la phrase construite avec les vraies données du produit. */}
+        <p className="mt-6 whitespace-pre-line text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+          {descriptionVendeur(article) || phraseProduit(article, boutique)}
+        </p>
 
         <dl className="mt-6 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
           {fiche.map(([nom, valeur]) => (

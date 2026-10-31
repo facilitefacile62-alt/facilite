@@ -52,6 +52,19 @@ export function nomRessembleATest(nom) {
   return false;
 }
 
+const sansAccent = (s) => uneLigne(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/** Titre posé par défaut par l'application quand le vendeur n'en a pas écrit (« Article Boutique », « Produit »…) : il ne dit rien du produit. */
+export function titreParDefaut(titre) {
+  return /^(mon |nouvel |nouveau |un )?(article|produit)( boutique)?( \d+)?$|^sans titre$|^titre( de l'article)?$/.test(sansAccent(titre));
+}
+
+/** Titre trop pauvre pour une page : moins de 2 mots ET moins de 8 caractères (« masque »). « Costume africain » (2 mots) ou « Smartphone » (10 caractères) passent. */
+export function titreTropPauvre(titre) {
+  const t = uneLigne(titre);
+  return t.split(" ").filter(Boolean).length < 2 && t.length < 8;
+}
+
 // ---------------------------------------------------------------------------
 // Photos
 // ---------------------------------------------------------------------------
@@ -96,6 +109,8 @@ export function articleEligible(article, boutique, urlSupabase) {
   if (!(Number(article.prix_xof) > 0)) return { eligible: false, raison: "sans prix" };
   if (photosPubliques(article.photos, urlSupabase).length === 0) return { eligible: false, raison: "sans photo" };
   if (nomRessembleATest(article.titre)) return { eligible: false, raison: "titre vide ou de test" };
+  if (titreParDefaut(article.titre)) return { eligible: false, raison: "titre par défaut" };
+  if (titreTropPauvre(article.titre)) return { eligible: false, raison: "titre trop pauvre" };
   if (nomRessembleATest(boutique.nom)) return { eligible: false, raison: "boutique au nom vide ou de test" };
   return { eligible: true };
 }
@@ -158,12 +173,34 @@ export function libelleCategorie(categorie) {
   return CATEGORIES_CONNUES[c] || c.charAt(0).toUpperCase() + c.slice(1).replace(/[_-]+/g, " ");
 }
 
-/** Description : texte du vendeur sans émoji ; à défaut, une phrase faite UNIQUEMENT de données réelles (jamais inventée). */
-export function descriptionProduit(article, boutique, max = LONGUEUR_DESCRIPTION) {
+/**
+ * Texte de description posé par défaut quand le vendeur n'en a pas écrit (« Superbe article disponible immédiatement en stock. Produit de très bonne qualité… ») :
+ * identique d'un article à l'autre, il n'apprend rien et créerait des pages en double. Reconnu à son début, quelle que soit la suite.
+ */
+export function descriptionParDefaut(texte) {
+  return sansAccent(texte).startsWith("superbe article disponible immediatement en stock");
+}
+
+/** Description saisie par le vendeur, sans émoji ; null si elle est vide, trop courte ou si c'est le texte par défaut (traité comme vide). */
+export function descriptionVendeur(article) {
   const texte = uneLigne(article.description);
+  if (texte.length < 40 || descriptionParDefaut(texte)) return null;
+  return texte;
+}
+
+/** Phrase construite UNIQUEMENT avec les vraies données du produit (titre, marque, catégorie, état, prix, boutique, quartier et ville) : jamais inventée. */
+export function phraseProduit(article, boutique) {
   const lieu = [uneLigne(boutique.quartier), uneLigne(boutique.ville)].filter(Boolean).join(", ");
-  const phrase = `${uneLigne(article.titre)}${article.marque ? ` ${uneLigne(article.marque)}` : ""}${LIBELLES_ETAT[article.etat] ? ` (${LIBELLES_ETAT[article.etat].toLowerCase()})` : ""} à ${formaterPrix(article.prix_xof)}, vendu par ${uneLigne(boutique.nom)}${lieu ? ` à ${lieu}` : ""}.`;
-  if (texte.length < 40) return tronquer(phrase, max);
+  const categorie = libelleCategorie(article.categorie);
+  const etat = LIBELLES_ETAT[article.etat];
+  return `${uneLigne(article.titre)}${article.marque ? ` ${uneLigne(article.marque)}` : ""}${etat ? ` (${etat.toLowerCase()})` : ""}${categorie ? `, catégorie ${categorie}` : ""}, à ${formaterPrix(article.prix_xof)}, vendu par ${uneLigne(boutique.nom)}${lieu ? ` à ${lieu}` : ""}.`;
+}
+
+/** Description pour la meta description et le JSON-LD : texte du vendeur sans émoji ; à défaut (vide, courte ou texte par défaut), la phrase construite. */
+export function descriptionProduit(article, boutique, max = LONGUEUR_DESCRIPTION) {
+  const texte = descriptionVendeur(article);
+  if (!texte) return tronquer(phraseProduit(article, boutique), max);
+  const lieu = [uneLigne(boutique.quartier), uneLigne(boutique.ville)].filter(Boolean).join(", ");
   return descriptionOffre({ description: texte, title: article.titre, company: boutique.nom, location: lieu }, max);
 }
 
