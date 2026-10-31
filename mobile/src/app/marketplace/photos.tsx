@@ -13,7 +13,7 @@ import { ouvrirConversation } from '@/lib/messages';
 
 // « Marketplace — Photos & vidéo » — maquette 22 : visionneuse plein écran
 // noire, compteur en haut à gauche, croix de fermeture, flèches de
-// navigation, et en bas « Envoyer demande » / « Discuter ici ».
+// navigation, et en bas « Discuter ici » seulement (« Envoyer demande » retiré le 31/10/2026).
 //
 // La vidéo du produit (colonne marketplace_items.url_video, ajoutée le
 // 09/10/2026) est le DERNIER élément de la série, comme sur la maquette
@@ -176,11 +176,7 @@ export default function PhotosArticleScreen() {
 
         {article ? (
           <View className="flex-row gap-3 px-5 pb-4 pt-3">
-            <Pressable
-              onPress={() => setCommandeOuverte(true)}
-              className="flex-1 bg-white rounded-2xl py-3.5 items-center">
-              <Text className="text-[14px] font-bold text-[#1A1A1A]">Envoyer demande</Text>
-            </Pressable>
+            {/* « Envoyer demande » retiré (demande du 31/10/2026) : on garde seulement « Discuter ici ». Le formulaire de commande reste dans le code, sans bouton pour l'ouvrir. */}
             <Pressable
               onPress={discuter}
               disabled={!article.proprietaireId || ouverture}
