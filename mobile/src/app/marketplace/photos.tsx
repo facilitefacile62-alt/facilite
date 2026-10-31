@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Linking, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CommandeRapideModal from '@/components/CommandeRapideModal';
@@ -13,7 +13,7 @@ import { ouvrirConversation } from '@/lib/messages';
 
 // « Marketplace — Photos & vidéo » — maquette 22 : visionneuse plein écran
 // noire, compteur en haut à gauche, croix de fermeture, flèches de
-// navigation, et en bas « Discuter ici » seulement (« Envoyer demande » retiré le 31/10/2026).
+// navigation, et en bas « Discuter » et « WhatsApp » (comme la fiche de l'article ; « Envoyer demande » retiré le 31/10/2026).
 //
 // La vidéo du produit (colonne marketplace_items.url_video, ajoutée le
 // 09/10/2026) est le DERNIER élément de la série, comme sur la maquette
@@ -32,6 +32,12 @@ export default function PhotosArticleScreen() {
   const [actif, setActif] = useState(() => Math.max(0, Number(index) || 0));
   const [commandeOuverte, setCommandeOuverte] = useState(false);
   const [ouverture, setOuverture] = useState(false);
+  const whatsapp = article ? lienWhatsapp(article) : null;
+  const estMonArticle = Boolean(article && user?.id && article.proprietaireId === user.id);
+  function ecrireSurWhatsapp() {
+    if (!whatsapp) return;
+    Linking.openURL(whatsapp).catch(() => Alert.alert('WhatsApp', "Impossible d'ouvrir WhatsApp."));
+  }
 
   // Même parcours que « Discuter » de la fiche : on ouvre (ou crée) la VRAIE conversation avec le vendeur, étiquetée
   // Marketplace, au lieu de passer l'identifiant du vendeur à la place d'un identifiant de conversation.
@@ -175,15 +181,29 @@ export default function PhotosArticleScreen() {
         </View>
 
         {article ? (
-          <View className="flex-row gap-3 px-5 pb-4 pt-3">
-            {/* « Envoyer demande » retiré (demande du 31/10/2026) : on garde seulement « Discuter ici ». Le formulaire de commande reste dans le code, sans bouton pour l'ouvrir. */}
+          <View className="flex-row gap-3 px-4 pb-4 pt-3">
+            {/* Les deux mêmes boutons que la fiche de l'article : « Discuter » (messagerie de la plateforme) et « WhatsApp » (message préparé au vendeur). */}
             <Pressable
               onPress={discuter}
               disabled={!article.proprietaireId || ouverture}
-              className="flex-1 rounded-2xl py-3.5 items-center flex-row justify-center gap-2"
-              style={{ backgroundColor: ORANGE, opacity: article.proprietaireId ? 1 : 0.5 }}>
-              <Ionicons name="chatbubble" size={14} color="#fff" />
-              <Text className="text-[14px] font-bold text-white">Discuter ici</Text>
+              accessibilityRole="button"
+              className="flex-1 flex-row items-center gap-2 rounded-[14px] px-2"
+              style={{ height: 52, backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399', opacity: article.proprietaireId ? 1 : 0.5 }}>
+              <View className="items-center justify-center rounded-[10px]" style={{ width: 34, height: 34, backgroundColor: '#D7F2EA' }}>
+                {ouverture ? <ActivityIndicator size="small" color="#047857" /> : <Ionicons name="chatbubble-outline" size={16} color="#047857" />}
+              </View>
+              <Text className="text-[14px] font-black text-[#1A1A1A]">Discuter</Text>
+            </Pressable>
+            <Pressable
+              onPress={ecrireSurWhatsapp}
+              disabled={!whatsapp || estMonArticle}
+              accessibilityRole="button"
+              className="flex-1 flex-row items-center gap-2 rounded-[14px] px-2"
+              style={{ height: 52, backgroundColor: '#F3FBF7', borderWidth: 1.5, borderColor: '#34D399', opacity: !whatsapp || estMonArticle ? 0.5 : 1 }}>
+              <View className="items-center justify-center rounded-[10px]" style={{ width: 34, height: 34, backgroundColor: '#D7F2EA' }}>
+                <Ionicons name="logo-whatsapp" size={17} color="#047857" />
+              </View>
+              <Text className="text-[14px] font-black text-[#1A1A1A]">WhatsApp</Text>
             </Pressable>
           </View>
         ) : null}
