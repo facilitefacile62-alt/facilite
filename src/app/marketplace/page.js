@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { canonicalMetadata } from "@/lib/staticPageMetadata";
+import { LONGUEUR_TITRE_PAGE, tronquer } from "@/lib/titresReferencement";
 import MarketplaceClient from "./MarketplaceClient";
 
 const SITE_URL =
@@ -8,7 +9,7 @@ const ID_ARTICLE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 const metadataDeBase = {
   ...canonicalMetadata("/marketplace"),
-  title: "Marketplace — Petites Annonces & Ventes à Dakar & Sénégal | Facilité",
+  title: "Marketplace : annonces à Dakar et au Sénégal",
   description: "Découvrez la sélection du jour sur Facilité Marketplace : téléphones, véhicules, immobilier, mode et services à Dakar, Thiès et partout au Sénégal.",
 };
 
@@ -44,10 +45,12 @@ export async function generateMetadata({ searchParams }) {
 
   const prix = donnees.prix > 0 ? `${String(Math.round(donnees.prix)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA` : null;
   const titre = prix ? `${donnees.titre} — ${prix}` : donnees.titre;
+  // Titre de l'onglet : court et sans marque (le modèle du site l'ajoute) ; l'aperçu de partage garde le nom complet.
+  const titreOnglet = prix ? `${tronquer(donnees.titre, LONGUEUR_TITRE_PAGE - prix.length - 3)} — ${prix}` : tronquer(donnees.titre, LONGUEUR_TITRE_PAGE);
   const description = prix ? `${prix} · Voir l'article sur Facilité Marketplace` : "Voir l'article sur Facilité Marketplace";
   return {
     ...metadataDeBase,
-    title: `${titre} | Facilité`,
+    title: titreOnglet,
     description,
     alternates: { canonical: `${SITE_URL}/marketplace?article=${id}` },
     openGraph: {
