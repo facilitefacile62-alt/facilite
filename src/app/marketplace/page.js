@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { canonicalMetadata } from "@/lib/staticPageMetadata";
 import { LONGUEUR_TITRE_PAGE, tronquer } from "@/lib/titresReferencement";
 import { adresseImage } from "@/lib/imagesPubliques";
+import { chargerProduit } from "@/lib/produitsServeur";
 import MarketplaceClient from "./MarketplaceClient";
 
 const SITE_URL =
@@ -43,6 +44,10 @@ export async function generateMetadata({ searchParams }) {
   const id = Array.isArray(article) ? article[0] : article;
   const donnees = id ? await articlePourApercu(id) : null;
   if (!donnees) return metadataDeBase;
+  // Quand l'article a une page produit référençable (/marketplace/produit/<id>), c'est elle la canonique : le lien partagé continue de fonctionner et garde son
+  // aperçu, mais les moteurs de recherche ne comptent qu'une seule adresse. Sinon (article incomplet), la canonique reste celle d'avant.
+  const produit = await chargerProduit(id);
+  const canonique = produit.eligible ? `${SITE_URL}/marketplace/produit/${id}` : `${SITE_URL}/marketplace?article=${id}`;
 
   const prix = donnees.prix > 0 ? `${String(Math.round(donnees.prix)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA` : null;
   const titre = prix ? `${donnees.titre} — ${prix}` : donnees.titre;
@@ -53,7 +58,7 @@ export async function generateMetadata({ searchParams }) {
     ...metadataDeBase,
     title: titreOnglet,
     description,
-    alternates: { canonical: `${SITE_URL}/marketplace?article=${id}` },
+    alternates: { canonical: canonique },
     openGraph: {
       type: "website",
       siteName: "Facilité",

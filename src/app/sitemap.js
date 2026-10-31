@@ -1,5 +1,6 @@
 import { getSupabasePublicClient } from "@/lib/supabase";
 import { offreHorsReferencement } from "@/lib/offreReferencement";
+import { chargerProduitsEligibles } from "@/lib/produitsServeur";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
@@ -99,6 +100,24 @@ export default async function sitemap() {
     }
   } catch (err) {
     console.error("[sitemap] Échec du chargement des offres d'emploi :", err.message);
+  }
+
+  // Produits du Marketplace : seulement les produits éligibles (actifs, boutique active, photo, prix > 0, noms valides), et aucun si l'interrupteur nav_marketplace
+  // est coupé (la page redirigerait alors vers « fonctionnalité indisponible »). Une panne de lecture n'ajoute rien et ne casse rien.
+  try {
+    const marketplaceOuvert = (await filtrerRoutesDesactivees([{ path: "/marketplace" }])).length > 0;
+    if (marketplaceOuvert) {
+      for (const { article } of await chargerProduitsEligibles()) {
+        entries.push({
+          url: `${SITE_URL}/marketplace/produit/${article.id}`,
+          lastModified: article.updated_at ? new Date(article.updated_at) : DATE_PAGES_FIXES,
+          changeFrequency: "weekly",
+          priority: 0.6,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[sitemap] Échec du chargement des produits :", err.message);
   }
 
   // Offre statique de secours (Concours Enseignants, définie dans offres/[id]/page.js) : annoncée seulement tant que sa date limite n'est pas dépassée.
