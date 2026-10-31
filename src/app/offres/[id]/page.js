@@ -1277,7 +1277,8 @@ export default async function OffreDetailPage({ params }) {
 
   return (
     <>
-      {!horsReferencement && (
+      {/* JobPosting seulement pour une offre ouverte ET qui est un emploi : un événement (type « autre », ex. un salon) n'est pas un poste à pourvoir. */}
+      {!horsReferencement && offer.listing_type !== "autre" && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeJsonLdString(jobPostingSchema) }}
