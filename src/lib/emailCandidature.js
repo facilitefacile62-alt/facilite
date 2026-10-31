@@ -4,6 +4,9 @@
 const echapper = (s) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** « de » devant une consonne, « d' » devant une voyelle ou un h : « poste de Technicien », « poste d'Agent de sécurité ». */
+export const deElision = (mot) => (/^[aeiouyhàâäéèêëîïôöùûüœ]/i.test(String(mot ?? "").trim()) ? "d'" : "de ");
+
 const uneLigne = (s) => String(s ?? "").replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
 
 /** Nom affiché d'un expéditeur : sans retour à la ligne, guillemets, barre oblique inverse ni chevrons (qui casseraient l'en-tête « De »). */
@@ -35,7 +38,7 @@ export function construireEmailRecruteur(p) {
   const ville = uneLigne(p.ville);
   const avecLettre = pieces.some((n) => /lettre|motivation/i.test(n));
 
-  const lignes = ["Bonjour,", "", `Je me permets de vous adresser ma candidature pour le poste de ${poste}${entreprise ? ` au sein de ${entreprise}` : ""}.`, ""];
+  const lignes = ["Bonjour,", "", `Je me permets de vous adresser ma candidature pour le poste ${deElision(poste)}${poste}${entreprise ? ` au sein de ${entreprise}` : ""}.`, ""];
   if (message) lignes.push(message, "");
   if (pieces.length) {
     lignes.push(
@@ -56,7 +59,7 @@ export function construireEmailRecruteur(p) {
   return {
     from: adresse ? `${nom} <${adresse}>` : nom,
     replyTo: emailCandidat,
-    subject: `Candidature au poste de ${poste} – ${nom}`,
+    subject: `Candidature au poste ${deElision(poste)}${poste} – ${nom}`,
     text,
     html,
   };
