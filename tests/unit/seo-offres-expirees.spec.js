@@ -56,7 +56,7 @@ test("offres similaires : jamais l'offre elle-même ni une offre clôturée ; m�
 
 test("page offre : JobPosting seulement pour une offre ouverte, noindex sinon, validThrough fixe, bandeau « Offre clôturée » et offres similaires", () => {
   const p = lire("src/app/offres/[id]/page.js");
-  expect(p).toContain("{!horsReferencement && (");
+  expect(p).toContain('{!horsReferencement && offer.listing_type !== "autre" && (');
   expect(p).toContain("validThrough: validThroughIso(offer),");
   expect(p).toContain("robots: { index: false, follow: true }");
   expect(p).toContain("{offreCloturee(offer) && <OffresSimilaires");
