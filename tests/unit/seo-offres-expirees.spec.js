@@ -33,6 +33,11 @@ test("hors référencement : date limite dépassée, statut de clôture, désact
   expect(offreHorsReferencement({ deadline: jour(30), is_active: false }, NOW)).toBe(true);
   expect(offreHorsReferencement({ created_at: iso(-90) }, NOW)).toBe(true);
   expect(offreHorsReferencement({ created_at: iso(-10) }, NOW)).toBe(false);
+  // Offre en attente de modération ou refusée : ni JobPosting ni indexation ; approuvée, ou sans statut (offres de secours), non concernée.
+  expect(offreHorsReferencement({ status: "pending_review", deadline: jour(10), created_at: iso(-1) }, NOW)).toBe(true);
+  expect(offreHorsReferencement({ status: "rejected", deadline: jour(10), created_at: iso(-1) }, NOW)).toBe(true);
+  expect(offreHorsReferencement({ status: "approved", deadline: jour(10), created_at: iso(-1) }, NOW)).toBe(false);
+  expect(offreHorsReferencement({ deadline: jour(10), created_at: iso(-1) }, NOW)).toBe(false);
   expect(offreHorsReferencement({ deadline: jour(20), created_at: iso(-90) }, NOW)).toBe(false);
   // « clôturée » (bandeau, bouton Postuler) ne regarde jamais la date de publication : une offre sans date limite n'est pas clôturée.
   expect(offreCloturee({ created_at: iso(-90) })).toBe(false);

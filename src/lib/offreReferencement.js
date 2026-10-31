@@ -35,6 +35,9 @@ export function offreCloturee(offre) {
 /** Offre à ne plus proposer aux moteurs : clôturée, ou date de fin de validité dépassée (cas d'une offre ancienne sans date limite). */
 export function offreHorsReferencement(offre, maintenant = Date.now()) {
   if (offreCloturee(offre)) return true;
+  // Offre pas encore approuvée (en attente de modération) ou refusée : sa page directe ne doit ni émettre de JobPosting ni être indexée. Une offre sans statut
+  // (offres de secours codées en dur) n'est pas concernée.
+  if (offre && offre.status && offre.status !== "approved") return true;
   const fin = dateFinValidite(offre);
   return fin ? fin.getTime() < maintenant : false;
 }
