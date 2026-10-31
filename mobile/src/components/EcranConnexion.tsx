@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Ellipse, Rect } from 'react-native-svg';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Keyboard, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import CleLogo from '@/components/CleLogo';
 import { SITE_URL } from '@/lib/webEcrans';
 
 // Gabarit commun des écrans de connexion 03 à 14 (spécification du
@@ -23,15 +23,8 @@ export const CHAMP = '#EEECE7';
 // La clé du logo, dessinée en vectoriel : le fichier cle-facilite.png a un fond
 // blanc opaque, qui ferait un carré blanc sur le disque vert menthe.
 export function CleVectorielle({ hauteur }: { hauteur: number }) {
-  return (
-    <Svg width={hauteur * 0.5} height={hauteur} viewBox="0 0 24 48">
-      <Ellipse cx={12} cy={8.5} rx={6} ry={7.2} stroke="#4A3320" strokeWidth={3} fill="none" />
-      <Rect x={10.4} y={16} width={3.2} height={28} rx={1} fill="#4A3320" />
-      <Rect x={8.2} y={19.5} width={7.6} height={2.6} rx={1.2} fill="#4A3320" />
-      <Rect x={13} y={34} width={5.2} height={3} rx={0.8} fill="#4A3320" />
-      <Rect x={13} y={39.5} width={4.2} height={3} rx={0.8} fill="#4A3320" />
-    </Svg>
-  );
+  // Nom conservé : le dessin vectoriel est remplacé par l'image détourée de la clé (voir CleLogo).
+  return <CleLogo hauteur={hauteur} />;
 }
 
 export function LogoCle({ taille = 90 }: { taille?: number }) {
