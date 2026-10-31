@@ -41,3 +41,18 @@ export function offreHorsReferencement(offre, maintenant = Date.now()) {
   const fin = dateFinValidite(offre);
   return fin ? fin.getTime() < maintenant : false;
 }
+
+/**
+ * Adresse du JobPosting à partir du champ « lieu » de l'offre (texte libre : « Dakar, Sénégal », « Tivaouane Peulh, Sénégal », « Sénégal »…). La ville est le premier
+ * élément avant une virgule, une barre oblique, « & » ou une parenthèse ; « Sénégal » seul n'est pas une ville et n'est donc pas mis dans addressLocality. Les champs
+ * rue et région, qui recopiaient avant le texte du lieu tel quel, sont supprimés : ils n'étaient pas vrais.
+ */
+export function adresseJobPosting(lieu) {
+  const premier = String(lieu ?? "").split(/[,/&(]/)[0].replace(/\s+/g, " ").trim();
+  const estLePays = /^s[ée]n[ée]gal$/i.test(premier);
+  return {
+    "@type": "PostalAddress",
+    ...(premier && !estLePays ? { addressLocality: premier } : {}),
+    addressCountry: "SN",
+  };
+}

@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import { SELECT_FICHE_OFFRE, retirerChampsInternes } from "@/lib/colonnesOffres";
 import { adresseImage } from "@/lib/imagesPubliques";
-import { offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
+import { adresseJobPosting, offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
 import { choisirOffresSimilaires } from "@/lib/offresSimilaires";
 import { descriptionOffre, titreOffre } from "@/lib/titresReferencement";
 import OffreDetailClient from "./OffreDetailClient";
@@ -1051,6 +1051,8 @@ async function fetchOffer(id) {
 // mapping best-effort, FULL_TIME par défaut plutôt qu'une valeur inventée.
 function mapEmploymentType(contractType) {
   const normalized = (contractType || "").toUpperCase();
+  // Type de contrat non renseigné : le champ est OMIS (schema.org le permet) plutôt que « FULL_TIME » supposé, qui serait une donnée inventée.
+  if (!normalized.trim()) return undefined;
   if (normalized.includes("STAGE") || normalized.includes("INTERN")) return "INTERN";
   if (normalized.includes("CDD")) return "TEMPORARY";
   if (normalized.includes("FREELANCE") || normalized.includes("INDÉPENDANT")) return "CONTRACTOR";
@@ -1238,13 +1240,7 @@ export default async function OffreDetailPage({ params }) {
     },
     jobLocation: {
       "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: offer.location || "Sénégal",
-        addressLocality: offer.location || "Dakar",
-        addressRegion: offer.location || "Dakar",
-        addressCountry: "SN",
-      },
+      address: adresseJobPosting(offer.location),
     },
     applicantLocationRequirements: {
       "@type": "Country",
