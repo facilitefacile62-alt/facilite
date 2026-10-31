@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { construireEmailRecruteur } from "@/lib/emailCandidature";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
@@ -518,40 +519,34 @@ export async function POST(req) {
     // la disponibilité du service d'e-mail.
     let emailDelivered = true;
 
+    // Téléphone et ville du candidat (son propre profil), pour sa signature : facultatifs, jamais bloquants.
+    let telephoneCandidat = "";
+    let villeCandidat = "";
+    try {
+      const { data: profilCandidat } = await supabase.from("profiles").select("phone, city").eq("id", user.id).maybeSingle();
+      telephoneCandidat = typeof profilCandidat?.phone === "string" ? profilCandidat.phone : "";
+      villeCandidat = typeof profilCandidat?.city === "string" ? profilCandidat.city : "";
+    } catch {
+      // Profil illisible : l'e-mail part sans téléphone ni ville.
+    }
+
+    const emailRecruteur = construireEmailRecruteur({
+      telephone: telephoneCandidat,
+      ville: villeCandidat,
+      nomCandidat: fullName,
+      emailCandidat: email,
+      poste: customSubject || jobTitle,
+      entreprise: company,
+      message: coverLetter,
+      nomsPieces: allCvNames,
+      expediteur: recruiterSender,
+    });
+
     if (allAttachments.length > 0) {
       const { error } = await resend.emails.send({
-        from: recruiterSender,
+        // E-mail présenté comme un message écrit par le candidat (objet, nom, corps, signature sans mention de la plateforme ; « Répondre » écrit au candidat).
+        ...emailRecruteur,
         to: finalRecruiterEmail,
-        subject: `[Facilite] Candidature : ${customSubject || jobTitle} - ${fullName}`,
-        html: `
-          <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
-            <h2 style="color: #10E688; border-bottom: 2px solid #eee; padding-bottom: 10px;">Nouvelle candidature reçue</h2>
-            <p>Un candidat vient de postuler à une offre depuis la plateforme Facilité.</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 170px;">Objet / Poste :</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; color: #2563EB;">${customSubject || jobTitle} (${company})</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Candidat :</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${fullName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">E-mail de contact :</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="mailto:${email}">${email}</a></td>
-              </tr>
-            </table>
-            <p><strong>Message d'accompagnement :</strong></p>
-            <div style="background-color: #f9f9f9; border-left: 4px solid #10E688; padding: 15px; margin: 15px 0; font-style: italic;">
-              ${coverLetter ? coverLetter.replace(/\n/g, "<br/>") : "Aucun message d'accompagnement fourni."}
-            </div>
-            <p><strong>Pièces jointes transmises (${allAttachments.length}) :</strong></p>
-            <ul>
-              ${allCvNames.map(name => `<li>📄 ${name}</li>`).join("")}
-            </ul>
-            <p>Les fichiers sont attachés en pièce jointe à cet e-mail.</p>
-          </div>
-        `,
         attachments: allAttachments,
       });
 
