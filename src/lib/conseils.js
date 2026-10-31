@@ -70,7 +70,7 @@ export const PAGES_CONSEILS = [
         h2: "Relire avant d'envoyer",
         paragraphes: [
           "Relisez votre CV à voix haute, puis demandez à une personne de confiance de le relire à son tour. Vérifiez surtout les fautes dans votre nom, votre numéro de téléphone et votre adresse e-mail : une seule erreur dans un numéro et le recruteur ne pourra pas vous joindre.",
-          "Quand tout est prêt, vous pouvez [[/creer-cv|créer votre CV sur Facilité]] avec un modèle déjà organisé dans l'ordre décrit ici. Pour rédiger le message qui accompagne votre CV, lisez notre guide sur [[/conseils/lettre-de-motivation|la lettre de motivation]].",
+          "Quand tout est prêt, vous pouvez [[/creer-cv|créer votre CV sur Facilité]] avec un modèle prêt à remplir. Pour rédiger le message qui accompagne votre CV, lisez notre guide sur [[/conseils/lettre-de-motivation|la lettre de motivation]].",
         ],
       },
     ],
@@ -165,7 +165,7 @@ export const PAGES_CONSEILS = [
         h2: "Première option : le créateur de CV de Facilité",
         paragraphes: [
           "Le créateur de CV de Facilité fonctionne dans le navigateur de votre téléphone, sans installer d'application. Vous ouvrez [[/creer-cv|la page de création de CV]], vous vous connectez avec votre compte, vous choisissez un modèle puis vous remplissez les rubriques une par une. L'aperçu vous montre le résultat avant de continuer.",
-          "Soyons clairs sur le prix : le téléchargement du CV final est payant, et le tarif s'affiche avant que vous payiez. Si vous préférez ne rien payer, passez à la deuxième option.",
+          "Soyons clairs sur le prix : le téléchargement du CV final est payant, vérifiez le prix affiché dans la fenêtre de paiement avant de confirmer. Si vous préférez ne rien payer, passez à la deuxième option.",
         ],
       },
       {

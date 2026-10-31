@@ -84,8 +84,20 @@ test("liens internes : seulement le créateur de CV, les offres et les autres co
 test("honnêteté sur le prix : la page « CV sur téléphone » dit que le téléchargement sur Facilité est payant", async () => {
   const { pageConseil, textesVisibles } = await donnees();
   const t = textesVisibles(pageConseil("creer-cv-telephone")).join(" ");
-  expect(t).toMatch(/téléchargement du CV final est payant/);
-  expect(t).toMatch(/avant que vous payiez/);
+  expect(t).toMatch(/le téléchargement du CV final est payant, vérifiez le prix affiché dans la fenêtre de paiement avant de confirmer/);
+  // Aucune autre affirmation sur le paiement que le code ne confirme pas.
+  expect(t).not.toMatch(/avant que vous payiez|le tarif s'affiche|rien n'est débité|sans votre accord/i);
+});
+
+test("affirmations vérifiables : le créateur est décrit comme « un modèle prêt à remplir » (le code ne confirme pas un ordre de rubriques) ; aucune page ne promet que Facilité est gratuit", async () => {
+  const { PAGES_CONSEILS, pageConseil, textesVisibles } = await donnees();
+  const t1 = textesVisibles(pageConseil("modele-cv-senegal")).join(" ");
+  expect(t1).toContain("avec un modèle prêt à remplir.");
+  expect(t1).not.toMatch(/déjà organisé|dans l'ordre décrit ici/);
+  for (const p of PAGES_CONSEILS) {
+    const phrases = textesVisibles(p).flatMap((x) => x.split(/(?<=[.!?])\s+/));
+    for (const ph of phrases) expect(/facilit/i.test(ph) && /gratuit/i.test(ph) && !/application de traitement de texte/i.test(ph), `${p.slug} : ${ph}`).toBe(false);
+  }
 });
 
 test("page d'un conseil : rendu serveur, un seul h1, h2, JSON-LD Article et BreadcrumbList, canonique, bouton vers /creer-cv, aucune image, 404 hors des cinq pages", () => {
