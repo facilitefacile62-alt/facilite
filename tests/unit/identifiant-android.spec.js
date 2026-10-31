@@ -26,11 +26,11 @@ test("le schéma de redirection de connexion ne dépend pas de l'identifiant And
   expect(JSON.stringify(expo.android)).not.toContain("com.ffacilite.mobile");
 });
 
-test("versions : nom 2.0.1, code 11 (le 10 est déjà dans Google Play), écrits dans app.json ; EAS lit la version en local, sans incrément automatique en production", () => {
+test("versions : nom 2.0.2, code 12 (le 11 est publié sur Google Play), écrits dans app.json ; EAS lit la version en local, sans incrément automatique en production", () => {
   const { expo } = json("mobile/app.json");
-  expect(expo.version).toBe("2.0.1");
-  expect(expo.android.versionCode).toBe(11);
-  expect(expo.android.versionCode).toBeGreaterThan(10);
+  expect(expo.version).toBe("2.0.2");
+  expect(expo.android.versionCode).toBe(12);
+  expect(expo.android.versionCode).toBeGreaterThan(11);
   const eas = json("mobile/eas.json");
   expect(eas.cli.appVersionSource).toBe("local");
   expect(eas.build.production.autoIncrement).toBeUndefined();

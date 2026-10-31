@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+
+import CleLogo from '@/components/CleLogo';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Animated, Easing, Pressable, View } from 'react-native';
@@ -46,7 +48,7 @@ export default function BasculePlateforme({ plateforme }: { plateforme: Platefor
       style={{ width: LARGEUR, height: HAUTEUR, borderRadius: HAUTEUR / 2, backgroundColor: FOND }}>
       {/* Les deux logos restent visibles de part et d'autre ; le rond passe par-dessus celui de la plateforme active. */}
       <View style={{ position: 'absolute', left: 8, top: 0, bottom: 0, justifyContent: 'center' }}>
-        <Ionicons name="key" size={13} color="rgba(255,255,255,0.55)" />
+        <CleLogo hauteur={15} couleur="rgba(255,255,255,0.55)" />
       </View>
       <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, justifyContent: 'center' }}>
         <Ionicons name="storefront" size={13} color="rgba(255,255,255,0.55)" />
@@ -64,7 +66,7 @@ export default function BasculePlateforme({ plateforme }: { plateforme: Platefor
           justifyContent: 'center',
           boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
         }}>
-        {surLocaux ? <Ionicons name="storefront" size={13} color="#2563EB" /> : <Ionicons name="key" size={13} color="#FFFFFF" />}
+        {surLocaux ? <Ionicons name="storefront" size={13} color="#2563EB" /> : <CleLogo hauteur={15} couleur="#FFFFFF" />}
       </Animated.View>
     </Pressable>
   );

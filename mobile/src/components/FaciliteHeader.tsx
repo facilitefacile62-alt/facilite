@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import ImageVariante from '@/components/ImageVariante';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import BasculePlateforme from '@/components/BasculePlateforme';
 import { CleVectorielle } from '@/components/EcranConnexion';
 import PanneauNotifications from '@/components/PanneauNotifications';
 import PastilleCompteur from '@/components/PastilleCompteur';
 import PastilleMiseAJour from '@/components/PastilleMiseAJour';
+import { placeStories, ROND, rondsQuiTiennent } from '@/lib/entetePlaceLogique';
 import { useMiseAJour } from '@/lib/miseAJour';
 import { useCompteursNonLus } from '@/lib/useCompteursNonLus';
 
@@ -35,6 +36,17 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
   const maj = useMiseAJour();
   const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const compteurs = useCompteursNonLus();
+  // Téléphone étroit : les ronds de stories ne doivent jamais être cachés par la bascule. On garde ce qui tient (jusqu'à 3) et, au besoin, on retire le
+  // mot « ffacilite » (le logo reste) pour leur laisser la place.
+  const { width: largeurEcran } = useWindowDimensions();
+  const serre = accueil && petitesStories.length > 0;
+  const place = placeStories(largeurEcran, petitesStories.length);
+  // Largeur RÉELLEMENT libre pour les ronds, mesurée après la mise en page : corrige l'estimation quand le téléphone a une police ou un affichage agrandis
+  // (Huawei Y9s : un bout de rond restait coincé contre la bascule). Un conteneur trop étroit retire le mot « ffacilite » puis se remesure.
+  const [largeurRonds, setLargeurRonds] = useState<number | null>(null);
+  const [sansMotMesure, setSansMotMesure] = useState(false);
+  const sansMot = place.sansMot || sansMotMesure;
+  const rondsAffiches = largeurRonds === null ? place.ronds : Math.min(petitesStories.length, rondsQuiTiennent(largeurRonds));
 
   return (
     <View style={{ backgroundColor: FOND, borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
@@ -42,7 +54,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: serre ? 12 : 16,
           paddingVertical: 13,
           gap: 8,
         }}>
@@ -51,7 +63,7 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#C4F3DD', alignItems: 'center', justifyContent: 'center' }}>
             <CleVectorielle hauteur={20} />
           </View>
-          <Text style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>
+          {serre && sansMot ? null : <Text maxFontSizeMultiplier={1} style={{ color: VERT_FONCE, fontSize: 19, fontWeight: '900', letterSpacing: -0.3 }}>ffacilite</Text>}
         </Pressable>
 
         {/* Bascule Facilité ⇄ Locaux : FIXE, à droite, juste avant la loupe, sur tous les écrans (même position que dans
@@ -59,8 +71,14 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
         {!accueil || petitesStories.length === 0 ? <View style={{ flex: 1 }} /> : null}
 
         {accueil && petitesStories.length > 0 ? (
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
-            {petitesStories.slice(0, 3).map((s, i) => (
+          <View
+            onLayout={(e) => {
+              const l = e.nativeEvent.layout.width;
+              setLargeurRonds(l);
+              if (l < ROND && !sansMotMesure) setSansMotMesure(true);
+            }}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10, marginRight: 4, overflow: 'hidden' }}>
+            {petitesStories.slice(0, rondsAffiches).map((s, i) => (
               <Pressable
                 key={s.id}
                 onPress={() => onStory?.(s.index)}
@@ -73,12 +91,12 @@ export default function FaciliteHeader({ petitesStories = [], onStory, accueil =
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: serre ? 8 : 12, flexShrink: 0 }}>
           <BasculePlateforme plateforme="facilite" />
           <Pressable
             onPress={() => router.push('/recherche')}
             accessibilityLabel="Rechercher"
-            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+            style={{ width: serre ? 32 : 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="search" size={20} color={ICONE} />
           </Pressable>
 
