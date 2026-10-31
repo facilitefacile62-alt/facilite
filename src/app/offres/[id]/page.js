@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeJsonLdString } from "@/lib/jsonLd";
 import { offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
 import { choisirOffresSimilaires } from "@/lib/offresSimilaires";
+import { descriptionOffre, titreOffre } from "@/lib/titresReferencement";
 import OffreDetailClient from "./OffreDetailClient";
 import OffresSimilaires from "./OffresSimilaires";
 
@@ -1140,21 +1141,16 @@ export async function generateMetadata({ params }) {
   } catch (err) {
     if (!(err instanceof OffreIndisponibleError)) throw err;
     // Panne passagère : titre neutre, la page elle-même répondra par une erreur serveur.
-    return { title: "Offre d'emploi | Facilité" };
+    return { title: "Offre d'emploi" };
   }
 
   if (!offer) {
-    return { title: "Offre d'emploi introuvable | Facilité" };
+    return { title: "Offre d'emploi introuvable" };
   }
 
-  const title = `${offer.title} - ${offer.company} | Offre d'emploi Facilité`;
-  const cleanDesc = (offer.description || "")
-    .replace(/[#*•_]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const description =
-    cleanDesc.slice(0, 160) ||
-    `Découvrez l'offre d'emploi ${offer.title} chez ${offer.company} à ${offer.location}. Postulez directement en ligne sur Facilité.`;
+  // Le modèle de titre du site (layout.js) ajoute la marque : le titre d'ici ne la contient pas, et tient en 49 caractères (60 avec la marque).
+  const title = titreOffre(offer);
+  const description = descriptionOffre(offer);
   const url = `${SITE_URL}/offres/${offer.id}`;
   const imageUrl = offer.image_url
     ? offer.image_url.startsWith("http")
@@ -1179,7 +1175,7 @@ export async function generateMetadata({ params }) {
     ],
     alternates: { canonical: url },
     openGraph: {
-      title,
+      title: `${title} | Facilite`,
       description,
       url,
       type: "article",
@@ -1189,7 +1185,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: `${title} | Facilite`,
       description,
       images: [imageUrl],
     },
