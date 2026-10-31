@@ -519,7 +519,20 @@ export async function POST(req) {
     // la disponibilité du service d'e-mail.
     let emailDelivered = true;
 
+    // Téléphone et ville du candidat (son propre profil), pour sa signature : facultatifs, jamais bloquants.
+    let telephoneCandidat = "";
+    let villeCandidat = "";
+    try {
+      const { data: profilCandidat } = await supabase.from("profiles").select("phone, city").eq("id", user.id).maybeSingle();
+      telephoneCandidat = typeof profilCandidat?.phone === "string" ? profilCandidat.phone : "";
+      villeCandidat = typeof profilCandidat?.city === "string" ? profilCandidat.city : "";
+    } catch {
+      // Profil illisible : l'e-mail part sans téléphone ni ville.
+    }
+
     const emailRecruteur = construireEmailRecruteur({
+      telephone: telephoneCandidat,
+      ville: villeCandidat,
       nomCandidat: fullName,
       emailCandidat: email,
       poste: customSubject || jobTitle,

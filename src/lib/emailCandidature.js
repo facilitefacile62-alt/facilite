@@ -31,11 +31,21 @@ export function construireEmailRecruteur(p) {
   const message = String(p.message ?? "").trim();
   const pieces = (p.nomsPieces || []).filter(Boolean);
   const emailCandidat = uneLigne(p.emailCandidat);
+  const telephone = uneLigne(p.telephone);
+  const ville = uneLigne(p.ville);
+  const avecLettre = pieces.some((n) => /lettre|motivation/i.test(n));
 
   const lignes = ["Bonjour,", "", `Je me permets de vous adresser ma candidature pour le poste de ${poste}${entreprise ? ` au sein de ${entreprise}` : ""}.`, ""];
   if (message) lignes.push(message, "");
-  if (pieces.length) lignes.push(pieces.length > 1 ? "Vous trouverez en pièces jointes mon CV et mes documents." : "Vous trouverez en pièce jointe mon CV.", "");
-  lignes.push(`Vous pouvez me répondre directement à cette adresse : ${emailCandidat}.`, "", "Cordialement,", "", nom, emailCandidat);
+  if (pieces.length) {
+    lignes.push(
+      pieces.length === 1 ? "Vous trouverez en pièce jointe mon CV." : avecLettre ? "Vous trouverez en pièces jointes mon CV et ma lettre de motivation." : "Vous trouverez en pièces jointes mon CV et mes documents.",
+      ""
+    );
+  }
+  lignes.push(`Vous pouvez me répondre directement à cette adresse : ${emailCandidat}${telephone ? `, ou me joindre au ${telephone}` : ""}.`, "", "Cordialement,", "", nom);
+  if (ville) lignes.push(ville);
+  lignes.push(emailCandidat);
   const text = lignes.join("\n");
 
   const html =

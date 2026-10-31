@@ -33,7 +33,8 @@ test("corps : message du candidat, pièces jointes, adresse de réponse, signatu
   const m = construireEmailRecruteur(base);
   expect(m.text).toContain("Je me permets de vous adresser ma candidature pour le poste de Agent de sécurité au sein de Groupe Sahel Sécurité.");
   expect(m.text).toContain("Bonjour, je suis très intéressée.\nJe suis disponible immédiatement.");
-  expect(m.text).toContain("Vous trouverez en pièces jointes mon CV et mes documents.");
+  expect(m.text).toContain("Vous trouverez en pièces jointes mon CV et ma lettre de motivation.");
+  expect(construireEmailRecruteur({ ...base, nomsPieces: ["CV.pdf", "Diplome.pdf"] }).text).toContain("mon CV et mes documents");
   expect(m.text).toContain("Vous pouvez me répondre directement à cette adresse : awa.diop@example.com.");
   expect(m.text.trim().endsWith("Cordialement,\n\nAwa Diop\nawa.diop@example.com")).toBe(true);
   expect(m.text).not.toMatch(/facilit|plateforme/i);
@@ -62,10 +63,22 @@ test("adresse d'envoi : celle du domaine configuré (Nom <adresse> ou adresse se
   expect(construireEmailRecruteur({ ...base, expediteur: "" }).from).toBe("Awa Diop");
 });
 
+test("téléphone et ville du profil du candidat : ajoutés à la phrase de réponse et à la signature quand ils existent ; sinon rien (pas de ligne vide ni « undefined »)", async () => {
+  const { construireEmailRecruteur } = await module_();
+  const avec = construireEmailRecruteur({ ...base, telephone: "+221 77 000 00 00", ville: "Dakar, Sénégal" });
+  expect(avec.text).toContain("Vous pouvez me répondre directement à cette adresse : awa.diop@example.com, ou me joindre au +221 77 000 00 00.");
+  expect(avec.text).toContain("Awa Diop\nDakar, Sénégal\nawa.diop@example.com");
+  const sans = construireEmailRecruteur(base);
+  expect(sans.text).toContain("à cette adresse : awa.diop@example.com.");
+  expect(sans.text).not.toMatch(/undefined|null|joindre au/);
+  expect(construireEmailRecruteur({ ...base, nomsPieces: ["CV_Awa.pdf", "Lettre_de_motivation_Awa.pdf"] }).text).toContain("mon CV et ma lettre de motivation");
+});
+
 test("la route de candidature utilise ce modèle pour le recruteur ; la confirmation du candidat est inchangée", () => {
   const r = lire("src/app/api/postuler/route.js");
   expect(r).toContain('import { construireEmailRecruteur } from "@/lib/emailCandidature";');
   expect(r).toContain("...emailRecruteur,");
+  expect(r).toContain("telephone: telephoneCandidat,");
   expect(r).not.toContain("[Facilite] Candidature");
   expect(r).not.toContain("Nouvelle candidature reçue");
   expect(r).toContain("Confirmation de votre candidature :");
