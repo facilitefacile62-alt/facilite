@@ -75,3 +75,16 @@ export function reparerElement(el, hote = HOTE_IMAGES) {
   if (typeof el.load === "function" && el.tagName !== "IMG") el.load();
   return true;
 }
+
+/**
+ * Pour le onError d'un composant qui cache l'image quand elle échoue : renvoie false tant que le repli vers Supabase vient d'être lancé par le filet global
+ * (ImagesRepliSupabase, qui s'exécute avant) — on attend le résultat de ce second essai —, et true quand l'échec est définitif (repli déjà tenté, ou image qui
+ * ne vient pas du Worker). Sans cela, le composant afficherait son image de remplacement alors que le repli aurait réussi une fraction de seconde plus tard.
+ */
+export function echecDefinitif(el) {
+  const d = el && el.dataset;
+  if (!d || !d.repliSupabase) return true;
+  if (d.repliEchec) return true;
+  d.repliEchec = "1";
+  return false;
+}
