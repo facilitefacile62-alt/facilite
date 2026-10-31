@@ -67,7 +67,26 @@ export default function OffreDetailClient({ initialOffer }) {
     loadSession();
   }, []);
 
-  const isOwner = userId && userId === offer.recruiter_id;
+  // L'identifiant du recruteur ne figure plus dans les données envoyées avec la page : une personne connectée le lit ici pour savoir si l'offre est la sienne
+  // (modifier / archiver). Un visiteur anonyme n'a pas besoin de le connaître.
+  const [recruteurId, setRecruteurId] = useState(null);
+  useEffect(() => {
+    if (!userId) return;
+    let annule = false;
+    supabase
+      .from("job_offers")
+      .select("recruiter_id")
+      .eq("id", offer.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!annule) setRecruteurId(data?.recruiter_id ?? null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [userId, offer.id]);
+
+  const isOwner = userId && userId === recruteurId;
   const isAdmin = userRole === "admin";
   const canManage = isOwner || isAdmin;
 

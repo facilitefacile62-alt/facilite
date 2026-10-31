@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSupabasePublicClient } from "@/lib/supabase";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeJsonLdString } from "@/lib/jsonLd";
+import { SELECT_FICHE_OFFRE, retirerChampsInternes } from "@/lib/colonnesOffres";
 import { offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
 import { choisirOffresSimilaires } from "@/lib/offresSimilaires";
 import { descriptionOffre, titreOffre } from "@/lib/titresReferencement";
@@ -983,7 +984,7 @@ async function fetchOffer(id) {
 
   // 1. Si présent dans les offres statiques de secours (IDs numériques ou clés enregistrées)
   if (FALLBACK_STATIC_OFFERS[strId]) {
-    return { ...FALLBACK_STATIC_OFFERS[strId], recruiterVerified: true };
+    return { ...retirerChampsInternes(FALLBACK_STATIC_OFFERS[strId]), recruiterVerified: true };
   }
 
   // 2. Si c'est un format UUID, interrogation de Supabase
@@ -999,7 +1000,8 @@ async function fetchOffer(id) {
 
       const { data, error } = await supabase
         .from("job_offers")
-        .select("*")
+        // Colonnes de la fiche seulement (+ recruiter_id, lu ici pour le badge puis retiré avant l'envoi au navigateur).
+        .select(`${SELECT_FICHE_OFFRE}, recruiter_id`)
         .eq("id", strId)
         .single();
 
@@ -1009,17 +1011,18 @@ async function fetchOffer(id) {
       }
 
       if (!error && data) {
+        const { recruiter_id: recruteurId, ...donneesPubliques } = data;
         let recruiterVerified = false;
-        if (data.recruiter_id) {
+        if (recruteurId) {
           try {
             const { data: verified } = await supabase.rpc("has_badge", {
-              check_user_id: data.recruiter_id,
+              check_user_id: recruteurId,
               badge_name: "verified_recruiter",
             });
             recruiterVerified = verified === true;
           } catch (e) {}
         }
-        return { ...data, recruiterVerified };
+        return { ...retirerChampsInternes(donneesPubliques), recruiterVerified };
       }
     } catch (err) {
       console.error("fetchOffer DB error:", err);
@@ -1032,7 +1035,7 @@ async function fetchOffer(id) {
     (o) => String(o.id).toLowerCase() === strId.toLowerCase()
   );
   if (found) {
-    return { ...found, recruiterVerified: true };
+    return { ...retirerChampsInternes(found), recruiterVerified: true };
   }
 
   if (panneBase) {
