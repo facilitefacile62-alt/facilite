@@ -51,15 +51,15 @@ test("bulles fixées : elles ne se ferment ni à la sortie de la souris ni au bo
   expect(c).toContain("if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);");
 });
 
-test("bulles qui ne se recouvrent pas : placées côté puis plus haut, dans la carte et sous la barre du haut ; recalculées au zoom", () => {
+test("bulles FIXES sur leur boutique : jamais déplacées ; deux bulles qui se touchent sont fusionnées en une seule, recalculé au zoom", () => {
   const c = g();
-  expect(c).toContain("const eviterChevauchementsBulles = () => {");
-  expect(c).toContain("carte.on(\"moveend zoomend\", carte.__eviterBulles);"); // chaque déplacement remet les bulles à leur place : le placement est recalculé ensuite
-  expect(c).toContain("t.top < hautMini || t.bottom > c.bottom");
-  // Une bulle trop haute pour tenir sous la barre du haut reste placeable (colonnes de côté) : la règle du haut ne dépasse jamais sa position naturelle.
-  expect(c).toContain("const hautMini = Math.min(haut, r.top) - 0.5;");
-  expect(c).toContain("const deplacerBulle = (dx, dy) => {");
-  // La carte descend UNE fois pour que les bulles tiennent entièrement sous la barre du haut (au lieu d'être coupées derrière elle).
+  expect(c).not.toContain("const eviterChevauchementsBulles");
+  expect(c).toContain("const fusionnerBullesQuiSeTouchent = async () => {");
+  expect(c).toContain("carte.__pairesFusion.push(...nouvelles);");
+  expect(c).toContain("(carte.__pairesFusion || []).forEach(([u, v]) => {");
+  expect(c).toContain("carte.on(\"moveend zoomend\", carte.__eviterBulles);");
+  expect(c).toContain("setTimeout(fusionnerBullesQuiSeTouchent, 250)");
+  // La carte descend UNE fois pour que les bulles tiennent sous la barre du haut (les bulles restent collées à leurs boutiques).
   expect(c).toContain("carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });");
   expect(c).toContain("if (deficit > 2 && !carte.__carteDescendue) {");
   expect(c).toContain("carte.__carteDescendue = false;");
@@ -80,6 +80,6 @@ test("boutiques proches : écartées les unes des autres (jamais empilées), « 
 
 test("affichage seulement : aucune écriture en base, adresses d'images inchangées", () => {
   const c = g();
-  const bloc = c.slice(c.indexOf("const ouvrirFixe = () => {"), c.indexOf("const eviterChevauchementsBulles") + 200);
+  const bloc = c.slice(c.indexOf("const ouvrirFixe = (htmlGroupe) => {"), c.indexOf("const fusionnerBullesQuiSeTouchent") + 200);
   expect(bloc).not.toMatch(/supabase|\.update\(|\.insert\(/);
 });
