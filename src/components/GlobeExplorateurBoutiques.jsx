@@ -2154,7 +2154,18 @@ export default function GlobeExplorateurBoutiques({
       for (let tour = 0; tour < 10; tour++) {
         carte.__signatureGroupes = null;
         appliquerBullesFixes();
-        await attendre(160);
+        // Mesure seulement quand toutes les bulles ont fini de se placer (appareils lents : sinon des bulles encore mal positionnées paraissent se toucher et sont fusionnées à tort).
+        let derniere = "";
+        for (let essai = 0; essai < 14; essai++) {
+          await attendre(150);
+          const sig = boutiquesAffichees
+            .map((b) => popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.())
+            .filter(Boolean)
+            .map((r) => [r.left, r.top, r.width, r.height].map(Math.round).join(","))
+            .join(";");
+          if (sig && sig === derniere) break;
+          derniere = sig;
+        }
         if (!bullesFixesRef.current || carteRef.current !== carte) return;
         const mesures = boutiquesAffichees
           .map((b) => ({ id: b.id, r: popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.() }))
