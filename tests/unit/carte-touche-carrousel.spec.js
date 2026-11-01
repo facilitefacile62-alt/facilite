@@ -54,6 +54,10 @@ test("bulles qui ne se recouvrent pas : placées côté puis plus haut, dans la 
   // Une bulle trop haute pour tenir sous la barre du haut reste placeable (colonnes de côté) : la règle du haut ne dépasse jamais sa position naturelle.
   expect(c).toContain("const hautMini = Math.min(haut, r.top) - 0.5;");
   expect(c).toContain("const deplacerBulle = (dx, dy) => {");
+  // La carte descend UNE fois pour que les bulles tiennent entièrement sous la barre du haut (au lieu d'être coupées derrière elle).
+  expect(c).toContain("carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });");
+  expect(c).toContain("if (deficit > 2 && !carte.__carteDescendue) {");
+  expect(c).toContain("carte.__carteDescendue = false;");
 });
 
 test("aucun regroupement de boutiques : plus d'anneau relié par un trait (site), plus de grappes (application) ; chaque boutique reste à sa vraie place", () => {

@@ -1970,6 +1970,16 @@ export default function GlobeExplorateurBoutiques({
       const haut = (headerRef.current ? headerRef.current.getBoundingClientRect().bottom : c.top) + 4;
       const poignees = boutiquesAffichees.map((b) => popupsBoutiquesRef.current.get(b.id)).filter((h) => h?.mesurerBulle?.());
       poignees.forEach((h) => h.deplacerBulle(0, 0));
+      // Bulles visibles à l'écran dépassant sous la barre du haut : la CARTE descend une seule fois du nombre de pixels qu'il faut pour que toutes tiennent entièrement
+      // dans la zone libre (les bulles restent collées à leurs boutiques), puis le placement est recalculé.
+      const visibles = poignees.map((h) => h.mesurerBulle()).filter((m) => m && m.right > c.left && m.left < c.right && m.top > c.top - 400 && m.top < c.bottom);
+      const deficit = visibles.length ? Math.max(0, haut - Math.min(...visibles.map((m) => m.top))) : 0;
+      if (deficit > 2 && !carte.__carteDescendue) {
+        carte.__carteDescendue = true;
+        carte.once("moveend", () => setTimeout(eviterChevauchementsBulles, 150));
+        carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });
+        return;
+      }
       const places = [];
       const croise = (a, d) => a.left < d.right && a.right > d.left && a.top < d.bottom && a.bottom > d.top;
       poignees
@@ -2004,6 +2014,7 @@ export default function GlobeExplorateurBoutiques({
       });
       if (carte.__eviterBulles) carte.off("zoomend", carte.__eviterBulles);
       carte.__eviterBulles = null;
+      carte.__carteDescendue = false;
       if (ouvert) {
         setTimeout(eviterChevauchementsBulles, 200);
         carte.__eviterBulles = () => setTimeout(eviterChevauchementsBulles, 200);
