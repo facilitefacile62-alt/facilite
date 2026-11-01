@@ -45,7 +45,8 @@ test("un toucher ouvre la bulle de TOUTES les boutiques affichées, sans fermer 
 
 test("bulles fixées : elles ne se ferment ni à la sortie de la souris ni au bout d'un délai ; reconstruction des marqueurs : fermées puis rouvertes, jamais en double", () => {
   const c = g();
-  expect((c.match(/if \(bullesFixesRef\.current\) return;/g) || []).length).toBe(2);
+  expect((c.match(/if \(bullesFixesRef\.current\) return;/g) || []).length).toBe(3); // sortie de souris, délai, survol
+  expect(c).toContain("if (bullesFixesRef.current) return; // touche « Carrousel » : toutes les bulles");
   expect(c).toContain("if (bullesFixesRef.current) basculerBullesFixesRef.current(false);\n    groupe.clearLayers();");
   expect(c).toContain("if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);");
 });

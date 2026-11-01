@@ -1108,6 +1108,9 @@ export default function GlobeExplorateurBoutiques({
         // statique, jamais issue de marketplace_stores (pas des boutiques,
         // personne n'en est "propriétaire" sur Facilité). Voir
         // src/lib/transportSenegal.js pour la source des coordonnées.
+        // Les stations sont dessinées sur un canevas : dans le pane des marqueurs (600) il recouvrait TOUTE la carte au-dessus des bulles (590) et interceptait leurs touchers
+        // (défilement des articles impossible). Pane dédié à 585 : sous les bulles et sous les épingles.
+        if (!carte.getPane("stations")) carte.createPane("stations").style.zIndex = 585;
         const coucheTransport = L.layerGroup().addTo(carte);
         const ajouterStationTransport = (station, couleur, reseau) => {
           L.circleMarker([station.lat, station.lng], {
@@ -1116,7 +1119,7 @@ export default function GlobeExplorateurBoutiques({
             color: "#ffffff",
             fillColor: couleur,
             fillOpacity: 0.95,
-            pane: "markerPane",
+            pane: "stations",
           })
             .bindPopup(`<strong>${reseau}</strong><br>${echapperHtml(station.nom)}`)
             .addTo(coucheTransport);
