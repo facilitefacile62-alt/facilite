@@ -1363,12 +1363,11 @@ export default function GlobeExplorateurBoutiques({
       // boutique, son badge reste caché derrière elle sans jamais être
       // écarté — confirmé par capture d'écran réelle. Son pane est
       // maintenant AU-DESSUS des marqueurs (voir centrerSurPosition).
+      // 01/11/2026 : « Vous êtes ici » n'entre PLUS dans ce calcul. Il est devenu un petit point (24 px) posé sous les épingles : il ne repousse plus les
+      // boutiques voisines en anneau autour de lui et ne bouge jamais de sa position réelle.
       const points = boutiquesAffichees
         .filter((b) => !regroupes.has(b.id))
         .map((b) => ({ id: b.id, ll: [b.lat, b.lng], ici: false }));
-      if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
-        points.push({ id: "__ici__", ll: positionOrigineMoiRef.current, ici: true });
-      }
       // Pixels ABSOLUS au zoom évalué (project) : ne dépend ni du centre ni
       // de l'animation en cours, donc utilisable dès zoomanim.
       const pixels = points.map((p) => {
@@ -1941,7 +1940,7 @@ export default function GlobeExplorateurBoutiques({
     // le déplacer/le tracer s'il chevauche une boutique — voir le
     // commentaire dans recalculerDissociations ci-dessus.
     if (marqueurMoiRef.current && positionOrigineMoiRef.current) {
-      marqueursCreesParId.set("__ici__", { marqueur: marqueurMoiRef.current, decalage: { dx: 0, dy: 0 }, decalageBas: false, ancre: [50, 70], rafraichirPopup: null });
+      marqueursCreesParId.set("__ici__", { marqueur: marqueurMoiRef.current, decalage: { dx: 0, dy: 0 }, decalageBas: false, ancre: [14, 14], rafraichirPopup: null });
     }
 
     // Application initiale de la dissociation automatique, puis recalcul à
@@ -2106,19 +2105,15 @@ export default function GlobeExplorateurBoutiques({
       marqueurMoiRef.current.remove();
     }
 
+    // Point bleu de position, IDENTIQUE à celui de l'application (CarteLeaflet.tsx) : 22 px, bordure blanche, halo doux, style Google Maps, sans étiquette.
+    // Avant : un rond de 48 px + un halo de 80 px + une étiquette, qui cachaient les boutiques voisines.
     const htmlMoi = `
       <div class="marqueur-decale">
-        ${htmlTraitRappel(50, 70)}
+        ${htmlTraitRappel(14, 14)}
         <div class="marqueur-decale-contenu">
-      <div class="relative flex flex-col items-center select-none cursor-pointer">
-        <div class="absolute -inset-4 bg-sky-500/30 rounded-full animate-ping pointer-events-none"></div>
-        <div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-sky-400 to-blue-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center text-xl">
-          <span>🧑🏾</span>
-        </div>
-        <div class="mt-1 px-2.5 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-lg border border-white whitespace-nowrap">
-          Vous êtes ici
-        </div>
-      </div>
+          <div class="relative flex justify-center select-none cursor-pointer">
+            <div style="margin-top:3px;width:22px;height:22px;border-radius:9999px;background:#4285F4;border:3px solid #fff;box-sizing:border-box;box-shadow:0 0 0 7px rgba(66,133,244,.25),0 2px 6px rgba(0,0,0,.45)"></div>
+          </div>
         </div>
       </div>
     `;
@@ -2126,23 +2121,22 @@ export default function GlobeExplorateurBoutiques({
     const iconeMoi = L.divIcon({
       html: htmlMoi,
       className: "snap-custom-moi",
-      iconSize: [100, 75],
-      iconAnchor: [50, 70],
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
     });
 
-    // Pane dédié AU-DESSUS de markerPane (600) et sous les bulles (700) :
-    // "Vous êtes ici" reste toujours visible au-dessus des boutiques (demande
-    // explicite). Il n'intercepte plus le survol/le clic des boutiques
+    // Pane dédié SOUS markerPane (600) et au-dessus des tracés (400) depuis le 01/11/2026 : les épingles des boutiques passent toujours
+    // devant le petit point « Vous êtes ici » (avant : au-dessus d'elles, 640, avec un badge de 84 px qui les cachait). Il n'intercepte plus le survol/le clic des boutiques
     // voisines : l'élément du marqueur est en pointer-events:none et seul
     // son contenu visible reçoit les événements (voir globals.css,
     // .snap-custom-moi) — c'était la raison de l'ancien pane SOUS les
     // marqueurs (correctifs v92/v96).
     if (!carte.getPane("paneMoi")) {
       carte.createPane("paneMoi");
-      carte.getPane("paneMoi").style.zIndex = 640;
+      carte.getPane("paneMoi").style.zIndex = 590;
     }
 
-    marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi, pane: "paneMoi" }).addTo(carte);
+    marqueurMoiRef.current = L.marker([pos.latitude, pos.longitude], { icon: iconeMoi, pane: "paneMoi", title: "Vous êtes ici" }).addTo(carte);
     positionOrigineMoiRef.current = [pos.latitude, pos.longitude];
     // Sans ceci, "Vous êtes ici" ne réagissait jamais au clic — et quand il
     // se superposait à une boutique (position de démo confondue avec sa
