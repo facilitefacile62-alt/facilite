@@ -272,7 +272,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       var membres = [a];
       aPlacer.forEach(function (b) { if (!pris[b.m.id] && proche(a.p, b.p)) { pris[b.m.id] = true; membres.push(b); } });
       var avecMoi = false;
-      if (moiMarq && !moiPris && moiPt && proche(a.p, moiPt)) { avecMoi = true; moiPris = true; }
+      // 01/11/2026 : « Vous êtes ici » ne fait plus partie d'une grappe : le point bleu reste seul à sa vraie place et les boutiques voisines ne se serrent plus autour de lui.
+      // (avecMoi reste faux ; moiPris n'est plus utilisé.)
       entites.push({ membres: membres, avecMoi: avecMoi, selection: membres.some(function (x) { return x.m.avatar.selectionne; }) });
     });
     function couronnes(k, centreOccupe) {
