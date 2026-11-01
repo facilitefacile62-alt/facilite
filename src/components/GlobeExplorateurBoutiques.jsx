@@ -2151,10 +2151,11 @@ export default function GlobeExplorateurBoutiques({
       if (!bullesFixesRef.current || carteRef.current !== carte) return;
       const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
       carte.__pairesFusion = [];
-      for (let tour = 0; tour < 10; tour++) {
+      // Applique les groupes courants, attend que toutes les bulles aient fini de se placer, puis renvoie les paires de bulles qui se touchent
+      // (null si la carte a changé entre-temps).
+      const appliquerEtMesurer = async () => {
         carte.__signatureGroupes = null;
         appliquerBullesFixes();
-        // Mesure seulement quand toutes les bulles ont fini de se placer (appareils lents : sinon des bulles encore mal positionnées paraissent se toucher et sont fusionnées à tort).
         let derniere = "";
         for (let essai = 0; essai < 14; essai++) {
           await attendre(150);
@@ -2166,22 +2167,39 @@ export default function GlobeExplorateurBoutiques({
           if (sig && sig === derniere) break;
           derniere = sig;
         }
-        if (!bullesFixesRef.current || carteRef.current !== carte) return;
+        if (!bullesFixesRef.current || carteRef.current !== carte) return null;
         const mesures = boutiquesAffichees
           .map((b) => ({ id: b.id, r: popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.() }))
           .filter((m) => m.r && m.r.width > 0);
         const air = 6;
-        const nouvelles = [];
+        const paires = [];
         for (let i = 0; i < mesures.length; i++) {
           for (let j = i + 1; j < mesures.length; j++) {
             const a = mesures[i].r;
             const c = mesures[j].r;
-            if (a.left < c.right + air && a.right + air > c.left && a.top < c.bottom + air && a.bottom + air > c.top) nouvelles.push([mesures[i].id, mesures[j].id]);
+            if (a.left < c.right + air && a.right + air > c.left && a.top < c.bottom + air && a.bottom + air > c.top) paires.push([mesures[i].id, mesures[j].id]);
           }
         }
+        return paires;
+      };
+      for (let tour = 0; tour < 10; tour++) {
+        const nouvelles = await appliquerEtMesurer();
+        if (nouvelles === null) return;
         if (!nouvelles.length) break;
         carte.__pairesFusion.push(...nouvelles);
       }
+      // Fusion MINIMALE : chaque paire est retirée à tour de rôle ; si plus aucune bulle ne se touche sans elle, elle reste retirée (une boutique éloignée n'est jamais fusionnée à tort).
+      const aEssayer = [...carte.__pairesFusion];
+      for (const paire of aEssayer.slice(0, 8)) {
+        const sans = carte.__pairesFusion.filter((q) => q !== paire);
+        const avant = carte.__pairesFusion;
+        carte.__pairesFusion = sans;
+        const reste = await appliquerEtMesurer();
+        if (reste === null) return;
+        if (reste.length) carte.__pairesFusion = avant;
+      }
+      carte.__signatureGroupes = null;
+      appliquerBullesFixes();
       // Une seule fois : si des bulles dépassent sous la barre du haut, la carte descend d'autant (les bulles restent collées à leurs boutiques).
       const c = carte.getContainer().getBoundingClientRect();
       // Bas de TOUT ce qui recouvre le haut de la carte : en-tête, barre de recherche et rangée de touches (Carrousel…).
@@ -2220,6 +2238,7 @@ export default function GlobeExplorateurBoutiques({
       clearTimeout(carte.__minuterieBulles);
       carte.__eviterBulles = null;
       carte.__descentes = 0;
+      carte.__pairesFusion = [];
       if (ouvert) {
         // Chaque déplacement ou zoom de la carte remet les bulles à leur place d'origine (voir rafraichirPopup) : le placement est donc recalculé juste après, une fois la carte
         // immobile (délai court, regroupé en un seul calcul).
