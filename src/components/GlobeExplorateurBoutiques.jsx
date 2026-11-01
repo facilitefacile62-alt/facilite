@@ -1633,6 +1633,7 @@ export default function GlobeExplorateurBoutiques({
                       const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
                       const prixTxt = art.prix_xof || art.prix;
                       return `
+                        <div style="flex-shrink:0; width:86px;">
                         <div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
                           ${
                             photoUrl
@@ -1643,6 +1644,8 @@ export default function GlobeExplorateurBoutiques({
                             <div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>
                             ${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}
                           </div>
+                        </div>
+                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:86px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
                         </div>
                       `;
                     })
@@ -1656,7 +1659,6 @@ export default function GlobeExplorateurBoutiques({
                 </div>
               `
           }
-          <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:6px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 10px; border:none; border-radius:12px; background:#10b981; color:#ffffff; font-size:11px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
         </div>
       `;
 
@@ -2089,20 +2091,20 @@ export default function GlobeExplorateurBoutiques({
         articlesDeLaBoutique(m).forEach((a) => {
           if (a?.id != null && !vus.has(String(a.id))) {
             vus.add(String(a.id));
-            articles.push(a);
+            articles.push({ a, boutiqueId: m.id });
           }
         })
       );
       const noms = membres.map((m) => echapperHtml((m.nom || "Boutique").trim())).join(" · ");
       const cartes = articles
-        .map((art) => {
+        .map(({ a: art, boutiqueId }) => {
           const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : art.photo ? urlPhoto(art.photo) : art.image ? urlPhoto(art.image) : "";
           const prixTxt = art.prix_xof || art.prix;
-          return `<div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
+          return `<div style="flex-shrink:0; width:86px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
             photoUrl
               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
               : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
-          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div>`;
+          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div><button type="button" data-itineraire="${echapperHtml(String(boutiqueId))}" style="margin-top:4px; width:86px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button></div>`;
         })
         .join("");
       return `<div class="bulle-produits-container" style="position:relative; width:260px; max-width:280px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
@@ -2112,9 +2114,6 @@ export default function GlobeExplorateurBoutiques({
           <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:2px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
         </div>
         <div class="bulle-defilement" style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
-        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${membres
-          .map((m) => `<button type="button" data-itineraire="${echapperHtml(String(m.id))}" style="border:none; border-radius:9999px; background:#10b981; color:#ffffff; padding:5px 9px; font-size:10px; font-weight:800; cursor:pointer; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">↱ Itinéraire · ${echapperHtml((m.nom || "Boutique").trim())}</button>`)
-          .join("")}</div>
       </div>`;
     };
     // (Ré)ouvre les bulles : groupées pour les boutiques qui se touchent au dézoom, individuelles sinon.
