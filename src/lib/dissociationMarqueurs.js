@@ -27,7 +27,7 @@
 // marqueur, ce qui décale aussi l'avatar de 1 à 2 px) : n'espacer que de
 // 52 px laissait ces avatars agrandis mordre sur leurs voisins (mesuré :
 // 58 px entre voisins pour 69 px d'avatar).
-export const DIAMETRE_AVATAR_PX = 32; // ronds de 28 px (36 px sélectionné) à taille fixe, plus grossis par le zoom
+export const DIAMETRE_AVATAR_PX = 50; // épingles de 44 px de large (52 px sélectionnée) + 6 px d'air : deux épingles voisines ne se touchent plus
 // Badge "Vous êtes ici" : 76 px de large (mais plus étroit en hauteur et posé
 // autour de son ancre, donc un voisin en diagonale le touche avant 76 px :
 // mesuré 1 à 5 px de recouvrement) + 8 px d'air.

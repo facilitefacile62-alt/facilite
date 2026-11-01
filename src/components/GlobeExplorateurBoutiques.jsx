@@ -1294,7 +1294,7 @@ export default function GlobeExplorateurBoutiques({
     // séparent jamais, quel que soit le zoom.
     const ZOOM_SEPARATION = 18;
     const REGROUPER_EN_BULLES = false;
-    const SEPARER_BOUTIQUES_PROCHES = false;
+    const SEPARER_BOUTIQUES_PROCHES = true;
     let bullesActives = [];
     let signatureBulles = "";
     const groupeDeBoutique = new Map(); // id boutique -> ids du groupe (regroupé)
@@ -1394,8 +1394,8 @@ export default function GlobeExplorateurBoutiques({
         // Jamais d'écartement tant que la vue est éloignée (22/10/2026) : à ces zooms quelques pixels représentent des centaines
         // de mètres et posaient des pins en mer. La pointe d'un pin reste sur ses coordonnées ; l'écartement relié par un trait
         // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
-        // 01/11/2026 : plus de regroupement. Chaque boutique reste SEULE, à sa vraie place (demande explicite) : SEPARER_BOUTIQUES_PROCHES = false
-        // supprime l'anneau relié par un trait qui serrait les boutiques proches les unes contre les autres. Remettre true pour le rétablir.
+        // Boutiques proches : écartées les unes des autres (anneau relié par un trait à leur vraie position), jamais empilées. Un essai à false (01/11/2026) les empilait
+        // les unes sur les autres : la demande portait sur « Vous êtes ici », qui n'entre plus dans ce calcul, pas sur l'écartement des boutiques.
         const d = SEPARER_BOUTIQUES_PROCHES && zoom >= 16 ? decalages.get(p.id) : { dx: 0, dy: 0 };
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
