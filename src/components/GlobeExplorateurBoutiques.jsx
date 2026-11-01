@@ -2152,6 +2152,8 @@ export default function GlobeExplorateurBoutiques({
     basculerBullesFixesRef.current = (ouvert) => {
       bullesFixesRef.current = ouvert;
       carte.__signatureGroupes = null;
+      // Carrousel actif : les bulles passent DEVANT les épingles (610 > 600), sinon la zone transparente d'une épingle voisine recouvre leurs boutons et bloque les touchers.
+      carte.getPane("popupPane").style.zIndex = ouvert ? 610 : 590;
       if (ouvert) appliquerBullesFixes();
       else
         boutiquesAffichees.forEach((b) => {
