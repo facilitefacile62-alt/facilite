@@ -61,8 +61,8 @@ test("bulles FIXES sur leur boutique : jamais déplacées ; deux bulles qui se t
   expect(c).toContain("setTimeout(fusionnerBullesQuiSeTouchent, 250)");
   // La carte descend UNE fois pour que les bulles tiennent sous la barre du haut (les bulles restent collées à leurs boutiques).
   expect(c).toContain("carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });");
-  expect(c).toContain("if (deficit > 2 && !carte.__carteDescendue) {");
-  expect(c).toContain("carte.__carteDescendue = false;");
+  expect(c).toContain("if (deficit > 2 && (carte.__descentes || 0) < 4) {");
+  expect(c).toContain("carte.__descentes = 0;");
 });
 
 test("boutiques proches : écartées les unes des autres (jamais empilées), « Vous êtes ici » hors du calcul ; écartement adapté aux épingles de 44 px", async () => {

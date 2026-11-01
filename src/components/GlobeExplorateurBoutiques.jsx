@@ -2173,13 +2173,21 @@ export default function GlobeExplorateurBoutiques({
       }
       // Une seule fois : si des bulles dépassent sous la barre du haut, la carte descend d'autant (les bulles restent collées à leurs boutiques).
       const c = carte.getContainer().getBoundingClientRect();
-      const haut = (headerRef.current ? headerRef.current.getBoundingClientRect().bottom : c.top) + 4;
+      // Bas de TOUT ce qui recouvre le haut de la carte : en-tête, barre de recherche et rangée de touches (Carrousel…).
+      const racine = carte.getContainer().closest('[role="dialog"]') || document;
+      const rangeeTouches = [...racine.querySelectorAll("button")].find((bt) => bt.textContent.trim() === "Carrousel")?.parentElement;
+      const hautDesCouches = [headerRef.current, rangeeTouches, ...racine.querySelectorAll("form")]
+        .filter(Boolean)
+        .map((e) => e.getBoundingClientRect())
+        .filter((r) => r.height > 0 && r.top < c.top + 320)
+        .map((r) => r.bottom);
+      const haut = Math.max(c.top, ...hautDesCouches) + 6;
       const visibles = boutiquesAffichees
         .map((b) => popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.())
         .filter((m) => m && m.right > c.left && m.left < c.right && m.top > c.top - 400 && m.top < c.bottom);
       const deficit = visibles.length ? Math.max(0, haut - Math.min(...visibles.map((m) => m.top))) : 0;
-      if (deficit > 2 && !carte.__carteDescendue) {
-        carte.__carteDescendue = true;
+      if (deficit > 2 && (carte.__descentes || 0) < 4) {
+        carte.__descentes = (carte.__descentes || 0) + 1;
         carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });
       }
     };
@@ -2200,7 +2208,7 @@ export default function GlobeExplorateurBoutiques({
       effacerLiens();
       clearTimeout(carte.__minuterieBulles);
       carte.__eviterBulles = null;
-      carte.__carteDescendue = false;
+      carte.__descentes = 0;
       if (ouvert) {
         // Chaque déplacement ou zoom de la carte remet les bulles à leur place d'origine (voir rafraichirPopup) : le placement est donc recalculé juste après, une fois la carte
         // immobile (délai court, regroupé en un seul calcul).
