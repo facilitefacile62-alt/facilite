@@ -1820,6 +1820,7 @@ export default function GlobeExplorateurBoutiques({
       };
 
       const ouvrirBulle = () => {
+        if (bullesFixesRef.current) return; // touche « Carrousel » : toutes les bulles (ou la bulle regroupée) sont déjà ouvertes, pas de seconde bulle au survol
         if (timerSurvol) clearTimeout(timerSurvol);
         popup.options.offset = offsetPopup();
         popup.setLatLng(marqueur.getLatLng()).openOn(carte);
