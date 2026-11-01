@@ -1978,11 +1978,14 @@ export default function GlobeExplorateurBoutiques({
         .forEach(({ h, r }) => {
           const W = r.width + 8;
           const H = r.height + 10;
+          // Essais : d'abord sur place, puis en colonnes de chaque côté (0, +1, -1, +2, -2 largeurs), puis plus haut ou plus bas d'une hauteur de bulle.
           const essais = [];
-          for (let niveau = 0; niveau < 4; niveau++) for (const cote of [0, 1, -1, 2, -2]) essais.push([cote * W, -niveau * H]);
+          for (const niveau of [0, 1, -1, 2, -2]) for (const cote of [0, 1, -1, 2, -2, 3, -3]) essais.push([cote * W, -niveau * H]);
+          // Une bulle trop haute pour tenir sous la barre du haut n'est jamais poussée plus haut qu'elle ne l'est déjà (sinon aucune place ne serait valable).
+          const hautMini = Math.min(haut, r.top) - 0.5;
           const place = essais.find(([dx, dy]) => {
             const t = { left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy };
-            if (t.left < c.left + 6 || t.right > c.right - 66 || t.top < haut || t.bottom > c.bottom) return false;
+            if (t.left < c.left + 6 || t.right > c.right - 66 || t.top < hautMini || t.bottom > c.bottom) return false;
             return !places.some((p) => croise(t, p));
           });
           const [dx, dy] = place || [0, 0];
