@@ -67,7 +67,7 @@ test("boutiques proches : écartées les unes des autres (jamais empilées), « 
   expect(c).toContain("const REGROUPER_EN_BULLES = false;"); // pas de bulle « N boutiques » qui masque les boutiques
   expect(c).not.toContain('points.push({ id: "__ici__"'); // ma position ne repousse plus personne
   const { DIAMETRE_AVATAR_PX } = await import("../../src/lib/dissociationMarqueurs.js");
-  expect(DIAMETRE_AVATAR_PX).toBeGreaterThanOrEqual(50); // 44 px de large + air
+  expect(DIAMETRE_AVATAR_PX).toBeGreaterThanOrEqual(62); // hauteur de l'épingle (56 px) + air : deux épingles voisines ne se recouvrent pas
   const app = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(app).toContain("var grappesActives = carte.getZoom() >= 12;"); // grappes de l'application rétablies (choix du 22/10)
   expect(app).not.toContain("avecMoi = true"); // mais plus avec « Vous êtes ici »
