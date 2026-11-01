@@ -832,6 +832,7 @@ export default function MarketplaceClient() {
           <main className={`min-w-0 w-full ${onglet === "vendre" || onglet === "livrer" ? "max-w-4xl mx-auto" : "flex-1"}`}>
             {onglet === "acheter" ? (
               <VueAcheteur
+                articleOuvert={!!articleSelectionne}
                 onVoirBoutique={(b) => setBoutiqueModal(b)}
                 onVoirArticle={(art) => {
                   setArticleSelectionne(art);
@@ -961,7 +962,7 @@ export default function MarketplaceClient() {
 /* ACHETEUR                                                                    */
 /* ========================================================================== */
 
-function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelectCategorie, demande = null, onDemandeTraitee }) {
+function VueAcheteur({ articleOuvert = false, onVoirBoutique, onVoirArticle, categorie = null, onSelectCategorie, demande = null, onDemandeTraitee }) {
   const [position, setPosition] = useState(null);
   const [texte, setTexte] = useState("");
   const [rayonKm, setRayonKm] = useState(10);
@@ -977,6 +978,15 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [globeOuvert, setGlobeOuvert] = useState(false);
+  // Article ouvert depuis la carte : la carte reste en place, simplement masquée derrière la fiche, et réapparaît telle quelle (même position, même zoom,
+  // Carrousel conservé) quand on referme l'article.
+  const [globeMasquePourArticle, setGlobeMasquePourArticle] = useState(false);
+  useEffect(() => {
+    if (globeMasquePourArticle && !articleOuvert) {
+      setGlobeMasquePourArticle(false);
+      if (typeof window !== "undefined") setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+    }
+  }, [globeMasquePourArticle, articleOuvert]);
   const [itineraireCible, setItineraireCible] = useState(null);
   // Vue « Autour de moi » : "liste" = articles proches sans carte (défaut) ; "mini" (carte compacte) est retirée pour le moment.
   // La pleine carte est le globe (globeOuvert).
@@ -1417,6 +1427,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
   return (
     <div>
       {globeOuvert && (
+        <div style={globeMasquePourArticle ? { display: "none" } : undefined}>
         <GlobeExplorateurBoutiques
           boutiques={boutiquesPourGlobe}
           tousArticles={articlesPourCarte}
@@ -1428,7 +1439,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             onVoirBoutique?.(b);
           }}
           onVoirArticle={(art) => {
-            setGlobeOuvert(false);
+            setGlobeMasquePourArticle(true);
             onVoirArticle?.(art);
           }}
           onFermer={() => {
@@ -1436,6 +1447,7 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
             setItineraireCible(null);
           }}
         />
+        </div>
       )}
 
       {/* 📍 CARTE FIXE EN MODE AUTOUR DE MOI (Immédiatement ancrée et fixe sous le header) */}
