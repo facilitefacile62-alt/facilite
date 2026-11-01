@@ -2052,6 +2052,45 @@ export default function GlobeExplorateurBoutiques({
       cont.appendChild(svg);
     };
     // Boutiques proches (épingles empilées au dézoom) : UNE seule bulle, avec les articles de toutes et leur nombre en haut. Au zoom d'écartement (16+) chaque boutique a la sienne.
+    // Bulle regroupée : pour chaque boutique associée dont l'épingle est loin de la pointe de la bulle, un petit « pic » sur le bord de la bulle, tourné vers cette épingle,
+    // montre que sa boutique est associée (ex. Véronique Mendy).
+    const ajouterPicsAssocies = () => {
+      if (!bullesFixesRef.current || carteRef.current !== carte) return;
+      carte.getContainer().querySelectorAll("[data-pic-associe]").forEach((e) => e.remove());
+      const centreEpingle = (id) => {
+        const el = marqueursCreesParId.get(id)?.marqueur?.getElement?.();
+        if (!el || el.style.display === "none") return null;
+        const r = el.querySelector(".epingle-pin")?.getBoundingClientRect();
+        return r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+      };
+      (carte.__groupesBulles || new Map()).forEach((ids, chef) => {
+        const popupEl = popupsBoutiquesRef.current.get(chef)?.mesurerBulleElement?.()?.closest(".leaflet-popup");
+        const bulle = popupsBoutiquesRef.current.get(chef)?.mesurerBulle?.();
+        const pointeChef = centreEpingle(chef);
+        if (!popupEl || !bulle || !pointeChef) return;
+        const po = popupEl.getBoundingClientRect();
+        const cx = bulle.left + bulle.width / 2;
+        const cy = bulle.top + bulle.height / 2;
+        ids.filter((id) => id !== chef).forEach((id) => {
+          const cible = centreEpingle(id);
+          if (!cible || Math.hypot(cible.x - pointeChef.x, cible.y - pointeChef.y) < 70) return; // épingle voisine de celle de la pointe : rien à montrer
+          const dx = cible.x - cx;
+          const dy = cible.y - cy;
+          if (!dx && !dy) return;
+          const t = Math.min(dx ? bulle.width / 2 / Math.abs(dx) : Infinity, dy ? bulle.height / 2 / Math.abs(dy) : Infinity);
+          const bx = cx + dx * t;
+          const by = cy + dy * t;
+          const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+          const pic = document.createElement("div");
+          pic.setAttribute("data-pic-associe", id);
+          pic.title = (boutiquesAffichees.find((b) => b.id === id)?.nom || "Boutique") + " (associée)";
+          pic.style.cssText = `position:absolute;left:${bx - po.left}px;top:${by - po.top}px;width:0;height:0;transform:rotate(${angle}deg);transform-origin:0 0;pointer-events:none;z-index:5;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25));`;
+          pic.innerHTML = '<div style="position:absolute;left:-2px;top:-11px;width:0;height:0;border-top:11px solid transparent;border-bottom:11px solid transparent;border-left:20px solid #ffffff;"></div>';
+          popupEl.appendChild(pic);
+        });
+      });
+    };
+
     const construireHtmlGroupe = (membres) => {
       const articles = [];
       const vus = new Set();
@@ -2137,7 +2176,11 @@ export default function GlobeExplorateurBoutiques({
         ids.slice(1).forEach((id) => cache.add(id));
       });
       const signature = groupes.map((g) => g.join("+")).join("|");
-      if (carte.__signatureGroupes === signature) return;
+      carte.__groupesBulles = chefDe;
+      if (carte.__signatureGroupes === signature) {
+        setTimeout(ajouterPicsAssocies, 120);
+        return;
+      }
       carte.__signatureGroupes = signature;
       boutiquesAffichees.forEach((b) => {
         const h = popupsBoutiquesRef.current.get(b.id);
@@ -2147,6 +2190,7 @@ export default function GlobeExplorateurBoutiques({
         const ids = chefDe.get(b.id);
         h.ouvrirFixe?.(ids ? construireHtmlGroupe(ids.map((id) => boutiquesAffichees.find((x) => x.id === id)).filter(Boolean)) : undefined);
       });
+      setTimeout(ajouterPicsAssocies, 350);
     };
 
     // Chaque bulle reste FIXE sur sa boutique (sa pointe vise le centre de l'épingle). Quand deux bulles se touchent à l'écran (dézoom), leurs boutiques sont
