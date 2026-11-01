@@ -1,5 +1,6 @@
 // Épingles des cartes de boutiques, façon Google Maps (choix du 22/10/2026) :
-//  - pin en forme de goutte, de taille FIXE en pixels à tous les zooms (28 × 36 px ; 36 × 46 px sélectionné, rouge) ;
+//  - pin en forme de goutte, de taille FIXE en pixels à tous les zooms (44 × 56 px ; 52 × 66 px sélectionné, rouge) : assez grand pour que l'icône de la
+//    boutique (avatar, logo ou photo) se lise au premier coup d'œil, même sur la carte satellite ;
 //  - la POINTE du pin est exactement sur les coordonnées de la boutique (ancre [70, 85] d'une icône de 140 × 90 px) ;
 //  - dans la tête du pin : la photo / le logo / l'avatar de la boutique quand il y en a une, sinon un pictogramme blanc selon
 //    le type (sac = produits, outil = services, bâtiment = établissements, couverts = restauration) ;
@@ -10,8 +11,8 @@
 // jamais (protection XSS des cartes, à ne pas régresser).
 
 export const EPINGLE = {
-  normal: { l: 28, h: 36 },
-  selectionne: { l: 36, h: 46 },
+  normal: { l: 44, h: 56 },
+  selectionne: { l: 52, h: 66 },
   couleurSelection: "#EF4444",
   boite: { l: 140, h: 90 },
   ancre: [70, 85],
@@ -56,8 +57,8 @@ export function htmlEpingle({ couleur, type = "produit", nom = "", selectionne =
     : "";
   return `<div class="epingle-boite" style="position:relative;width:${EPINGLE.boite.l}px;height:${EPINGLE.boite.h}px;pointer-events:none;">
     <div class="epingle-pin" data-selectionne="${selectionne ? "1" : "0"}" style="position:absolute;left:${gauche}px;top:${haut}px;width:${d.l}px;height:${d.h}px;pointer-events:auto;cursor:pointer;z-index:${selectionne ? 5 : 1};">
-      <svg width="${d.l}" height="${d.h}" viewBox="0 0 28 36" style="position:absolute;left:0;top:0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));" aria-hidden="true"><path d="M14 0.75C6.7 0.75 0.75 6.7 0.75 14c0 9.4 13.25 21.25 13.25 21.25S27.25 23.4 27.25 14C27.25 6.7 21.3 0.75 14 0.75z" fill="${couleurPin}" stroke="#fff" stroke-width="1.5"/></svg>
-      <div style="position:absolute;left:${margeTete}px;top:${margeTete}px;width:${tete}px;height:${tete}px;border-radius:9999px;background:${fond};display:flex;align-items:center;justify-content:center;overflow:hidden;">${interieur}</div>
+      <svg width="${d.l}" height="${d.h}" viewBox="0 0 28 36" style="position:absolute;left:0;top:0;z-index:0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));" aria-hidden="true"><path d="M14 0.75C6.7 0.75 0.75 6.7 0.75 14c0 9.4 13.25 21.25 13.25 21.25S27.25 23.4 27.25 14C27.25 6.7 21.3 0.75 14 0.75z" fill="${couleurPin}" stroke="#fff" stroke-width="1.5"/></svg>
+      <div style="position:absolute;left:${margeTete}px;top:${margeTete}px;width:${tete}px;height:${tete}px;border-radius:9999px;background:${fond};display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:1;">${interieur}</div>
     </div>
     ${etiquette}
   </div>`;
