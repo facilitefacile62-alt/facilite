@@ -4,7 +4,7 @@ const path = require("path");
 
 /**
  * Touche « Carrousel » DANS la carte, juste après « Autour de moi » : un toucher ouvre et FIXE la bulle (nom, quartier, carrousel d'articles) de TOUTES les boutiques
- * affichées ; un second toucher les ferme. Aucun regroupement de boutiques : chacune reste seule à sa vraie place (site et application).
+ * affichées ; un second toucher les ferme. Les boutiques proches sont écartées (jamais empilées) et « Vous êtes ici » n'y participe pas.
  */
 const lire = (p) => fs.readFileSync(path.join(__dirname, "../..", p), "utf8").replace(/\r\n/g, "\n");
 const g = () => lire("src/components/GlobeExplorateurBoutiques.jsx");
@@ -60,14 +60,17 @@ test("bulles qui ne se recouvrent pas : placées côté puis plus haut, dans la 
   expect(c).toContain("carte.__carteDescendue = false;");
 });
 
-test("aucun regroupement de boutiques : plus d'anneau relié par un trait (site), plus de grappes (application) ; chaque boutique reste à sa vraie place", () => {
+test("boutiques proches : écartées les unes des autres (jamais empilées), « Vous êtes ici » hors du calcul ; écartement adapté aux épingles de 44 px", async () => {
   const c = g();
-  expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = false;");
+  expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = true;");
   expect(c).toContain("SEPARER_BOUTIQUES_PROCHES && zoom >= 16 ? decalages.get(p.id) : { dx: 0, dy: 0 }");
-  expect(c).toContain("const REGROUPER_EN_BULLES = false;");
+  expect(c).toContain("const REGROUPER_EN_BULLES = false;"); // pas de bulle « N boutiques » qui masque les boutiques
+  expect(c).not.toContain('points.push({ id: "__ici__"'); // ma position ne repousse plus personne
+  const { DIAMETRE_AVATAR_PX } = await import("../../src/lib/dissociationMarqueurs.js");
+  expect(DIAMETRE_AVATAR_PX).toBeGreaterThanOrEqual(50); // 44 px de large + air
   const app = lire("mobile/src/components/CarteLeaflet.tsx");
-  expect(app).toContain("var grappesActives = false;");
-  expect(app).not.toContain("avecMoi = true");
+  expect(app).toContain("var grappesActives = carte.getZoom() >= 12;"); // grappes de l'application rétablies (choix du 22/10)
+  expect(app).not.toContain("avecMoi = true"); // mais plus avec « Vous êtes ici »
 });
 
 test("affichage seulement : aucune écriture en base, adresses d'images inchangées", () => {

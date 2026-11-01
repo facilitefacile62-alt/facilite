@@ -258,8 +258,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var D = TAILLE + 1;
     // Des boutiques qui se recouvrent À L'ÉCRAN forment une grappe en couronne (comme sur l'image de référence) : jamais de pin caché
     // derrière un autre. En vue très éloignée (zoom < 12) rien ne bouge : un pixel y représente trop de mètres.
-    // 01/11/2026 : plus de grappes (demande explicite : ne pas regrouper les boutiques) ; chaque boutique reste seule à sa vraie place. Remettre carte.getZoom() >= 12 pour les rétablir.
-    var grappesActives = false;
+    var grappesActives = carte.getZoom() >= 12;
     var proche = function (u, v) { return grappesActives && Math.hypot(u.x - v.x, u.y - v.y) < D + 6; };
     var aPlacer = libres.filter(function (m) { return m.avatar && !m.compteur && !m.avatar.moi; })
       .map(function (m) { return { m: m, p: carte.latLngToContainerPoint([m.lat, m.lng]) }; })
