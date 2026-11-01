@@ -1854,9 +1854,11 @@ export default function GlobeExplorateurBoutiques({
 
       // Touche « Carrousel » : ouvre cette bulle SANS fermer les autres (autoClose désactivé) et sans déplacer la carte (pas d'ajustement : avec plusieurs bulles, les
       // déplacements se contrarieraient).
-      const ouvrirFixe = () => {
+      const ouvrirFixe = (htmlGroupe) => {
         if (timerSurvol) clearTimeout(timerSurvol);
         if (carteRef.current !== carte) return;
+        // Boutiques proches regroupées : la bulle de la première porte le carrousel de toutes (htmlGroupe), sinon son contenu d'origine.
+        popup.setContent(htmlGroupe || htmlBulleProduits);
         popup.options.autoClose = false;
         popup.options.offset = offsetPopup();
         popup.setLatLng(marqueur.getLatLng());
@@ -1871,6 +1873,7 @@ export default function GlobeExplorateurBoutiques({
       const fermerFixe = () => {
         popup.options.autoClose = true;
         if (carte.hasLayer(popup)) carte.removeLayer(popup);
+        popup.setContent(htmlBulleProduits);
       };
       // Mesure de la bulle affichée et déplacement en pixels par rapport à sa place normale (au-dessus de sa boutique).
       const mesurerBulle = () => popup.getElement()?.querySelector(".leaflet-popup-content-wrapper")?.getBoundingClientRect() || null;
@@ -2062,14 +2065,79 @@ export default function GlobeExplorateurBoutiques({
       requestAnimationFrame(dessinerLiens);
     };
 
-    basculerBullesFixesRef.current = (ouvert) => {
-      bullesFixesRef.current = ouvert;
+    // Boutiques proches (épingles empilées au dézoom) : UNE seule bulle, avec les articles de toutes et leur nombre en haut. Au zoom d'écartement (16+) chaque boutique a la sienne.
+    const construireHtmlGroupe = (membres) => {
+      const articles = [];
+      const vus = new Set();
+      membres.forEach((m) =>
+        articlesDeLaBoutique(m).forEach((a) => {
+          if (a?.id != null && !vus.has(String(a.id))) {
+            vus.add(String(a.id));
+            articles.push(a);
+          }
+        })
+      );
+      const noms = membres.map((m) => echapperHtml((m.nom || "Boutique").trim())).join(" · ");
+      const cartes = articles
+        .map((art) => {
+          const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : art.photo ? urlPhoto(art.photo) : art.image ? urlPhoto(art.image) : "";
+          const prixTxt = art.prix_xof || art.prix;
+          return `<div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
+            photoUrl
+              ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
+              : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
+          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div>`;
+        })
+        .join("");
+      return `<div class="bulle-produits-container" style="position:relative; width:260px; max-width:280px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+        <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
+        <div style="margin-bottom:8px; padding-right:22px;">
+          <div style="font-size:12px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${noms}</div>
+          <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:2px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
+        </div>
+        <div class="bulle-defilement" style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
+      </div>`;
+    };
+    // (Ré)ouvre les bulles : groupées pour les boutiques qui se touchent au dézoom, individuelles sinon.
+    const appliquerBullesFixes = () => {
+      if (!bullesFixesRef.current || carteRef.current !== carte) return;
+      const zoom = carte.getZoom();
+      const groupes = zoom < ZOOM_ANNEAU
+        ? calculerDecalagesDissociation(
+            boutiquesAffichees.map((b) => {
+              const px = carte.project([b.lat, b.lng], zoom);
+              return { id: b.id, x: px.x, y: px.y, ici: false };
+            }),
+            { echelle: 1 }
+          ).groupes
+        : [];
+      const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
+      const cache = new Set();
+      groupes.forEach((ids) => {
+        chefDe.set(ids[0], ids);
+        ids.slice(1).forEach((id) => cache.add(id));
+      });
+      const signature = groupes.map((g) => g.join("+")).join("|") + "@" + (zoom < ZOOM_ANNEAU);
+      if (carte.__signatureGroupes === signature) return;
+      carte.__signatureGroupes = signature;
       boutiquesAffichees.forEach((b) => {
         const h = popupsBoutiquesRef.current.get(b.id);
         if (!h) return;
-        if (ouvert) h.ouvrirFixe?.();
-        else h.fermerFixe?.();
+        h.fermerFixe?.();
+        if (cache.has(b.id)) return;
+        const ids = chefDe.get(b.id);
+        h.ouvrirFixe?.(ids ? construireHtmlGroupe(ids.map((id) => boutiquesAffichees.find((x) => x.id === id)).filter(Boolean)) : undefined);
       });
+    };
+
+    basculerBullesFixesRef.current = (ouvert) => {
+      bullesFixesRef.current = ouvert;
+      carte.__signatureGroupes = null;
+      if (ouvert) appliquerBullesFixes();
+      else
+        boutiquesAffichees.forEach((b) => {
+          popupsBoutiquesRef.current.get(b.id)?.fermerFixe?.();
+        });
       if (carte.__eviterBulles) carte.off("moveend zoomend", carte.__eviterBulles);
       if (carte.__effacerLiens) carte.off("movestart zoomstart", carte.__effacerLiens);
       carte.__effacerLiens = null;
@@ -2082,7 +2150,10 @@ export default function GlobeExplorateurBoutiques({
         // immobile (délai court, regroupé en un seul calcul).
         carte.__eviterBulles = () => {
           clearTimeout(carte.__minuterieBulles);
-          carte.__minuterieBulles = setTimeout(eviterChevauchementsBulles, 250);
+          carte.__minuterieBulles = setTimeout(() => {
+            appliquerBullesFixes();
+            setTimeout(eviterChevauchementsBulles, 80);
+          }, 250);
         };
         carte.on("moveend zoomend", carte.__eviterBulles);
         carte.__effacerLiens = effacerLiens;

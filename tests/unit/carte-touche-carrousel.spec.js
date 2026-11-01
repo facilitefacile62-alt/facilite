@@ -29,10 +29,14 @@ test("un toucher ouvre la bulle de TOUTES les boutiques affichées, sans fermer 
   const c = g();
   expect(c).toContain("carrousselCarteOuvertRef.current = carrousselCarteOuvert;\n    basculerBullesFixesRef.current(carrousselCarteOuvert);");
   const bascule = c.slice(c.indexOf("basculerBullesFixesRef.current = (ouvert) => {"), c.indexOf("if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);"));
-  expect(bascule).toContain("boutiquesAffichees.forEach((b) => {");
-  expect(bascule).toContain("if (ouvert) h.ouvrirFixe?.();");
-  expect(bascule).toContain("else h.fermerFixe?.();");
-  const ouvrir = c.slice(c.indexOf("const ouvrirFixe = () => {"), c.indexOf("const fermerFixe = () => {"));
+  expect(bascule).toContain("if (ouvert) appliquerBullesFixes();");
+  expect(bascule).toContain("fermerFixe?.()");
+  // Boutiques proches au dézoom : UNE bulle avec les articles de toutes et leur nombre ; chacune sa bulle dès le zoom d'écartement.
+  expect(c).toContain("const construireHtmlGroupe = (membres) => {");
+  expect(c).toContain("article${articles.length > 1");
+  expect(c).toContain("zoom < ZOOM_ANNEAU");
+  expect(c).toContain("h.ouvrirFixe?.(ids ? construireHtmlGroupe(");
+  const ouvrir = c.slice(c.indexOf("const ouvrirFixe = (htmlGroupe) => {"), c.indexOf("const fermerFixe = () => {"));
   expect(ouvrir).toContain("popup.options.autoClose = false;"); // n'en ferme aucune autre
   expect(ouvrir).toContain("popup.addTo(carte)");
   expect(ouvrir).not.toContain("openOn(");
