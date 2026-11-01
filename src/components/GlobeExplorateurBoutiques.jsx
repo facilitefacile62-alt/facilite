@@ -2080,7 +2080,7 @@ export default function GlobeExplorateurBoutiques({
           if (dx || dy) h.deplacerBulle(dx, dy);
           places.push({ left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy });
         });
-      requestAnimationFrame(dessinerLiens);
+      // 01/11/2026 : traits et points colorés retirés (demande de l'utilisateur : inutiles maintenant que les boutiques proches partagent une seule bulle). dessinerLiens n'est plus appelé.
     };
 
     // Boutiques proches (épingles empilées au dézoom) : UNE seule bulle, avec les articles de toutes et leur nombre en haut. Au zoom d'écartement (16+) chaque boutique a la sienne.
