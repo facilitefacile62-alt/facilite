@@ -1441,9 +1441,23 @@ export default function GlobeExplorateurBoutiques({
     carte.getContainer().addEventListener("touchstart", surToucher, { passive: true, capture: true });
     const toucherRecent = () => Date.now() - dernierToucherLe < 900;
 
+    // Articles d'une boutique : ceux déjà rattachés à elle, sinon ceux de la liste générale (même boutique par identifiant ou par nom).
+    const articlesDeLaBoutique = (b) => {
+      if (b.articles && b.articles.length > 0) return b.articles;
+      const bId = String(b.id || "");
+      const bNom = (b.nom || "").trim().toLowerCase();
+      return (tousArticles || []).filter((a) => {
+        const aBId = String(a.boutique_id || a.boutiqueId || a.boutique?.id || "");
+        const aBNom = (a.boutique_nom || a.boutiqueNom || a.boutique?.nom || "").trim().toLowerCase();
+        return (bId && aBId && bId === aBId) || (bNom && aBNom && bNom === aBNom);
+      });
+    };
+
     boutiquesAffichees.forEach((b, idx) => {
       const avatarInfo = AVATARS_SNAP[idx % AVATARS_SNAP.length];
       const aPhoto = b.photo ? urlPhoto(b.photo) : null;
+      const cheminPremierArticle = articlesDeLaBoutique(b).find((a) => a?.photos?.[0])?.photos?.[0];
+      const photoPremierArticle = cheminPremierArticle ? urlPhoto(cheminPremierArticle) : null;
       // Échappés dès ici : injectés plus bas en HTML brut (L.divIcon({ html
       // })), y compris dans un attribut alt="..." — un nom de boutique
       // contenant des guillemets ou des balises casserait sinon hors de
@@ -1490,6 +1504,9 @@ export default function GlobeExplorateurBoutiques({
           avatarOuArticle ||
           (aPhoto
             ? `<img src="${aPhoto}" alt="${nomCourt}" class="w-full h-full object-cover" />`
+            : photoPremierArticle
+            ? // Boutique sans logo, sans avatar ni photo : l'icône de son épingle est la première photo de ses articles.
+              `<img src="${echapperHtml(photoPremierArticle)}" alt="${nomCourt}" class="w-full h-full object-cover" />`
             : `<span class="text-2xl">${avatarInfo.emoji}</span>`);
       }
 
