@@ -1387,7 +1387,7 @@ export default function GlobeExplorateurBoutiques({
       // de l'animation en cours, donc utilisable dès zoomanim.
       // 01/11/2026 : la disposition (écartement en cercle) est calculée au zoom 16 au plus bas, puis gardée IDENTIQUE en pixels quand on dézoome :
       // mêmes places côte à côte, même taille, rien ne bouge ni ne se recouvre en dézoomant.
-      const zoomCalcul = Math.max(zoom, ZOOM_ANNEAU);
+      const zoomCalcul = zoom; // 01/11/2026 : retour aux points fixes — la disposition gardée en dézoomant éloignait les épingles de leur vraie position
       const pixels = points.map((p) => {
         const px = carte.project(p.ll, zoomCalcul);
         return { id: p.id, x: px.x, y: px.y, ici: p.ici };
@@ -1401,7 +1401,7 @@ export default function GlobeExplorateurBoutiques({
         // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
         // Boutiques proches : écartées les unes des autres (anneau relié par un trait à leur vraie position), jamais empilées. Un essai à false (01/11/2026) les empilait
         // les unes sur les autres : la demande portait sur « Vous êtes ici », qui n'entre plus dans ce calcul, pas sur l'écartement des boutiques.
-        const d = SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 };
+        const d = SEPARER_BOUTIQUES_PROCHES && zoom >= ZOOM_ANNEAU ? decalages.get(p.id) : { dx: 0, dy: 0 };
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
       regroupes.forEach((id) => {

@@ -63,7 +63,7 @@ test("bulles qui ne se recouvrent pas : placées côté puis plus haut, dans la 
 test("boutiques proches : écartées les unes des autres (jamais empilées), « Vous êtes ici » hors du calcul ; écartement adapté aux épingles de 44 px", async () => {
   const c = g();
   expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = true;");
-  expect(c).toContain("SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 }");
+  expect(c).toContain("SEPARER_BOUTIQUES_PROCHES && zoom >= ZOOM_ANNEAU ? decalages.get(p.id) : { dx: 0, dy: 0 }");
   expect(c).toContain("const REGROUPER_EN_BULLES = false;"); // dézoom : boutiques qui se touchent = un point numéroté ; zoom 16+ : écartées
   expect(c).not.toContain('points.push({ id: "__ici__"'); // ma position ne repousse plus personne
   const { DIAMETRE_AVATAR_PX } = await import("../../src/lib/dissociationMarqueurs.js");
