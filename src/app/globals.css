@@ -458,3 +458,6 @@ html.dark .bg-whatsapp-chat {
 .epingle-nom-masque {
   visibility: hidden;
 }
+
+/* Carte : l'épingle survolée passe devant ses voisines (sans bouger ni changer de taille) pour pouvoir cliquer celle de son choix. */
+.leaflet-marker-icon:hover { z-index: 100000 !important; }

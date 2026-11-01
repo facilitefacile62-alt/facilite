@@ -1294,7 +1294,7 @@ export default function GlobeExplorateurBoutiques({
     // séparent jamais, quel que soit le zoom.
     const ZOOM_SEPARATION = 18;
     // 01/11/2026 : au dézoom (< 16), les boutiques qui se touchent deviennent UN point numéroté (cliquer = zoomer dessus) ; les boutiques isolées restent fixes sur leur position.
-    const REGROUPER_EN_BULLES = true;
+    const REGROUPER_EN_BULLES = false; // 01/11/2026 : l'utilisateur refuse tout regroupement en chiffre
     const ZOOM_ANNEAU = 16;
     const SEPARER_BOUTIQUES_PROCHES = true;
     let bullesActives = [];
@@ -1398,7 +1398,7 @@ export default function GlobeExplorateurBoutiques({
         // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
         // Boutiques proches : écartées les unes des autres (anneau relié par un trait à leur vraie position), jamais empilées. Un essai à false (01/11/2026) les empilait
         // les unes sur les autres : la demande portait sur « Vous êtes ici », qui n'entre plus dans ce calcul, pas sur l'écartement des boutiques.
-        const d = SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 };
+        const d = SEPARER_BOUTIQUES_PROCHES && zoom >= ZOOM_ANNEAU ? decalages.get(p.id) : { dx: 0, dy: 0 };
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
       regroupes.forEach((id) => {
