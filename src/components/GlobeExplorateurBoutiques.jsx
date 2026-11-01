@@ -1777,7 +1777,11 @@ export default function GlobeExplorateurBoutiques({
               carte.closePopup(popup);
               const artId = card.getAttribute("data-article-id");
               if (typeof onVoirArticle === "function") {
-                onVoirArticle(artId);
+                // La fiche attend l'article COMPLET (pas son seul identifiant, qui donnait une fiche vide « 0 FCFA ») : retrouvé parmi tous les articles et ceux des boutiques affichées.
+                const objet =
+                  (tousArticles || []).find((a) => String(a.id) === String(artId)) ||
+                  boutiquesAffichees.flatMap((x) => articlesDeLaBoutique(x)).find((a) => String(a?.id) === String(artId));
+                onVoirArticle(objet || artId);
               } else {
                 setBoutiqueSelectionnee(b);
                 setVueBoutiqueDetails(true);
@@ -2172,13 +2176,17 @@ export default function GlobeExplorateurBoutiques({
         const mesures = boutiquesAffichees
           .map((b) => ({ id: b.id, r: popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.() }))
           .filter((m) => m.r && m.r.width > 0);
-        const air = 6;
         const paires = [];
         for (let i = 0; i < mesures.length; i++) {
           for (let j = i + 1; j < mesures.length; j++) {
             const a = mesures[i].r;
             const c = mesures[j].r;
-            if (a.left < c.right + air && a.right + air > c.left && a.top < c.bottom + air && a.bottom + air > c.top) paires.push([mesures[i].id, mesures[j].id]);
+            // Fusion seulement si les bulles se chevauchent d'au moins 10 % de la plus petite (de simples voisines, même proches, restent séparées).
+            const largeurCommune = Math.min(a.right, c.right) - Math.max(a.left, c.left);
+            const hauteurCommune = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top);
+            if (largeurCommune <= 0 || hauteurCommune <= 0) continue;
+            const petite = Math.min(a.width * a.height, c.width * c.height);
+            if ((largeurCommune * hauteurCommune) / petite >= 0.1) paires.push([mesures[i].id, mesures[j].id]);
           }
         }
         return paires;
