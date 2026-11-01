@@ -2095,6 +2095,7 @@ export default function GlobeExplorateurBoutiques({
     carte.on("zoomanim", surZoomAnim);
     carte.on("zoom", surZoom);
     // 01/11/2026 : barre de pourcentage de zoom TEMPORAIRE (demande de l'utilisateur, à retirer sur sa demande).
+    carte.getContainer().querySelectorAll("[data-barre-zoom]").forEach((e) => e.remove()); // jamais deux barres (cet effet se rejoue)
     const barreZoom = document.createElement("div");
     barreZoom.setAttribute("data-barre-zoom", "1");
     barreZoom.style.cssText = "position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:1200;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px;border-radius:14px;background:rgba(15,23,42,.82);color:#fff;font:700 12px system-ui,sans-serif;pointer-events:none;";
