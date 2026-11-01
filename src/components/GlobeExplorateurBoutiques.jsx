@@ -1874,6 +1874,7 @@ export default function GlobeExplorateurBoutiques({
       };
       // Mesure de la bulle affichée et déplacement en pixels par rapport à sa place normale (au-dessus de sa boutique).
       const mesurerBulle = () => popup.getElement()?.querySelector(".leaflet-popup-content-wrapper")?.getBoundingClientRect() || null;
+      const mesurerBulleElement = () => popup.getElement()?.querySelector(".leaflet-popup-content-wrapper") || null;
       const deplacerBulle = (dx, dy) => {
         const base = offsetPopup();
         popup.options.offset = [base[0] + dx, base[1] + dy];
@@ -1894,6 +1895,7 @@ export default function GlobeExplorateurBoutiques({
         ouvrirFixe,
         fermerFixe,
         mesurerBulle,
+        mesurerBulleElement,
         deplacerBulle,
         boutique: b,
       });
@@ -1969,6 +1971,57 @@ export default function GlobeExplorateurBoutiques({
     // active, les bulles sont rouvertes tout de suite sur les nouveaux marqueurs.
     // Les bulles ouvertes ensemble ne doivent pas se recouvrir : chacune garde sa boutique pour pointe, mais est décalée (côté, puis plus haut) jusqu'à trouver une
     // place libre dans la carte, sous la barre du haut. Recalculé à chaque changement de zoom.
+    // Chaque bulle ouverte par « Carrousel » reçoit une couleur : un trait part de sa pointe et finit sur un POINT de la même couleur posé sur la vraie position de sa boutique
+    // (les épingles pouvant être empilées au dézoom). Le haut de la bulle porte la même couleur. Effacé dès que la carte bouge, redessiné quand elle est immobile.
+    const COULEURS_LIENS = ["#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16"];
+    const effacerLiens = () => {
+      carte.getContainer().querySelectorAll("[data-liens-bulles]").forEach((e) => e.remove());
+      popupsBoutiquesRef.current.forEach((h) => {
+        const w = h.mesurerBulleElement?.();
+        if (w) w.style.borderTop = "";
+      });
+    };
+    const dessinerLiens = () => {
+      if (!bullesFixesRef.current || carteRef.current !== carte) return;
+      effacerLiens();
+      const cont = carte.getContainer();
+      const c = cont.getBoundingClientRect();
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("data-liens-bulles", "1");
+      svg.setAttribute("width", c.width);
+      svg.setAttribute("height", c.height);
+      svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:690;overflow:visible;";
+      boutiquesAffichees.forEach((b, k) => {
+        const h = popupsBoutiquesRef.current.get(b.id);
+        const w = h?.mesurerBulleElement?.();
+        if (!w) return;
+        const couleur = COULEURS_LIENS[k % COULEURS_LIENS.length];
+        const r = w.getBoundingClientRect();
+        const pt = carte.latLngToContainerPoint([b.lat, b.lng]);
+        const x1 = r.left + r.width / 2 - c.left;
+        const y1 = r.bottom - c.top;
+        const ligne = document.createElementNS(NS, "line");
+        ligne.setAttribute("x1", x1);
+        ligne.setAttribute("y1", y1);
+        ligne.setAttribute("x2", pt.x);
+        ligne.setAttribute("y2", pt.y);
+        ligne.setAttribute("stroke", couleur);
+        ligne.setAttribute("stroke-width", "2.5");
+        ligne.setAttribute("stroke-linecap", "round");
+        svg.appendChild(ligne);
+        const point = document.createElementNS(NS, "circle");
+        point.setAttribute("cx", pt.x);
+        point.setAttribute("cy", pt.y);
+        point.setAttribute("r", "6");
+        point.setAttribute("fill", couleur);
+        point.setAttribute("stroke", "#fff");
+        point.setAttribute("stroke-width", "2");
+        svg.appendChild(point);
+        w.style.borderTop = "5px solid " + couleur;
+      });
+      cont.appendChild(svg);
+    };
     const eviterChevauchementsBulles = () => {
       if (!bullesFixesRef.current || carteRef.current !== carte) return;
       const c = carte.getContainer().getBoundingClientRect();
@@ -2006,6 +2059,7 @@ export default function GlobeExplorateurBoutiques({
           if (dx || dy) h.deplacerBulle(dx, dy);
           places.push({ left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy });
         });
+      requestAnimationFrame(dessinerLiens);
     };
 
     basculerBullesFixesRef.current = (ouvert) => {
@@ -2017,6 +2071,9 @@ export default function GlobeExplorateurBoutiques({
         else h.fermerFixe?.();
       });
       if (carte.__eviterBulles) carte.off("moveend zoomend", carte.__eviterBulles);
+      if (carte.__effacerLiens) carte.off("movestart zoomstart", carte.__effacerLiens);
+      carte.__effacerLiens = null;
+      effacerLiens();
       clearTimeout(carte.__minuterieBulles);
       carte.__eviterBulles = null;
       carte.__carteDescendue = false;
@@ -2028,6 +2085,8 @@ export default function GlobeExplorateurBoutiques({
           carte.__minuterieBulles = setTimeout(eviterChevauchementsBulles, 250);
         };
         carte.on("moveend zoomend", carte.__eviterBulles);
+        carte.__effacerLiens = effacerLiens;
+        carte.on("movestart zoomstart", effacerLiens);
         carte.__eviterBulles();
       }
     };
