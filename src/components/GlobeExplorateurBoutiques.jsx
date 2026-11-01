@@ -1387,7 +1387,7 @@ export default function GlobeExplorateurBoutiques({
         const px = carte.project(p.ll, zoom);
         return { id: p.id, x: px.x, y: px.y, ici: p.ici };
       });
-      const { decalages } = calculerDecalagesDissociation(pixels, { echelle });
+      const { decalages } = calculerDecalagesDissociation(pixels, { echelle, disposition: zoom >= 16 ? "anneau" : "rangee" });
       pixels.forEach((p) => {
         const entree = marqueursCreesParId.get(p.id);
         if (!entree) return;
@@ -1396,7 +1396,7 @@ export default function GlobeExplorateurBoutiques({
         // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
         // Boutiques proches : écartées les unes des autres (anneau relié par un trait à leur vraie position), jamais empilées. Un essai à false (01/11/2026) les empilait
         // les unes sur les autres : la demande portait sur « Vous êtes ici », qui n'entre plus dans ce calcul, pas sur l'écartement des boutiques.
-        const d = SEPARER_BOUTIQUES_PROCHES && zoom >= 16 ? decalages.get(p.id) : { dx: 0, dy: 0 };
+        const d = SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 };
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
       regroupes.forEach((id) => {

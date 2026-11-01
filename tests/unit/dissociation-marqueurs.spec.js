@@ -102,3 +102,12 @@ test.describe("Dissociation des marqueurs (calcul pur)", () => {
     expect([...a.decalages.entries()]).toEqual([...b.decalages.entries()]);
   });
 });
+
+test("disposition en rangée : 4 épingles superposées sont côte à côte, sans recouvrement, pointes alignées", () => {
+  const pts = [0, 1, 2, 3].map((k) => ({ id: "b" + k, x: 100 + k, y: 200 + k }));
+  const { decalages } = calculerDecalagesDissociation(pts, { disposition: "rangee" });
+  const pos = pts.map((p) => ({ x: p.x + decalages.get(p.id).dx, y: p.y + decalages.get(p.id).dy }));
+  const xs = pos.map((p) => p.x).sort((a, b) => a - b);
+  for (let k = 1; k < xs.length; k++) expect(xs[k] - xs[k - 1]).toBeGreaterThanOrEqual(44);
+  expect(new Set(pos.map((p) => Math.round(p.y))).size).toBe(1);
+});

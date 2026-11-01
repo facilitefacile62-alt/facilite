@@ -33,6 +33,7 @@ export const DIAMETRE_AVATAR_PX = 62; // épingles de 44 × 56 px (52 × 66 sél
 // mesuré 1 à 5 px de recouvrement) + 8 px d'air.
 export const DIAMETRE_ICI_PX = 84;
 export const RAYON_MIN_PX = 30;
+export const LARGEUR_EPINGLE_PX = 44;
 export const CAPACITE_PREMIER_ANNEAU = 8;
 
 /**
@@ -42,7 +43,7 @@ export const CAPACITE_PREMIER_ANNEAU = 8;
  *   (echelleAvatarPourZoom).
  * @returns {{decalages: Map<string, {dx: number, dy: number}>, groupes: string[][]}}
  */
-export function calculerDecalagesDissociation(points, { echelle = 1 } = {}) {
+export function calculerDecalagesDissociation(points, { echelle = 1, disposition = "anneau" } = {}) {
   // Le badge "Vous êtes ici" garde une taille fixe (il n'est pas redimensionné
   // avec le zoom, contrairement aux avatars des boutiques).
   const diametre = (p) => (p.ici ? DIAMETRE_ICI_PX : DIAMETRE_AVATAR_PX * echelle);
@@ -81,6 +82,25 @@ export function calculerDecalagesDissociation(points, { echelle = 1 } = {}) {
     const cx = indices.reduce((s, i) => s + points[i].x, 0) / indices.length;
     const cy = indices.reduce((s, i) => s + points[i].y, 0) / indices.length;
     const dGroupe = Math.max(...indices.map((i) => diametre(points[i])));
+
+    // Disposition « rangée » (dézoom) : épingles côte à côte, de gauche à droite, pointes sur une même ligne, chaque épingle entièrement
+    // visible donc cliquable. 6 par rangée au maximum ; les rangées suivantes passent dessous.
+    if (disposition === "rangee") {
+      const pas = LARGEUR_EPINGLE_PX + 6;
+      const haut = dGroupe;
+      const rangeeMax = 6;
+      const ordre = indices.slice().sort((i, j) => points[i].x - points[j].x || points[i].y - points[j].y || i - j);
+      ordre.forEach((i, rang) => {
+        const ligne = Math.floor(rang / rangeeMax);
+        const dansLigne = ordre.slice(ligne * rangeeMax, (ligne + 1) * rangeeMax).length;
+        const col = rang % rangeeMax;
+        decalages.set(points[i].id, {
+          dx: cx + (col - (dansLigne - 1) / 2) * pas - points[i].x,
+          dy: cy + ligne * haut - points[i].y,
+        });
+      });
+      continue;
+    }
 
     // Tri par angle autour du barycentre : les traits de rappel se croisent
     // le moins possible. Points parfaitement confondus (angle 0 pour tous) :
