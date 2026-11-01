@@ -1391,12 +1391,13 @@ export default function GlobeExplorateurBoutiques({
       pixels.forEach((p) => {
         const entree = marqueursCreesParId.get(p.id);
         if (!entree) return;
+        // 01/11/2026 : écartement à TOUS les zooms (demande de l'utilisateur : le dézoom doit ressembler au zoom proche). Ancienne règle du 22/10/2026 supprimée :
         // Jamais d'écartement tant que la vue est éloignée (22/10/2026) : à ces zooms quelques pixels représentent des centaines
         // de mètres et posaient des pins en mer. La pointe d'un pin reste sur ses coordonnées ; l'écartement relié par un trait
         // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
         // Boutiques proches : écartées les unes des autres (anneau relié par un trait à leur vraie position), jamais empilées. Un essai à false (01/11/2026) les empilait
         // les unes sur les autres : la demande portait sur « Vous êtes ici », qui n'entre plus dans ce calcul, pas sur l'écartement des boutiques.
-        const d = SEPARER_BOUTIQUES_PROCHES && zoom >= 16 ? decalages.get(p.id) : { dx: 0, dy: 0 };
+        const d = SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 };
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
       regroupes.forEach((id) => {
