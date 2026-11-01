@@ -114,8 +114,8 @@ test.describe("branchement dans le site", () => {
       "src/app/marketplace/page.js",
       "src/app/offres/[id]/page.js",
       "src/app/offres/OffresClient.jsx",
-      // Carrousel plein écran des photos d'une carte produit : affichage seulement (voir marketplace-carrousel-carte.spec.js).
-      "src/components/CarrousselPhotos.jsx",
+      // Panneau « Carrousel » de la carte (touche près de « Autour de moi ») : affichage seulement (voir carte-touche-carrousel.spec.js).
+      "src/components/GlobeExplorateurBoutiques.jsx",
       "src/components/ImageAdaptative.jsx",
       "src/components/ImagesRepliSupabase.jsx",
       "src/components/LecteurAudioOffre.jsx",

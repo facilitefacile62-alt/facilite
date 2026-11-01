@@ -109,8 +109,6 @@ import {
   chargerLitigesOuverts,
 } from "@/lib/marketplaceData";
 import { adresseImage, echecDefinitif } from "@/lib/imagesPubliques";
-import CarrousselPhotos from "@/components/CarrousselPhotos";
-import { photosDuCarrousel } from "@/lib/carrousselLogique";
 
 // Boutons IA en pause : grisés, non cliquables.
 const STYLE_IA_EN_PAUSE = { filter: "grayscale(1)", opacity: 0.45, cursor: "not-allowed" };
@@ -1598,11 +1596,8 @@ function VueAcheteur({ onVoirBoutique, onVoirArticle, categorie = null, onSelect
 
 function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false }) {
   const [signalementOuvert, setSignalementOuvert] = useState(false);
-  const [carrousselOuvert, setCarrousselOuvert] = useState(false);
   const enStock = article.statut === "en_stock";
   const photo = article.photos?.[0] || null;
-  // Toutes les photos de l'article, pour la touche « Carrousel » (adresses complètes ; le Worker n'est appliqué qu'à l'affichage, dans le carrousel).
-  const photosCarrousel = photosDuCarrousel((article.photos || []).map((p) => urlPhoto(p)));
 
   const ouvrirFiche = () => {
     if (onVoirArticle) {
@@ -1651,22 +1646,6 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
           <div className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/80 text-zinc-300 text-[9px] font-bold">
             Épuisé
           </div>
-        )}
-
-        {/* Touche « Carrousel » : ouvre en plein écran toutes les photos de l'article, à faire défiler. */}
-        {photosCarrousel.length > 0 && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCarrousselOuvert(true);
-            }}
-            aria-label={`Carrousel : voir les ${photosCarrousel.length} photo${photosCarrousel.length > 1 ? "s" : ""} de ${article.titre}`}
-            className="absolute bottom-2 left-2 z-10 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/70 hover:bg-black/85 backdrop-blur-sm text-white text-[11px] font-bold shadow-sm transition"
-          >
-            <i className="fa-solid fa-images text-[11px]" aria-hidden="true"></i>
-            Carrousel
-          </button>
         )}
 
       </div>
@@ -1723,7 +1702,6 @@ function CarteArticle({ article, onVoirArticle, onVoirBoutique, ancre = false })
         />
       )}
 
-      {carrousselOuvert && <CarrousselPhotos photos={photosCarrousel} titre={article.titre} onFermer={() => setCarrousselOuvert(false)} />}
     </article>
   );
 }
