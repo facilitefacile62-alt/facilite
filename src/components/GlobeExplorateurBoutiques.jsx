@@ -17,8 +17,6 @@ import ModalTrouverLivreur from "@/components/ModalTrouverLivreur";
 import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
-import { adresseImage } from "@/lib/imagesPubliques";
-import { produitsDuCarrousselCarte } from "@/lib/carrousselCarte";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
 import CarteBoutiqueChoisie from "@/components/CarteBoutiqueChoisie";
@@ -450,8 +448,16 @@ export default function GlobeExplorateurBoutiques({
   // ou nouvelle liste d'articles individuels (Point C) — deux vues
   // distinctes dans le même espace, pas de carrousel supplémentaire empilé.
   const [vueCarrousel, setVueCarrousel] = useState("boutiques"); // 'boutiques' | 'articles'
-  // Touche « Carrousel » de la carte : panneau FIXE (il reste ouvert jusqu'à sa fermeture) avec tous les produits des boutiques affichées sur la carte.
+  // Touche « Carrousel » de la carte : un toucher ouvre et FIXE la bulle de TOUTES les boutiques affichées (nom, quartier, carrousel de leurs articles) ;
+  // un second toucher les ferme toutes. Les refs servent au code Leaflet, qui ne relit pas l'état React.
   const [carrousselCarteOuvert, setCarrousselCarteOuvert] = useState(false);
+  const carrousselCarteOuvertRef = useRef(false);
+  const bullesFixesRef = useRef(false);
+  const basculerBullesFixesRef = useRef(() => {});
+  useEffect(() => {
+    carrousselCarteOuvertRef.current = carrousselCarteOuvert;
+    basculerBullesFixesRef.current(carrousselCarteOuvert);
+  }, [carrousselCarteOuvert]);
   // Article individuellement actif dans le dock "Articles" — distinct de
   // boutiqueSelectionnee (qui ne retient que la boutique) : sans état
   // dédié, deux articles d'une même boutique s'affichaient tous les deux
@@ -797,8 +803,6 @@ export default function GlobeExplorateurBoutiques({
   // à la fois à détecter les marqueurs superposés au clic et au cadre de
   // sélection ci-dessous. Lit la position de "Vous êtes ici" directement
   // sur son marqueur Leaflet (pas de state dédié pour ça ici).
-  const produitsCarrousselCarte = useMemo(() => produitsDuCarrousselCarte(articlesFiltres, boutiquesAffichees), [articlesFiltres, boutiquesAffichees]);
-
   const obtenirMembresConnus = useCallback(() => {
     const membres = boutiquesAffichees.map((b) => ({
       position: [b.lat, b.lng],
@@ -1224,6 +1228,8 @@ export default function GlobeExplorateurBoutiques({
     if (!carte || !groupe) return;
 
     const L = (await import("leaflet")).default;
+    // Touche « Carrousel » active : les bulles fixées de l'ancienne génération de marqueurs sont fermées avant l'effacement ; les nouvelles sont rouvertes plus bas.
+    if (bullesFixesRef.current) basculerBullesFixesRef.current(false);
     groupe.clearLayers();
 
     // Boutiques à la même position réelle (ou trop proches à l'écran) :
@@ -1288,6 +1294,7 @@ export default function GlobeExplorateurBoutiques({
     // séparent jamais, quel que soit le zoom.
     const ZOOM_SEPARATION = 18;
     const REGROUPER_EN_BULLES = false;
+    const SEPARER_BOUTIQUES_PROCHES = false;
     let bullesActives = [];
     let signatureBulles = "";
     const groupeDeBoutique = new Map(); // id boutique -> ids du groupe (regroupé)
@@ -1387,7 +1394,9 @@ export default function GlobeExplorateurBoutiques({
         // Jamais d'écartement tant que la vue est éloignée (22/10/2026) : à ces zooms quelques pixels représentent des centaines
         // de mètres et posaient des pins en mer. La pointe d'un pin reste sur ses coordonnées ; l'écartement relié par un trait
         // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
-        const d = zoom < 16 ? { dx: 0, dy: 0 } : decalages.get(p.id);
+        // 01/11/2026 : plus de regroupement. Chaque boutique reste SEULE, à sa vraie place (demande explicite) : SEPARER_BOUTIQUES_PROCHES = false
+        // supprime l'anneau relié par un trait qui serrait les boutiques proches les unes contre les autres. Remettre true pour le rétablir.
+        const d = SEPARER_BOUTIQUES_PROCHES && zoom >= 16 ? decalages.get(p.id) : { dx: 0, dy: 0 };
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
       });
       regroupes.forEach((id) => {
@@ -1661,6 +1670,7 @@ export default function GlobeExplorateurBoutiques({
             // Épinglée : reste ouverte (voir fermerBulle plus haut, même
             // règle).
             if (boutiqueEpingleeIdRef.current === b.id) return;
+            if (bullesFixesRef.current) return; // touche « Carrousel » : les bulles restent ouvertes
             timerSurvol = setTimeout(() => {
               carte.closePopup(popup);
             }, 300);
@@ -1831,9 +1841,38 @@ export default function GlobeExplorateurBoutiques({
         // tant qu'on ne la désépingle pas explicitement (nouveau clic ou
         // double-clic sur une autre boutique).
         if (boutiqueEpingleeIdRef.current === b.id) return;
+        if (bullesFixesRef.current) return; // touche « Carrousel » : les bulles restent ouvertes
         timerSurvol = setTimeout(() => {
           carte.closePopup(popup);
         }, 300);
+      };
+
+      // Touche « Carrousel » : ouvre cette bulle SANS fermer les autres (autoClose désactivé) et sans déplacer la carte (pas d'ajustement : avec plusieurs bulles, les
+      // déplacements se contrarieraient).
+      const ouvrirFixe = () => {
+        if (timerSurvol) clearTimeout(timerSurvol);
+        if (carteRef.current !== carte) return;
+        popup.options.autoClose = false;
+        popup.options.offset = offsetPopup();
+        popup.setLatLng(marqueur.getLatLng());
+        if (!carte.hasLayer(popup)) popup.addTo(carte);
+        attacherEcouteursPopup();
+        setTimeout(() => {
+          if (!popup.isOpen()) return;
+          popup.options.offset = offsetPopup();
+          repositionnerBulle();
+        }, 40);
+      };
+      const fermerFixe = () => {
+        popup.options.autoClose = true;
+        if (carte.hasLayer(popup)) carte.removeLayer(popup);
+      };
+      // Mesure de la bulle affichée et déplacement en pixels par rapport à sa place normale (au-dessus de sa boutique).
+      const mesurerBulle = () => popup.getElement()?.querySelector(".leaflet-popup-content-wrapper")?.getBoundingClientRect() || null;
+      const deplacerBulle = (dx, dy) => {
+        const base = offsetPopup();
+        popup.options.offset = [base[0] + dx, base[1] + dy];
+        repositionnerBulle();
       };
 
       // La bulle s'ouvre : si la boutique est fixée, les autres se masquent. Elle se ferme (croix, nouveau
@@ -1847,6 +1886,10 @@ export default function GlobeExplorateurBoutiques({
       popupsBoutiquesRef.current.set(b.id, {
         ouvrir: ouvrirBulle,
         fermer: fermerBulle,
+        ouvrirFixe,
+        fermerFixe,
+        mesurerBulle,
+        deplacerBulle,
         boutique: b,
       });
 
@@ -1916,6 +1959,55 @@ export default function GlobeExplorateurBoutiques({
         // fenêtre soit visible, sans éloigner la boutique de l'endroit touché.
       });
     });
+
+    // Touche « Carrousel » : ouvre (ou ferme) la bulle de toutes les boutiques affichées. Recréée à chaque reconstruction des marqueurs ; si la touche est
+    // active, les bulles sont rouvertes tout de suite sur les nouveaux marqueurs.
+    // Les bulles ouvertes ensemble ne doivent pas se recouvrir : chacune garde sa boutique pour pointe, mais est décalée (côté, puis plus haut) jusqu'à trouver une
+    // place libre dans la carte, sous la barre du haut. Recalculé à chaque changement de zoom.
+    const eviterChevauchementsBulles = () => {
+      if (!bullesFixesRef.current || carteRef.current !== carte) return;
+      const c = carte.getContainer().getBoundingClientRect();
+      const haut = (headerRef.current ? headerRef.current.getBoundingClientRect().bottom : c.top) + 4;
+      const poignees = boutiquesAffichees.map((b) => popupsBoutiquesRef.current.get(b.id)).filter((h) => h?.mesurerBulle?.());
+      poignees.forEach((h) => h.deplacerBulle(0, 0));
+      const places = [];
+      const croise = (a, d) => a.left < d.right && a.right > d.left && a.top < d.bottom && a.bottom > d.top;
+      poignees
+        .map((h) => ({ h, r: h.mesurerBulle() }))
+        .sort((u, v) => u.r.left - v.r.left)
+        .forEach(({ h, r }) => {
+          const W = r.width + 8;
+          const H = r.height + 10;
+          const essais = [];
+          for (let niveau = 0; niveau < 4; niveau++) for (const cote of [0, 1, -1, 2, -2]) essais.push([cote * W, -niveau * H]);
+          const place = essais.find(([dx, dy]) => {
+            const t = { left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy };
+            if (t.left < c.left + 6 || t.right > c.right - 66 || t.top < haut || t.bottom > c.bottom) return false;
+            return !places.some((p) => croise(t, p));
+          });
+          const [dx, dy] = place || [0, 0];
+          if (dx || dy) h.deplacerBulle(dx, dy);
+          places.push({ left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy });
+        });
+    };
+
+    basculerBullesFixesRef.current = (ouvert) => {
+      bullesFixesRef.current = ouvert;
+      boutiquesAffichees.forEach((b) => {
+        const h = popupsBoutiquesRef.current.get(b.id);
+        if (!h) return;
+        if (ouvert) h.ouvrirFixe?.();
+        else h.fermerFixe?.();
+      });
+      if (carte.__eviterBulles) carte.off("zoomend", carte.__eviterBulles);
+      carte.__eviterBulles = null;
+      if (ouvert) {
+        setTimeout(eviterChevauchementsBulles, 200);
+        carte.__eviterBulles = () => setTimeout(eviterChevauchementsBulles, 200);
+        carte.on("zoomend", carte.__eviterBulles);
+      }
+    };
+    if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);
 
     // Mode « focus » : tant qu'une boutique est fixée (bulle d'articles ouverte), seules elle et « Vous êtes
     // ici » restent visibles ; les autres boutiques, leurs bulles de regroupement et leurs traits sont
@@ -2450,7 +2542,7 @@ export default function GlobeExplorateurBoutiques({
             <span>Autour de moi</span>
           </button>
 
-          {/* Touche « Carrousel » : un toucher fixe le panneau de tous les produits de la carte ; un second toucher (ou la croix) le ferme. */}
+          {/* Touche « Carrousel » : un toucher ouvre et fixe la bulle (carrousel d'articles) de toutes les boutiques de la carte ; un second toucher les ferme. */}
           <button
             type="button"
             onClick={() => setCarrousselCarteOuvert((v) => !v)}
@@ -2480,57 +2572,6 @@ export default function GlobeExplorateurBoutiques({
       </header>
 
       {livreursOuverts && livreurAutorise && <ModalTrouverLivreur onFermer={() => setLivreursOuverts(false)} />}
-
-      {/* Panneau « Carrousel » : fixe en bas de la carte, tous les produits des boutiques affichées, à faire défiler ; toucher un produit ouvre sa fiche. */}
-      {carrousselCarteOuvert && (
-        <section
-          role="dialog"
-          aria-label="Carrousel des produits de la carte"
-          className="absolute inset-x-0 bottom-0 z-[1100] pointer-events-auto rounded-t-3xl bg-gray-950/95 backdrop-blur-md border-t border-gray-800 shadow-2xl"
-        >
-          <div className="flex items-center justify-between gap-3 px-4 pt-3">
-            <h3 className="text-sm font-black text-white flex items-center gap-2">
-              <i className="fa-solid fa-images text-pink-400" aria-hidden="true"></i>
-              Carrousel
-              <span className="text-xs font-bold text-gray-400">
-                {produitsCarrousselCarte.length} produit{produitsCarrousselCarte.length > 1 ? "s" : ""}
-              </span>
-            </h3>
-            <button
-              type="button"
-              onClick={() => setCarrousselCarteOuvert(false)}
-              aria-label="Fermer le carrousel"
-              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-            >
-              <i className="fa-solid fa-xmark" aria-hidden="true"></i>
-            </button>
-          </div>
-          {produitsCarrousselCarte.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400">Aucun produit à montrer sur cette carte pour le moment.</p>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {produitsCarrousselCarte.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => onVoirArticle?.(a)}
-                  className="snap-start shrink-0 w-36 sm:w-40 text-left rounded-2xl bg-gray-900 border border-gray-800 hover:border-gray-600 overflow-hidden transition"
-                >
-                  <div className="aspect-square w-full bg-gray-800">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={adresseImage(urlPhoto(a.photos[0]))} alt={a.titre} className="w-full h-full object-cover" loading="lazy" />
-                  </div>
-                  <div className="p-2">
-                    <p className="text-[11px] font-bold text-white truncate" title={a.titre}>{a.titre}</p>
-                    <p className="text-xs font-black text-emerald-400 mt-0.5">{prixLisible(a.prix_xof)} FCFA</p>
-                    {a.boutique_nom && <p className="text-[10px] text-gray-400 truncate mt-0.5">{a.boutique_nom}</p>}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
 
       {/* 2. CONTENEUR CARTE LEAFLET */}
       <div className="relative flex-1 w-full h-full min-h-0 bg-[#0B0F17]">
