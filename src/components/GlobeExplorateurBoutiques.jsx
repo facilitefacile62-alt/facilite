@@ -1610,7 +1610,7 @@ export default function GlobeExplorateurBoutiques({
       const articlesApercu = articlesBoutique.slice(0, 8);
 
       const htmlBulleProduits = `
-        <div class="bulle-produits-container" style="position:relative; width:220px; max-width:250px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+        <div class="bulle-produits-container" style="position:relative; width:190px; max-width:210px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
           <!-- Bouton Fermer X -->
           <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
 
@@ -1633,8 +1633,8 @@ export default function GlobeExplorateurBoutiques({
                       const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
                       const prixTxt = art.prix_xof || art.prix;
                       return `
-                        <div style="flex-shrink:0; width:86px;">
-                        <div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
+                        <div style="flex-shrink:0; width:74px;">
+                        <div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
                           ${
                             photoUrl
                               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.replaceWith(Object.assign(document.createElement('div'),{style:'width:100%;height:100%;background:#c4a4b8;display:flex;align-items:center;justify-content:center;font-size:22px;',textContent:'🛍️'}))" />`
@@ -1645,7 +1645,7 @@ export default function GlobeExplorateurBoutiques({
                             ${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}
                           </div>
                         </div>
-                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:86px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
+                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:74px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
                         </div>
                       `;
                     })
@@ -1761,7 +1761,11 @@ export default function GlobeExplorateurBoutiques({
             btn.onclick = (e) => {
               e.stopPropagation();
               const cible = boutiquesAffichees.find((x) => String(x.id) === btn.getAttribute("data-itineraire"));
-              if (cible) setItineraireLocal({ id: cible.id, nom: cible.nom, lat: Number(cible.lat), lng: Number(cible.lng) });
+              if (cible) {
+                setItineraireLocal({ id: cible.id, nom: cible.nom, lat: Number(cible.lat), lng: Number(cible.lng) });
+                // Redirige la carte vers la position de la boutique (zoom 16 au moins).
+                carte.flyTo([Number(cible.lat), Number(cible.lng)], Math.max(carte.getZoom(), 16), { duration: 0.8 });
+              }
             };
           });
 
@@ -2100,14 +2104,14 @@ export default function GlobeExplorateurBoutiques({
         .map(({ a: art, boutiqueId }) => {
           const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : art.photo ? urlPhoto(art.photo) : art.image ? urlPhoto(art.image) : "";
           const prixTxt = art.prix_xof || art.prix;
-          return `<div style="flex-shrink:0; width:86px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:86px; height:112px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
+          return `<div style="flex-shrink:0; width:74px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
             photoUrl
               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
               : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
-          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div><button type="button" data-itineraire="${echapperHtml(String(boutiqueId))}" style="margin-top:4px; width:86px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button></div>`;
+          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div><button type="button" data-itineraire="${echapperHtml(String(boutiqueId))}" style="margin-top:4px; width:74px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button></div>`;
         })
         .join("");
-      return `<div class="bulle-produits-container" style="position:relative; width:260px; max-width:280px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+      return `<div class="bulle-produits-container" style="position:relative; width:225px; max-width:245px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
         <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
         <div style="margin-bottom:8px; padding-right:22px;">
           <div style="font-size:12px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${noms}</div>
@@ -2120,22 +2124,49 @@ export default function GlobeExplorateurBoutiques({
     const appliquerBullesFixes = () => {
       if (!bullesFixesRef.current || carteRef.current !== carte) return;
       const zoom = carte.getZoom();
-      const groupes = zoom < ZOOM_ANNEAU
-        ? calculerDecalagesDissociation(
-            boutiquesAffichees.map((b) => {
-              const px = carte.project([b.lat, b.lng], zoom);
-              return { id: b.id, x: px.x, y: px.y, ici: false };
-            }),
-            { echelle: 1 }
-          ).groupes
-        : [];
+      // Groupes : boutiques à 100 m ou moins les unes des autres (distance réelle, à tout zoom), plus celles dont les épingles se recouvrent au dézoom.
+      const RAYON_GROUPE_M = 100;
+      const metres = (u, v) => {
+        const R = 6371000;
+        const rad = Math.PI / 180;
+        const dLat = (v.lat - u.lat) * rad;
+        const dLng = (v.lng - u.lng) * rad;
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(u.lat * rad) * Math.cos(v.lat * rad) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+      };
+      const pixels = boutiquesAffichees.map((b) => {
+        const px = carte.project([b.lat, b.lng], zoom);
+        return { x: px.x, y: px.y };
+      });
+      const parent = boutiquesAffichees.map((_, i) => i);
+      const racine = (i) => {
+        while (parent[i] !== i) {
+          parent[i] = parent[parent[i]];
+          i = parent[i];
+        }
+        return i;
+      };
+      for (let i = 0; i < boutiquesAffichees.length; i++) {
+        for (let j = i + 1; j < boutiquesAffichees.length; j++) {
+          const proches = metres(boutiquesAffichees[i], boutiquesAffichees[j]) <= RAYON_GROUPE_M;
+          const recouvertes = zoom < ZOOM_ANNEAU && Math.hypot(pixels[i].x - pixels[j].x, pixels[i].y - pixels[j].y) < DIAMETRE_AVATAR_PX;
+          if (proches || recouvertes) parent[racine(i)] = racine(j);
+        }
+      }
+      const parRacine = new Map();
+      boutiquesAffichees.forEach((b, i) => {
+        const r = racine(i);
+        if (!parRacine.has(r)) parRacine.set(r, []);
+        parRacine.get(r).push(b.id);
+      });
+      const groupes = [...parRacine.values()].filter((ids) => ids.length > 1);
       const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
       const cache = new Set();
       groupes.forEach((ids) => {
         chefDe.set(ids[0], ids);
         ids.slice(1).forEach((id) => cache.add(id));
       });
-      const signature = groupes.map((g) => g.join("+")).join("|") + "@" + (zoom < ZOOM_ANNEAU);
+      const signature = groupes.map((g) => g.join("+")).join("|");
       if (carte.__signatureGroupes === signature) return;
       carte.__signatureGroupes = signature;
       boutiquesAffichees.forEach((b) => {
