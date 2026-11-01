@@ -1,0 +1,71 @@
+const { test, expect } = require("@playwright/test");
+const fs = require("fs");
+const path = require("path");
+
+/**
+ * Touche « Carrousel » DANS la carte, juste après « Autour de moi » : un toucher ouvre et FIXE la bulle (nom, quartier, carrousel d'articles) de TOUTES les boutiques
+ * affichées ; un second toucher les ferme. Aucun regroupement de boutiques : chacune reste seule à sa vraie place (site et application).
+ */
+const lire = (p) => fs.readFileSync(path.join(__dirname, "../..", p), "utf8").replace(/\r\n/g, "\n");
+const g = () => lire("src/components/GlobeExplorateurBoutiques.jsx");
+
+test("touche « Carrousel » dans la rangée de la carte, juste après « Autour de moi » et avant « Trouver un livreur »", () => {
+  const c = g();
+  const iAutour = c.indexOf("<span>Autour de moi</span>");
+  const iCarrousel = c.indexOf("<span>Carrousel</span>");
+  const iLivreur = c.indexOf("<span>Trouver un livreur</span>");
+  expect(iAutour).toBeGreaterThan(0);
+  expect(iCarrousel).toBeGreaterThan(iAutour);
+  expect(iLivreur).toBeGreaterThan(iCarrousel);
+  const entre = c.slice(c.indexOf("</button>", iAutour), c.indexOf("<button", c.indexOf("</button>", iAutour)));
+  expect(entre).not.toMatch(/<(div|section|header)\b/);
+  expect(c).toContain("onClick={() => setCarrousselCarteOuvert((v) => !v)}");
+  // L'ancien panneau du bas n'existe plus : ce sont les bulles de la carte qui s'ouvrent.
+  expect(c).not.toContain("Carrousel des produits de la carte");
+  expect(c).not.toContain("produitsDuCarrousselCarte");
+});
+
+test("un toucher ouvre la bulle de TOUTES les boutiques affichées, sans fermer les autres, et les fixe ; le second toucher les ferme toutes", () => {
+  const c = g();
+  expect(c).toContain("carrousselCarteOuvertRef.current = carrousselCarteOuvert;\n    basculerBullesFixesRef.current(carrousselCarteOuvert);");
+  const bascule = c.slice(c.indexOf("basculerBullesFixesRef.current = (ouvert) => {"), c.indexOf("if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);"));
+  expect(bascule).toContain("boutiquesAffichees.forEach((b) => {");
+  expect(bascule).toContain("if (ouvert) h.ouvrirFixe?.();");
+  expect(bascule).toContain("else h.fermerFixe?.();");
+  const ouvrir = c.slice(c.indexOf("const ouvrirFixe = () => {"), c.indexOf("const fermerFixe = () => {"));
+  expect(ouvrir).toContain("popup.options.autoClose = false;"); // n'en ferme aucune autre
+  expect(ouvrir).toContain("popup.addTo(carte)");
+  expect(ouvrir).not.toContain("openOn(");
+  expect(ouvrir).not.toContain("panBy"); // la carte ne bouge pas : sinon les déplacements de plusieurs bulles se contrarieraient
+});
+
+test("bulles fixées : elles ne se ferment ni à la sortie de la souris ni au bout d'un délai ; reconstruction des marqueurs : fermées puis rouvertes, jamais en double", () => {
+  const c = g();
+  expect((c.match(/if \(bullesFixesRef\.current\) return;/g) || []).length).toBe(2);
+  expect(c).toContain("if (bullesFixesRef.current) basculerBullesFixesRef.current(false);\n    groupe.clearLayers();");
+  expect(c).toContain("if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);");
+});
+
+test("bulles qui ne se recouvrent pas : placées côté puis plus haut, dans la carte et sous la barre du haut ; recalculées au zoom", () => {
+  const c = g();
+  expect(c).toContain("const eviterChevauchementsBulles = () => {");
+  expect(c).toContain("carte.on(\"zoomend\", carte.__eviterBulles);");
+  expect(c).toContain("t.top < haut || t.bottom > c.bottom");
+  expect(c).toContain("const deplacerBulle = (dx, dy) => {");
+});
+
+test("aucun regroupement de boutiques : plus d'anneau relié par un trait (site), plus de grappes (application) ; chaque boutique reste à sa vraie place", () => {
+  const c = g();
+  expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = false;");
+  expect(c).toContain("SEPARER_BOUTIQUES_PROCHES && zoom >= 16 ? decalages.get(p.id) : { dx: 0, dy: 0 }");
+  expect(c).toContain("const REGROUPER_EN_BULLES = false;");
+  const app = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(app).toContain("var grappesActives = false;");
+  expect(app).not.toContain("avecMoi = true");
+});
+
+test("affichage seulement : aucune écriture en base, adresses d'images inchangées", () => {
+  const c = g();
+  const bloc = c.slice(c.indexOf("const ouvrirFixe = () => {"), c.indexOf("const eviterChevauchementsBulles") + 200);
+  expect(bloc).not.toMatch(/supabase|\.update\(|\.insert\(/);
+});
