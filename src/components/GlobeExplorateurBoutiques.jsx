@@ -1976,7 +1976,6 @@ export default function GlobeExplorateurBoutiques({
       const deficit = visibles.length ? Math.max(0, haut - Math.min(...visibles.map((m) => m.top))) : 0;
       if (deficit > 2 && !carte.__carteDescendue) {
         carte.__carteDescendue = true;
-        carte.once("moveend", () => setTimeout(eviterChevauchementsBulles, 150));
         carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });
         return;
       }
@@ -2012,13 +2011,19 @@ export default function GlobeExplorateurBoutiques({
         if (ouvert) h.ouvrirFixe?.();
         else h.fermerFixe?.();
       });
-      if (carte.__eviterBulles) carte.off("zoomend", carte.__eviterBulles);
+      if (carte.__eviterBulles) carte.off("moveend zoomend", carte.__eviterBulles);
+      clearTimeout(carte.__minuterieBulles);
       carte.__eviterBulles = null;
       carte.__carteDescendue = false;
       if (ouvert) {
-        setTimeout(eviterChevauchementsBulles, 200);
-        carte.__eviterBulles = () => setTimeout(eviterChevauchementsBulles, 200);
-        carte.on("zoomend", carte.__eviterBulles);
+        // Chaque déplacement ou zoom de la carte remet les bulles à leur place d'origine (voir rafraichirPopup) : le placement est donc recalculé juste après, une fois la carte
+        // immobile (délai court, regroupé en un seul calcul).
+        carte.__eviterBulles = () => {
+          clearTimeout(carte.__minuterieBulles);
+          carte.__minuterieBulles = setTimeout(eviterChevauchementsBulles, 250);
+        };
+        carte.on("moveend zoomend", carte.__eviterBulles);
+        carte.__eviterBulles();
       }
     };
     if (carrousselCarteOuvertRef.current) basculerBullesFixesRef.current(true);
