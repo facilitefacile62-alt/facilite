@@ -2047,46 +2047,6 @@ export default function GlobeExplorateurBoutiques({
       });
       cont.appendChild(svg);
     };
-    const eviterChevauchementsBulles = () => {
-      if (!bullesFixesRef.current || carteRef.current !== carte) return;
-      const c = carte.getContainer().getBoundingClientRect();
-      const haut = (headerRef.current ? headerRef.current.getBoundingClientRect().bottom : c.top) + 4;
-      const poignees = boutiquesAffichees.map((b) => popupsBoutiquesRef.current.get(b.id)).filter((h) => h?.mesurerBulle?.());
-      poignees.forEach((h) => h.deplacerBulle(0, 0));
-      // Bulles visibles à l'écran dépassant sous la barre du haut : la CARTE descend une seule fois du nombre de pixels qu'il faut pour que toutes tiennent entièrement
-      // dans la zone libre (les bulles restent collées à leurs boutiques), puis le placement est recalculé.
-      const visibles = poignees.map((h) => h.mesurerBulle()).filter((m) => m && m.right > c.left && m.left < c.right && m.top > c.top - 400 && m.top < c.bottom);
-      const deficit = visibles.length ? Math.max(0, haut - Math.min(...visibles.map((m) => m.top))) : 0;
-      if (deficit > 2 && !carte.__carteDescendue) {
-        carte.__carteDescendue = true;
-        carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });
-        return;
-      }
-      const places = [];
-      const croise = (a, d) => a.left < d.right && a.right > d.left && a.top < d.bottom && a.bottom > d.top;
-      poignees
-        .map((h) => ({ h, r: h.mesurerBulle() }))
-        .sort((u, v) => u.r.left - v.r.left)
-        .forEach(({ h, r }) => {
-          const W = r.width + 8;
-          const H = r.height + 10;
-          // Essais : d'abord sur place, puis en colonnes de chaque côté (0, +1, -1, +2, -2 largeurs), puis plus haut ou plus bas d'une hauteur de bulle.
-          const essais = [];
-          for (const niveau of [0, 1, -1, 2, -2]) for (const cote of [0, 1, -1, 2, -2, 3, -3]) essais.push([cote * W, -niveau * H]);
-          // Une bulle trop haute pour tenir sous la barre du haut n'est jamais poussée plus haut qu'elle ne l'est déjà (sinon aucune place ne serait valable).
-          const hautMini = Math.min(haut, r.top) - 0.5;
-          const place = essais.find(([dx, dy]) => {
-            const t = { left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy };
-            if (t.left < c.left + 6 || t.right > c.right - 66 || t.top < hautMini || t.bottom > c.bottom) return false;
-            return !places.some((p) => croise(t, p));
-          });
-          const [dx, dy] = place || [0, 0];
-          if (dx || dy) h.deplacerBulle(dx, dy);
-          places.push({ left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy });
-        });
-      // 01/11/2026 : traits et points colorés retirés (demande de l'utilisateur : inutiles maintenant que les boutiques proches partagent une seule bulle). dessinerLiens n'est plus appelé.
-    };
-
     // Boutiques proches (épingles empilées au dézoom) : UNE seule bulle, avec les articles de toutes et leur nombre en haut. Au zoom d'écartement (16+) chaque boutique a la sienne.
     const construireHtmlGroupe = (membres) => {
       const articles = [];
@@ -2153,6 +2113,12 @@ export default function GlobeExplorateurBoutiques({
           if (proches || recouvertes) parent[racine(i)] = racine(j);
         }
       }
+      // Paires de bulles qui se touchent (mesurées à l'écran) : fusionnées en une seule.
+      (carte.__pairesFusion || []).forEach(([u, v]) => {
+        const i = boutiquesAffichees.findIndex((b) => b.id === u);
+        const j = boutiquesAffichees.findIndex((b) => b.id === v);
+        if (i >= 0 && j >= 0) parent[racine(i)] = racine(j);
+      });
       const parRacine = new Map();
       boutiquesAffichees.forEach((b, i) => {
         const r = racine(i);
@@ -2179,6 +2145,45 @@ export default function GlobeExplorateurBoutiques({
       });
     };
 
+    // Chaque bulle reste FIXE sur sa boutique (sa pointe vise le centre de l'épingle). Quand deux bulles se touchent à l'écran (dézoom), leurs boutiques sont
+    // associées en UNE bulle ; on recommence jusqu'à ce qu'aucune ne se touche.
+    const fusionnerBullesQuiSeTouchent = async () => {
+      if (!bullesFixesRef.current || carteRef.current !== carte) return;
+      const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+      carte.__pairesFusion = [];
+      for (let tour = 0; tour < 10; tour++) {
+        carte.__signatureGroupes = null;
+        appliquerBullesFixes();
+        await attendre(160);
+        if (!bullesFixesRef.current || carteRef.current !== carte) return;
+        const mesures = boutiquesAffichees
+          .map((b) => ({ id: b.id, r: popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.() }))
+          .filter((m) => m.r && m.r.width > 0);
+        const air = 6;
+        const nouvelles = [];
+        for (let i = 0; i < mesures.length; i++) {
+          for (let j = i + 1; j < mesures.length; j++) {
+            const a = mesures[i].r;
+            const c = mesures[j].r;
+            if (a.left < c.right + air && a.right + air > c.left && a.top < c.bottom + air && a.bottom + air > c.top) nouvelles.push([mesures[i].id, mesures[j].id]);
+          }
+        }
+        if (!nouvelles.length) break;
+        carte.__pairesFusion.push(...nouvelles);
+      }
+      // Une seule fois : si des bulles dépassent sous la barre du haut, la carte descend d'autant (les bulles restent collées à leurs boutiques).
+      const c = carte.getContainer().getBoundingClientRect();
+      const haut = (headerRef.current ? headerRef.current.getBoundingClientRect().bottom : c.top) + 4;
+      const visibles = boutiquesAffichees
+        .map((b) => popupsBoutiquesRef.current.get(b.id)?.mesurerBulle?.())
+        .filter((m) => m && m.right > c.left && m.left < c.right && m.top > c.top - 400 && m.top < c.bottom);
+      const deficit = visibles.length ? Math.max(0, haut - Math.min(...visibles.map((m) => m.top))) : 0;
+      if (deficit > 2 && !carte.__carteDescendue) {
+        carte.__carteDescendue = true;
+        carte.panBy([0, -Math.ceil(deficit)], { animate: true, duration: 0.35 });
+      }
+    };
+
     basculerBullesFixesRef.current = (ouvert) => {
       bullesFixesRef.current = ouvert;
       carte.__signatureGroupes = null;
@@ -2201,10 +2206,7 @@ export default function GlobeExplorateurBoutiques({
         // immobile (délai court, regroupé en un seul calcul).
         carte.__eviterBulles = () => {
           clearTimeout(carte.__minuterieBulles);
-          carte.__minuterieBulles = setTimeout(() => {
-            appliquerBullesFixes();
-            setTimeout(eviterChevauchementsBulles, 80);
-          }, 250);
+          carte.__minuterieBulles = setTimeout(fusionnerBullesQuiSeTouchent, 250);
         };
         carte.on("moveend zoomend", carte.__eviterBulles);
         carte.__effacerLiens = effacerLiens;
