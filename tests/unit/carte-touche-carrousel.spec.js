@@ -50,7 +50,9 @@ test("bulles qui ne se recouvrent pas : placées côté puis plus haut, dans la 
   const c = g();
   expect(c).toContain("const eviterChevauchementsBulles = () => {");
   expect(c).toContain("carte.on(\"zoomend\", carte.__eviterBulles);");
-  expect(c).toContain("t.top < haut || t.bottom > c.bottom");
+  expect(c).toContain("t.top < hautMini || t.bottom > c.bottom");
+  // Une bulle trop haute pour tenir sous la barre du haut reste placeable (colonnes de côté) : la règle du haut ne dépasse jamais sa position naturelle.
+  expect(c).toContain("const hautMini = Math.min(haut, r.top) - 0.5;");
   expect(c).toContain("const deplacerBulle = (dx, dy) => {");
 });
 
