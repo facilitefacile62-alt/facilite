@@ -2094,6 +2094,19 @@ export default function GlobeExplorateurBoutiques({
     gestionnaireDissociation();
     carte.on("zoomanim", surZoomAnim);
     carte.on("zoom", surZoom);
+    // 01/11/2026 : barre de pourcentage de zoom TEMPORAIRE (demande de l'utilisateur, à retirer sur sa demande).
+    const barreZoom = document.createElement("div");
+    barreZoom.setAttribute("data-barre-zoom", "1");
+    barreZoom.style.cssText = "position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:1200;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px;border-radius:14px;background:rgba(15,23,42,.82);color:#fff;font:700 12px system-ui,sans-serif;pointer-events:none;";
+    barreZoom.innerHTML = '<span data-valeur>0%</span><div style="width:8px;height:120px;border-radius:9999px;background:rgba(255,255,255,.25);position:relative;overflow:hidden"><div data-remplissage style="position:absolute;left:0;right:0;bottom:0;height:0;background:#3B82F6"></div></div>';
+    carte.getContainer().appendChild(barreZoom);
+    const majBarreZoom = () => {
+      const pc = Math.max(0, Math.min(100, Math.round((carte.getZoom() / 18) * 100)));
+      barreZoom.querySelector("[data-valeur]").textContent = pc + "%";
+      barreZoom.querySelector("[data-remplissage]").style.height = pc + "%";
+    };
+    majBarreZoom();
+    carte.on("zoom zoomend", majBarreZoom);
     carte.on("zoomend", gestionnaireDissociation);
     carte.on("moveend", gestionnaireDissociation);
 
