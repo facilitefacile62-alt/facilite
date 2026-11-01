@@ -17,6 +17,8 @@ import ModalTrouverLivreur from "@/components/ModalTrouverLivreur";
 import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
+import { adresseImage } from "@/lib/imagesPubliques";
+import { produitsDuCarrousselCarte } from "@/lib/carrousselCarte";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
 import CarteBoutiqueChoisie from "@/components/CarteBoutiqueChoisie";
@@ -448,6 +450,8 @@ export default function GlobeExplorateurBoutiques({
   // ou nouvelle liste d'articles individuels (Point C) — deux vues
   // distinctes dans le même espace, pas de carrousel supplémentaire empilé.
   const [vueCarrousel, setVueCarrousel] = useState("boutiques"); // 'boutiques' | 'articles'
+  // Touche « Carrousel » de la carte : panneau FIXE (il reste ouvert jusqu'à sa fermeture) avec tous les produits des boutiques affichées sur la carte.
+  const [carrousselCarteOuvert, setCarrousselCarteOuvert] = useState(false);
   // Article individuellement actif dans le dock "Articles" — distinct de
   // boutiqueSelectionnee (qui ne retient que la boutique) : sans état
   // dédié, deux articles d'une même boutique s'affichaient tous les deux
@@ -793,6 +797,8 @@ export default function GlobeExplorateurBoutiques({
   // à la fois à détecter les marqueurs superposés au clic et au cadre de
   // sélection ci-dessous. Lit la position de "Vous êtes ici" directement
   // sur son marqueur Leaflet (pas de state dédié pour ça ici).
+  const produitsCarrousselCarte = useMemo(() => produitsDuCarrousselCarte(articlesFiltres, boutiquesAffichees), [articlesFiltres, boutiquesAffichees]);
+
   const obtenirMembresConnus = useCallback(() => {
     const membres = boutiquesAffichees.map((b) => ({
       position: [b.lat, b.lng],
@@ -2444,6 +2450,21 @@ export default function GlobeExplorateurBoutiques({
             <span>Autour de moi</span>
           </button>
 
+          {/* Touche « Carrousel » : un toucher fixe le panneau de tous les produits de la carte ; un second toucher (ou la croix) le ferme. */}
+          <button
+            type="button"
+            onClick={() => setCarrousselCarteOuvert((v) => !v)}
+            aria-pressed={carrousselCarteOuvert}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shadow-md backdrop-blur-md ${
+              carrousselCarteOuvert
+                ? "bg-white text-gray-950 font-black shadow-white/20"
+                : "bg-gray-900/80 text-white hover:bg-gray-800 border border-gray-700/80"
+            }`}
+          >
+            <i className="fa-solid fa-images text-xs text-pink-400"></i>
+            <span>Carrousel</span>
+          </button>
+
           {/* « Trouver un livreur » : livreurs accrédités de la zone (compte connecté requis pour les contacter). */}
 {livreurAutorise && (
           <button
@@ -2459,6 +2480,57 @@ export default function GlobeExplorateurBoutiques({
       </header>
 
       {livreursOuverts && livreurAutorise && <ModalTrouverLivreur onFermer={() => setLivreursOuverts(false)} />}
+
+      {/* Panneau « Carrousel » : fixe en bas de la carte, tous les produits des boutiques affichées, à faire défiler ; toucher un produit ouvre sa fiche. */}
+      {carrousselCarteOuvert && (
+        <section
+          role="dialog"
+          aria-label="Carrousel des produits de la carte"
+          className="absolute inset-x-0 bottom-0 z-[1100] pointer-events-auto rounded-t-3xl bg-gray-950/95 backdrop-blur-md border-t border-gray-800 shadow-2xl"
+        >
+          <div className="flex items-center justify-between gap-3 px-4 pt-3">
+            <h3 className="text-sm font-black text-white flex items-center gap-2">
+              <i className="fa-solid fa-images text-pink-400" aria-hidden="true"></i>
+              Carrousel
+              <span className="text-xs font-bold text-gray-400">
+                {produitsCarrousselCarte.length} produit{produitsCarrousselCarte.length > 1 ? "s" : ""}
+              </span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => setCarrousselCarteOuvert(false)}
+              aria-label="Fermer le carrousel"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            >
+              <i className="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+          {produitsCarrousselCarte.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-400">Aucun produit à montrer sur cette carte pour le moment.</p>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {produitsCarrousselCarte.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => onVoirArticle?.(a)}
+                  className="snap-start shrink-0 w-36 sm:w-40 text-left rounded-2xl bg-gray-900 border border-gray-800 hover:border-gray-600 overflow-hidden transition"
+                >
+                  <div className="aspect-square w-full bg-gray-800">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={adresseImage(urlPhoto(a.photos[0]))} alt={a.titre} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                  <div className="p-2">
+                    <p className="text-[11px] font-bold text-white truncate" title={a.titre}>{a.titre}</p>
+                    <p className="text-xs font-black text-emerald-400 mt-0.5">{prixLisible(a.prix_xof)} FCFA</p>
+                    {a.boutique_nom && <p className="text-[10px] text-gray-400 truncate mt-0.5">{a.boutique_nom}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 2. CONTENEUR CARTE LEAFLET */}
       <div className="relative flex-1 w-full h-full min-h-0 bg-[#0B0F17]">
