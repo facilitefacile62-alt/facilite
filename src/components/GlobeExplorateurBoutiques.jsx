@@ -155,7 +155,7 @@ export default function GlobeExplorateurBoutiques({
   positionInitiale = null,
   // Boutique vers laquelle l'utilisateur veut se rendre : trace l'itinéraire
   // depuis sa position (route serveur, ou ligne droite à défaut).
-  itineraireCible = null,
+  itineraireCible: itineraireCibleProp = null,
 }) {
   const conteneurRef = useRef(null);
   const carteRef = useRef(null);
@@ -244,6 +244,9 @@ export default function GlobeExplorateurBoutiques({
   const [vueBoutiqueDetails, setVueBoutiqueDetails] = useState(false);
   const [cartePrete, setCartePrete] = useState(false);
   const [trajetInfo, setTrajetInfo] = useState(null);
+  // Itinéraire demandé depuis le bouton vert des bulles du carrousel (en plus de celui que la page parente peut imposer).
+  const [itineraireLocal, setItineraireLocal] = useState(null);
+  const itineraireCible = itineraireCibleProp || itineraireLocal;
 
   useEffect(() => {
     if (!itineraireCible || !cartePrete || !carteRef.current) return undefined;
@@ -1653,6 +1656,7 @@ export default function GlobeExplorateurBoutiques({
                 </div>
               `
           }
+          <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:6px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 10px; border:none; border-radius:12px; background:#10b981; color:#ffffff; font-size:11px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
         </div>
       `;
 
@@ -1750,6 +1754,14 @@ export default function GlobeExplorateurBoutiques({
               { passive: false }
             );
           }
+
+          el.querySelectorAll("[data-itineraire]").forEach((btn) => {
+            btn.onclick = (e) => {
+              e.stopPropagation();
+              const cible = boutiquesAffichees.find((x) => String(x.id) === btn.getAttribute("data-itineraire"));
+              if (cible) setItineraireLocal({ id: cible.id, nom: cible.nom, lat: Number(cible.lat), lng: Number(cible.lng) });
+            };
+          });
 
           el.querySelectorAll("[data-article-id]").forEach((card) => {
             card.onclick = (e) => {
@@ -2100,6 +2112,9 @@ export default function GlobeExplorateurBoutiques({
           <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:2px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
         </div>
         <div class="bulle-defilement" style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
+        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">${membres
+          .map((m) => `<button type="button" data-itineraire="${echapperHtml(String(m.id))}" style="border:none; border-radius:9999px; background:#10b981; color:#ffffff; padding:5px 9px; font-size:10px; font-weight:800; cursor:pointer; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">↱ Itinéraire · ${echapperHtml((m.nom || "Boutique").trim())}</button>`)
+          .join("")}</div>
       </div>`;
     };
     // (Ré)ouvre les bulles : groupées pour les boutiques qui se touchent au dézoom, individuelles sinon.
