@@ -64,7 +64,7 @@ test("boutiques proches : écartées les unes des autres (jamais empilées), « 
   const c = g();
   expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = true;");
   expect(c).toContain("SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 }");
-  expect(c).toContain("const REGROUPER_EN_BULLES = false;"); // pas de bulle « N boutiques » qui masque les boutiques
+  expect(c).toContain("const REGROUPER_EN_BULLES = true;"); // dézoom : boutiques qui se touchent = un point numéroté ; zoom 16+ : écartées
   expect(c).not.toContain('points.push({ id: "__ici__"'); // ma position ne repousse plus personne
   const { DIAMETRE_AVATAR_PX } = await import("../../src/lib/dissociationMarqueurs.js");
   expect(DIAMETRE_AVATAR_PX).toBeGreaterThanOrEqual(62); // hauteur de l'épingle (56 px) + air : deux épingles voisines ne se recouvrent pas

@@ -1293,7 +1293,9 @@ export default function GlobeExplorateurBoutiques({
     // vraiment au même endroit (même immeuble, même marché) : elles ne se
     // séparent jamais, quel que soit le zoom.
     const ZOOM_SEPARATION = 18;
-    const REGROUPER_EN_BULLES = false;
+    // 01/11/2026 : au dézoom (< 16), les boutiques qui se touchent deviennent UN point numéroté (cliquer = zoomer dessus) ; les boutiques isolées restent fixes sur leur position.
+    const REGROUPER_EN_BULLES = true;
+    const ZOOM_ANNEAU = 16;
     const SEPARER_BOUTIQUES_PROCHES = true;
     let bullesActives = [];
     let signatureBulles = "";
@@ -1350,7 +1352,7 @@ export default function GlobeExplorateurBoutiques({
       groupes.forEach((ids) => {
         // Au zoom maximal, on ne regroupe plus : l'anneau relié prend le relais.
         // Regroupement en bulle désactivé (demande du 18/10/2026) : les boutiques restent telles quelles.
-        if (REGROUPER_EN_BULLES && zoom < ZOOM_SEPARATION && majorationSeparable(ids)) {
+        if (REGROUPER_EN_BULLES && zoom < ZOOM_ANNEAU && majorationSeparable(ids)) {
           groupesBulle.push(ids);
           ids.forEach((id) => {
             regroupes.add(id);
@@ -1387,7 +1389,7 @@ export default function GlobeExplorateurBoutiques({
         const px = carte.project(p.ll, zoom);
         return { id: p.id, x: px.x, y: px.y, ici: p.ici };
       });
-      const { decalages } = calculerDecalagesDissociation(pixels, { echelle, disposition: zoom >= 16 ? "anneau" : "rangee" });
+      const { decalages } = calculerDecalagesDissociation(pixels, { echelle });
       pixels.forEach((p) => {
         const entree = marqueursCreesParId.get(p.id);
         if (!entree) return;
