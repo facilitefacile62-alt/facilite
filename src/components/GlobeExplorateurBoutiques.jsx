@@ -1371,6 +1371,60 @@ export default function GlobeExplorateurBoutiques({
       bullesActives.push(bulle);
     }
 
+    // Épingles qui se recouvrent : UN marqueur posé sur leur position, avec la tête de profil de CHAQUE boutique côte à côte (4 têtes pour 4 boutiques). Position et taille fixes ;
+    // chaque tête est cliquable et agit comme l'épingle de sa boutique. Dès que les épingles ne se recouvrent plus, elles redeviennent des épingles.
+    let coucheTetes = null;
+    function dessinerTetesGroupees(groupes) {
+      if (!coucheTetes) coucheTetes = L.layerGroup().addTo(carte);
+      coucheTetes.clearLayers();
+      marqueursCreesParId.forEach((e) => {
+        const el = e.marqueur.getElement?.();
+        if (el && el.dataset.masqueTetes === "1") {
+          el.style.display = "";
+          delete el.dataset.masqueTetes;
+        }
+      });
+      groupes.forEach((ids) => {
+        const membres = ids.map((id) => ({ id, entree: marqueursCreesParId.get(id) })).filter((m) => m.entree?.marqueur?.getElement?.());
+        if (membres.length < 2) return;
+        const TAILLE = 32;
+        const PAS = 21; // les têtes se chevauchent légèrement
+        const tetes = membres.map((m) => {
+          const el = m.entree.marqueur.getElement();
+          const pin = el.querySelector(".epingle-pin");
+          const couleur = pin?.querySelector("svg path")?.getAttribute("fill") || "#10B981";
+          const contenu = pin?.children?.[1]?.innerHTML || "";
+          return { id: m.id, couleur, contenu, el };
+        });
+        const largeur = TAILLE + (tetes.length - 1) * PAS;
+        const html = `<div style="position:relative;width:${largeur}px;height:${TAILLE + 12}px;">
+          <div style="position:absolute;left:${largeur / 2 - 6}px;top:${TAILLE - 2}px;width:12px;height:12px;background:#ffffff;transform:rotate(45deg);box-shadow:2px 2px 4px rgba(0,0,0,.25);"></div>
+          ${tetes
+            .map(
+              (t, i) =>
+                `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${i * PAS}px;top:0;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 3px ${t.couleur}, 0 3px 8px rgba(0,0,0,.4);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:${i + 1};">${t.contenu}</div>`
+            )
+            .join("")}
+        </div>`;
+        const lat = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lat, 0) / membres.length;
+        const lng = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lng, 0) / membres.length;
+        const icone = L.divIcon({ className: "tetes-groupees", html, iconSize: [largeur, TAILLE + 12], iconAnchor: [largeur / 2, TAILLE + 12] });
+        const mk = L.marker([lat, lng], { icon: icone, keyboard: false, zIndexOffset: 800 }).addTo(coucheTetes);
+        // Les vraies épingles de ces boutiques sont masquées derrière le marqueur de groupe.
+        tetes.forEach((t) => {
+          t.el.style.display = "none";
+          t.el.dataset.masqueTetes = "1";
+        });
+        const racine = mk.getElement?.();
+        racine?.querySelectorAll("[data-tete]").forEach((h) => {
+          h.addEventListener("click", (e) => {
+            e.stopPropagation();
+            marqueursCreesParId.get(h.getAttribute("data-tete"))?.marqueur?.fire("click", {});
+          });
+        });
+      });
+    }
+
     function recalculerDissociations(zoom = carte.getZoom()) {
       if (!Number.isFinite(zoom)) return;
       // Taille des avatars constante : ils ne grandissent plus au zoom ni au dézoom.
@@ -1428,7 +1482,7 @@ export default function GlobeExplorateurBoutiques({
         const px = carte.project(p.ll, zoomCalcul);
         return { id: p.id, x: px.x, y: px.y, ici: p.ici };
       });
-      const { decalages } = calculerDecalagesDissociation(pixels, { echelle });
+      const { decalages, groupes: groupesRecouverts } = calculerDecalagesDissociation(pixels, { echelle });
       pixels.forEach((p) => {
         const entree = marqueursCreesParId.get(p.id);
         if (!entree) return;
@@ -1444,6 +1498,7 @@ export default function GlobeExplorateurBoutiques({
         const entree = marqueursCreesParId.get(id);
         if (entree) appliquerDecalageMarqueur(entree, 0, 0);
       });
+      dessinerTetesGroupees(groupesRecouverts || []);
     }
 
     aDesVoisinsRef.current = (id) => {
