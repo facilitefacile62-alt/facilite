@@ -2121,7 +2121,7 @@ export default function GlobeExplorateurBoutiques({
 
     // Disposition « arbre » (essai du 02/11/2026, croquis de l'utilisateur) : au lieu de fusionner les boutiques proches en une seule bulle, chacune garde SA bulle ; les bulles
     // se rangent côte à côte au-dessus du groupe et sont reliées à leur épingle par des traits qui se rejoignent en un tronc (bulle → barre → tronc → branche → épingle).
-    const ARBRE_POUR_GROUPES = true; // essai en relief du 02/11/2026 ; remettre false pour revenir à la bulle regroupée
+    const ARBRE_POUR_GROUPES = false; // arbre en relief (02/11/2026) mis de côté à la demande de l'utilisateur ; true pour le réactiver
     const effacerArbres = () => carte.getContainer().querySelectorAll("[data-arbres-bulles]").forEach((e) => e.remove());
     const dessinerArbres = () => {
       effacerArbres();
