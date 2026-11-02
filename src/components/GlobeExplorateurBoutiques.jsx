@@ -1420,8 +1420,8 @@ export default function GlobeExplorateurBoutiques({
         const k = centresPx.findIndex((c) => Math.hypot(c.x - pt.x, c.y - pt.y) < 62);
         if (k >= 0) groupes[k].push(b.id);
       });
-      groupes.forEach((g, i) => (groupes[i] = g.sort()));
-      const signature = groupes.map((g) => g.join("+")).sort().join("|");
+      carte.__groupesFleurs = groupes; // noyau d'abord (le premier est le chef du groupe), puis les boutiques qui ont rejoint la fleur
+      const signature = groupes.map((g) => g.slice().sort().join("+")).sort().join("|");
       const toutesMasquees = groupes.flat().every((id) => marqueursCreesParId.get(id)?.marqueur?.getElement?.()?.dataset?.masqueTetes === "1");
       if (carte.__signatureTetes === signature && toutesMasquees && carte.__coucheTetes) {
         // La fleur existe déjà : on remasque seulement les épingles de ses boutiques (le code qui précède vient de toutes les réafficher).
@@ -2061,12 +2061,14 @@ export default function GlobeExplorateurBoutiques({
         const entree = marqueursCreesParId.get(b.id);
         const d = entree?.decalage || { dx: 0, dy: 0 };
         const pastille = marqueur.getElement()?.querySelector(".epingle-pin");
-        if (pastille) {
+        if (pastille && pastille.getBoundingClientRect().width > 0) {
           const c = carte.getContainer().getBoundingClientRect();
           const r = pastille.getBoundingClientRect();
           const pt = carte.latLngToContainerPoint(marqueur.getLatLng());
           return [d.dx, Math.round(r.top - c.top - pt.y - 8)];
         }
+        // Épingle masquée derrière une fleur : la bulle se pose juste au-dessus de la fleur (rayon d'environ 46 px).
+        if (marqueur.getElement()?.dataset?.masqueTetes === "1") return [d.dx, -60];
         return [d.dx, -88 + d.dy];
       };
 
@@ -2579,7 +2581,8 @@ export default function GlobeExplorateurBoutiques({
         parRacine.get(r).push(b.id);
       });
       // Aucun regroupement de bulles, sauf pour la touche « Arbre » (qui a besoin des groupes pour ranger les bulles autour d'un tronc).
-      const groupes = arbreActifRef.current ? [...parRacine.values()].filter((ids) => ids.length > 1) : [];
+      // Une bulle par FLEUR (les boutiques d'une fleur partagent un seul carrousel, avec leurs icônes de profil en tête) ; mode « Arbre » : groupes à 100 m rangés autour d'un tronc.
+      const groupes = arbreActifRef.current ? [...parRacine.values()].filter((ids) => ids.length > 1) : (carte.__groupesFleurs || []).map((g) => g.slice());
       const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
       const cache = new Set();
       if (arbreActifRef.current) {
