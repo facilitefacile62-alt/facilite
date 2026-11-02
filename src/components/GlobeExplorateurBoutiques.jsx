@@ -1373,7 +1373,7 @@ export default function GlobeExplorateurBoutiques({
 
     // Épingles qui se recouvrent : UN marqueur posé sur leur position, avec la tête de profil de CHAQUE boutique côte à côte (4 têtes pour 4 boutiques). Position et taille fixes ;
     // chaque tête est cliquable et agit comme l'épingle de sa boutique. Dès que les épingles ne se recouvrent plus, elles redeviennent des épingles.
-    function dessinerTetesGroupees() {
+    function dessinerTetesGroupees(zoomCalcul = carte.getZoom()) {
       // Groupes GÉOGRAPHIQUES : les boutiques à 100 m ou moins les unes des autres. Ils ne dépendent donc plus du zoom : la fleur reste la même (mêmes têtes, même taille, même place) à tous les niveaux, et
       // n'est reconstruite que si le groupe lui-même change (nouvelle boutique, boutique retirée) ou si les épingles ont été recréées.
       const liste = boutiquesAffichees.filter((b) => Number.isFinite(b.lat) && Number.isFinite(b.lng));
@@ -1396,7 +1396,31 @@ export default function GlobeExplorateurBoutiques({
         if (!parRacine.has(r)) parRacine.set(r, []);
         parRacine.get(r).push(b.id);
       });
-      const groupes = [...parRacine.values()].filter((ids) => ids.length > 1).map((ids) => ids.slice().sort());
+      const groupesCoeur = [...parRacine.values()].filter((ids) => ids.length > 1);
+      // En dézoomant, une boutique dont l'épingle TOUCHE la fleur la rejoint (sa tête s'ajoute ; la taille et la place de la fleur ne changent pas). Le centre de la fleur est celui du noyau à 100 m.
+      const centreNoyau = (ids) => {
+        const ll = ids.map((id) => liste.find((b) => b.id === id)).map((b) => L.latLng(b.lat, b.lng));
+        let noyau = ll;
+        let meilleur = -1;
+        ll.forEach((u) => {
+          const voisines = ll.filter((v) => carte.distance(u, v) <= 100);
+          if (voisines.length > meilleur) {
+            meilleur = voisines.length;
+            noyau = voisines;
+          }
+        });
+        return L.latLng(noyau.reduce((t, x) => t + x.lat, 0) / noyau.length, noyau.reduce((t, x) => t + x.lng, 0) / noyau.length);
+      };
+      const dansUnGroupe = new Set(groupesCoeur.flat());
+      const centresPx = groupesCoeur.map((ids) => carte.project(centreNoyau(ids), zoomCalcul));
+      const groupes = groupesCoeur.map((ids) => ids.slice());
+      liste.forEach((b) => {
+        if (dansUnGroupe.has(b.id)) return;
+        const pt = carte.project([b.lat, b.lng], zoomCalcul);
+        const k = centresPx.findIndex((c) => Math.hypot(c.x - pt.x, c.y - pt.y) < 62);
+        if (k >= 0) groupes[k].push(b.id);
+      });
+      groupes.forEach((g, i) => (groupes[i] = g.sort()));
       const signature = groupes.map((g) => g.join("+")).sort().join("|");
       const toutesMasquees = groupes.flat().every((id) => marqueursCreesParId.get(id)?.marqueur?.getElement?.()?.dataset?.masqueTetes === "1");
       if (carte.__signatureTetes === signature && toutesMasquees && carte.__coucheTetes) {
@@ -1556,7 +1580,7 @@ export default function GlobeExplorateurBoutiques({
         const entree = marqueursCreesParId.get(id);
         if (entree) appliquerDecalageMarqueur(entree, 0, 0);
       });
-      dessinerTetesGroupees();
+      dessinerTetesGroupees(zoom);
     }
 
     aDesVoisinsRef.current = (id) => {
