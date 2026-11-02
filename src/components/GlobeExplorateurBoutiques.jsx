@@ -2283,16 +2283,22 @@ export default function GlobeExplorateurBoutiques({
         articlesDeLaBoutique(m).forEach((a) => {
           if (a?.id != null && !vus.has(String(a.id))) {
             vus.add(String(a.id));
-            articles.push({ a, boutiqueId: m.id });
+            articles.push({ a, boutiqueId: m.id, membre: m });
           }
         })
       );
       const noms = membres.map((m) => echapperHtml((m.nom || "Boutique").trim())).join(" · ");
       const cartes = articles
-        .map(({ a: art, boutiqueId }) => {
+        .map(({ a: art, boutiqueId, membre }) => {
+          // Icône de profil de la boutique de cet article (logo, sinon avatar Bitmoji, sinon emoji) : on voit tout de suite de quelle boutique il vient.
+          let icone = "🏪";
+          try {
+            icone = membre?.logo_url ? `<img src="${echapperHtml(membre.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : membre?.avatar_config ? svgAvatarBoutique(membre.avatar_config, 26) : icone;
+          } catch {}
+          const pastille = `<div title="${echapperHtml((membre?.nom || "Boutique").trim())}" style="position:absolute;top:5px;left:5px;width:26px;height:26px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;z-index:3;">${icone}</div>`;
           const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : art.photo ? urlPhoto(art.photo) : art.image ? urlPhoto(art.image) : "";
           const prixTxt = art.prix_xof || art.prix;
-          return `<div style="flex-shrink:0; width:74px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
+          return `<div style="flex-shrink:0; width:74px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${pastille}${
             photoUrl
               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
               : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
