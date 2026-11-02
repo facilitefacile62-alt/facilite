@@ -1619,7 +1619,7 @@ export default function GlobeExplorateurBoutiques({
       const articlesApercu = articlesBoutique.slice(0, 8);
 
       const htmlBulleProduits = `
-        <div class="bulle-produits-container" style="position:relative; width:190px; max-width:190px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+        <div class="bulle-produits-container" style="position:relative; width:172px; max-width:172px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
           <!-- Bouton Fermer X -->
           <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
 
@@ -1636,14 +1636,14 @@ export default function GlobeExplorateurBoutiques({
           ${
             articlesApercu.length > 0
               ? `
-                <div class="bulle-defilement" style="width:156px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">
+                <div class="bulle-defilement" style="width:140px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">
                   ${articlesApercu
                     .map((art) => {
                       const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
                       const prixTxt = art.prix_xof || art.prix;
                       return `
-                        <div style="flex-shrink:0; width:74px;">
-                        <div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
+                        <div style="flex-shrink:0; width:66px;">
+                        <div data-article-id="${art.id}" style="flex-shrink:0; width:66px; height:86px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer; transition:transform 0.15s ease;">
                           ${
                             photoUrl
                               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.replaceWith(Object.assign(document.createElement('div'),{style:'width:100%;height:100%;background:#c4a4b8;display:flex;align-items:center;justify-content:center;font-size:22px;',textContent:'🛍️'}))" />`
@@ -1654,7 +1654,7 @@ export default function GlobeExplorateurBoutiques({
                             ${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}
                           </div>
                         </div>
-                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:74px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
+                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:66px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
                         </div>
                       `;
                     })
@@ -1737,7 +1737,7 @@ export default function GlobeExplorateurBoutiques({
               bt.style.cssText = `position:absolute;${cote === "g" ? "left:-4px" : "right:-4px"};top:${bande.offsetTop + bande.offsetHeight / 2 - 14}px;width:28px;height:28px;border-radius:9999px;border:none;background:#ffffff;color:#0f172a;font-size:20px;font-weight:900;line-height:26px;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer;z-index:15;display:none;padding:0;`;
               bt.onclick = (e) => {
                 e.stopPropagation();
-                bande.scrollBy({ left: cote === "g" ? -164 : 164, behavior: "smooth" });
+                bande.scrollBy({ left: cote === "g" ? -148 : 148, behavior: "smooth" });
               };
               conteneur.appendChild(bt);
               return bt;
@@ -1809,20 +1809,35 @@ export default function GlobeExplorateurBoutiques({
           if (bande && fenetreIcones && !bande.__iconesPretes) {
             bande.__iconesPretes = true;
             const piste = fenetreIcones.querySelector(".icones-piste");
+            // Chaque icône reste collée au bord gauche tant que les articles de SA boutique défilent, puis part avec le dernier d'entre eux (la suivante la remplace).
+            const bornes = new Map();
             const placerIcones = () => {
               const z = bande.getBoundingClientRect();
               piste.style.width = Math.max(bande.scrollWidth, z.width) + "px";
               fenetreIcones.querySelectorAll("[data-icone-boutique]").forEach((ic) => {
-                const carte1 = bande.querySelector(`[data-boutique-de="${ic.getAttribute("data-icone-boutique")}"]`);
-                if (!carte1) {
+                const id = ic.getAttribute("data-icone-boutique");
+                const cartes1 = [...bande.querySelectorAll(`[data-boutique-de="${id}"]`)];
+                if (!cartes1.length) {
                   ic.style.display = "none";
                   return;
                 }
-                ic.style.left = Math.round(carte1.getBoundingClientRect().left - z.left + bande.scrollLeft) + "px";
+                const debut = cartes1[0].getBoundingClientRect().left - z.left + bande.scrollLeft;
+                const fin = cartes1[cartes1.length - 1].getBoundingClientRect().right - z.left + bande.scrollLeft;
+                bornes.set(id, { debut, fin });
               });
-              fenetreIcones.scrollLeft = bande.scrollLeft;
+              majPosIcones();
             };
-            bande.addEventListener("scroll", () => (fenetreIcones.scrollLeft = bande.scrollLeft), { passive: true });
+            const majPosIcones = () => {
+              fenetreIcones.scrollLeft = bande.scrollLeft;
+              const largeur = 26;
+              fenetreIcones.querySelectorAll("[data-icone-boutique]").forEach((ic) => {
+                const bn = bornes.get(ic.getAttribute("data-icone-boutique"));
+                if (!bn) return;
+                const x = Math.min(Math.max(bande.scrollLeft + 1, bn.debut), bn.fin - largeur);
+                ic.style.left = Math.round(x) + "px";
+              });
+            };
+            bande.addEventListener("scroll", majPosIcones, { passive: true });
             setTimeout(placerIcones, 30);
             setTimeout(placerIcones, 400);
           }
@@ -2336,29 +2351,29 @@ export default function GlobeExplorateurBoutiques({
         .map((m, k) => {
           let icone = "🏪";
           try {
-            icone = m.logo_url ? `<img src="${echapperHtml(m.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : m.avatar_config ? svgAvatarBoutique(m.avatar_config, 30) : icone;
+            icone = m.logo_url ? `<img src="${echapperHtml(m.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : m.avatar_config ? svgAvatarBoutique(m.avatar_config, 26) : icone;
           } catch {}
-          return `<button type="button" data-icone-boutique="${echapperHtml(String(m.id))}" title="${echapperHtml((m.nom || "Boutique").trim())}" aria-label="${echapperHtml((m.nom || "Boutique").trim())}" style="width:30px;height:30px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid ${k === 0 ? "#10b981" : "#e2e8f0"};padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer;position:absolute;top:1px;left:0;">${icone}</button>`;
+          return `<button type="button" data-icone-boutique="${echapperHtml(String(m.id))}" title="${echapperHtml((m.nom || "Boutique").trim())}" aria-label="${echapperHtml((m.nom || "Boutique").trim())}" style="width:26px;height:26px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid ${k === 0 ? "#10b981" : "#e2e8f0"};padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer;position:absolute;top:1px;left:0;">${icone}</button>`;
         })
         .join("");
       const cartes = articles
         .map(({ a: art, boutiqueId }) => {
           const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : art.photo ? urlPhoto(art.photo) : art.image ? urlPhoto(art.image) : "";
           const prixTxt = art.prix_xof || art.prix;
-          return `<div data-boutique-de="${echapperHtml(String(boutiqueId))}" style="flex-shrink:0; width:74px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
+          return `<div data-boutique-de="${echapperHtml(String(boutiqueId))}" style="flex-shrink:0; width:66px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:66px; height:86px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
             photoUrl
               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
               : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
-          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div><button type="button" data-itineraire="${echapperHtml(String(boutiqueId))}" style="margin-top:4px; width:74px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button></div>`;
+          }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div><button type="button" data-itineraire="${echapperHtml(String(boutiqueId))}" style="margin-top:4px; width:66px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button></div>`;
         })
         .join("");
-      return `<div class="bulle-produits-container" style="position:relative; width:190px; max-width:190px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+      return `<div class="bulle-produits-container" style="position:relative; width:172px; max-width:172px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
         <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
         <div style="margin-bottom:8px; padding-right:22px;">
-          <div class="icones-fenetre" style="width:156px; max-width:100%; overflow:hidden; height:34px; position:relative;"><div class="icones-piste" style="position:relative; height:34px; width:156px;">${pastilles}</div></div>
-          <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:4px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
+          <div class="icones-fenetre" style="width:140px; max-width:100%; overflow:hidden; height:30px; position:relative;"><div class="icones-piste" style="position:relative; height:30px; width:140px;">${pastilles}</div></div>
+          <div style="font-size:9px; font-weight:700; color:#64748b; margin-top:3px; white-space:nowrap;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""}</span></div>
         </div>
-        <div class="bulle-defilement" style="width:156px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
+        <div class="bulle-defilement" style="width:140px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
       </div>`;
     };
     // (Ré)ouvre les bulles : groupées pour les boutiques qui se touchent au dézoom, individuelles sinon.
