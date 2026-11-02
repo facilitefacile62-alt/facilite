@@ -1388,9 +1388,10 @@ export default function GlobeExplorateurBoutiques({
         const membres = ids.map((id) => ({ id, entree: marqueursCreesParId.get(id) })).filter((m) => m.entree?.marqueur?.getElement?.());
         if (membres.length < 2) return;
         // En FLEUR (inspiration donnée par l'utilisateur) : un cœur sombre posé sur la vraie position, des pétales jaunes qui rayonnent autour, et la tête de profil de chaque boutique au bout de son pétale.
-        const TAILLE = 30;
+        const TAILLE = 28;
         const n = membres.length;
-        const R = Math.max(36, Math.ceil((TAILLE + 6) / (2 * Math.sin(Math.PI / n))));
+        // Taille FIXE : le même rayon pour 2 à 7 boutiques (il ne grandit que s'il y en a plus de 7, pour que les têtes ne se chevauchent pas).
+        const R = Math.max(38, Math.ceil((TAILLE + 4) / (2 * Math.sin(Math.PI / Math.max(n, 8)))));
         const cote = 2 * (R + TAILLE / 2 + 6);
         const c0 = cote / 2;
         const tetes = membres.map((m) => {
@@ -1416,8 +1417,21 @@ export default function GlobeExplorateurBoutiques({
           .join("");
         const coeur = `<div style="position:absolute;left:${c0 - 11}px;top:${c0 - 11}px;width:22px;height:22px;border-radius:9999px;background:radial-gradient(circle,#450a0a 55%,#7f1d1d);border:3px dotted #F59E0B;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);z-index:2;pointer-events:none;"></div>`;
         const html = `<div style="position:relative;width:${cote}px;height:${cote}px;pointer-events:none;">${petales}${coeur}${visages}</div>`;
-        const lat = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lat, 0) / membres.length;
-        const lng = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lng, 0) / membres.length;
+        // Position FIXE : le cœur est posé sur le centre du noyau du groupe (la boutique qui a le plus de voisines à 100 m ou moins, avec ces voisines). Quand d'autres boutiques
+        // se joignent au groupe en dézoomant, ce noyau ne change pas : la fleur ne se déplace pas.
+        const ll = membres.map((m) => m.entree.marqueur.getLatLng());
+        const proches = (u, v) => carte.distance(u, v) <= 100;
+        let noyau = ll;
+        let meilleur = -1;
+        ll.forEach((u) => {
+          const voisines = ll.filter((v) => proches(u, v));
+          if (voisines.length > meilleur) {
+            meilleur = voisines.length;
+            noyau = voisines;
+          }
+        });
+        const lat = noyau.reduce((t, x) => t + x.lat, 0) / noyau.length;
+        const lng = noyau.reduce((t, x) => t + x.lng, 0) / noyau.length;
         const icone = L.divIcon({ className: "tetes-groupees", html, iconSize: [cote, cote], iconAnchor: [cote / 2, cote / 2] });
         const mk = L.marker([lat, lng], { icon: icone, keyboard: false, zIndexOffset: 800 }).addTo(coucheTetes);
         // Les vraies épingles de ces boutiques sont masquées derrière le marqueur de groupe.
