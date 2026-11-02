@@ -1350,6 +1350,57 @@ export default function GlobeExplorateurBoutiques({
       bullesActives.push(bulle);
     }
 
+    // Passe un marqueur en « rond » (sans la pointe du pin, sans le nom, anneau de sa couleur) ou le remet en pin.
+    function styliserRosette(entree, actif) {
+      const el = entree.marqueur.getElement?.();
+      const pin = el?.querySelector(".epingle-pin");
+      if (!pin) return;
+      const svg = pin.querySelector("svg");
+      const tete = pin.children[1];
+      if (!svg || !tete) return;
+      if (actif) {
+        if (!pin.dataset.couleur) pin.dataset.couleur = svg.querySelector("path")?.getAttribute("fill") || "#10B981";
+        svg.style.display = "none";
+        el.classList.add("marqueur-rosette");
+        tete.style.boxShadow = `0 0 0 3px ${pin.dataset.couleur}, 0 3px 8px rgba(0,0,0,.4)`;
+        const trait = el.querySelector(".trait-rappel");
+        if (trait) {
+          trait.style.display = "none";
+          trait.dataset.actif = "0";
+        }
+      } else {
+        svg.style.display = "";
+        el.classList.remove("marqueur-rosette");
+        tete.style.boxShadow = "";
+      }
+    }
+    // Repère jaune posé sur la vraie position du groupe, avec un petit losange de la couleur de chaque boutique tourné vers son rond.
+    let coucheRosette = null;
+    function dessinerReperesRosette(groupes, vecteurs) {
+      if (!coucheRosette) coucheRosette = L.layerGroup().addTo(carte);
+      coucheRosette.clearLayers();
+      groupes.forEach((ids) => {
+        const membres = ids.map((id) => ({ id, entree: marqueursCreesParId.get(id), v: vecteurs.get(id) })).filter((m) => m.entree && m.v);
+        if (membres.length < 2) return;
+        const lat = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lat, 0) / membres.length;
+        const lng = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lng, 0) / membres.length;
+        const losanges = membres
+          .map((m) => {
+            const couleur = m.entree.marqueur.getElement?.()?.querySelector(".epingle-pin")?.dataset?.couleur || "#10B981";
+            const angle = (Math.atan2(m.v.dy, m.v.dx) * 180) / Math.PI;
+            return `<div style="position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;transform:rotate(${angle}deg) translateX(15px) rotate(45deg);background:${couleur};border:1.5px solid #fff;border-radius:3px;"></div>`;
+          })
+          .join("");
+        const icone = L.divIcon({
+          className: "repere-rosette",
+          html: `<div style="position:relative;width:44px;height:44px;pointer-events:none;">${losanges}<div style="position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:9999px;background:#FACC15;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);"></div></div>`,
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+        });
+        L.marker([lat, lng], { icon: icone, interactive: false, keyboard: false, zIndexOffset: -1000 }).addTo(coucheRosette);
+      });
+    }
+
     function recalculerDissociations(zoom = carte.getZoom()) {
       if (!Number.isFinite(zoom)) return;
       // Taille des avatars constante : ils ne grandissent plus au zoom ni au dézoom.
@@ -1407,18 +1458,24 @@ export default function GlobeExplorateurBoutiques({
         const px = carte.project(p.ll, zoomCalcul);
         return { id: p.id, x: px.x, y: px.y, ici: p.ici };
       });
-      const { decalages } = calculerDecalagesDissociation(pixels, { echelle });
+      const { decalages, groupes: groupesRecouverts } = calculerDecalagesDissociation(pixels, { echelle });
+      // ROSETTE (02/11/2026, maquette de l'utilisateur) : sous le zoom d'écartement (67 %), les boutiques dont les épingles se recouvrent deviennent des ronds
+      // (photo ou avatar dans un anneau de leur couleur) disposés en croix / cercle autour d'un petit repère jaune posé sur leur vraie position. Chaque rond reste cliquable.
+      const modeRosette = zoom < ZOOM_ANNEAU;
+      const vecteursRosette = new Map();
       pixels.forEach((p) => {
         const entree = marqueursCreesParId.get(p.id);
         if (!entree) return;
-        // Jamais d'écartement tant que la vue est éloignée (22/10/2026) : à ces zooms quelques pixels représentent des centaines
-        // de mètres et posaient des pins en mer. La pointe d'un pin reste sur ses coordonnées ; l'écartement relié par un trait
-        // n'intervient qu'à partir du zoom 16, pour atteindre des boutiques quasi superposées.
-        // Boutiques proches : écartées les unes des autres (anneau relié par un trait à leur vraie position), jamais empilées. Un essai à false (01/11/2026) les empilait
-        // les unes sur les autres : la demande portait sur « Vous êtes ici », qui n'entre plus dans ce calcul, pas sur l'écartement des boutiques.
-        const d = SEPARER_BOUTIQUES_PROCHES && zoom >= ZOOM_ANNEAU ? decalages.get(p.id) : { dx: 0, dy: 0 };
+        let d = SEPARER_BOUTIQUES_PROCHES ? decalages.get(p.id) : { dx: 0, dy: 0 };
+        const decale = Math.hypot(d.dx, d.dy) >= 0.5;
+        if (modeRosette && decale) {
+          vecteursRosette.set(p.id, { dx: d.dx, dy: d.dy });
+          d = { dx: d.dx, dy: d.dy + 34 }; // la pointe du pin est 34 px sous le centre du rond : le CENTRE du rond se pose sur le point de l'anneau
+        }
         appliquerDecalageMarqueur(entree, d.dx, d.dy);
+        styliserRosette(entree, modeRosette && decale);
       });
+      dessinerReperesRosette(modeRosette ? groupesRecouverts : [], vecteursRosette);
       regroupes.forEach((id) => {
         const entree = marqueursCreesParId.get(id);
         if (entree) appliquerDecalageMarqueur(entree, 0, 0);
