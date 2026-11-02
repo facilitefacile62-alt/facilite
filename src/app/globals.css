@@ -461,3 +461,7 @@ html.dark .bg-whatsapp-chat {
 
 /* Carte : l'épingle survolée passe devant ses voisines (sans bouger ni changer de taille) pour pouvoir cliquer celle de son choix. */
 .leaflet-marker-icon:hover { z-index: 100000 !important; }
+
+/* Rosette (carte dézoomée) : les boutiques proches deviennent des ronds, sans leur nom ni la pointe du pin. */
+.marqueur-rosette .epingle-nom { display: none !important; }
+.repere-rosette { background: none; border: 0; }
