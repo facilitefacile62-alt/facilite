@@ -461,3 +461,6 @@ html.dark .bg-whatsapp-chat {
 
 /* Carte : l'épingle survolée passe devant ses voisines (sans bouger ni changer de taille) pour pouvoir cliquer celle de son choix. */
 .leaflet-marker-icon:hover { z-index: 100000 !important; }
+
+/* Têtes de profil groupées (épingles qui se recouvrent). */
+.tetes-groupees { background: none; border: 0; }
