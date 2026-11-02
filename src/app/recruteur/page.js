@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { problemesReferencement, contratPrecise } from "@/lib/validationOffreReferencement";
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import { messagePublication } from "@/lib/messagePublication";
@@ -30,7 +31,7 @@ const EMPTY_OFFER = {
   title: "",
   company: "",
   location: "Sénégal",
-  contract_type: "CDI",
+  contract_type: "",
   listing_type: "offre_emploi",
   salary_range: "",
   min_education_level: "Aucun",
@@ -802,7 +803,7 @@ export default function RecruteurDashboardPage() {
           title: extracted.title || prev.title || "",
           company: extracted.company || recruiterProfileForm.company_name || prev.company || "",
           location: extracted.location || prev.location || "Sénégal",
-          contract_type: extracted.contract_type || prev.contract_type || "CDI",
+          contract_type: contratPrecise(extracted.contract_type) || prev.contract_type || "",
           salary_range: extracted.salary_range || prev.salary_range || "",
           min_education_level: extracted.min_education_level || prev.min_education_level || "Aucun",
           description: extracted.description || prev.description || "",
@@ -981,11 +982,19 @@ export default function RecruteurDashboardPage() {
 
       const finalEmail = (currentOfferData.contact_email || currentOfferData.application_email || "").trim();
 
+      {
+        const problemes = problemesReferencement({ ...currentOfferData, company: currentOfferData.company || recruiterProfileForm.company_name });
+        if (problemes.length) {
+          triggerToast(problemes[0]);
+          return;
+        }
+      }
+
       const payload = {
         title: (currentOfferData.title || "Opportunité de recrutement").trim(),
         company: (currentOfferData.company || recruiterProfileForm.company_name || "Entreprise").trim(),
         location: (currentOfferData.location || "Sénégal").trim(),
-        contract_type: currentOfferData.contract_type || "CDI",
+        contract_type: contratPrecise(currentOfferData.contract_type),
         salary_range: currentOfferData.salary_range || null,
         min_education_level: currentOfferData.min_education_level || "Aucun",
         description: currentOfferData.description || "",
@@ -1059,11 +1068,19 @@ export default function RecruteurDashboardPage() {
 
       const finalEmail = (offerForm.contact_email || offerForm.application_email || "").trim();
 
+      {
+        const problemes = problemesReferencement({ ...offerForm, company: offerForm.company || recruiterProfileForm.company_name });
+        if (problemes.length) {
+          triggerToast(problemes[0]);
+          return;
+        }
+      }
+
       const payload = {
         title: (offerForm.title || "Opportunité de recrutement").trim(),
         company: (offerForm.company || recruiterProfileForm.company_name || "Entreprise").trim(),
         location: (offerForm.location || "Sénégal").trim(),
-        contract_type: offerForm.contract_type || "CDI",
+        contract_type: contratPrecise(offerForm.contract_type),
         salary_range: offerForm.salary_range || null,
         min_education_level: offerForm.min_education_level || "Aucun",
         description: offerForm.description || "",
@@ -1126,7 +1143,7 @@ export default function RecruteurDashboardPage() {
       title: offer.title || "",
       company: offer.company || "",
       location: offer.location || "Sénégal",
-      contract_type: offer.contract_type || "CDI",
+      contract_type: offer.contract_type || "",
       listing_type: offer.listing_type || "offre_emploi",
       salary_range: offer.salary_range || "",
       min_education_level: offer.min_education_level || "Aucun",
@@ -2085,6 +2102,7 @@ export default function RecruteurDashboardPage() {
                           onChange={(e) => handleOfferFieldChange("contract_type", e.target.value)}
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition shadow-2xs cursor-pointer"
                         >
+                          <option value="">À préciser (non indiqué)</option>
                           <option value="CDI">CDI</option>
                           <option value="CDD">CDD</option>
                           <option value="Stage">Stage</option>
@@ -2285,7 +2303,7 @@ export default function RecruteurDashboardPage() {
                         {LISTING_TYPE_LABELS[offerForm.listing_type] || "Opportunité"}
                       </span>
                       <span>•</span>
-                      <span className="text-gray-700">{offerForm.contract_type || "CDI"}</span>
+                      <span className="text-gray-700">{offerForm.contract_type || "Contrat non précisé"}</span>
                       {offerForm.min_education_level && offerForm.min_education_level !== "Aucun" && (
                         <>
                           <span>•</span>
@@ -2317,7 +2335,7 @@ export default function RecruteurDashboardPage() {
                         title: offerForm.title || "Offre d'emploi",
                         company: offerForm.company || recruiterProfileForm.company_name || "Entreprise",
                         location: offerForm.location || "Sénégal",
-                        contract: offerForm.contract_type || "CDI",
+                        contract: offerForm.contract_type || "Contrat non précisé",
                         description: offerForm.description,
                         contact_phone: offerForm.contact_phone,
                         contact_email: offerForm.contact_email,
@@ -2420,7 +2438,7 @@ export default function RecruteurDashboardPage() {
                                 </span>
                               </div>
                               <p className="text-xs font-bold text-gray-600 mt-0.5">
-                                {offer.company} — <span className="text-emerald-700">{offer.contract_type || "CDI"}</span>
+                                {offer.company} — <span className="text-emerald-700">{offer.contract_type || "Contrat non précisé"}</span>
                               </p>
                               <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-2">
                                 <span>

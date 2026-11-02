@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { problemesReferencement, contratPrecise } from "@/lib/validationOffreReferencement";
 import { televerserImagePubliee } from "@/lib/imagePubliee";
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
@@ -25,7 +26,7 @@ const EMPTY_OFFER = {
   title: "",
   company: "",
   location: "Sénégal",
-  contract_type: "CDI",
+  contract_type: "",
   salary_range: "",
   min_education_level: "Aucun",
   description: "",
@@ -299,7 +300,7 @@ export default function AdminOffresPage() {
           title: extracted.title || "",
           company: extracted.company || "",
           location: extracted.location || "Sénégal",
-          contract_type: extracted.contract_type || "CDI",
+          contract_type: contratPrecise(extracted.contract_type) || "",
           salary_range: extracted.salary_range || "",
           min_education_level: extracted.min_education_level || "Aucun",
           description: extracted.description || "",
@@ -498,11 +499,19 @@ export default function AdminOffresPage() {
 
       const finalEmail = (currentOfferData.contact_email || currentOfferData.application_email || "").trim();
 
+      {
+        const problemes = problemesReferencement(currentOfferData);
+        if (problemes.length) {
+          triggerToast(problemes[0], "fa-triangle-exclamation");
+          return;
+        }
+      }
+
       const payload = {
         title: (currentOfferData.title || "Opportunité de recrutement").trim(),
         company: (currentOfferData.company || "Entreprise").trim(),
         location: (currentOfferData.location || "Sénégal").trim(),
-        contract_type: currentOfferData.contract_type || "CDI",
+        contract_type: contratPrecise(currentOfferData.contract_type),
         salary_range: currentOfferData.salary_range || null,
         min_education_level: currentOfferData.min_education_level || "Aucun",
         description: currentOfferData.description || "",
@@ -584,6 +593,14 @@ export default function AdminOffresPage() {
       return;
     }
 
+      {
+        const problemes = problemesReferencement(offerForm);
+        if (problemes.length) {
+          triggerToast(problemes[0], "fa-triangle-exclamation");
+          return;
+        }
+      }
+
     setSavingOffer(true);
 
     try {
@@ -614,7 +631,7 @@ export default function AdminOffresPage() {
         title: offerForm.title.trim(),
         company: offerForm.company.trim(),
         location: offerForm.location.trim() || "Sénégal",
-        contract_type: offerForm.contract_type || "CDI",
+        contract_type: contratPrecise(offerForm.contract_type),
         salary_range: offerForm.salary_range || null,
         min_education_level: offerForm.min_education_level || "Aucun",
         description: offerForm.description || "",
@@ -1565,6 +1582,7 @@ export default function AdminOffresPage() {
                     onChange={(e) => setOfferForm({ ...offerForm, contract_type: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-emerald-500 transition cursor-pointer"
                   >
+                    <option value="">À préciser (non indiqué)</option>
                     <option value="CDI">CDI</option>
                     <option value="CDD">CDD</option>
                     <option value="Stage">Stage</option>
@@ -1757,7 +1775,7 @@ export default function AdminOffresPage() {
                   <span>·</span>
                   <span>Opportunité</span>
                   <span>·</span>
-                  <span>{offerForm.contract_type || "CDI"}</span>
+                  <span>{offerForm.contract_type || "Contrat non précisé"}</span>
                   {offerForm.min_education_level && offerForm.min_education_level !== "Aucun" && (
                     <>
                       <span>·</span>
@@ -1795,7 +1813,7 @@ export default function AdminOffresPage() {
                     title: offerForm.title || "Offre d'emploi",
                     company: offerForm.company || "Entreprise",
                     location: offerForm.location || "Sénégal",
-                    contract: offerForm.contract_type || "CDI",
+                    contract: offerForm.contract_type || "Contrat non précisé",
                     description: offerForm.description,
                     contact_phone: offerForm.contact_phone,
                     contact_email: offerForm.contact_email,
@@ -1894,7 +1912,7 @@ export default function AdminOffresPage() {
                         )}
                       </div>
                       <p className="text-xs font-bold text-gray-600">
-                        {offer.company} — <span className="text-emerald-700">{offer.contract_type || "CDI"}</span>
+                        {offer.company} — <span className="text-emerald-700">{offer.contract_type || "Contrat non précisé"}</span>
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-2">
                         <span>

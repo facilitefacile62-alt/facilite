@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireUser } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
+import { problemesReferencement } from "@/lib/validationOffreReferencement";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,11 @@ export async function POST(req) {
     });
 
     const body = await req.json();
+    // Même contrôle que dans les éditeurs, refait ici : une offre sans vrai titre, sans employeur ou sans description ne peut pas produire un JobPosting valide.
+    const problemes = problemesReferencement(body);
+    if (problemes.length) {
+      return NextResponse.json({ success: false, error: problemes[0], problemes }, { status: 400 });
+    }
     const payload = {
       ...body,
       status: "approved",
