@@ -267,6 +267,28 @@ export default function AutourDeMoiScreen() {
         setSelection(null);
         return;
       }
+      if (id === 'fermer-carrousel') {
+        setCarrousel(false);
+        return;
+      }
+      if (id.startsWith('boutique:')) {
+        router.push(`/marketplace/boutique/${id.slice(9)}` as Href);
+        return;
+      }
+      if (id.startsWith('itineraire:')) {
+        const b = boutiques?.find((x) => x.id === id.slice(11));
+        if (!b) return;
+        if (!position) {
+          activer();
+          return;
+        }
+        const arrivee = { latitude: b.latitude, longitude: b.longitude };
+        setTrajet(ligneDroite(position, arrivee));
+        calculerItineraire(position, arrivee).then(setTrajet);
+        // La carte se recentre sur la boutique visée (zoom 16 au moins) ; le trajet reste tracé.
+        carte?.centrer(b.latitude, b.longitude, 16);
+        return;
+      }
       if (id === 'itineraire') {
         const b = boutiques?.find((x) => x.id === selection);
         if (!b) return;
@@ -296,7 +318,7 @@ export default function AutourDeMoiScreen() {
       }
       toucherBoutique(id);
     },
-    [choisirBoutique, toucherBoutique, router, selection, boutiques, position, activer]
+    [choisirBoutique, toucherBoutique, router, selection, boutiques, position, activer, carte]
   );
 
   // Articles de la boutique sélectionnée, pour l'aperçu fixe.
@@ -334,6 +356,37 @@ export default function AutourDeMoiScreen() {
     };
   }, [boutiqueSel, articlesSel]);
 
+  // Touche « Carrousel » : la bulle de toutes les boutiques affichées reste ouverte (regroupées à 100 m et fusionnées si elles se touchent, dans la carte).
+  const [carrousel, setCarrousel] = useState(false);
+  const [articlesToutes, setArticlesToutes] = useState<Record<string, ArticleMarketplace[]>>({});
+  useEffect(() => {
+    if (!carrousel) return;
+    let annule = false;
+    visibles.forEach((b) => {
+      chargerArticles({ boutiqueId: b.id, limite: 20 })
+        .then((liste) => {
+          if (!annule) setArticlesToutes((prev) => ({ ...prev, [b.id]: liste }));
+        })
+        .catch(() => {
+          if (!annule) setArticlesToutes((prev) => ({ ...prev, [b.id]: [] }));
+        });
+    });
+    return () => {
+      annule = true;
+    };
+  }, [carrousel, visibles]);
+  const popups = useMemo<PopupBoutique[] | null>(() => {
+    if (!carrousel) return null;
+    return visibles.map((b) => ({
+      cle: b.id,
+      lat: b.latitude,
+      lng: b.longitude,
+      titre: b.nom,
+      sous: b.quartier || b.ville || 'Sénégal',
+      articles: (articlesToutes[b.id] ?? []).map((a) => ({ id: a.id, titre: a.titre, prix: `${prixLisible(a.prixXof)} F`, photo: a.photos[0] })),
+    }));
+  }, [carrousel, visibles, articlesToutes]);
+
   // Une recherche affiche tout de suite le carrousel des boutiques trouvées (moins de clics).
   const lancerRecherche = () => {
     setRecherche(saisie);
@@ -354,7 +407,8 @@ export default function AutourDeMoiScreen() {
         margeBas={265}
         ajuster={!selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
-        popup={popup}
+        popup={carrousel ? null : popup}
+        popups={popups}
         trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
         onMarqueur={surMarqueur}
         commandes={setCarte}
@@ -429,6 +483,18 @@ export default function AutourDeMoiScreen() {
               </Pressable>
             );
           })}
+          <Pressable
+            onPress={() => {
+              setCarrousel((v) => !v);
+              setSelection(null);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: carrousel }}
+            className="flex-row items-center gap-1.5 rounded-full"
+            style={{ height: 38, paddingHorizontal: 14, backgroundColor: carrousel ? '#fff' : 'rgba(20,24,33,0.92)', borderWidth: carrousel ? 0 : 1, borderColor: 'rgba(75,85,99,0.8)' }}>
+            <Ionicons name="images" size={15} color="#EC4899" />
+            <Text className="text-[12.5px] font-black" style={{ color: carrousel ? '#1A1A1A' : '#fff' }}>Carrousel</Text>
+          </Pressable>
           {livreurOuvert ? (
             <Pressable
               onPress={() => setLivreursOuverts(true)}
