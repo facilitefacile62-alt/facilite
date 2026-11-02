@@ -1804,6 +1804,28 @@ export default function GlobeExplorateurBoutiques({
               }
             };
           });
+          // Les icônes de profil sont sur UNE seule ligne, qui défile avec les produits : chaque icône se place au-dessus du premier article de sa boutique.
+          const fenetreIcones = el.querySelector(".icones-fenetre");
+          if (bande && fenetreIcones && !bande.__iconesPretes) {
+            bande.__iconesPretes = true;
+            const piste = fenetreIcones.querySelector(".icones-piste");
+            const placerIcones = () => {
+              const z = bande.getBoundingClientRect();
+              piste.style.width = Math.max(bande.scrollWidth, z.width) + "px";
+              fenetreIcones.querySelectorAll("[data-icone-boutique]").forEach((ic) => {
+                const carte1 = bande.querySelector(`[data-boutique-de="${ic.getAttribute("data-icone-boutique")}"]`);
+                if (!carte1) {
+                  ic.style.display = "none";
+                  return;
+                }
+                ic.style.left = Math.round(carte1.getBoundingClientRect().left - z.left + bande.scrollLeft) + "px";
+              });
+              fenetreIcones.scrollLeft = bande.scrollLeft;
+            };
+            bande.addEventListener("scroll", () => (fenetreIcones.scrollLeft = bande.scrollLeft), { passive: true });
+            setTimeout(placerIcones, 30);
+            setTimeout(placerIcones, 400);
+          }
           if (bande && !bande.__anneauPret && el.querySelector("[data-icone-boutique]")) {
             bande.__anneauPret = true;
             const majAnneau = () => {
@@ -2316,7 +2338,7 @@ export default function GlobeExplorateurBoutiques({
           try {
             icone = m.logo_url ? `<img src="${echapperHtml(m.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : m.avatar_config ? svgAvatarBoutique(m.avatar_config, 30) : icone;
           } catch {}
-          return `<button type="button" data-icone-boutique="${echapperHtml(String(m.id))}" title="${echapperHtml((m.nom || "Boutique").trim())}" aria-label="${echapperHtml((m.nom || "Boutique").trim())}" style="width:30px;height:30px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid ${k === 0 ? "#10b981" : "#e2e8f0"};padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer;flex:none;">${icone}</button>`;
+          return `<button type="button" data-icone-boutique="${echapperHtml(String(m.id))}" title="${echapperHtml((m.nom || "Boutique").trim())}" aria-label="${echapperHtml((m.nom || "Boutique").trim())}" style="width:30px;height:30px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid ${k === 0 ? "#10b981" : "#e2e8f0"};padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer;position:absolute;top:1px;left:0;">${icone}</button>`;
         })
         .join("");
       const cartes = articles
@@ -2333,7 +2355,7 @@ export default function GlobeExplorateurBoutiques({
       return `<div class="bulle-produits-container" style="position:relative; width:190px; max-width:190px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
         <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
         <div style="margin-bottom:8px; padding-right:22px;">
-          <div style="display:flex; flex-wrap:wrap; gap:4px;">${pastilles}</div>
+          <div class="icones-fenetre" style="width:156px; max-width:100%; overflow:hidden; height:34px; position:relative;"><div class="icones-piste" style="position:relative; height:34px; width:156px;">${pastilles}</div></div>
           <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:4px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
         </div>
         <div class="bulle-defilement" style="width:156px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
