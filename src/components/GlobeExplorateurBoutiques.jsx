@@ -1399,7 +1399,14 @@ export default function GlobeExplorateurBoutiques({
       const groupes = [...parRacine.values()].filter((ids) => ids.length > 1).map((ids) => ids.slice().sort());
       const signature = groupes.map((g) => g.join("+")).sort().join("|");
       const toutesMasquees = groupes.flat().every((id) => marqueursCreesParId.get(id)?.marqueur?.getElement?.()?.dataset?.masqueTetes === "1");
-      if (carte.__signatureTetes === signature && toutesMasquees && carte.__coucheTetes) return;
+      if (carte.__signatureTetes === signature && toutesMasquees && carte.__coucheTetes) {
+        // La fleur existe déjà : on remasque seulement les épingles de ses boutiques (le code qui précède vient de toutes les réafficher).
+        groupes.flat().forEach((id) => {
+          const el = marqueursCreesParId.get(id)?.marqueur?.getElement?.();
+          if (el) el.style.display = "none";
+        });
+        return;
+      }
       carte.__signatureTetes = signature;
       if (!carte.__coucheTetes) carte.__coucheTetes = L.layerGroup().addTo(carte);
       const coucheTetes = carte.__coucheTetes;
