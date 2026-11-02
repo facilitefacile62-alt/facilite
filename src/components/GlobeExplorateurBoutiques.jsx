@@ -1411,7 +1411,7 @@ export default function GlobeExplorateurBoutiques({
             const ang = ((-90 + (360 * i) / n) * Math.PI) / 180;
             const x = c0 + R * Math.cos(ang) - TAILLE / 2;
             const y = c0 + R * Math.sin(ang) - TAILLE / 2;
-            return `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${x}px;top:${y}px;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 3px ${t.couleur}, 0 3px 8px rgba(0,0,0,.45);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;">${t.contenu}</div>`;
+            return `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${x}px;top:${y}px;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 3px ${t.couleur}, 0 3px 8px rgba(0,0,0,.45);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;pointer-events:auto;">${t.contenu}</div>`;
           })
           .join("");
         const coeur = `<div style="position:absolute;left:${c0 - 11}px;top:${c0 - 11}px;width:22px;height:22px;border-radius:9999px;background:radial-gradient(circle,#450a0a 55%,#7f1d1d);border:3px dotted #F59E0B;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);z-index:2;pointer-events:none;"></div>`;
