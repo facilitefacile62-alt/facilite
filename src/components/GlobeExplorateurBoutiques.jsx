@@ -1610,7 +1610,7 @@ export default function GlobeExplorateurBoutiques({
       const articlesApercu = articlesBoutique.slice(0, 8);
 
       const htmlBulleProduits = `
-        <div class="bulle-produits-container" style="position:relative; width:190px; max-width:210px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+        <div class="bulle-produits-container" style="position:relative; width:190px; max-width:190px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
           <!-- Bouton Fermer X -->
           <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
 
@@ -1627,7 +1627,7 @@ export default function GlobeExplorateurBoutiques({
           ${
             articlesApercu.length > 0
               ? `
-                <div class="bulle-defilement" style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">
+                <div class="bulle-defilement" style="width:156px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">
                   ${articlesApercu
                     .map((art) => {
                       const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : (art.photo ? urlPhoto(art.photo) : (art.image ? urlPhoto(art.image) : ""));
@@ -1715,6 +1715,34 @@ export default function GlobeExplorateurBoutiques({
           // Défilement des articles à la souris (glisser, molette) ; au doigt, le défilement natif fait le travail
           // (touch-action: pan-x). Un glissement ne doit pas ouvrir l'article sur lequel il se termine.
           const bande = el.querySelector(".bulle-defilement");
+          // Flèches gauche / droite : deux articles visibles à la fois ; une flèche n'apparaît que s'il reste des articles de ce côté.
+          if (bande && !bande.__flechesPretes) {
+            bande.__flechesPretes = true;
+            const conteneur = bande.parentElement;
+            const faireFleche = (cote) => {
+              const bt = document.createElement("button");
+              bt.type = "button";
+              bt.setAttribute("data-fleche", cote);
+              bt.setAttribute("aria-label", cote === "g" ? "Articles précédents" : "Articles suivants");
+              bt.textContent = cote === "g" ? "‹" : "›";
+              bt.style.cssText = `position:absolute;${cote === "g" ? "left:-4px" : "right:-4px"};top:${bande.offsetTop + bande.offsetHeight / 2 - 14}px;width:28px;height:28px;border-radius:9999px;border:none;background:#ffffff;color:#0f172a;font-size:20px;font-weight:900;line-height:26px;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer;z-index:15;display:none;padding:0;`;
+              bt.onclick = (e) => {
+                e.stopPropagation();
+                bande.scrollBy({ left: cote === "g" ? -164 : 164, behavior: "smooth" });
+              };
+              conteneur.appendChild(bt);
+              return bt;
+            };
+            const fg = faireFleche("g");
+            const fd = faireFleche("d");
+            const majFleches = () => {
+              fg.style.display = bande.scrollLeft > 2 ? "block" : "none";
+              fd.style.display = bande.scrollLeft + bande.clientWidth < bande.scrollWidth - 2 ? "block" : "none";
+            };
+            bande.addEventListener("scroll", majFleches, { passive: true });
+            setTimeout(majFleches, 30);
+            setTimeout(majFleches, 400);
+          }
           if (bande && !bande.__defilementPret) {
             bande.__defilementPret = true;
             let appuye = false;
@@ -2114,13 +2142,13 @@ export default function GlobeExplorateurBoutiques({
           }<div style="position:absolute; bottom:0; left:0; right:0; padding:6px 5px 4px 5px; background:linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 70%, transparent 100%); color:#ffffff;"><div style="font-size:8.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1;">${echapperHtml(art.titre || "Article")}</div>${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}</div></div><button type="button" data-itineraire="${echapperHtml(String(boutiqueId))}" style="margin-top:4px; width:74px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button></div>`;
         })
         .join("");
-      return `<div class="bulle-produits-container" style="position:relative; width:225px; max-width:245px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
+      return `<div class="bulle-produits-container" style="position:relative; width:190px; max-width:190px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
         <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
         <div style="margin-bottom:8px; padding-right:22px;">
           <div style="font-size:12px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${noms}</div>
           <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:2px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
         </div>
-        <div class="bulle-defilement" style="display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
+        <div class="bulle-defilement" style="width:156px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
       </div>`;
     };
     // (Ré)ouvre les bulles : groupées pour les boutiques qui se touchent au dézoom, individuelles sinon.
