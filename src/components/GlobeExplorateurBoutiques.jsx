@@ -2582,7 +2582,23 @@ export default function GlobeExplorateurBoutiques({
       });
       // Aucun regroupement de bulles, sauf pour la touche « Arbre » (qui a besoin des groupes pour ranger les bulles autour d'un tronc).
       // Une bulle par FLEUR (les boutiques d'une fleur partagent un seul carrousel, avec leurs icônes de profil en tête) ; mode « Arbre » : groupes à 100 m rangés autour d'un tronc.
-      const groupes = arbreActifRef.current ? [...parRacine.values()].filter((ids) => ids.length > 1) : (carte.__groupesFleurs || []).map((g) => g.slice());
+      const groupes = arbreActifRef.current ? [...parRacine.values()].filter((ids) => ids.length > 1) : (() => {
+            // Groupes des fleurs, plus les paires de bulles qui se chevauchent (au moins 10 %) : leurs boutiques partagent alors une seule bulle (les épingles, elles, ne bougent pas).
+            const liste = (carte.__groupesFleurs || []).map((g) => g.slice());
+            const trouver = (id) => liste.findIndex((g) => g.includes(id));
+            (carte.__pairesFusion || []).forEach(([u, v]) => {
+              const iu = trouver(u);
+              const iv = trouver(v);
+              if (iu < 0 && iv < 0) liste.push([u, v]);
+              else if (iu < 0) liste[iv].push(u);
+              else if (iv < 0) liste[iu].push(v);
+              else if (iu !== iv) {
+                liste[iu].push(...liste[iv]);
+                liste.splice(iv, 1);
+              }
+            });
+            return liste;
+          })();
       const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
       const cache = new Set();
       if (arbreActifRef.current) {
@@ -2625,7 +2641,7 @@ export default function GlobeExplorateurBoutiques({
       if (!bullesFixesRef.current || carteRef.current !== carte) return;
       if (arbreActifRef.current) placerArbres();
       await attendre(250);
-      const doitRecalculer = false; // plus aucune fusion par chevauchement
+      const doitRecalculer = !arbreActifRef.current && carte.__zoomFusion !== zoomFusion; // fusion des bulles qui se chevauchent, recalculée au changement de zoom
       // Applique les groupes courants, attend que toutes les bulles aient fini de se placer, puis renvoie les paires de bulles qui se touchent
       // (null si la carte a changé entre-temps).
       const appliquerEtMesurer = async () => {
