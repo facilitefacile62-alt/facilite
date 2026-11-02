@@ -1404,7 +1404,7 @@ export default function GlobeExplorateurBoutiques({
         const petales = tetes
           .map((t, i) => {
             const ang = -90 + (360 * i) / n;
-            return `<div style="position:absolute;left:${c0}px;top:${c0}px;width:${R + 4}px;height:16px;margin-top:-8px;transform-origin:0 50%;transform:rotate(${ang}deg);background:linear-gradient(90deg,#FDE047,#FACC15);border-radius:60% 60% 60% 60% / 50%;border:1px solid rgba(161,98,7,.45);box-shadow:0 2px 4px rgba(0,0,0,.25);"></div>`;
+            return `<div style="position:absolute;left:${c0}px;top:${c0}px;width:${R - 8}px;height:16px;margin-top:-8px;transform-origin:0 50%;transform:rotate(${ang}deg);background:linear-gradient(90deg,#FDE047,#FACC15);border-radius:60% 60% 60% 60% / 50%;border:1px solid rgba(161,98,7,.45);box-shadow:0 2px 4px rgba(0,0,0,.25);"></div>`;
           })
           .join("");
         const visages = tetes
