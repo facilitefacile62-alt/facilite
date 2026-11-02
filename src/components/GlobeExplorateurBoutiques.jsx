@@ -2643,44 +2643,22 @@ export default function GlobeExplorateurBoutiques({
         ref={headerRef}
         className="absolute top-0 inset-x-0 z-20 pt-3 pb-2 px-3 sm:px-5 bg-gradient-to-b from-black/90 via-black/50 to-transparent pointer-events-none flex flex-col gap-2"
       >
-        <div className="flex items-center justify-between">
-          {/* Avatar Utilisateur Gauche + Météo */}
-          <div className="pointer-events-auto flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-lg flex items-center justify-center text-lg">
-              <span>👤</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-white font-black text-base sm:text-lg tracking-tight drop-shadow">
-                  Dakar · Thiès
-                </h1>
-                <span className="text-amber-300 text-xs font-bold drop-shadow">🌙 30°C</span>
-              </div>
-              <p className="text-emerald-400 text-[11px] font-bold drop-shadow flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                {marqueurs.length} membre{marqueurs.length > 1 ? "s" : ""} &amp; boutique{marqueurs.length > 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
-
-          {/* Bouton Fermer */}
-          <div className="pointer-events-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onFermer}
-              className="w-10 h-10 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white flex items-center justify-center cursor-pointer transition backdrop-blur-md border border-gray-700 shadow-xl"
-              aria-label="Fermer la carte"
-              title="Retourner à Locaux"
-            >
-              <i className="fa-solid fa-xmark text-base"></i>
-            </button>
-          </div>
-        </div>
+        {/* Comme l'application : barre de recherche tout en haut, bouton de fermeture à sa droite (le titre « Dakar · Thiès », la météo et le compteur sont retirés). */}
+        <button
+          type="button"
+          onClick={onFermer}
+          className="pointer-events-auto absolute top-3 right-3 sm:right-5 w-11 h-11 rounded-full text-white flex items-center justify-center cursor-pointer transition backdrop-blur-md shadow-xl"
+          style={{ backgroundColor: "rgba(20,24,33,0.78)" }}
+          aria-label="Fermer la carte"
+          title="Retourner à Locaux"
+        >
+          <i className="fa-solid fa-xmark text-base"></i>
+        </button>
 
         {/* Recherche mot-clé haute-fidélité (Inspiration E-Commerce / AliExpress) :
             Contour orange vif (#FF5500), scan photo IA par caméra, bouton dégradé chaud "Rechercher",
             filtre instantané des marqueurs carte et dock articles. */}
-        <div ref={barreRechercheRef} className="pointer-events-auto relative w-full">
+        <div ref={barreRechercheRef} className="pointer-events-auto relative" style={{ width: "calc(100% - 56px)" }}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -2695,8 +2673,8 @@ export default function GlobeExplorateurBoutiques({
                 })();
               }
             }}
-            style={{ backgroundColor: "#e3dbcc", borderColor: "#e3dbcc" }}
-            className="relative flex items-center w-full bg-[#e3dbcc] rounded-full border-2 border-[#e3dbcc] shadow-xl p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#c4b89f]"
+            style={{ backgroundColor: "#EAE3D2", borderColor: "#EAE3D2", borderRadius: 18 }}
+            className="relative flex items-center w-full bg-[#e3dbcc] rounded-[18px] border-2 border-[#e3dbcc] shadow-xl p-1 pl-3.5 sm:pl-4 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#c4b89f]"
           >
             <input
               ref={inputRechercheRef}
