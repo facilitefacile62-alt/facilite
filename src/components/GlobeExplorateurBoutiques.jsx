@@ -1373,9 +1373,9 @@ export default function GlobeExplorateurBoutiques({
 
     // Épingles qui se recouvrent : UN marqueur posé sur leur position, avec la tête de profil de CHAQUE boutique côte à côte (4 têtes pour 4 boutiques). Position et taille fixes ;
     // chaque tête est cliquable et agit comme l'épingle de sa boutique. Dès que les épingles ne se recouvrent plus, elles redeviennent des épingles.
-    let coucheTetes = null;
     function dessinerTetesGroupees(groupes) {
-      if (!coucheTetes) coucheTetes = L.layerGroup().addTo(carte);
+      if (!carte.__coucheTetes) carte.__coucheTetes = L.layerGroup().addTo(carte);
+      const coucheTetes = carte.__coucheTetes;
       coucheTetes.clearLayers();
       marqueursCreesParId.forEach((e) => {
         const el = e.marqueur.getElement?.();
@@ -1387,8 +1387,12 @@ export default function GlobeExplorateurBoutiques({
       groupes.forEach((ids) => {
         const membres = ids.map((id) => ({ id, entree: marqueursCreesParId.get(id) })).filter((m) => m.entree?.marqueur?.getElement?.());
         if (membres.length < 2) return;
-        const TAILLE = 32;
-        const PAS = 21; // les têtes se chevauchent légèrement
+        // En FLEUR (inspiration donnée par l'utilisateur) : un cœur sombre posé sur la vraie position, des pétales jaunes qui rayonnent autour, et la tête de profil de chaque boutique au bout de son pétale.
+        const TAILLE = 30;
+        const n = membres.length;
+        const R = Math.max(36, Math.ceil((TAILLE + 6) / (2 * Math.sin(Math.PI / n))));
+        const cote = 2 * (R + TAILLE / 2 + 6);
+        const c0 = cote / 2;
         const tetes = membres.map((m) => {
           const el = m.entree.marqueur.getElement();
           const pin = el.querySelector(".epingle-pin");
@@ -1396,19 +1400,25 @@ export default function GlobeExplorateurBoutiques({
           const contenu = pin?.children?.[1]?.innerHTML || "";
           return { id: m.id, couleur, contenu, el };
         });
-        const largeur = TAILLE + (tetes.length - 1) * PAS;
-        const html = `<div style="position:relative;width:${largeur}px;height:${TAILLE + 12}px;">
-          <div style="position:absolute;left:${largeur / 2 - 6}px;top:${TAILLE - 2}px;width:12px;height:12px;background:#ffffff;transform:rotate(45deg);box-shadow:2px 2px 4px rgba(0,0,0,.25);"></div>
-          ${tetes
-            .map(
-              (t, i) =>
-                `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${i * PAS}px;top:0;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 3px ${t.couleur}, 0 3px 8px rgba(0,0,0,.4);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:${i + 1};">${t.contenu}</div>`
-            )
-            .join("")}
-        </div>`;
+        const petales = tetes
+          .map((t, i) => {
+            const ang = -90 + (360 * i) / n;
+            return `<div style="position:absolute;left:${c0}px;top:${c0}px;width:${R + 12}px;height:${Math.max(22, Math.min(30, Math.round((2 * Math.PI * R) / n)))}px;margin-top:-${Math.max(11, Math.min(15, Math.round(Math.PI * R / n)))}px;transform-origin:0 50%;transform:rotate(${ang}deg);background:linear-gradient(90deg,#FDE047,#FACC15);border-radius:60% 60% 60% 60% / 50%;border:1px solid rgba(161,98,7,.45);box-shadow:0 2px 4px rgba(0,0,0,.25);"></div>`;
+          })
+          .join("");
+        const visages = tetes
+          .map((t, i) => {
+            const ang = ((-90 + (360 * i) / n) * Math.PI) / 180;
+            const x = c0 + R * Math.cos(ang) - TAILLE / 2;
+            const y = c0 + R * Math.sin(ang) - TAILLE / 2;
+            return `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${x}px;top:${y}px;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 3px ${t.couleur}, 0 3px 8px rgba(0,0,0,.45);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;">${t.contenu}</div>`;
+          })
+          .join("");
+        const coeur = `<div style="position:absolute;left:${c0 - 11}px;top:${c0 - 11}px;width:22px;height:22px;border-radius:9999px;background:radial-gradient(circle,#450a0a 55%,#7f1d1d);border:3px dotted #F59E0B;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);z-index:2;pointer-events:none;"></div>`;
+        const html = `<div style="position:relative;width:${cote}px;height:${cote}px;pointer-events:none;">${petales}${coeur}${visages}</div>`;
         const lat = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lat, 0) / membres.length;
         const lng = membres.reduce((t, m) => t + m.entree.marqueur.getLatLng().lng, 0) / membres.length;
-        const icone = L.divIcon({ className: "tetes-groupees", html, iconSize: [largeur, TAILLE + 12], iconAnchor: [largeur / 2, TAILLE + 12] });
+        const icone = L.divIcon({ className: "tetes-groupees", html, iconSize: [cote, cote], iconAnchor: [cote / 2, cote / 2] });
         const mk = L.marker([lat, lng], { icon: icone, keyboard: false, zIndexOffset: 800 }).addTo(coucheTetes);
         // Les vraies épingles de ces boutiques sont masquées derrière le marqueur de groupe.
         tetes.forEach((t) => {
