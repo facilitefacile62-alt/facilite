@@ -457,6 +457,16 @@ export default function GlobeExplorateurBoutiques({
   const carrousselCarteOuvertRef = useRef(false);
   const bullesFixesRef = useRef(false);
   const basculerBullesFixesRef = useRef(() => {});
+  // Touche « Arbre » : boutiques proches = une bulle chacune, rangées en deux colonnes de part et d'autre d'un tronc relié à leurs épingles (croquis de l'utilisateur).
+  const [arbreActif, setArbreActif] = useState(false);
+  const arbreActifRef = useRef(false);
+  useEffect(() => {
+    arbreActifRef.current = arbreActif;
+    if (carrousselCarteOuvertRef.current) {
+      basculerBullesFixesRef.current(false);
+      basculerBullesFixesRef.current(true);
+    }
+  }, [arbreActif]);
   useEffect(() => {
     carrousselCarteOuvertRef.current = carrousselCarteOuvert;
     basculerBullesFixesRef.current(carrousselCarteOuvert);
@@ -2121,11 +2131,11 @@ export default function GlobeExplorateurBoutiques({
 
     // Disposition « arbre » (essai du 02/11/2026, croquis de l'utilisateur) : au lieu de fusionner les boutiques proches en une seule bulle, chacune garde SA bulle ; les bulles
     // se rangent côte à côte au-dessus du groupe et sont reliées à leur épingle par des traits qui se rejoignent en un tronc (bulle → barre → tronc → branche → épingle).
-    const ARBRE_POUR_GROUPES = false; // arbre en relief (02/11/2026) mis de côté à la demande de l'utilisateur ; true pour le réactiver
+    // L'arbre (touche « Arbre », visible quand le Carrousel est ouvert) est lu dans arbreActifRef ; par défaut éteint : la bulle regroupée reste la version normale.
     const effacerArbres = () => carte.getContainer().querySelectorAll("[data-arbres-bulles]").forEach((e) => e.remove());
     const dessinerArbres = () => {
       effacerArbres();
-      if (!ARBRE_POUR_GROUPES || !bullesFixesRef.current || carteRef.current !== carte) return;
+      if (!arbreActifRef.current || !bullesFixesRef.current || carteRef.current !== carte) return;
       const groupes = carte.__arbres || [];
       if (!groupes.length) return;
       const cont = carte.getContainer();
@@ -2172,22 +2182,26 @@ export default function GlobeExplorateurBoutiques({
           })
           .filter(Boolean);
         if (items.length < 2) return;
-        const bx = (i) => i.bulle.left + i.bulle.width / 2 - c.left;
         const px = (i) => i.pin.left + i.pin.width / 2 - c.left;
         const pyHaut = (i) => i.pin.top - c.top + 6;
-        const basBulle = Math.max(...items.map((i) => i.bulle.bottom)) - c.top;
-        const yBarre = basBulle + 16;
-        const troncX = items.reduce((t, i) => t + bx(i), 0) / items.length;
+        const troncX = items.reduce((t, i) => t + px(i), 0) / items.length;
         const yFourche = Math.min(...items.map(pyHaut)) - 18;
-        items.forEach((i) => trait(`M ${bx(i)} ${i.bulle.bottom - c.top} L ${bx(i)} ${yBarre} L ${troncX} ${yBarre}`));
-        trait(`M ${troncX} ${yBarre} L ${troncX} ${yFourche}`);
-        items.forEach((i) => trait(`M ${troncX} ${yFourche} L ${px(i)} ${yFourche + 8} L ${px(i)} ${pyHaut(i)}`));
-        // Billes aux jonctions : bas de chaque bulle, pied du tronc, fourche, tête de chaque épingle.
-        items.forEach((i) => {
-          sphere(bx(i), i.bulle.bottom - c.top, 4.5);
-          sphere(px(i), pyHaut(i), 4.5);
+        // Chaque bulle se relie par son côté intérieur, à mi-hauteur, au tronc vertical.
+        const jonctions = items.map((i) => {
+          const gauche = i.bulle.left + i.bulle.width / 2 - c.left < troncX;
+          const ex = (gauche ? i.bulle.right : i.bulle.left) - c.left;
+          const ey = i.bulle.top + i.bulle.height / 2 - c.top;
+          return { ex, ey };
         });
-        sphere(troncX, yBarre, 5.5);
+        jonctions.forEach((jn) => trait(`M ${jn.ex} ${jn.ey} L ${troncX} ${jn.ey}`));
+        const yHautTronc = Math.min(...jonctions.map((jn) => jn.ey));
+        trait(`M ${troncX} ${yHautTronc} L ${troncX} ${yFourche}`);
+        items.forEach((i) => trait(`M ${troncX} ${yFourche} L ${px(i)} ${yFourche + 8} L ${px(i)} ${pyHaut(i)}`));
+        jonctions.forEach((jn) => {
+          sphere(jn.ex, jn.ey, 4.5);
+          sphere(troncX, jn.ey, 4.2);
+        });
+        items.forEach((i) => sphere(px(i), pyHaut(i), 4.5));
         sphere(troncX, yFourche, 5.5);
       });
       cont.appendChild(svg);
@@ -2202,7 +2216,7 @@ export default function GlobeExplorateurBoutiques({
     };
     // Range les bulles d'un groupe côte à côte au-dessus de ses épingles (leurs pointes sont cachées : les traits prennent le relais).
     const placerArbres = () => {
-      if (!ARBRE_POUR_GROUPES || !bullesFixesRef.current || carteRef.current !== carte) return;
+      if (!arbreActifRef.current || !bullesFixesRef.current || carteRef.current !== carte) return;
       const groupes = carte.__arbres || [];
       groupes.forEach((ids) => {
         const infos = ids
@@ -2216,29 +2230,29 @@ export default function GlobeExplorateurBoutiques({
           .filter(Boolean);
         if (infos.length < 2) return;
         const ordre = infos.slice().sort((u, v) => u.pin.left - v.pin.left);
-        const ecart = 8;
-        const largeurTotale = ordre.reduce((t, i) => t + i.bulle.width, 0) + ecart * (ordre.length - 1);
         const centreGroupe = ordre.reduce((t, i) => t + i.pin.left + i.pin.width / 2, 0) / ordre.length;
         const hautPinMin = Math.min(...ordre.map((i) => i.pin.top));
-        const HAUTEUR_TRAITS = 78;
-        let x = centreGroupe - largeurTotale / 2;
-        ordre.forEach((i) => {
-          const cibleCentreX = x + i.bulle.width / 2;
-          const dx = cibleCentreX - (i.bulle.left + i.bulle.width / 2);
-          // La bulle d'origine se pose juste au-dessus de SON épingle : on la remonte au-dessus de la plus haute du groupe, plus la hauteur des traits.
-          const dy = hautPinMin - i.pin.top - HAUTEUR_TRAITS;
-          i.h.deplacerBulle?.(dx, dy);
-          x += i.bulle.width + ecart;
-        });
-        // Relief : chaque bulle pivote légèrement vers le centre du groupe (perspective), avec une tranche épaisse et une grande ombre portée.
-        ordre.forEach((i, k) => {
-          const w = i.h.mesurerBulleElement?.();
-          if (!w) return;
-          const t = ordre.length > 1 ? (k - (ordre.length - 1) / 2) / ((ordre.length - 1) / 2) : 0;
-          w.style.transformOrigin = "50% 100%";
-          w.style.transform = `perspective(900px) rotateX(5deg) rotateY(${(-t * 10).toFixed(1)}deg)`;
-          w.style.boxShadow = "0 1px 0 #ffffff inset, 0 3px 0 #d3dbe6, 0 6px 0 #b4c0d0, 0 9px 0 #94a3b8, 0 22px 30px rgba(15,23,42,.5)";
-          w.style.transition = "transform .25s ease";
+        const HAUTEUR_TRAITS = 70; // entre le bas de la bulle la plus basse et la plus haute épingle
+        const DEGAGEMENT_TRONC = 26; // espace entre le tronc et chaque colonne
+        const ECART_VERTICAL = 8;
+        // Deux colonnes de part et d'autre du tronc (moitié gauche des épingles à gauche, moitié droite à droite), bulles empilées du bas vers le haut.
+        const moitie = Math.ceil(ordre.length / 2);
+        [[ordre.slice(0, moitie), -1], [ordre.slice(moitie), 1]].forEach(([colonne, signe]) => {
+          let bas = hautPinMin - HAUTEUR_TRAITS;
+          colonne.forEach((i) => {
+            const cibleCentreX = centreGroupe + signe * (DEGAGEMENT_TRONC + i.bulle.width / 2);
+            const dx = cibleCentreX - (i.bulle.left + i.bulle.width / 2);
+            const dy = bas - i.bulle.bottom;
+            i.h.deplacerBulle?.(dx, dy);
+            bas -= i.bulle.height + ECART_VERTICAL;
+            // Relief : la bulle pivote légèrement vers le tronc, avec une tranche épaisse et une grande ombre portée.
+            const w = i.h.mesurerBulleElement?.();
+            if (w) {
+              w.style.transformOrigin = signe < 0 ? "100% 50%" : "0% 50%";
+              w.style.transform = `perspective(900px) rotateY(${signe < 0 ? 9 : -9}deg)`;
+              w.style.boxShadow = "0 1px 0 #ffffff inset, 0 3px 0 #d3dbe6, 0 6px 0 #b4c0d0, 0 9px 0 #94a3b8, 0 22px 30px rgba(15,23,42,.5)";
+            }
+          });
         });
       });
       ordreMasquerPointes();
@@ -2257,7 +2271,7 @@ export default function GlobeExplorateurBoutiques({
       carte.__arbreAttache = true;
       carte.on("move zoom viewreset", planifierArbres);
       carte.on("zoomend", () => {
-        if (ARBRE_POUR_GROUPES && bullesFixesRef.current) setTimeout(placerArbres, 350);
+        if (arbreActifRef.current && bullesFixesRef.current) setTimeout(placerArbres, 350);
       });
     }
 
@@ -2341,7 +2355,7 @@ export default function GlobeExplorateurBoutiques({
       const groupes = [...parRacine.values()].filter((ids) => ids.length > 1);
       const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
       const cache = new Set();
-      if (ARBRE_POUR_GROUPES) {
+      if (arbreActifRef.current) {
         carte.__arbres = groupes; // chaque boutique garde sa bulle ; les groupes sont rangés en arbre (voir placerArbres)
       } else {
         groupes.forEach((ids) => {
@@ -2365,7 +2379,7 @@ export default function GlobeExplorateurBoutiques({
         h.ouvrirFixe?.(ids ? construireHtmlGroupe(ids.map((id) => boutiquesAffichees.find((x) => x.id === id)).filter(Boolean)) : undefined);
       });
       setTimeout(ajouterPicsAssocies, 350);
-      if (ARBRE_POUR_GROUPES) setTimeout(placerArbres, 450);
+      if (arbreActifRef.current) setTimeout(placerArbres, 450);
     };
 
     // Chaque bulle reste FIXE sur sa boutique (sa pointe vise le centre de l'épingle). Quand deux bulles se touchent à l'écran (dézoom), leurs boutiques sont
@@ -2375,7 +2389,7 @@ export default function GlobeExplorateurBoutiques({
       const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
       // Déplacer la carte ne change rien aux bulles (elles suivent leurs boutiques) : la fusion n'est recalculée que si le ZOOM a changé, sinon aucune bulle ne se ferme ni ne se rouvre.
       const zoomFusion = carte.getZoom();
-      if (ARBRE_POUR_GROUPES) {
+      if (arbreActifRef.current) {
         // Disposition en arbre : bulles rangées, puis (plus bas) la carte descend si elles dépassent sous les couches du haut.
         appliquerBullesFixes();
         await attendre(650);
@@ -2383,7 +2397,7 @@ export default function GlobeExplorateurBoutiques({
         placerArbres();
         await attendre(250);
       }
-      const doitRecalculer = !ARBRE_POUR_GROUPES && carte.__zoomFusion !== zoomFusion;
+      const doitRecalculer = !arbreActifRef.current && carte.__zoomFusion !== zoomFusion;
       // Applique les groupes courants, attend que toutes les bulles aient fini de se placer, puis renvoie les paires de bulles qui se touchent
       // (null si la carte a changé entre-temps).
       const appliquerEtMesurer = async () => {
@@ -3039,6 +3053,19 @@ export default function GlobeExplorateurBoutiques({
             <i className="fa-solid fa-images text-xs text-pink-400"></i>
             <span>Carrousel</span>
           </button>
+          {carrousselCarteOuvert && (
+            <button
+              type="button"
+              onClick={() => setArbreActif((v) => !v)}
+              aria-pressed={arbreActif}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shadow-md backdrop-blur-md ${
+                arbreActif ? "bg-white text-gray-950 font-black shadow-white/20" : "bg-gray-900/80 text-white hover:bg-gray-800 border border-gray-700/80"
+              }`}
+            >
+              <i className="fa-solid fa-sitemap text-xs text-sky-400"></i>
+              <span>Arbre</span>
+            </button>
+          )}
 
           {/* « Trouver un livreur » : livreurs accrédités de la zone (compte connecté requis pour les contacter). */}
 {livreurAutorise && (
