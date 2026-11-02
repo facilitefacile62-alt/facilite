@@ -468,8 +468,8 @@ export default function GlobeExplorateurBoutiques({
   const [vueCarrousel, setVueCarrousel] = useState("boutiques"); // 'boutiques' | 'articles'
   // Touche « Carrousel » de la carte : un toucher ouvre et FIXE la bulle de TOUTES les boutiques affichées (nom, quartier, carrousel de leurs articles) ;
   // un second toucher les ferme toutes. Les refs servent au code Leaflet, qui ne relit pas l'état React.
-  const [carrousselCarteOuvert, setCarrousselCarteOuvert] = useState(false);
-  const carrousselCarteOuvertRef = useRef(false);
+  const [carrousselCarteOuvert, setCarrousselCarteOuvert] = useState(true); // activé par défaut : les bulles des boutiques sont visibles dès l'entrée dans la carte
+  const carrousselCarteOuvertRef = useRef(true);
   const bullesFixesRef = useRef(false);
   const basculerBullesFixesRef = useRef(() => {});
   // Touche « Arbre » : boutiques proches = une bulle chacune, rangées en deux colonnes de part et d'autre d'un tronc relié à leurs épingles (croquis de l'utilisateur).

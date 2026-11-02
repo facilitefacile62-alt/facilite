@@ -343,11 +343,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       }
       if (e.grappe) grappes.push(e);
     });
-    // halo vert doux derrière chaque grappe affichée
+    // FLEUR derrière chaque grappe (même motif que la carte du site) : un cœur sombre piqueté d'orange au centre et un pétale jaune vers chaque rond, de taille fixe.
     grappes.forEach(function (e) {
-      var S = Math.round(2 * (e.R + 18));
+      var S = Math.round(2 * (e.R + 8));
+      var c0 = S / 2;
       var centreHalo = carte.containerPointToLatLng(L.point(e.cx, e.cy));
-      var icHalo = L.divIcon({ className: 'bulle-regroupement', html: '<div style="width:' + S + 'px;height:' + S + 'px;border-radius:9999px;background:radial-gradient(circle, rgba(16,185,129,.42) 0%, rgba(16,185,129,.26) 55%, rgba(16,185,129,0) 72%);pointer-events:none"></div>', iconSize: [S, S], iconAnchor: [S / 2, S / 2] });
+      var petales = e.pos.map(function (p) {
+        var ang = Math.atan2(p.y, p.x) * 180 / Math.PI, lg = Math.max(8, Math.hypot(p.x, p.y) - 2);
+        return '<div style="position:absolute;left:' + c0 + 'px;top:' + c0 + 'px;width:' + lg + 'px;height:11px;margin-top:-5.5px;transform-origin:0 50%;transform:rotate(' + ang + 'deg);background:linear-gradient(90deg,#FDE047,#FACC15);border-radius:60%/50%;border:1px solid rgba(161,98,7,.45);box-shadow:0 2px 4px rgba(0,0,0,.25)"></div>';
+      }).join('');
+      var coeur = '<div style="position:absolute;left:' + (c0 - 8) + 'px;top:' + (c0 - 8) + 'px;width:16px;height:16px;border-radius:9999px;box-sizing:border-box;background:radial-gradient(circle,#450a0a 55%,#7f1d1d);border:2px dotted #F59E0B;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>';
+      var icHalo = L.divIcon({ className: 'bulle-regroupement', html: '<div style="position:relative;width:' + S + 'px;height:' + S + 'px;pointer-events:none">' + petales + coeur + '</div>', iconSize: [S, S], iconAnchor: [S / 2, S / 2] });
       L.marker(centreHalo, { icon: icHalo, interactive: false, keyboard: false, zIndexOffset: 100 }).addTo(couche);
     });
     // Noms (comme Google Maps) : à partir du zoom 14, chacun prend le premier côté libre (droite, gauche, dessous, dessus) ;

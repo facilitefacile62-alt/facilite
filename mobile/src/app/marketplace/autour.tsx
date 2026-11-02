@@ -357,7 +357,7 @@ export default function AutourDeMoiScreen() {
   }, [boutiqueSel, articlesSel]);
 
   // Touche « Carrousel » : la bulle de toutes les boutiques affichées reste ouverte (regroupées à 100 m et fusionnées si elles se touchent, dans la carte).
-  const [carrousel, setCarrousel] = useState(false);
+  const [carrousel, setCarrousel] = useState(true); // Carrousel activé par défaut : les bulles des boutiques sont visibles dès l'entrée dans la carte
   const [articlesToutes, setArticlesToutes] = useState<Record<string, ArticleMarketplace[]>>({});
   useEffect(() => {
     if (!carrousel) return;
