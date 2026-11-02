@@ -62,6 +62,8 @@ export type PopupBoutique = {
   dx?: number;
   titre: string;
   sous?: string;
+  /** Icône de profil de la boutique (en-tête de la bulle regroupée) : image (data URI) ou emoji de repli. */
+  avatar?: { uri?: string; emoji?: string; bordure?: string };
   /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
   action?: { id: string; libelle: string; icone?: string };
   /** null = chargement des articles en cours. */
@@ -119,13 +121,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .popup-carrousel .leaflet-popup-content-wrapper { border-radius: 18px; padding: 0 0 8px; }
   .popup-carrousel .pb-nom { max-width: 150px; font-size: 13px; }
-  .popup-carrousel .pb-compte { font: 700 11px system-ui, sans-serif; color: #059669; margin-top: 2px; }
+  .popup-carrousel .pb-compte { font: 700 11px system-ui, sans-serif; color: #059669; margin-top: 2px; white-space: nowrap; }
   .popup-carrousel .pb-conteneur { position: relative; width: 190px; }
   .popup-carrousel .pb-liste { width: 168px; max-width: 168px; margin: 0 auto; padding: 2px 0 6px; gap: 8px; }
   .popup-carrousel .pb-art { width: 80px; }
   .popup-carrousel .pb-photo { width: 80px; height: 96px; }
   .popup-carrousel .pb-titre { font-size: 10.5px; }
   .popup-carrousel .pb-it { display: block; margin-top: 4px; padding: 6px 0; border-radius: 10px; background: #10B981; color: #fff; text-align: center; font: 800 11px system-ui, sans-serif; cursor: pointer; }
+  .popup-carrousel .pb-fenetre-ic { width: 140px; margin: 0 auto 4px; overflow: hidden; height: 30px; position: relative; }
+  .popup-carrousel .pb-piste-ic { position: relative; height: 30px; }
+  .popup-carrousel .pb-ic { position: absolute; top: 1px; left: 0; width: 26px; height: 26px; border-radius: 9999px; overflow: hidden; background: #fff; border: 2px solid #E2E8F0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; padding: 0; }
+  .popup-carrousel .pb-ic img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-fleche { position: absolute; top: 40px; width: 28px; height: 28px; border-radius: 9999px; background: #fff; color: #0f172a; font: 900 20px/26px system-ui, sans-serif; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); cursor: pointer; z-index: 5; display: none; }
   .pb-action { display: block; margin: 0 14px 0; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
@@ -540,13 +546,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.createElement('div');
     var cartes = arts.map(function (x) {
       var a = x.a;
-      return '<div class="pb-art"><div data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
+      return '<div class="pb-art" data-bde="' + esc(x.b) + '"><div data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
         + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:34px">' + esc(a.icone || '') + '</div>')
         + '<span class="pb-prix">' + esc(a.prix) + '</span></div><div class="pb-titre">' + esc(a.titre) + '</div></div>'
         + '<div class="pb-it" data-act="itineraire:' + esc(x.b) + '">↱ Itinéraire</div></div>';
     }).join('');
-    el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="' + (multi ? 'rien' : 'boutique:' + esc(membres[0].cle)) + '">' + esc(membres.map(function (m) { return m.titre; }).join(' · ')) + '</div>'
-      + (multi ? '<div class="pb-compte">' + membres.length + ' boutiques · ' + arts.length + ' article' + (arts.length > 1 ? 's' : '') + ' disponible' + (arts.length > 1 ? 's' : '') + '</div>' : (membres[0].sous ? '<div class="pb-lieu">📍 ' + esc(membres[0].sous) + '</div>' : ''))
+    var icones = multi ? '<div class="pb-fenetre-ic"><div class="pb-piste-ic">' + membres.map(function (m) {
+      var a = m.avatar || {};
+      return '<div class="pb-ic" data-ic="' + esc(m.cle) + '" data-act="boutique:' + esc(m.cle) + '" title="' + esc(m.titre) + '">' + (a.uri ? '<img src="' + esc(a.uri) + '" />' : esc(a.emoji || '🏪')) + '</div>';
+    }).join('') + '</div></div>' : '';
+    el.innerHTML = '<div class="pb-tete"><div>' + (multi ? icones : '<div class="pb-nom" data-act="boutique:' + esc(membres[0].cle) + '">' + esc(membres[0].titre) + '</div>')
+      + (multi ? '<div class="pb-compte">' + membres.length + ' boutiques · ' + arts.length + ' article' + (arts.length > 1 ? 's' : '') + '</div>' : (membres[0].sous ? '<div class="pb-lieu">📍 ' + esc(membres[0].sous) + '</div>' : ''))
       + '</div><div class="pb-x" data-act="fermer-carrousel">✕</div></div>'
       + '<div class="pb-conteneur">' + (arts.length ? '<div class="pb-liste">' + cartes + '</div>' : '<div class="pb-vide">Aucun article.</div>')
       + '<div class="pb-fleche" data-fl="g" style="left:-4px">‹</div><div class="pb-fleche" data-fl="d" style="right:-4px">›</div></div>';
@@ -566,6 +576,36 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       };
       bande.addEventListener('scroll', maj);
       setTimeout(maj, 60); setTimeout(maj, 400);
+      // Icônes de profil sur UNE ligne : chacune reste collée au bord gauche tant que les articles de SA boutique défilent, puis part avec le dernier.
+      var fenetreIc = el.querySelector('.pb-fenetre-ic');
+      if (fenetreIc) {
+        var piste = fenetreIc.querySelector('.pb-piste-ic');
+        var bornes = {};
+        var placer = function () {
+          var z = bande.getBoundingClientRect();
+          piste.style.width = Math.max(bande.scrollWidth, z.width) + 'px';
+          fenetreIc.querySelectorAll('.pb-ic').forEach(function (ic) {
+            var id = ic.getAttribute('data-ic');
+            var cartes = bande.querySelectorAll('[data-bde="' + id + '"]');
+            if (!cartes.length) { ic.style.display = 'none'; return; }
+            bornes[id] = { debut: cartes[0].getBoundingClientRect().left - z.left + bande.scrollLeft, fin: cartes[cartes.length - 1].getBoundingClientRect().right - z.left + bande.scrollLeft };
+          });
+          suivre();
+        };
+        var suivre = function () {
+          fenetreIc.scrollLeft = bande.scrollLeft;
+          var premier = null;
+          fenetreIc.querySelectorAll('.pb-ic').forEach(function (ic) {
+            var b = bornes[ic.getAttribute('data-ic')];
+            if (!b) return;
+            ic.style.left = Math.round(Math.min(Math.max(bande.scrollLeft + 1, b.debut), b.fin - 26)) + 'px';
+            if (premier === null && b.fin > bande.scrollLeft + 8) premier = ic.getAttribute('data-ic');
+          });
+          fenetreIc.querySelectorAll('.pb-ic').forEach(function (ic) { ic.style.borderColor = ic.getAttribute('data-ic') === premier ? '#10b981' : '#E2E8F0'; });
+        };
+        bande.addEventListener('scroll', suivre);
+        el.__placerIcones = placer;
+      }
     }
     return el;
   }
@@ -586,6 +626,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       p.__cles = membres.map(function (m) { return m.cle; });
       p.addTo(carte);
       popupsOuverts.push(p);
+      var contenu = p.getContent();
+      if (contenu && contenu.__placerIcones) { setTimeout(contenu.__placerIcones, 80); setTimeout(contenu.__placerIcones, 450); }
     });
   }
   function fusionnerPopups() {
