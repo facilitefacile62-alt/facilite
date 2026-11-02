@@ -2235,7 +2235,10 @@ export default function GlobeExplorateurBoutiques({
         }
         return paires;
       };
-      if (doitRecalculer) carte.__pairesFusion = [];
+      if (doitRecalculer) {
+        carte.__pairesFusion = [];
+        carte.__descentes = 0; // nouveau zoom : la carte peut de nouveau descendre pour que les bulles passent sous les couches du haut
+      }
       for (let tour = 0; doitRecalculer && tour < 10; tour++) {
         const nouvelles = await appliquerEtMesurer();
         if (nouvelles === null) return;
