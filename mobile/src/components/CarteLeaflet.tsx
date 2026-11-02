@@ -574,7 +574,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     groupesPopups().forEach(function (membres) {
       var chef = membres[0];
       var sp = chef.cle ? spread[chef.cle] : null;
-      var p = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, autoClose: false, className: 'popup-boutique popup-carrousel', offset: L.point((chef.dx || 0) + (sp ? sp.dx : 0), -74 + (sp ? sp.dy : 0)), minWidth: 190, maxWidth: 190 })
+      // La pointe de la bulle se pose juste au-dessus du rond le plus haut du groupe (6 px d'air) : un rond isolé a son centre à TAILLE/2 + 5 px au-dessus de sa position ; un rond de
+      // couronne, à son décalage (spread). Avant, un décalage fixe de 74 px laissait un grand vide entre la bulle et la boutique.
+      var hautRond = 0;
+      membres.forEach(function (m) {
+        var sm = m.cle ? spread[m.cle] : null;
+        hautRond = Math.min(hautRond, sm ? sm.dy : -(TAILLE / 2 + 5));
+      });
+      var p = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, autoClose: false, className: 'popup-boutique popup-carrousel', offset: L.point((chef.dx || 0) + (sp ? sp.dx : 0), hautRond - TAILLE / 2 - 6), minWidth: 190, maxWidth: 190 })
         .setLatLng([chef.lat, chef.lng]).setContent(contenuCarrousel(membres));
       p.__cles = membres.map(function (m) { return m.cle; });
       p.addTo(carte);
