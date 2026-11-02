@@ -2119,6 +2119,117 @@ export default function GlobeExplorateurBoutiques({
       });
     };
 
+    // Disposition « arbre » (essai du 02/11/2026, croquis de l'utilisateur) : au lieu de fusionner les boutiques proches en une seule bulle, chacune garde SA bulle ; les bulles
+    // se rangent côte à côte au-dessus du groupe et sont reliées à leur épingle par des traits qui se rejoignent en un tronc (bulle → barre → tronc → branche → épingle).
+    const ARBRE_POUR_GROUPES = true;
+    const effacerArbres = () => carte.getContainer().querySelectorAll("[data-arbres-bulles]").forEach((e) => e.remove());
+    const dessinerArbres = () => {
+      effacerArbres();
+      if (!ARBRE_POUR_GROUPES || !bullesFixesRef.current || carteRef.current !== carte) return;
+      const groupes = carte.__arbres || [];
+      if (!groupes.length) return;
+      const cont = carte.getContainer();
+      const c = cont.getBoundingClientRect();
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("data-arbres-bulles", "1");
+      svg.setAttribute("width", c.width);
+      svg.setAttribute("height", c.height);
+      svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:590;overflow:visible;";
+      const trait = (d) => {
+        [["#0f172a", 5, 0.45], ["#ffffff", 2.5, 1]].forEach(([couleur, largeur, opacite]) => {
+          const chemin = document.createElementNS(NS, "path");
+          chemin.setAttribute("d", d);
+          chemin.setAttribute("fill", "none");
+          chemin.setAttribute("stroke", couleur);
+          chemin.setAttribute("stroke-width", largeur);
+          chemin.setAttribute("stroke-opacity", opacite);
+          chemin.setAttribute("stroke-linecap", "round");
+          chemin.setAttribute("stroke-linejoin", "round");
+          svg.appendChild(chemin);
+        });
+      };
+      groupes.forEach((ids) => {
+        const items = ids
+          .map((id) => {
+            const bulle = popupsBoutiquesRef.current.get(id)?.mesurerBulle?.();
+            const pin = marqueursCreesParId.get(id)?.marqueur?.getElement?.()?.querySelector(".epingle-pin")?.getBoundingClientRect();
+            return bulle && pin && pin.width > 0 ? { bulle, pin } : null;
+          })
+          .filter(Boolean);
+        if (items.length < 2) return;
+        const bx = (i) => i.bulle.left + i.bulle.width / 2 - c.left;
+        const px = (i) => i.pin.left + i.pin.width / 2 - c.left;
+        const pyHaut = (i) => i.pin.top - c.top + 6;
+        const basBulle = Math.max(...items.map((i) => i.bulle.bottom)) - c.top;
+        const yBarre = basBulle + 16;
+        const troncX = items.reduce((t, i) => t + bx(i), 0) / items.length;
+        const yFourche = Math.min(...items.map(pyHaut)) - 18;
+        items.forEach((i) => trait(`M ${bx(i)} ${i.bulle.bottom - c.top} L ${bx(i)} ${yBarre} L ${troncX} ${yBarre}`));
+        trait(`M ${troncX} ${yBarre} L ${troncX} ${yFourche}`);
+        items.forEach((i) => trait(`M ${troncX} ${yFourche} L ${px(i)} ${yFourche + 8} L ${px(i)} ${pyHaut(i)}`));
+      });
+      cont.appendChild(svg);
+    };
+    let imageArbre = 0;
+    const planifierArbres = () => {
+      if (imageArbre) return;
+      imageArbre = requestAnimationFrame(() => {
+        imageArbre = 0;
+        dessinerArbres();
+      });
+    };
+    // Range les bulles d'un groupe côte à côte au-dessus de ses épingles (leurs pointes sont cachées : les traits prennent le relais).
+    const placerArbres = () => {
+      if (!ARBRE_POUR_GROUPES || !bullesFixesRef.current || carteRef.current !== carte) return;
+      const groupes = carte.__arbres || [];
+      groupes.forEach((ids) => {
+        const infos = ids
+          .map((id) => {
+            const h = popupsBoutiquesRef.current.get(id);
+            const pin = marqueursCreesParId.get(id)?.marqueur?.getElement?.()?.querySelector(".epingle-pin")?.getBoundingClientRect();
+            h?.deplacerBulle?.(0, 0);
+            const bulle = h?.mesurerBulle?.();
+            return h && pin && pin.width > 0 && bulle ? { id, h, pin, bulle } : null;
+          })
+          .filter(Boolean);
+        if (infos.length < 2) return;
+        const ordre = infos.slice().sort((u, v) => u.pin.left - v.pin.left);
+        const ecart = 8;
+        const largeurTotale = ordre.reduce((t, i) => t + i.bulle.width, 0) + ecart * (ordre.length - 1);
+        const centreGroupe = ordre.reduce((t, i) => t + i.pin.left + i.pin.width / 2, 0) / ordre.length;
+        const hautPinMin = Math.min(...ordre.map((i) => i.pin.top));
+        const HAUTEUR_TRAITS = 78;
+        let x = centreGroupe - largeurTotale / 2;
+        ordre.forEach((i) => {
+          const cibleCentreX = x + i.bulle.width / 2;
+          const dx = cibleCentreX - (i.bulle.left + i.bulle.width / 2);
+          // La bulle d'origine se pose juste au-dessus de SON épingle : on la remonte au-dessus de la plus haute du groupe, plus la hauteur des traits.
+          const dy = hautPinMin - i.pin.top - HAUTEUR_TRAITS;
+          i.h.deplacerBulle?.(dx, dy);
+          x += i.bulle.width + ecart;
+        });
+      });
+      ordreMasquerPointes();
+      setTimeout(dessinerArbres, 80);
+    };
+    const ordreMasquerPointes = () => {
+      const groupes = carte.__arbres || [];
+      carte.getContainer().querySelectorAll(".leaflet-popup-tip-container").forEach((t) => (t.style.display = ""));
+      groupes.flat().forEach((id) => {
+        const el = popupsBoutiquesRef.current.get(id)?.mesurerBulleElement?.()?.closest(".leaflet-popup");
+        const tip = el?.querySelector(".leaflet-popup-tip-container");
+        if (tip) tip.style.display = "none";
+      });
+    };
+    if (!carte.__arbreAttache) {
+      carte.__arbreAttache = true;
+      carte.on("move zoom viewreset", planifierArbres);
+      carte.on("zoomend", () => {
+        if (ARBRE_POUR_GROUPES && bullesFixesRef.current) setTimeout(placerArbres, 350);
+      });
+    }
+
     const construireHtmlGroupe = (membres) => {
       const articles = [];
       const vus = new Set();
@@ -2199,10 +2310,14 @@ export default function GlobeExplorateurBoutiques({
       const groupes = [...parRacine.values()].filter((ids) => ids.length > 1);
       const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
       const cache = new Set();
-      groupes.forEach((ids) => {
-        chefDe.set(ids[0], ids);
-        ids.slice(1).forEach((id) => cache.add(id));
-      });
+      if (ARBRE_POUR_GROUPES) {
+        carte.__arbres = groupes; // chaque boutique garde sa bulle ; les groupes sont rangés en arbre (voir placerArbres)
+      } else {
+        groupes.forEach((ids) => {
+          chefDe.set(ids[0], ids);
+          ids.slice(1).forEach((id) => cache.add(id));
+        });
+      }
       const signature = groupes.map((g) => g.join("+")).join("|");
       carte.__groupesBulles = chefDe;
       if (carte.__signatureGroupes === signature) {
@@ -2219,6 +2334,7 @@ export default function GlobeExplorateurBoutiques({
         h.ouvrirFixe?.(ids ? construireHtmlGroupe(ids.map((id) => boutiquesAffichees.find((x) => x.id === id)).filter(Boolean)) : undefined);
       });
       setTimeout(ajouterPicsAssocies, 350);
+      if (ARBRE_POUR_GROUPES) setTimeout(placerArbres, 450);
     };
 
     // Chaque bulle reste FIXE sur sa boutique (sa pointe vise le centre de l'épingle). Quand deux bulles se touchent à l'écran (dézoom), leurs boutiques sont
@@ -2227,6 +2343,11 @@ export default function GlobeExplorateurBoutiques({
       if (!bullesFixesRef.current || carteRef.current !== carte) return;
       const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
       // Déplacer la carte ne change rien aux bulles (elles suivent leurs boutiques) : la fusion n'est recalculée que si le ZOOM a changé, sinon aucune bulle ne se ferme ni ne se rouvre.
+      if (ARBRE_POUR_GROUPES) {
+        appliquerBullesFixes();
+        setTimeout(placerArbres, 500);
+        return;
+      }
       const zoomFusion = carte.getZoom();
       const doitRecalculer = carte.__zoomFusion !== zoomFusion;
       // Applique les groupes courants, attend que toutes les bulles aient fini de se placer, puis renvoie les paires de bulles qui se touchent
@@ -2317,6 +2438,11 @@ export default function GlobeExplorateurBoutiques({
           popupsBoutiquesRef.current.get(b.id)?.fermerFixe?.();
         });
       if (carte.__eviterBulles) carte.off("moveend zoomend", carte.__eviterBulles);
+      if (!ouvert) {
+        carte.__arbres = [];
+        effacerArbres();
+        carte.getContainer().querySelectorAll(".leaflet-popup-tip-container").forEach((t) => (t.style.display = ""));
+      }
       if (carte.__effacerLiens) carte.off("movestart zoomstart", carte.__effacerLiens);
       carte.__effacerLiens = null;
       effacerLiens();
