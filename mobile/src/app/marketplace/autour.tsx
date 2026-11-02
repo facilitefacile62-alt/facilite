@@ -383,9 +383,10 @@ export default function AutourDeMoiScreen() {
       lng: b.longitude,
       titre: b.nom,
       sous: b.quartier || b.ville || 'Sénégal',
+      avatar: { uri: avatars.get(b.id)?.uri, emoji: avatars.get(b.id)?.emoji },
       articles: (articlesToutes[b.id] ?? []).map((a) => ({ id: a.id, titre: a.titre, prix: `${prixLisible(a.prixXof)} F`, photo: a.photos[0] })),
     }));
-  }, [carrousel, visibles, articlesToutes]);
+  }, [carrousel, visibles, articlesToutes, avatars]);
 
   // Une recherche affiche tout de suite le carrousel des boutiques trouvées (moins de clics).
   const lancerRecherche = () => {
