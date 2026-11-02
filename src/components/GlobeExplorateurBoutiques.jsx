@@ -1311,7 +1311,7 @@ export default function GlobeExplorateurBoutiques({
     const ZOOM_SEPARATION = 18;
     // 01/11/2026 : au dézoom (< 16), les boutiques qui se touchent deviennent UN point numéroté (cliquer = zoomer dessus) ; les boutiques isolées restent fixes sur leur position.
     const REGROUPER_EN_BULLES = false; // 01/11/2026 : l'utilisateur refuse tout regroupement en chiffre
-    const ZOOM_ANNEAU = 16;
+    const ZOOM_ANNEAU = 12; // 67 % sur la barre de zoom : dès ce niveau, les épingles qui se recouvrent sont écartées côte à côte (taille et position de base inchangées)
     const SEPARER_BOUTIQUES_PROCHES = true;
     let bullesActives = [];
     let signatureBulles = "";
