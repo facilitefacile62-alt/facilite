@@ -1943,6 +1943,7 @@ export default function GlobeExplorateurBoutiques({
       const mesurerBulle = () => popup.getElement()?.querySelector(".leaflet-popup-content-wrapper")?.getBoundingClientRect() || null;
       const mesurerBulleElement = () => popup.getElement()?.querySelector(".leaflet-popup-content-wrapper") || null;
       const deplacerBulle = (dx, dy) => {
+        if (!carte.hasLayer(popup) || !popup._map) return; // bulle fermée entre-temps (bascule Carrousel/Arbre) : rien à déplacer
         const base = offsetPopup();
         popup.options.offset = [base[0] + dx, base[1] + dy];
         repositionnerBulle();
@@ -2232,7 +2233,7 @@ export default function GlobeExplorateurBoutiques({
         const ordre = infos.slice().sort((u, v) => u.pin.left - v.pin.left);
         const centreGroupe = ordre.reduce((t, i) => t + i.pin.left + i.pin.width / 2, 0) / ordre.length;
         const hautPinMin = Math.min(...ordre.map((i) => i.pin.top));
-        const HAUTEUR_TRAITS = 70; // entre le bas de la bulle la plus basse et la plus haute épingle
+        const HAUTEUR_TRAITS = 58; // entre le bas de la bulle la plus basse et la plus haute épingle
         const DEGAGEMENT_TRONC = 26; // espace entre le tronc et chaque colonne
         const ECART_VERTICAL = 8;
         // Deux colonnes de part et d'autre du tronc (moitié gauche des épingles à gauche, moitié droite à droite), bulles empilées du bas vers le haut.
