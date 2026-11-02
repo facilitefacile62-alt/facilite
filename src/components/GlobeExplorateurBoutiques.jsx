@@ -2121,7 +2121,7 @@ export default function GlobeExplorateurBoutiques({
 
     // Disposition « arbre » (essai du 02/11/2026, croquis de l'utilisateur) : au lieu de fusionner les boutiques proches en une seule bulle, chacune garde SA bulle ; les bulles
     // se rangent côte à côte au-dessus du groupe et sont reliées à leur épingle par des traits qui se rejoignent en un tronc (bulle → barre → tronc → branche → épingle).
-    const ARBRE_POUR_GROUPES = false;
+    const ARBRE_POUR_GROUPES = true; // essai en relief du 02/11/2026 ; remettre false pour revenir à la bulle regroupée
     const effacerArbres = () => carte.getContainer().querySelectorAll("[data-arbres-bulles]").forEach((e) => e.remove());
     const dessinerArbres = () => {
       effacerArbres();
@@ -2135,9 +2135,23 @@ export default function GlobeExplorateurBoutiques({
       svg.setAttribute("data-arbres-bulles", "1");
       svg.setAttribute("width", c.width);
       svg.setAttribute("height", c.height);
-      svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:590;overflow:visible;";
+      svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:590;overflow:visible;filter:drop-shadow(0 4px 3px rgba(15,23,42,.38));";
+      const defs = document.createElementNS(NS, "defs");
+      defs.innerHTML = '<radialGradient id="sphere-arbre" cx="35%" cy="30%" r="75%"><stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#cbd5e1"/><stop offset="100%" stop-color="#64748b"/></radialGradient>';
+      svg.appendChild(defs);
+      const sphere = (x, y, r) => {
+        const o = document.createElementNS(NS, "circle");
+        o.setAttribute("cx", x);
+        o.setAttribute("cy", y);
+        o.setAttribute("r", r);
+        o.setAttribute("fill", "url(#sphere-arbre)");
+        o.setAttribute("stroke", "#334155");
+        o.setAttribute("stroke-width", "0.8");
+        svg.appendChild(o);
+      };
+      // Traits en « tubes » : bord sombre, corps gris clair, reflet blanc au centre.
       const trait = (d) => {
-        [["#0f172a", 5, 0.45], ["#ffffff", 2.5, 1]].forEach(([couleur, largeur, opacite]) => {
+        [["#0f172a", 7, 0.5], ["#cbd5e1", 4.6, 1], ["#ffffff", 1.6, 1]].forEach(([couleur, largeur, opacite]) => {
           const chemin = document.createElementNS(NS, "path");
           chemin.setAttribute("d", d);
           chemin.setAttribute("fill", "none");
@@ -2168,6 +2182,13 @@ export default function GlobeExplorateurBoutiques({
         items.forEach((i) => trait(`M ${bx(i)} ${i.bulle.bottom - c.top} L ${bx(i)} ${yBarre} L ${troncX} ${yBarre}`));
         trait(`M ${troncX} ${yBarre} L ${troncX} ${yFourche}`);
         items.forEach((i) => trait(`M ${troncX} ${yFourche} L ${px(i)} ${yFourche + 8} L ${px(i)} ${pyHaut(i)}`));
+        // Billes aux jonctions : bas de chaque bulle, pied du tronc, fourche, tête de chaque épingle.
+        items.forEach((i) => {
+          sphere(bx(i), i.bulle.bottom - c.top, 4.5);
+          sphere(px(i), pyHaut(i), 4.5);
+        });
+        sphere(troncX, yBarre, 5.5);
+        sphere(troncX, yFourche, 5.5);
       });
       cont.appendChild(svg);
     };
@@ -2208,6 +2229,16 @@ export default function GlobeExplorateurBoutiques({
           const dy = hautPinMin - i.pin.top - HAUTEUR_TRAITS;
           i.h.deplacerBulle?.(dx, dy);
           x += i.bulle.width + ecart;
+        });
+        // Relief : chaque bulle pivote légèrement vers le centre du groupe (perspective), avec une tranche épaisse et une grande ombre portée.
+        ordre.forEach((i, k) => {
+          const w = i.h.mesurerBulleElement?.();
+          if (!w) return;
+          const t = ordre.length > 1 ? (k - (ordre.length - 1) / 2) / ((ordre.length - 1) / 2) : 0;
+          w.style.transformOrigin = "50% 100%";
+          w.style.transform = `perspective(900px) rotateX(5deg) rotateY(${(-t * 10).toFixed(1)}deg)`;
+          w.style.boxShadow = "0 1px 0 #ffffff inset, 0 3px 0 #d3dbe6, 0 6px 0 #b4c0d0, 0 9px 0 #94a3b8, 0 22px 30px rgba(15,23,42,.5)";
+          w.style.transition = "transform .25s ease";
         });
       });
       ordreMasquerPointes();
