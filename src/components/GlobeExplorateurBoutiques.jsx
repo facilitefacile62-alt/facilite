@@ -2343,13 +2343,16 @@ export default function GlobeExplorateurBoutiques({
       if (!bullesFixesRef.current || carteRef.current !== carte) return;
       const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
       // Déplacer la carte ne change rien aux bulles (elles suivent leurs boutiques) : la fusion n'est recalculée que si le ZOOM a changé, sinon aucune bulle ne se ferme ni ne se rouvre.
-      if (ARBRE_POUR_GROUPES) {
-        appliquerBullesFixes();
-        setTimeout(placerArbres, 500);
-        return;
-      }
       const zoomFusion = carte.getZoom();
-      const doitRecalculer = carte.__zoomFusion !== zoomFusion;
+      if (ARBRE_POUR_GROUPES) {
+        // Disposition en arbre : bulles rangées, puis (plus bas) la carte descend si elles dépassent sous les couches du haut.
+        appliquerBullesFixes();
+        await attendre(650);
+        if (!bullesFixesRef.current || carteRef.current !== carte) return;
+        placerArbres();
+        await attendre(250);
+      }
+      const doitRecalculer = !ARBRE_POUR_GROUPES && carte.__zoomFusion !== zoomFusion;
       // Applique les groupes courants, attend que toutes les bulles aient fini de se placer, puis renvoie les paires de bulles qui se touchent
       // (null si la carte a changé entre-temps).
       const appliquerEtMesurer = async () => {
