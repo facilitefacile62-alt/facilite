@@ -246,6 +246,21 @@ export default function GlobeExplorateurBoutiques({
   // Itinéraire demandé depuis le bouton vert des bulles du carrousel (en plus de celui que la page parente peut imposer).
   const [itineraireLocal, setItineraireLocal] = useState(null);
   const itineraireCible = itineraireCibleProp || itineraireLocal;
+  // L'itinéraire demandé depuis une bulle survit à l'actualisation de la page (stocké sur l'appareil) ; il disparaît quand on ferme le carrousel ou une bulle.
+  const CLE_ITINERAIRE = "facilite:itineraire-carte";
+  useEffect(() => {
+    try {
+      const v = JSON.parse(window.localStorage.getItem(CLE_ITINERAIRE) || "null");
+      if (v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lng))) setItineraireLocal(v);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (itineraireLocal) window.localStorage.setItem(CLE_ITINERAIRE, JSON.stringify(itineraireLocal));
+      else window.localStorage.removeItem(CLE_ITINERAIRE);
+    } catch {}
+    if (!itineraireLocal) setTrajetInfo(null);
+  }, [itineraireLocal]);
 
   useEffect(() => {
     if (!itineraireCible || !cartePrete || !carteRef.current) return undefined;
@@ -277,7 +292,7 @@ export default function GlobeExplorateurBoutiques({
 
         let points = [origine, destination];
         let resume = null;
-        if (session) {
+        for (let essai = 0; session && !resume && essai < 2; essai++) {
           try {
             const reponse = await fetch("/api/marketplace/itineraire", {
               method: "POST",
@@ -297,7 +312,7 @@ export default function GlobeExplorateurBoutiques({
               resume = donnees;
             }
           } catch {
-            // repli ci-dessous
+            // nouvel essai, puis repli ci-dessous
           }
         }
         if (annule) return;
@@ -332,7 +347,8 @@ export default function GlobeExplorateurBoutiques({
         couches.push(
           L.circleMarker(destination, { radius: 10, color: "#ffffff", weight: 3, fillColor: "#10b981", fillOpacity: 1 }).addTo(carte)
         );
-        carte.fitBounds(trace.getBounds(), { padding: [60, 60] });
+        // Le cadrage automatique ne vaut que pour un itinéraire demandé par la page (« M'y rendre ») ; depuis le bouton d'une bulle, la carte ne bouge pas.
+        if (itineraireCibleProp) carte.fitBounds(trace.getBounds(), { padding: [60, 60] });
       } catch {
         if (!annule) setTrajetInfo({ texte: "Position indisponible : autorise la localisation." });
       }
@@ -342,7 +358,7 @@ export default function GlobeExplorateurBoutiques({
       annule = true;
       couches.forEach((c) => c.remove());
     };
-  }, [itineraireCible, cartePrete, positionInitiale]);
+  }, [itineraireCible, itineraireCibleProp, cartePrete, positionInitiale]);
   const [horaires, setHoraires] = useState([]);
   const [horairesChargement, setHorairesChargement] = useState(false);
   // Recherche mot-clé de la carte (Point C) — filtre local, sur les
@@ -466,9 +482,13 @@ export default function GlobeExplorateurBoutiques({
       basculerBullesFixesRef.current(true);
     }
   }, [arbreActif]);
+  const carrousselAvantRef = useRef(false);
   useEffect(() => {
     carrousselCarteOuvertRef.current = carrousselCarteOuvert;
     basculerBullesFixesRef.current(carrousselCarteOuvert);
+    // Fermeture du carrousel (touche ou croix) : le trajet demandé depuis une bulle est retiré.
+    if (carrousselAvantRef.current && !carrousselCarteOuvert) setItineraireLocal(null);
+    carrousselAvantRef.current = carrousselCarteOuvert;
   }, [carrousselCarteOuvert]);
   // Article individuellement actif dans le dock "Articles" — distinct de
   // boutiqueSelectionnee (qui ne retient que la boutique) : sans état
@@ -1704,6 +1724,7 @@ export default function GlobeExplorateurBoutiques({
           if (btnFermer) {
             btnFermer.onclick = (e) => {
               e.stopPropagation();
+              setItineraireLocal(null);
               // Fermeture explicite : désépingle aussi, sinon un survol
               // suivant du même marqueur resterait bloqué "épinglé" sans
               // bulle visible.
@@ -1861,8 +1882,6 @@ export default function GlobeExplorateurBoutiques({
               const cible = boutiquesAffichees.find((x) => String(x.id) === btn.getAttribute("data-itineraire"));
               if (cible) {
                 setItineraireLocal({ id: cible.id, nom: cible.nom, lat: Number(cible.lat), lng: Number(cible.lng) });
-                // Redirige la carte vers la position de la boutique (zoom 16 au moins).
-                carte.flyTo([Number(cible.lat), Number(cible.lng)], Math.max(carte.getZoom(), 16), { duration: 0.8 });
               }
             };
           });
