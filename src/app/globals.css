@@ -464,3 +464,5 @@ html.dark .bg-whatsapp-chat {
 
 /* Têtes de profil groupées (épingles qui se recouvrent). */
 .tetes-groupees { background: none; border: 0; }
+
+.tetes-groupees [data-tete] svg, .tetes-groupees [data-tete] img { width: 100% !important; height: 100% !important; object-fit: cover; }

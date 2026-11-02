@@ -1373,7 +1373,34 @@ export default function GlobeExplorateurBoutiques({
 
     // Épingles qui se recouvrent : UN marqueur posé sur leur position, avec la tête de profil de CHAQUE boutique côte à côte (4 têtes pour 4 boutiques). Position et taille fixes ;
     // chaque tête est cliquable et agit comme l'épingle de sa boutique. Dès que les épingles ne se recouvrent plus, elles redeviennent des épingles.
-    function dessinerTetesGroupees(groupes) {
+    function dessinerTetesGroupees() {
+      // Groupes GÉOGRAPHIQUES : les boutiques à 100 m ou moins les unes des autres. Ils ne dépendent donc plus du zoom : la fleur reste la même (mêmes têtes, même taille, même place) à tous les niveaux, et
+      // n'est reconstruite que si le groupe lui-même change (nouvelle boutique, boutique retirée) ou si les épingles ont été recréées.
+      const liste = boutiquesAffichees.filter((b) => Number.isFinite(b.lat) && Number.isFinite(b.lng));
+      const parent = liste.map((_, i) => i);
+      const racine = (i) => {
+        while (parent[i] !== i) {
+          parent[i] = parent[parent[i]];
+          i = parent[i];
+        }
+        return i;
+      };
+      for (let i = 0; i < liste.length; i++) {
+        for (let j = i + 1; j < liste.length; j++) {
+          if (carte.distance([liste[i].lat, liste[i].lng], [liste[j].lat, liste[j].lng]) <= 100) parent[racine(i)] = racine(j);
+        }
+      }
+      const parRacine = new Map();
+      liste.forEach((b, i) => {
+        const r = racine(i);
+        if (!parRacine.has(r)) parRacine.set(r, []);
+        parRacine.get(r).push(b.id);
+      });
+      const groupes = [...parRacine.values()].filter((ids) => ids.length > 1).map((ids) => ids.slice().sort());
+      const signature = groupes.map((g) => g.join("+")).sort().join("|");
+      const toutesMasquees = groupes.flat().every((id) => marqueursCreesParId.get(id)?.marqueur?.getElement?.()?.dataset?.masqueTetes === "1");
+      if (carte.__signatureTetes === signature && toutesMasquees && carte.__coucheTetes) return;
+      carte.__signatureTetes = signature;
       if (!carte.__coucheTetes) carte.__coucheTetes = L.layerGroup().addTo(carte);
       const coucheTetes = carte.__coucheTetes;
       coucheTetes.clearLayers();
@@ -1388,11 +1415,11 @@ export default function GlobeExplorateurBoutiques({
         const membres = ids.map((id) => ({ id, entree: marqueursCreesParId.get(id) })).filter((m) => m.entree?.marqueur?.getElement?.());
         if (membres.length < 2) return;
         // En FLEUR (inspiration donnée par l'utilisateur) : un cœur sombre posé sur la vraie position, des pétales jaunes qui rayonnent autour, et la tête de profil de chaque boutique au bout de son pétale.
-        const TAILLE = 28;
+        const TAILLE = 22;
         const n = membres.length;
         // Taille FIXE : le même rayon pour 2 à 7 boutiques (il ne grandit que s'il y en a plus de 7, pour que les têtes ne se chevauchent pas).
-        const R = Math.max(38, Math.ceil((TAILLE + 4) / (2 * Math.sin(Math.PI / Math.max(n, 8)))));
-        const cote = 2 * (R + TAILLE / 2 + 6);
+        const R = Math.max(28, Math.ceil((TAILLE + 3) / (2 * Math.sin(Math.PI / Math.max(n, 8)))));
+        const cote = 2 * (R + TAILLE / 2 + 5);
         const c0 = cote / 2;
         const tetes = membres.map((m) => {
           const el = m.entree.marqueur.getElement();
@@ -1404,7 +1431,7 @@ export default function GlobeExplorateurBoutiques({
         const petales = tetes
           .map((t, i) => {
             const ang = -90 + (360 * i) / n;
-            return `<div style="position:absolute;left:${c0}px;top:${c0}px;width:${R - 8}px;height:16px;margin-top:-8px;transform-origin:0 50%;transform:rotate(${ang}deg);background:linear-gradient(90deg,#FDE047,#FACC15);border-radius:60% 60% 60% 60% / 50%;border:1px solid rgba(161,98,7,.45);box-shadow:0 2px 4px rgba(0,0,0,.25);"></div>`;
+            return `<div style="position:absolute;left:${c0}px;top:${c0}px;width:${R - 6}px;height:12px;margin-top:-6px;transform-origin:0 50%;transform:rotate(${ang}deg);background:linear-gradient(90deg,#FDE047,#FACC15);border-radius:60% 60% 60% 60% / 50%;border:1px solid rgba(161,98,7,.45);box-shadow:0 2px 4px rgba(0,0,0,.25);"></div>`;
           })
           .join("");
         const visages = tetes
@@ -1412,10 +1439,10 @@ export default function GlobeExplorateurBoutiques({
             const ang = ((-90 + (360 * i) / n) * Math.PI) / 180;
             const x = c0 + R * Math.cos(ang) - TAILLE / 2;
             const y = c0 + R * Math.sin(ang) - TAILLE / 2;
-            return `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${x}px;top:${y}px;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 3px ${t.couleur}, 0 3px 8px rgba(0,0,0,.45);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;pointer-events:auto;">${t.contenu}</div>`;
+            return `<div data-tete="${echapperHtml(String(t.id))}" title="${echapperHtml((boutiquesAffichees.find((b) => b.id === t.id)?.nom || "Boutique").trim())}" style="position:absolute;left:${x}px;top:${y}px;width:${TAILLE}px;height:${TAILLE}px;border-radius:9999px;background:#ffffff;box-shadow:0 0 0 2px ${t.couleur}, 0 2px 6px rgba(0,0,0,.45);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;pointer-events:auto;">${t.contenu}</div>`;
           })
           .join("");
-        const coeur = `<div style="position:absolute;left:${c0 - 11}px;top:${c0 - 11}px;width:22px;height:22px;border-radius:9999px;background:radial-gradient(circle,#450a0a 55%,#7f1d1d);border:3px dotted #F59E0B;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);z-index:2;pointer-events:none;"></div>`;
+        const coeur = `<div style="position:absolute;left:${c0 - 8}px;top:${c0 - 8}px;width:16px;height:16px;border-radius:9999px;background:radial-gradient(circle,#450a0a 55%,#7f1d1d);border:2px dotted #F59E0B;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.5);z-index:2;pointer-events:none;"></div>`;
         const html = `<div style="position:relative;width:${cote}px;height:${cote}px;pointer-events:none;">${petales}${coeur}${visages}</div>`;
         // Position FIXE : le cœur est posé sur le centre du noyau du groupe (la boutique qui a le plus de voisines à 100 m ou moins, avec ces voisines). Quand d'autres boutiques
         // se joignent au groupe en dézoomant, ce noyau ne change pas : la fleur ne se déplace pas.
@@ -1522,7 +1549,7 @@ export default function GlobeExplorateurBoutiques({
         const entree = marqueursCreesParId.get(id);
         if (entree) appliquerDecalageMarqueur(entree, 0, 0);
       });
-      dessinerTetesGroupees(groupesRecouverts || []);
+      dessinerTetesGroupees();
     }
 
     aDesVoisinsRef.current = (id) => {
