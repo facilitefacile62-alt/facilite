@@ -65,7 +65,7 @@ export type PopupBoutique = {
   /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
   action?: { id: string; libelle: string; icone?: string };
   /** null = chargement des articles en cours. */
-  articles: { id: string; titre: string; prix: string; photo?: string; icone?: string }[] | null;
+  articles: { id: string; titre: string; prix: string; photo?: string; icone?: string; boutiqueId?: string }[] | null;
 };
 
 /** Trajet tracé sur la carte (ex. « M'y rendre ») ; `approximatif` = ligne droite en pointillés. */
@@ -117,6 +117,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-prix { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: absolute; left: 6px; bottom: 6px; background: rgba(17,24,39,.88); color: #fff; border-radius: 9999px; padding: 2px 8px; font: 800 11px system-ui, sans-serif; }
   .pb-titre { margin-top: 6px; font: 800 12px system-ui, sans-serif; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .popup-carrousel .leaflet-popup-content-wrapper { border-radius: 18px; padding: 0 0 8px; }
+  .popup-carrousel .pb-nom { max-width: 150px; font-size: 13px; }
+  .popup-carrousel .pb-compte { font: 700 11px system-ui, sans-serif; color: #059669; margin-top: 2px; }
+  .popup-carrousel .pb-conteneur { position: relative; width: 190px; }
+  .popup-carrousel .pb-liste { width: 168px; max-width: 168px; margin: 0 auto; padding: 2px 0 6px; gap: 8px; }
+  .popup-carrousel .pb-art { width: 80px; }
+  .popup-carrousel .pb-photo { width: 80px; height: 96px; }
+  .popup-carrousel .pb-titre { font-size: 10.5px; }
+  .popup-carrousel .pb-it { display: block; margin-top: 4px; padding: 6px 0; border-radius: 10px; background: #10B981; color: #fff; text-align: center; font: 800 11px system-ui, sans-serif; cursor: pointer; }
+  .pb-fleche { position: absolute; top: 40px; width: 28px; height: 28px; border-radius: 9999px; background: #fff; color: #0f172a; font: 900 20px/26px system-ui, sans-serif; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); cursor: pointer; z-index: 5; display: none; }
   .pb-action { display: block; margin: 0 14px 0; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
@@ -486,6 +496,119 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     popupCourant = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, className: 'popup-boutique', offset: decalagePopup(), minWidth: 220, maxWidth: 260 })
       .setLatLng([d.lat, d.lng]).setContent(el).openOn(carte);
   };
+  // Touche « Carrousel » : la bulle de TOUTES les boutiques reste ouverte. Les boutiques à 100 m ou moins l'une de l'autre partagent une seule bulle ; deux bulles qui
+  // se chevauchent d'au moins 10 % sont fusionnées en une seule. Chaque article a son bouton « Itinéraire ».
+  var popupsOuverts = [];
+  var donneesPopups = null;
+  var pairesFusion = [];
+  var zoomFusion = null;
+  function metres(a, b) {
+    var R = 6371000, rad = Math.PI / 180;
+    var dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function fermerPopups() {
+    popupsOuverts.forEach(function (p) { carte.removeLayer(p); });
+    popupsOuverts = [];
+  }
+  function groupesPopups() {
+    var liste = donneesPopups || [];
+    var parent = liste.map(function (_, i) { return i; });
+    function racine(i) { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
+    for (var i = 0; i < liste.length; i++) for (var j = i + 1; j < liste.length; j++) {
+      if (metres(liste[i], liste[j]) <= 100) parent[racine(i)] = racine(j);
+    }
+    pairesFusion.forEach(function (pr) {
+      var i2 = liste.findIndex(function (x) { return x.cle === pr[0]; }), j2 = liste.findIndex(function (x) { return x.cle === pr[1]; });
+      if (i2 >= 0 && j2 >= 0) parent[racine(i2)] = racine(j2);
+    });
+    var map = {};
+    liste.forEach(function (d, i) { var r = racine(i); (map[r] = map[r] || []).push(d); });
+    return Object.keys(map).map(function (k) { return map[k]; });
+  }
+  function contenuCarrousel(membres) {
+    var vus = {}, arts = [];
+    membres.forEach(function (m) { (m.articles || []).forEach(function (a) { if (!vus[a.id]) { vus[a.id] = 1; arts.push({ a: a, b: m.cle }); } }); });
+    var multi = membres.length > 1;
+    var el = document.createElement('div');
+    var cartes = arts.map(function (x) {
+      var a = x.a;
+      return '<div class="pb-art"><div data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
+        + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:34px">' + esc(a.icone || '') + '</div>')
+        + '<span class="pb-prix">' + esc(a.prix) + '</span></div><div class="pb-titre">' + esc(a.titre) + '</div></div>'
+        + '<div class="pb-it" data-act="itineraire:' + esc(x.b) + '">↱ Itinéraire</div></div>';
+    }).join('');
+    el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="' + (multi ? 'rien' : 'boutique:' + esc(membres[0].cle)) + '">' + esc(membres.map(function (m) { return m.titre; }).join(' · ')) + '</div>'
+      + (multi ? '<div class="pb-compte">' + membres.length + ' boutiques · ' + arts.length + ' article' + (arts.length > 1 ? 's' : '') + ' disponible' + (arts.length > 1 ? 's' : '') + '</div>' : (membres[0].sous ? '<div class="pb-lieu">📍 ' + esc(membres[0].sous) + '</div>' : ''))
+      + '</div><div class="pb-x" data-act="fermer-carrousel">✕</div></div>'
+      + '<div class="pb-conteneur">' + (arts.length ? '<div class="pb-liste">' + cartes + '</div>' : '<div class="pb-vide">Aucun article.</div>')
+      + '<div class="pb-fleche" data-fl="g" style="left:-4px">‹</div><div class="pb-fleche" data-fl="d" style="right:-4px">›</div></div>';
+    el.addEventListener('click', function (e) {
+      var f = e.target.closest ? e.target.closest('[data-fl]') : null;
+      var bandeClic = el.querySelector('.pb-liste');
+      if (f && bandeClic) { bandeClic.scrollBy({ left: f.getAttribute('data-fl') === 'g' ? -176 : 176, behavior: 'smooth' }); return; }
+      var t = e.target.closest ? e.target.closest('[data-act]') : null;
+      if (t && t.getAttribute('data-act') !== 'rien') envoyer(t.getAttribute('data-act'));
+    });
+    var bande = el.querySelector('.pb-liste');
+    if (bande) {
+      var fg = el.querySelector('[data-fl="g"]'), fd = el.querySelector('[data-fl="d"]');
+      var maj = function () {
+        fg.style.display = bande.scrollLeft > 2 ? 'block' : 'none';
+        fd.style.display = bande.scrollLeft + bande.clientWidth < bande.scrollWidth - 2 ? 'block' : 'none';
+      };
+      bande.addEventListener('scroll', maj);
+      setTimeout(maj, 60); setTimeout(maj, 400);
+    }
+    return el;
+  }
+  function afficherGroupes() {
+    fermerPopups();
+    groupesPopups().forEach(function (membres) {
+      var chef = membres[0];
+      var sp = chef.cle ? spread[chef.cle] : null;
+      var p = L.popup({ closeButton: false, autoPan: false, closeOnClick: false, autoClose: false, className: 'popup-boutique popup-carrousel', offset: L.point((chef.dx || 0) + (sp ? sp.dx : 0), -74 + (sp ? sp.dy : 0)), minWidth: 190, maxWidth: 190 })
+        .setLatLng([chef.lat, chef.lng]).setContent(contenuCarrousel(membres));
+      p.__cles = membres.map(function (m) { return m.cle; });
+      p.addTo(carte);
+      popupsOuverts.push(p);
+    });
+  }
+  function fusionnerPopups() {
+    if (!donneesPopups) return;
+    var z = carte.getZoom();
+    if (zoomFusion === z) return;
+    pairesFusion = [];
+    var tour = 0;
+    function mesurer() {
+      afficherGroupes();
+      setTimeout(function () {
+        if (!donneesPopups) return;
+        var m = popupsOuverts.map(function (p) { var w = p.getElement() && p.getElement().querySelector('.leaflet-popup-content-wrapper'); return w ? { p: p, r: w.getBoundingClientRect() } : null; }).filter(Boolean);
+        var nouvelles = [];
+        for (var i = 0; i < m.length; i++) for (var j = i + 1; j < m.length; j++) {
+          var a = m[i].r, c = m[j].r;
+          var lw = Math.min(a.right, c.right) - Math.max(a.left, c.left), lh = Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top);
+          if (lw <= 0 || lh <= 0) continue;
+          var petite = Math.min(a.width * a.height, c.width * c.height);
+          if ((lw * lh) / petite >= 0.1) nouvelles.push([m[i].p.__cles[0], m[j].p.__cles[0]]);
+        }
+        tour++;
+        if (nouvelles.length && tour < 8) { pairesFusion = pairesFusion.concat(nouvelles); mesurer(); }
+        else zoomFusion = z;
+      }, 250);
+    }
+    mesurer();
+  }
+  window.majPopups = function (liste) {
+    fermerPopups();
+    donneesPopups = liste && liste.length ? liste : null;
+    zoomFusion = null;
+    pairesFusion = [];
+    if (donneesPopups) fusionnerPopups();
+  };
+  carte.on('zoomend', function () { if (donneesPopups) fusionnerPopups(); });
   var trace = null;
   window.majTrajet = function (t) {
     if (trace) { carte.removeLayer(trace); trace = null; }
@@ -520,6 +643,7 @@ export default function CarteLeaflet({
   commandes,
   focus = null,
   popup = null,
+  popups = null,
   trajet = null,
   style,
 }: {
@@ -546,6 +670,8 @@ export default function CarteLeaflet({
   focus?: string | null;
   /** Bulle d'aperçu au-dessus du rond de la boutique fixée. */
   popup?: PopupBoutique | null;
+  /** Touche « Carrousel » : bulles de toutes les boutiques, regroupées à 100 m, fusionnées si elles se touchent. */
+  popups?: PopupBoutique[] | null;
   /** Trajet à tracer (ligne bleue). */
   trajet?: TrajetCarte | null;
   style?: StyleProp<ViewStyle>;
@@ -584,6 +710,10 @@ export default function CarteLeaflet({
     executer(`window.majPopup && window.majPopup(${JSON.stringify(popup)})`);
   }, [executer, popup]);
 
+  const majPopups = useCallback(() => {
+    executer(`window.majPopups && window.majPopups(${JSON.stringify(popups)})`);
+  }, [executer, popups]);
+
   const majTrajet = useCallback(() => {
     executer(`window.majTrajet && window.majTrajet(${JSON.stringify(trajet)})`);
   }, [executer, trajet]);
@@ -591,7 +721,8 @@ export default function CarteLeaflet({
   useEffect(() => {
     miseAJour();
     majPopup();
-  }, [miseAJour, majPopup]);
+    majPopups();
+  }, [miseAJour, majPopup, majPopups]);
 
   useEffect(() => {
     majTrajet();
@@ -612,13 +743,14 @@ export default function CarteLeaflet({
       if (e.data?.pret) {
         miseAJour();
         majPopup();
+        majPopups();
         majTrajet();
       }
       if (e.data?.marqueur && onMarqueur) onMarqueur(String(e.data.marqueur));
     };
     window.addEventListener('message', surMessage);
     return () => window.removeEventListener('message', surMessage);
-  }, [miseAJour, majPopup, majTrajet, onMarqueur]);
+  }, [miseAJour, majPopup, majPopups, majTrajet, onMarqueur]);
 
   const surMessageNatif = (e: WebViewMessageEvent) => {
     if (onMarqueur) onMarqueur(e.nativeEvent.data);
@@ -644,6 +776,7 @@ export default function CarteLeaflet({
           onLoadEnd={() => {
             miseAJour();
             majPopup();
+            majPopups();
             majTrajet();
           }}
           scrollEnabled={false}
