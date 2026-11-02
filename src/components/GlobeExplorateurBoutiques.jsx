@@ -1795,6 +1795,29 @@ export default function GlobeExplorateurBoutiques({
             );
           }
 
+          el.querySelectorAll("[data-icone-boutique]").forEach((ic) => {
+            ic.onclick = (e) => {
+              e.stopPropagation();
+              const cible = boutiquesAffichees.find((x) => String(x.id) === ic.getAttribute("data-icone-boutique"));
+              if (cible) {
+                setBoutiqueSelectionnee(cible);
+                setVueBoutiqueDetails(true);
+              }
+            };
+          });
+          if (bande && !bande.__anneauPret && el.querySelector("[data-icone-boutique]")) {
+            bande.__anneauPret = true;
+            const majAnneau = () => {
+              const z = bande.getBoundingClientRect();
+              const premier = [...bande.querySelectorAll("[data-boutique-de]")].find((c) => c.getBoundingClientRect().right > z.left + 8);
+              const id = premier?.getAttribute("data-boutique-de");
+              el.querySelectorAll("[data-icone-boutique]").forEach((ic) => {
+                ic.style.borderColor = ic.getAttribute("data-icone-boutique") === id ? "#10b981" : "#e2e8f0";
+              });
+            };
+            bande.addEventListener("scroll", majAnneau, { passive: true });
+            setTimeout(majAnneau, 40);
+          }
           el.querySelectorAll("[data-itineraire]").forEach((btn) => {
             btn.onclick = (e) => {
               e.stopPropagation();
@@ -2287,18 +2310,21 @@ export default function GlobeExplorateurBoutiques({
           }
         })
       );
-      const noms = membres.map((m) => echapperHtml((m.nom || "Boutique").trim())).join(" · ");
-      const cartes = articles
-        .map(({ a: art, boutiqueId, membre }) => {
-          // Icône de profil de la boutique de cet article (logo, sinon avatar Bitmoji, sinon emoji) : on voit tout de suite de quelle boutique il vient.
+      // En-tête : une pastille de profil CLIQUABLE par boutique du groupe (logo, sinon avatar Bitmoji, sinon emoji). Celle dont les articles passent est entourée.
+      const pastilles = membres
+        .map((m, k) => {
           let icone = "🏪";
           try {
-            icone = membre?.logo_url ? `<img src="${echapperHtml(membre.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : membre?.avatar_config ? svgAvatarBoutique(membre.avatar_config, 26) : icone;
+            icone = m.logo_url ? `<img src="${echapperHtml(m.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />` : m.avatar_config ? svgAvatarBoutique(m.avatar_config, 30) : icone;
           } catch {}
-          const pastille = `<div title="${echapperHtml((membre?.nom || "Boutique").trim())}" style="position:absolute;top:5px;left:5px;width:26px;height:26px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid #ffffff;box-shadow:0 1px 4px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;z-index:3;">${icone}</div>`;
+          return `<button type="button" data-icone-boutique="${echapperHtml(String(m.id))}" title="${echapperHtml((m.nom || "Boutique").trim())}" aria-label="${echapperHtml((m.nom || "Boutique").trim())}" style="width:30px;height:30px;border-radius:9999px;overflow:hidden;background:#ffffff;border:2px solid ${k === 0 ? "#10b981" : "#e2e8f0"};padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer;flex:none;">${icone}</button>`;
+        })
+        .join("");
+      const cartes = articles
+        .map(({ a: art, boutiqueId }) => {
           const photoUrl = art.photos?.[0] ? urlPhoto(art.photos[0]) : art.photo ? urlPhoto(art.photo) : art.image ? urlPhoto(art.image) : "";
           const prixTxt = art.prix_xof || art.prix;
-          return `<div style="flex-shrink:0; width:74px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${pastille}${
+          return `<div data-boutique-de="${echapperHtml(String(boutiqueId))}" style="flex-shrink:0; width:74px;"><div data-article-id="${art.id}" style="flex-shrink:0; width:74px; height:96px; border-radius:14px; overflow:hidden; background:#c4a4b8; position:relative; box-shadow:0 3px 10px rgba(0,0,0,0.15); cursor:pointer;">${
             photoUrl
               ? `<img src="${photoUrl}" alt="${echapperHtml(art.titre || "")}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
               : `<div style="width:100%; height:100%; background:linear-gradient(135deg,#c4a4b8,#a88b9e); display:flex; align-items:center; justify-content:center; font-size:22px;">🛍️</div>`
@@ -2308,8 +2334,8 @@ export default function GlobeExplorateurBoutiques({
       return `<div class="bulle-produits-container" style="position:relative; width:190px; max-width:190px; background:#ffffff; border-radius:18px; padding:10px 10px 8px 10px; font-family:inherit; color:#0f172a; box-shadow: 0 16px 36px rgba(0,0,0,0.35);">
         <button type="button" class="btn-fermer-bulle" style="position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:9999px; background:#f1f5f9; border:none; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:11px; font-weight:900; cursor:pointer; z-index:20; line-height:1;" title="Fermer">✕</button>
         <div style="margin-bottom:8px; padding-right:22px;">
-          <div style="font-size:12px; font-weight:900; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${noms}</div>
-          <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:2px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px;">${pastilles}</div>
+          <div style="font-size:9.5px; font-weight:700; color:#64748b; margin-top:4px;">${membres.length} boutiques · <span style="color:#059669;">${articles.length} article${articles.length > 1 ? "s" : ""} disponible${articles.length > 1 ? "s" : ""}</span></div>
         </div>
         <div class="bulle-defilement" style="width:156px; margin:0 auto; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 1px 4px 1px; -webkit-overflow-scrolling:touch; touch-action:pan-x; overscroll-behavior-x:contain; cursor:grab; user-select:none;">${cartes}</div>
       </div>`;
