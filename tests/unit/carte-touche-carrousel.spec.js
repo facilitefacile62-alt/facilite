@@ -65,9 +65,9 @@ test("bulles FIXES sur leur boutique : jamais déplacées ; deux bulles qui se t
   expect(c).toContain("carte.__descentes = 0;");
 });
 
-test("boutiques proches : écartées les unes des autres (jamais empilées), « Vous êtes ici » hors du calcul ; écartement adapté aux épingles de 44 px", async () => {
+test("boutiques proches : jamais déplacées (aucun écartement), « Vous êtes ici » hors du calcul ; écartement adapté aux épingles de 44 px", async () => {
   const c = g();
-  expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = true;");
+  expect(c).toContain("const SEPARER_BOUTIQUES_PROCHES = false;"); // les épingles ne quittent jamais leur position (demande du 02/11/2026)
   expect(c).toContain("SEPARER_BOUTIQUES_PROCHES && zoom >= ZOOM_ANNEAU ? decalages.get(p.id) : { dx: 0, dy: 0 }");
   expect(c).toContain("const REGROUPER_EN_BULLES = false;"); // dézoom : boutiques qui se touchent = un point numéroté ; zoom 16+ : écartées
   expect(c).not.toContain('points.push({ id: "__ici__"'); // ma position ne repousse plus personne

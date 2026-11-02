@@ -1311,7 +1311,8 @@ export default function GlobeExplorateurBoutiques({
     // 01/11/2026 : au dézoom (< 16), les boutiques qui se touchent deviennent UN point numéroté (cliquer = zoomer dessus) ; les boutiques isolées restent fixes sur leur position.
     const REGROUPER_EN_BULLES = false; // 01/11/2026 : l'utilisateur refuse tout regroupement en chiffre
     const ZOOM_ANNEAU = 12; // 67 % sur la barre de zoom : dès ce niveau, les épingles qui se recouvrent sont écartées côte à côte (taille et position de base inchangées)
-    const SEPARER_BOUTIQUES_PROCHES = true;
+    // 02/11/2026 : les épingles ne quittent JAMAIS leur position (ni écartement en cercle, ni rosette) ; chaque boutique garde sa propre bulle (aucune fusion) sauf avec la touche « Arbre ».
+    const SEPARER_BOUTIQUES_PROCHES = false;
     let bullesActives = [];
     let signatureBulles = "";
     const groupeDeBoutique = new Map(); // id boutique -> ids du groupe (regroupé)
@@ -2421,7 +2422,8 @@ export default function GlobeExplorateurBoutiques({
         if (!parRacine.has(r)) parRacine.set(r, []);
         parRacine.get(r).push(b.id);
       });
-      const groupes = [...parRacine.values()].filter((ids) => ids.length > 1);
+      // Aucun regroupement de bulles, sauf pour la touche « Arbre » (qui a besoin des groupes pour ranger les bulles autour d'un tronc).
+      const groupes = arbreActifRef.current ? [...parRacine.values()].filter((ids) => ids.length > 1) : [];
       const chefDe = new Map(); // id -> ids du groupe (pour le chef seulement)
       const cache = new Set();
       if (arbreActifRef.current) {
@@ -2458,15 +2460,13 @@ export default function GlobeExplorateurBoutiques({
       const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
       // Déplacer la carte ne change rien aux bulles (elles suivent leurs boutiques) : la fusion n'est recalculée que si le ZOOM a changé, sinon aucune bulle ne se ferme ni ne se rouvre.
       const zoomFusion = carte.getZoom();
-      if (arbreActifRef.current) {
-        // Disposition en arbre : bulles rangées, puis (plus bas) la carte descend si elles dépassent sous les couches du haut.
-        appliquerBullesFixes();
-        await attendre(650);
-        if (!bullesFixesRef.current || carteRef.current !== carte) return;
-        placerArbres();
-        await attendre(250);
-      }
-      const doitRecalculer = !arbreActifRef.current && carte.__zoomFusion !== zoomFusion;
+      // Bulles ouvertes telles quelles (une par boutique) ; en mode « Arbre », rangées autour du tronc. Puis la carte descend si elles dépassent sous les couches du haut.
+      appliquerBullesFixes();
+      await attendre(650);
+      if (!bullesFixesRef.current || carteRef.current !== carte) return;
+      if (arbreActifRef.current) placerArbres();
+      await attendre(250);
+      const doitRecalculer = false; // plus aucune fusion par chevauchement
       // Applique les groupes courants, attend que toutes les bulles aient fini de se placer, puis renvoie les paires de bulles qui se touchent
       // (null si la carte a changé entre-temps).
       const appliquerEtMesurer = async () => {
