@@ -19,7 +19,6 @@ import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
-import CarteBoutiqueChoisie from "@/components/CarteBoutiqueChoisie";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
 // Les styles Carto Dark Matter / Voyager sont retirés : Carto a fermé l'accès
@@ -3235,9 +3234,7 @@ export default function GlobeExplorateurBoutiques({
           ref={dockRef}
           className="absolute bottom-4 inset-x-0 z-20 px-3 sm:px-6 flex flex-col items-center gap-2 pointer-events-none"
         >
-          {boutiqueSelectionnee && ficheCarteOuverte ? (
-            <CarteBoutiqueChoisie boutique={boutiqueSelectionnee} onFermer={() => setFicheCarteOuverte(false)} />
-          ) : null}
+          {/* 02/11/2026 : la carte du bas (Itinéraire / Appeler / WhatsApp / Partager) ne s'ouvre plus au toucher d'une épingle (demande de l'utilisateur). */}
           {/* Pilule d'information active */}
           <div className="pointer-events-auto px-4 py-2 rounded-full bg-[#1877F2]/95 hover:bg-[#1877F2] text-white text-xs font-extrabold shadow-2xl backdrop-blur-md border border-white/20 flex items-center gap-2 cursor-pointer transition transform hover:scale-102">
             <i className="fa-solid fa-house text-xs"></i>
