@@ -246,7 +246,7 @@ export default function Carte3D() {
     if (!carte || !ml || etat !== "pret") return undefined;
     const crees = affichees.map((b) => {
       const el = elementRepere(b);
-      const popup = new ml.Popup({ offset: [0, -92], closeButton: true, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(b));
+      const popup = new ml.Popup({ offset: [0, -92], closeButton: false, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(b));
       popup.on("open", () => {
         const racine = popup.getElement();
         if (racine) brancherFleches(racine);
@@ -279,6 +279,7 @@ export default function Carte3D() {
 
   return (
     <div className="fixed inset-0 bg-[#e8eaee]" style={{ zIndex: 50 }}>
+      <style>{".maplibregl-ctrl-bottom-right{bottom:104px !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}"}</style>
       <div ref={conteneurRef} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} aria-label="Carte 3D des boutiques" />
       {etat === "chargement" && <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>}
       {etat === "repli" && (
