@@ -61,6 +61,21 @@ function contient(tuile, m, lieu, p) {
   return true;
 }
 
+// Rapport d'appartenance à une boîte orientée : projection du point sur chacun des 3 demi-axes (|valeur| <= 1 sur les trois = dedans). Sert au diagnostic hors ligne.
+function rapports(tuile, m, p) {
+  const b = tuile?.boundingVolume?.box;
+  if (!b) return null;
+  const c = appliquer(m, b.slice(0, 3), true);
+  const axes = [b.slice(3, 6), b.slice(6, 9), b.slice(9, 12)].map((x) => appliquer(m, x, false));
+  const d = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+  return axes.map((u) => {
+    const n2 = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
+    return n2 === 0 ? null : Math.round(((d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / n2) * 1e6) / 1e6;
+  });
+}
+// Les valeurs de key= et session= sont remplacées avant toute copie : la réponse brute ne contient aucun secret.
+const nettoyer = (obj) => JSON.stringify(obj, null, 1).replace(/(key|session)=[^&"\\\s]+/gi, "$1=XXX");
+
 // Adresse du contenu d'une tuile : « content » (1.0) ou « contents » (1.1, plusieurs contenus).
 function adresseContenu(t) {
   return t?.content?.uri ?? t?.content?.url ?? t?.contents?.[0]?.uri ?? t?.contents?.[0]?.url ?? null;
@@ -72,6 +87,22 @@ export default function TestGoogle3D() {
   const [faits, setFaits] = useState({});
   const [sorties, setSorties] = useState({});
   const racinesUtilisees = useRef(0);
+  const brutParLieu = useRef({});
+  const [pret, setPret] = useState(0);
+  const [copie, setCopie] = useState("");
+  const [texteBrut, setTexteBrut] = useState("");
+
+  // Copie hors ligne : réponses reçues (clé et session remplacées par XXX) + point en ECEF + détail de chaque test d'appartenance. Aucune requête.
+  async function copierBrut() {
+    const texte = nettoyer(brutParLieu.current);
+    setTexteBrut(texte);
+    try {
+      await navigator.clipboard.writeText(texte);
+      setCopie("Copié dans le presse-papiers (aucun secret : key= et session= remplacés par XXX).");
+    } catch {
+      setCopie("Copie automatique impossible : sélectionnez le texte ci-dessous et copiez-le à la main.");
+    }
+  }
   const cle = process.env.NEXT_PUBLIC_GOOGLE_TILES_KEY;
 
   const maj = (id, f) => setSorties((s) => ({ ...s, [id]: f(s[id] || { lignes: [], verdict: "" }) }));
@@ -97,6 +128,7 @@ export default function TestGoogle3D() {
       return binaire ? r.arrayBuffer() : r.json();
     };
     let raison = "";
+    let brut = null;
     try {
       const p = versEcef(lieu.lat, lieu.lng);
       racinesUtilisees.current++;
@@ -104,6 +136,9 @@ export default function TestGoogle3D() {
       const ts = await get(RACINE);
       let cur = ts.root;
       let m = produit(IDENTITE, cur.transform || IDENTITE);
+      brut = { lieu: lieu.id, pointEcef: p, reponseRacine: ts, matriceRacine: m, tuilesRetenues: [], tilesetsExternes: [], evaluations: [] };
+      brutParLieu.current[lieu.id] = brut;
+      setPret((x) => x + 1);
       ligne(`Racine : volume « ${typeVolume(cur)} », ${(cur.children || []).length} enfant(s), contenu : ${adresseContenu(cur) ? (estModele(adresseContenu(cur)) ? "modèle" : "tileset externe") : "aucun"}, erreur géométrique ${erreurTxt(cur.geometricError)}.`);
       let profondeur = 0, ge = cur.geometricError, glb = null, ouverts = 0;
       for (let garde = 0; garde < 60; garde++) {
@@ -113,6 +148,7 @@ export default function TestGoogle3D() {
           if (requetes >= MAX_REQUETES - 1) { raison = "plafond de requêtes atteint avant d'ouvrir un tileset externe"; break; }
           const sous = await get(uri);
           ouverts++;
+          brut.tilesetsExternes.push(sous);
           cur = sous.root;
           m = produit(m, cur.transform || IDENTITE);
           ge = cur.geometricError;
@@ -122,8 +158,17 @@ export default function TestGoogle3D() {
         }
         const enfants = cur.children || [];
         if (!enfants.length) { raison = "fin de l'arbre (aucun enfant, pas de contenu à ouvrir)"; break; }
-        const suivant = enfants.find((e) => contient(e, m, lieu, p));
-        if (!suivant) { raison = `aucun des ${enfants.length} enfants ne contient le point (volumes : ${[...new Set(enfants.map(typeVolume))].join(", ")})`; break; }
+        // Le « transform » d'une tuile s'applique à son propre volume, à son contenu et à ses enfants : on le compose AVANT de tester l'appartenance (avant cette correction, seul celui de la racine l'était).
+        const evalues = enfants.map((e, i) => {
+          const me = produit(m, e.transform || IDENTITE);
+          return { e, me, i, ok: contient(e, me, lieu, p) };
+        });
+        evalues.forEach((x) => brut.evaluations.push({ profondeur: profondeur + 1, enfant: x.i, volume: typeVolume(x.e), aTransform: !!x.e.transform, rapportsAxes: rapports(x.e, x.me, p), dedans: x.ok }));
+        const retenu = evalues.find((x) => x.ok);
+        if (!retenu) { raison = `aucun des ${enfants.length} enfants ne contient le point (volumes : ${[...new Set(enfants.map(typeVolume))].join(", ")})`; break; }
+        const suivant = retenu.e;
+        m = retenu.me;
+        brut.tuilesRetenues.push({ profondeur: profondeur + 1, tuile: suivant, matriceCumulee: m });
         cur = suivant;
         profondeur++;
         ge = cur.geometricError;
@@ -163,6 +208,11 @@ export default function TestGoogle3D() {
           {sorties[l.id]?.verdict ? <p id={`verdict-${l.id}`} className="mt-2 rounded-xl bg-amber-100 p-3 font-bold">{sorties[l.id].verdict}</p> : null}
         </section>
       ))}
+      <button id="copier-brut" type="button" onClick={copierBrut} disabled={!pret} className="rounded-xl bg-gray-800 px-4 py-3 font-extrabold text-white disabled:bg-gray-400">
+        Copier la réponse brute
+      </button>
+      {copie ? <p className="mt-2 font-bold">{copie}</p> : null}
+      {texteBrut ? <textarea id="texte-brut" readOnly value={texteBrut} className="mt-2 h-48 w-full rounded-lg border p-2 font-mono text-xs" /> : null}
     </main>
   );
 }
