@@ -321,12 +321,21 @@ export default function Carte3D() {
               <button type="button" onClick={() => setCarrousel((v) => !v)} aria-pressed={carrousel} className={chipEtat(carrousel)}>
                 Carrousel
               </button>
-              <button type="button" onClick={surBascule} aria-pressed={mode3D} title={mode3D ? "Passer en 2D" : "Passer en 3D"} className={`${CHIP} bg-sky-500 text-white`}>
-                {mode3D ? "3D → 2D" : "2D → 3D"}
-              </button>
               <span className="shrink-0 self-center rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gray-900">Prototype</span>
             </div>
           </div>
+          {/* Bouton 2D / 3D : toujours visible (rond, à droite), il ne change que le rendu de la carte */}
+          <button
+            type="button"
+            onClick={surBascule}
+            aria-pressed={mode3D}
+            aria-label={mode3D ? "Passer en 2D" : "Passer en 3D"}
+            className="absolute right-3 flex h-14 w-14 flex-col items-center justify-center rounded-full bg-sky-500 text-white shadow-2xl"
+            style={{ top: 132, zIndex: 5 }}
+          >
+            <span className="text-[15px] font-black leading-none">{mode3D ? "3D" : "2D"}</span>
+            <span className="mt-0.5 text-[8px] font-extrabold leading-none opacity-90">{mode3D ? "→ 2D" : "→ 3D"}</span>
+          </button>
           {/* Bande de boutiques en bas, comme sur la carte 2D */}
           <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none" }}>
             {info && (
