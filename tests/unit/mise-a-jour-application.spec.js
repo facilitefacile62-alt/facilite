@@ -91,7 +91,7 @@ test.describe("le code", () => {
 test("le fichier de version est public : le proxy d'authentification l'exclut (sinon l'application anonyme recevrait la page /login)", () => {
   const p = lire("src/proxy.js");
   const bs = String.fromCharCode(92);
-  expect(p).toContain("manifest" + bs + bs + ".webmanifest|app-version" + bs + bs + ".json|robots");
+  expect(p).toContain("manifest" + bs + bs + ".webmanifest|app-version" + bs + bs + ".json|carte3d/|robots"); // carte3d/ : worker et bâtiments de la carte 3D, eux aussi publics
 });
 
 test("pastille rouge sur l'icône ☰ des en-têtes de Facilité et de Locaux quand une mise à jour est disponible", () => {
