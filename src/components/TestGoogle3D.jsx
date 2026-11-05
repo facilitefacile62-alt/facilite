@@ -1,12 +1,18 @@
 "use client";
 // TEST de couverture : Google Photorealistic 3D Tiles couvre-t-il Dakar, avec des bâtiments en volume ?
-// Une seule requête « racine » par clic, bouton désactivé après le premier clic, aucun rechargement automatique. La clé vient de NEXT_PUBLIC_GOOGLE_TILES_KEY (lue au build) et n'est ni affichée ni stockée :
-// les adresses affichées dans le rapport en sont débarrassées. On descend l'arbre de tuiles uniquement vers le point testé, avec un plafond de requêtes.
-import { useState } from "react";
+// Deux boutons à usage unique : Dakar, puis la tour Eiffel (lieu sûr, pour vérifier que le test lui-même fonctionne). Une requête « racine » par bouton, jamais plus de 3 au total pour la page, aucun rechargement automatique.
+// La clé vient de NEXT_PUBLIC_GOOGLE_TILES_KEY (lue au build) ; ni la clé ni la session ne sont affichées. On descend l'arbre de tuiles uniquement vers le point testé : on suit les enfants ET les contenus externes (.json),
+// plafond de 14 requêtes par bouton (tuile de détail comprise).
+
+import { useRef, useState } from "react";
 
 const RACINE = "https://tile.googleapis.com/v1/3dtiles/root.json";
-const POINT = { nom: "Dakar Plateau (place de l'Indépendance)", lat: 14.6708, lng: -17.4377 };
 const MAX_REQUETES = 14;
+const MAX_RACINES = 3;
+const LIEUX = [
+  { id: "dakar", bouton: "Tester Dakar", nom: "Dakar Plateau (place de l'Indépendance)", lat: 14.6708, lng: -17.4377 },
+  { id: "paris", bouton: "Contrôle : tour Eiffel (Paris)", nom: "Paris (tour Eiffel)", lat: 48.8584, lng: 2.2945 },
+];
 
 function versEcef(latDeg, lngDeg) {
   const a = 6378137, f = 1 / 298.257223563, e2 = f * (2 - f);
@@ -15,7 +21,7 @@ function versEcef(latDeg, lngDeg) {
   return [n * Math.cos(la) * Math.cos(lo), n * Math.cos(la) * Math.sin(lo), n * (1 - e2) * Math.sin(la)];
 }
 
-// Applique la matrice 4x4 (colonne par colonne) cumulée au centre et aux axes de la boîte.
+// Matrice 4x4 stockée colonne par colonne (convention 3D Tiles).
 function appliquer(m, v, point) {
   return [
     m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + (point ? m[12] : 0),
@@ -30,114 +36,133 @@ function produit(a, b) {
 }
 const IDENTITE = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-function contient(tuile, m, p) {
-  const bv = tuile.boundingVolume;
+function typeVolume(t) {
+  const bv = t?.boundingVolume;
+  return bv?.region ? "region" : bv?.box ? "box" : bv?.sphere ? "sphere" : "aucun";
+}
+// Un volume inconnu (sphère, absent) est traité comme « contient » pour ne jamais arrêter la descente à tort ; le type est signalé dans le diagnostic.
+function contient(tuile, m, lieu, p) {
+  const bv = tuile?.boundingVolume;
   if (bv?.region) {
     const [o, s, e, n] = bv.region;
-    const la = (POINT.lat * Math.PI) / 180, lo = (POINT.lng * Math.PI) / 180;
+    const la = (lieu.lat * Math.PI) / 180, lo = (lieu.lng * Math.PI) / 180;
     return lo >= o && lo <= e && la >= s && la <= n;
   }
-  if (!bv?.box) return false;
-  const b = bv.box;
-  const c = appliquer(m, b.slice(0, 3), true);
-  const axes = [b.slice(3, 6), b.slice(6, 9), b.slice(9, 12)].map((x) => appliquer(m, x, false));
-  const d = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
-  return axes.every((u) => {
-    const n2 = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
-    return n2 === 0 ? true : Math.abs((d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / n2) <= 1.0001;
-  });
+  if (bv?.box) {
+    const b = bv.box;
+    const c = appliquer(m, b.slice(0, 3), true);
+    const axes = [b.slice(3, 6), b.slice(6, 9), b.slice(9, 12)].map((x) => appliquer(m, x, false));
+    const d = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+    return axes.every((u) => {
+      const n2 = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
+      return n2 === 0 ? true : Math.abs((d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / n2) <= 1.0001;
+    });
+  }
+  return true;
 }
 
+// Adresse du contenu d'une tuile : « content » (1.0) ou « contents » (1.1, plusieurs contenus).
+function adresseContenu(t) {
+  return t?.content?.uri ?? t?.content?.url ?? t?.contents?.[0]?.uri ?? t?.contents?.[0]?.url ?? null;
+}
+const estModele = (u) => /\.(glb|gltf|b3dm|i3dm|pnts)(\?|$)/i.test(u);
+const erreurTxt = (g) => (g == null ? "?" : g >= 1e10 ? "infinie" : `${Math.round(g * 10) / 10} m`);
+
 export default function TestGoogle3D() {
-  const [lance, setLance] = useState(false);
-  const [lignes, setLignes] = useState([]);
-  const [verdict, setVerdict] = useState("");
+  const [faits, setFaits] = useState({});
+  const [sorties, setSorties] = useState({});
+  const racinesUtilisees = useRef(0);
   const cle = process.env.NEXT_PUBLIC_GOOGLE_TILES_KEY;
 
-  const ajouter = (t) => setLignes((l) => [...l, t]);
+  const maj = (id, f) => setSorties((s) => ({ ...s, [id]: f(s[id] || { lignes: [], verdict: "" }) }));
 
-  async function tester() {
-    if (lance) return;
-    setLance(true);
-    if (!cle) {
-      setVerdict("Clé absente de cette version de la page : la preview n'a pas été reconstruite après l'ajout de la variable. Aucune requête envoyée.");
-      return;
-    }
-    let requetes = 0, racines = 0;
+  async function tester(lieu) {
+    if (faits[lieu.id]) return;
+    setFaits((f) => ({ ...f, [lieu.id]: true }));
+    const ligne = (t) => maj(lieu.id, (o) => ({ ...o, lignes: [...o.lignes, t] }));
+    const verdict = (t) => maj(lieu.id, (o) => ({ ...o, verdict: t }));
+    if (!cle) return verdict("Clé absente de cette version de la page : la preview n'a pas été reconstruite après l'ajout de la variable. Aucune requête envoyée.");
+    if (racinesUtilisees.current >= MAX_RACINES) return verdict("Plafond de requêtes racine atteint pour cette page : aucune requête envoyée.");
+    let requetes = 0, racines = 0, session = null;
     const get = async (url, binaire) => {
       if (requetes >= MAX_REQUETES) throw new Error("plafond de requêtes atteint");
       requetes++;
       const u = new URL(url, "https://tile.googleapis.com/");
       if (u.hostname !== "tile.googleapis.com") throw new Error("hôte inattendu");
+      if (u.searchParams.get("session")) session = u.searchParams.get("session");
+      else if (session) u.searchParams.set("session", session);
       if (!u.searchParams.has("key")) u.searchParams.set("key", cle);
       const r = await fetch(u.toString(), { cache: "no-store" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return binaire ? r.arrayBuffer() : r.json();
     };
+    let raison = "";
     try {
-      const p = versEcef(POINT.lat, POINT.lng);
+      const p = versEcef(lieu.lat, lieu.lng);
+      racinesUtilisees.current++;
       racines++;
-      ajouter(`Requête racine (${racines}) …`);
       const ts = await get(RACINE);
-      let courant = ts.root, m = produit(IDENTITE, courant.transform || IDENTITE);
-      let profondeur = 0, derniereErreurGeo = courant.geometricError, glb = null, jsonSuivis = 1;
-      if (!contient(courant, m, p)) {
-        setVerdict("Dakar n'est pas dans la zone de la tuile racine : pas de couverture.");
-        return;
-      }
-      for (let garde = 0; garde < 40; garde++) {
-        const uri = courant.content?.uri;
-        if (uri && /\.glb(\?|$)/.test(uri)) glb = { uri, erreurGeo: courant.geometricError };
-        if (uri && /\.json(\?|$)/.test(uri) && courant !== ts.root) {
+      let cur = ts.root;
+      let m = produit(IDENTITE, cur.transform || IDENTITE);
+      ligne(`Racine : volume « ${typeVolume(cur)} », ${(cur.children || []).length} enfant(s), contenu : ${adresseContenu(cur) ? (estModele(adresseContenu(cur)) ? "modèle" : "tileset externe") : "aucun"}, erreur géométrique ${erreurTxt(cur.geometricError)}.`);
+      let profondeur = 0, ge = cur.geometricError, glb = null, ouverts = 0;
+      for (let garde = 0; garde < 60; garde++) {
+        const uri = adresseContenu(cur);
+        if (uri && estModele(uri)) glb = { uri, ge: cur.geometricError };
+        if (uri && !estModele(uri)) {
+          if (requetes >= MAX_REQUETES - 1) { raison = "plafond de requêtes atteint avant d'ouvrir un tileset externe"; break; }
           const sous = await get(uri);
-          jsonSuivis++;
-          courant = sous.root;
-          m = produit(m, courant.transform || IDENTITE);
-          derniereErreurGeo = courant.geometricError;
-          ajouter(`Sous-arbre ${jsonSuivis} chargé (erreur géométrique ${Math.round(courant.geometricError)} m).`);
+          ouverts++;
+          cur = sous.root;
+          m = produit(m, cur.transform || IDENTITE);
+          ge = cur.geometricError;
+          ligne(`Tileset externe ${ouverts} ouvert : volume « ${typeVolume(cur)} », ${(cur.children || []).length} enfant(s), contenu : ${adresseContenu(cur) ? (estModele(adresseContenu(cur)) ? "modèle" : "tileset externe") : "aucun"}, erreur ${erreurTxt(cur.geometricError)}.`);
+          if (!contient(cur, m, lieu, p)) { raison = "le point n'est pas dans le volume du tileset ouvert"; break; }
           continue;
         }
-        const enfants = courant.children || [];
-        const suivant = enfants.find((e) => contient(e, m, p));
-        if (!suivant) break;
-        courant = suivant;
+        const enfants = cur.children || [];
+        if (!enfants.length) { raison = "fin de l'arbre (aucun enfant, pas de contenu à ouvrir)"; break; }
+        const suivant = enfants.find((e) => contient(e, m, lieu, p));
+        if (!suivant) { raison = `aucun des ${enfants.length} enfants ne contient le point (volumes : ${[...new Set(enfants.map(typeVolume))].join(", ")})`; break; }
+        cur = suivant;
         profondeur++;
-        derniereErreurGeo = courant.geometricError;
-        if (courant.content?.uri && /\.json(\?|$)/.test(courant.content.uri)) {
-          const sous = await get(courant.content.uri);
-          jsonSuivis++;
-          courant = sous.root;
-          m = produit(m, courant.transform || IDENTITE);
-          derniereErreurGeo = courant.geometricError;
-          ajouter(`Sous-arbre ${jsonSuivis} chargé (erreur géométrique ${Math.round(courant.geometricError)} m).`);
-        }
+        ge = cur.geometricError;
+        ligne(`Enfant retenu (profondeur ${profondeur}) : volume « ${typeVolume(cur)} », ${(cur.children || []).length} enfant(s), contenu : ${adresseContenu(cur) ? (estModele(adresseContenu(cur)) ? "modèle" : "tileset externe") : "aucun"}, erreur ${erreurTxt(cur.geometricError)}.`);
       }
-      ajouter(`Profondeur atteinte : ${profondeur}. Plus fine erreur géométrique vue : ${Math.round(derniereErreurGeo * 10) / 10} m.`);
-      let taille = 0;
+      if (!raison) raison = "limite de boucle atteinte";
+      ligne(`Arrêt de la descente : ${raison}. Profondeur ${profondeur}, tilesets externes ouverts ${ouverts}, plus fine erreur vue ${erreurTxt(ge)}.`);
       if (glb) {
         const buf = await get(glb.uri, true);
-        taille = buf.byteLength;
-        ajouter(`Une tuile de détail (glb) téléchargée : ${Math.round(taille / 1024)} Ko, erreur géométrique ${Math.round(glb.erreurGeo * 10) / 10} m.`);
+        ligne(`Tuile de détail téléchargée : ${Math.round(buf.byteLength / 1024)} Ko, erreur géométrique ${erreurTxt(glb.ge)}.`);
+        verdict(glb.ge <= 16
+          ? "COUVERT : des tuiles de maillage fin existent à cet endroit (bâtiments en volume probables)."
+          : "PARTIEL : des tuiles existent mais seulement à faible détail (relief sans bâtiments probable).");
+      } else if (/^fin de l'arbre/.test(raison)) {
+        verdict("AUCUNE TUILE DE MODÈLE : l'arbre se termine sans contenu 3D à cet endroit. Valable seulement si le contrôle de Paris trouve, lui, une tuile.");
+      } else {
+        verdict(`INDÉTERMINÉ : le test s'est arrêté avant de trouver un modèle (${raison}). Ne rien conclure sur la couverture.`);
       }
-      if (glb && glb.erreurGeo <= 16) setVerdict("COUVERT : des tuiles de maillage fin existent sur Dakar (bâtiments en volume probables). Regarder la capture et dire oui/non.");
-      else if (glb) setVerdict("PARTIEL : des tuiles existent mais seulement à faible détail (relief sans bâtiments probable).");
-      else setVerdict("NON COUVERT : aucune tuile de détail pour ce point.");
     } catch (e) {
-      setVerdict(`Échec : ${String(e.message || e).replace(cle, "***")}`);
+      verdict(`Échec : ${String(e.message || e).split(cle).join("***")}`);
     } finally {
-      ajouter(`Requêtes envoyées : ${requetes} (dont requêtes racine : ${racines}).`);
+      ligne(`Requêtes envoyées : ${requetes} (dont requête racine : ${racines}). Racines utilisées sur cette page : ${racinesUtilisees.current} sur ${MAX_RACINES}.`);
     }
   }
 
   return (
     <main className="mx-auto max-w-xl p-4 text-sm text-gray-900">
-      <h1 className="mb-2 text-lg font-extrabold">Test de couverture — Google 3D à Dakar</h1>
-      <p className="mb-3">Point testé : {POINT.nom} ({POINT.lat}, {POINT.lng}). Une seule requête racine, aucun rechargement automatique.</p>
-      <button id="tester-dakar" type="button" onClick={tester} disabled={lance} className="rounded-xl bg-sky-500 px-4 py-3 font-extrabold text-white disabled:bg-gray-400">
-        {lance ? "Test lancé" : "Tester Dakar"}
-      </button>
-      <ul className="mt-4 list-disc pl-5">{lignes.map((l, i) => <li key={i}>{l}</li>)}</ul>
-      {verdict ? <p id="verdict" className="mt-3 rounded-xl bg-amber-100 p-3 font-bold">{verdict}</p> : null}
+      <h1 className="mb-2 text-lg font-extrabold">Test de couverture — Google 3D</h1>
+      <p className="mb-3">Une seule requête racine par bouton, 3 au maximum pour la page, aucun rechargement automatique. Chaque bouton ne sert qu&apos;une fois.</p>
+      {LIEUX.map((l) => (
+        <section key={l.id} className="mb-5">
+          <p className="mb-1">Point : {l.nom} ({l.lat}, {l.lng}).</p>
+          <button id={`tester-${l.id}`} type="button" onClick={() => tester(l)} disabled={!!faits[l.id]} className="rounded-xl bg-sky-500 px-4 py-3 font-extrabold text-white disabled:bg-gray-400">
+            {faits[l.id] ? "Test lancé" : l.bouton}
+          </button>
+          <ul className="mt-3 list-disc pl-5">{(sorties[l.id]?.lignes || []).map((t, i) => <li key={i}>{t}</li>)}</ul>
+          {sorties[l.id]?.verdict ? <p id={`verdict-${l.id}`} className="mt-2 rounded-xl bg-amber-100 p-3 font-bold">{sorties[l.id].verdict}</p> : null}
+        </section>
+      ))}
     </main>
   );
 }
