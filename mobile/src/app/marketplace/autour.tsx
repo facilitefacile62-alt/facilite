@@ -1,4 +1,5 @@
 import { contientTousLesMots } from '@/lib/texte';
+import { adresseCarte3D } from '@/lib/carte3d';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -496,6 +497,16 @@ export default function AutourDeMoiScreen() {
             <Ionicons name="images" size={15} color="#EC4899" />
             <Text className="text-[12.5px] font-black" style={{ color: carrousel ? '#1A1A1A' : '#fff' }}>Carrousel</Text>
           </Pressable>
+          {adresseCarte3D() ? (
+            <Pressable
+              onPress={() => router.push('/marketplace/carte-3d' as Href)}
+              accessibilityRole="button"
+              className="flex-row items-center gap-1.5 rounded-full"
+              style={{ height: 38, paddingHorizontal: 14, backgroundColor: 'rgba(20,24,33,0.92)', borderWidth: 1, borderColor: 'rgba(75,85,99,0.8)' }}>
+              <Ionicons name="cube" size={15} color="#38BDF8" />
+              <Text className="text-[12.5px] font-black text-white">3D</Text>
+            </Pressable>
+          ) : null}
           {livreurOuvert ? (
             <Pressable
               onPress={() => setLivreursOuverts(true)}
