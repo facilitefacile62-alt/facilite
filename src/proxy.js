@@ -430,10 +430,11 @@ export const config = {
     //     enregistré du tout — le mode hors ligne ne démarrerait jamais.
     //   * hors-ligne.html : page de repli servie par le service worker,
     //     précisément quand il n'y a pas de réseau pour joindre /login.
+    //   * carte3d/ : fichiers statiques de la carte 3D (worker MapLibre, bâtiments GeoJSON) : une redirection vers /login les rendrait illisibles (le worker échoue en silence).
     //   * .apk : même raisonnement que les images/polices ci-dessous, pour
     //     le binaire de /telecharger-android — trouvé le 13/09/2026, un
     //     visiteur anonyme recevait la page /login en HTML à la place du
     //     paquet Android ("Erreur d'analyse" à l'installation).
-    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|app-version\\.json|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?|apk)$).*)",
+    "/((?!api/|_next/static|_next/image|favicon\\.ico|manifest\\.json|manifest\\.webmanifest|app-version\\.json|carte3d/|robots\\.txt|sitemap\\.xml|\\.well-known/|sw\\.js|hors-ligne\\.html|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|woff2?|apk)$).*)",
   ],
 };

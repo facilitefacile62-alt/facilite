@@ -117,9 +117,13 @@ export default function Carte3D() {
 
     (async () => {
       try {
-        const ml = (await import("maplibre-gl")).default;
+        const modMaplibre = await import("maplibre-gl");
+        const ml = modMaplibre.default ?? modMaplibre;
         if (annule || !conteneurRef.current) return;
         bibliothequeRef.current = ml;
+        // MapLibre 6 déduit l'adresse de son worker du chemin du fichier qui le contient : une fois empaqueté par Next, ce chemin est faux. Le worker (et son module partagé) sont donc servis
+        // par le site lui-même, dans public/carte3d/ (copie exacte de node_modules/maplibre-gl/dist, à recopier à chaque mise à jour de maplibre-gl) ; worker-src 'self' de la CSP les autorise.
+        ml.setWorkerUrl("/carte3d/maplibre-gl-worker.mjs");
         carte = new ml.Map({
           container: conteneurRef.current,
           style: STYLE_FOND,
@@ -132,6 +136,7 @@ export default function Carte3D() {
           cooperativeGestures: false,
         });
         carteRef.current = carte;
+        if (typeof window !== "undefined") window.__carte3d = carte; // outil de diagnostic (aperçu), sans effet
         carte.addControl(new ml.AttributionControl({ compact: true, customAttribution: ATTRIBUTION_BATIMENTS }), "bottom-right");
         carte.addControl(new ml.NavigationControl({ visualizePitch: true }), "top-right");
         minuterie = window.setTimeout(() => {
@@ -139,6 +144,7 @@ export default function Carte3D() {
         }, DELAI_CHARGEMENT_MS);
         carte.on("error", (e) => {
           const msg = String(e?.error?.message || "");
+          console.warn("[carte 3D] erreur MapLibre :", msg.slice(0, 200));
           if (!carte.loaded() && /style|Failed to fetch|NetworkError|webgl/i.test(msg)) basculerVersCarte2D("Le fond de carte est injoignable : retour à la carte 2D.");
         });
         carte.getCanvas().addEventListener("webglcontextlost", () => basculerVersCarte2D("L'affichage 3D a été interrompu par l'appareil : retour à la carte 2D."));
@@ -172,16 +178,20 @@ export default function Carte3D() {
               );
               return new ml.Marker({ element: el, anchor: "top-left", offset: [-70, -85] }).setLngLat([b.lng, b.lat]).setPopup(popup).addTo(carte);
             });
-            if (boutiques.length) {
+            // Vue de départ : le groupe de boutiques de la zone de Pikine / Guinaw Rails (à moins de 4 km du centre), assez près pour voir les bâtiments en volume. Les boutiques plus lointaines
+            // (Keur Massar, Thiès...) restent sur la carte : on les atteint en déplaçant la carte.
+            const proches = boutiques.filter((b) => Math.hypot((b.lng - CENTRE_DEFAUT[0]) * 107000, (b.lat - CENTRE_DEFAUT[1]) * 111000) < 4000);
+            if (proches.length > 1) {
               const bornes = new ml.LngLatBounds();
-              boutiques.forEach((b) => bornes.extend([b.lng, b.lat]));
-              if (boutiques.length > 1) carte.fitBounds(bornes, { padding: 90, maxZoom: 15.6, pitch: INCLINAISON_3D, bearing: -17, duration: 1200 });
+              proches.forEach((b) => bornes.extend([b.lng, b.lat]));
+              carte.fitBounds(bornes, { padding: 110, maxZoom: 16.2, pitch: INCLINAISON_3D, bearing: -17, duration: 1200 });
             }
           } catch {
             setInfo("Les boutiques n'ont pas pu être chargées pour le moment.");
           }
         });
-      } catch {
+      } catch (erreur) {
+        console.error("[carte 3D] démarrage impossible :", erreur);
         if (!annule) basculerVersCarte2D("La carte 3D n'a pas pu démarrer : retour à la carte 2D.");
       }
     })();
@@ -204,7 +214,7 @@ export default function Carte3D() {
 
   return (
     <div className="fixed inset-0 bg-[#e8eaee]" style={{ zIndex: 50 }}>
-      <div ref={conteneurRef} className="absolute inset-0" aria-label="Carte 3D des boutiques" />
+      <div ref={conteneurRef} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} aria-label="Carte 3D des boutiques" />
       {etat === "chargement" && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>
       )}
