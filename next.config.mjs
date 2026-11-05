@@ -66,7 +66,7 @@ const contentSecurityPolicy = [
   // tiles.openfreemap.org : conservé même si GlobeExplorateurBoutiques.jsx
   // n'utilise plus MapLibre — retiré seulement si plus aucun composant du
   // site ne s'en sert.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io https://*.clarity.ms https://tiles.openfreemap.org",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.daily.co wss://*.daily.co https://plausible.io https://*.clarity.ms https://tiles.openfreemap.org https://tile.googleapis.com",
   "frame-src 'self' blob: data: https://*.supabase.co https://*.daily.co https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://*.google.com",
   "object-src 'self' blob: data: https://*.supabase.co",
   "base-uri 'self'",
