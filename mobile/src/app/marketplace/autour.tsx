@@ -532,6 +532,7 @@ export default function AutourDeMoiScreen() {
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
           { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
           { icone: 'layers' as const, nom: satellite ? 'Plan' : 'Satellite', action: () => setSatellite((v) => !v), couleur: satellite ? '#34D399' : '#fff' },
+          ...(adresseCarte3D() ? [{ icone: 'cube' as const, nom: 'Carte 3D', action: () => router.push('/marketplace/carte-3d' as Href), couleur: '#38BDF8' }] : []),
           { icone: 'add' as const, nom: 'Zoom avant', action: () => carte?.zoomer(1), couleur: '#fff' },
           { icone: 'remove' as const, nom: 'Zoom arrière', action: () => carte?.zoomer(-1), couleur: '#fff' },
         ].map((c) => (
