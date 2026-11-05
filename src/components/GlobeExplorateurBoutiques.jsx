@@ -18,6 +18,7 @@ import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
+import { carte3dActive } from "@/lib/carte3d";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
@@ -3297,6 +3298,17 @@ export default function GlobeExplorateurBoutiques({
             <i className="fa-solid fa-images text-xs text-pink-400"></i>
             <span>Carrousel</span>
           </button>
+          {carte3dActive() && (
+            <button
+              type="button"
+              onClick={() => window.location.assign("/carte-3d")}
+              className="px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shadow-md backdrop-blur-md bg-gray-900/80 text-white hover:bg-gray-800 border border-gray-700/80"
+              title="Carte 3D (prototype)"
+            >
+              <i className="fa-solid fa-cube text-xs text-sky-400"></i>
+              <span>3D</span>
+            </button>
+          )}
           {carrousselCarteOuvert && (
             <button
               type="button"

@@ -111,6 +111,8 @@ const PUBLIC_BROWSABLE_ROUTES = [
   // Pages de conseils (/conseils et /conseils/<slug>) : texte public pour les visiteurs et les moteurs de recherche. Sans cette entrée, le refus par défaut
   // redirigerait un visiteur anonyme vers /login.
   "/conseils",
+  // Prototype « Carte 3D » : la page elle-même répond 404 tant que l'interrupteur NEXT_PUBLIC_CARTE_3D est éteint (voir src/lib/carte3d.js) ; ouverte aux visiteurs sur les aperçus.
+  "/carte-3d",
   // Même trouvaille que les entrées ci-dessus, trouvée le 2026-08-22 :
   // aucune route de recherche visible pour un visiteur anonyme (barre du
   // header comme page dédiée) ne doit forcer une redirection /login avant
