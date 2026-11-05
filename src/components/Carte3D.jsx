@@ -1,14 +1,14 @@
 "use client";
-// Carte 3D de Locaux (PROTOTYPE) — MapLibre GL JS, bâtiments en volume, un repère par boutique, bouton 2D/3D.
+// Carte 3D de Locaux (PROTOTYPE) — même interface que la carte « Autour de moi » : barre de recherche, rangée de touches, bulles Carrousel sur chaque boutique, bande de boutiques en bas.
+// SEUL le bouton 2D/3D change le rendu de la carte (volumes et inclinaison, ou carte à plat).
 //
-// Données : fond de carte OpenFreeMap (style « positron », sans clé, sans compte) ; bâtiments issus de l'Overture Maps (voir scripts/carte3d/extraire-batiments.py), fichier statique
-// public/carte3d/batiments.geojson chargé SEULEMENT quand la 3D est active. Les boutiques sont chargées comme sur la carte 2D actuelle (mêmes fonctions publiques) : cette carte
-// ne montre donc rien de plus que la carte actuelle, et aucune coordonnée n'est écrite dans le HTML de la page (rendu côté navigateur uniquement).
-// Repli : appareil trop faible, WebGL absent, fond de carte injoignable ou carte trop lente => retour à la carte 2D actuelle (ou carte plate sans volumes).
+// Données : fond OpenFreeMap (style « positron », sans clé) ; bâtiments Overture (voir scripts/carte3d/extraire-batiments.py), fichier statique public/carte3d/batiments.geojson chargé SEULEMENT à la
+// première activation de la 3D. Les boutiques sont chargées comme sur la carte 2D (mêmes fonctions publiques) : rien de plus que la carte actuelle, aucune coordonnée dans le HTML.
+// Repli : appareil trop faible, WebGL absent, fond injoignable, carte trop lente => retour à la carte 2D actuelle (ou carte à plat).
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ADRESSE_CARTE_2D, peutAfficher3D } from "@/lib/carte3d";
-import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml } from "@/lib/marketplaceData";
+import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto } from "@/lib/marketplaceData";
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
 
@@ -17,6 +17,11 @@ const CENTRE_DEFAUT = [-17.384, 14.756]; // [lng, lat] : Pikine
 const INCLINAISON_3D = 60;
 const DELAI_CHARGEMENT_MS = 15000;
 const ATTRIBUTION_BATIMENTS = "Bâtiments : © Overture Maps Foundation, OpenStreetMap contributors";
+
+function prixLisible(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toLocaleString("fr-FR") : "0";
+}
 
 function construireBoutiques(articles, logos) {
   const vues = new Set();
@@ -34,29 +39,68 @@ function construireBoutiques(articles, logos) {
       quartier: a.quartier || a.ville || "Sénégal",
       avatar_config: a.boutique_avatar_config || null,
       logo_url: logos?.get?.(a.boutique_id) || null,
-      nbArticles: (articles || []).filter((r) => r.boutique_id === a.boutique_id).length,
+      articles: (articles || []).filter((r) => r.boutique_id === a.boutique_id),
     });
   }
   return liste;
 }
 
+function contenuAvatar(b, taille) {
+  try {
+    if (b.logo_url) return `<img src="${echapperHtml(b.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`;
+    if (b.avatar_config) return svgAvatarBoutique(b.avatar_config, taille);
+  } catch {
+    /* repli : pictogramme */
+  }
+  return null;
+}
+
 function elementRepere(b) {
   const boite = document.createElement("div");
   boite.style.cssText = "width:140px;height:90px;cursor:pointer;";
-  let contenu = null;
-  try {
-    contenu = b.logo_url
-      ? `<img src="${echapperHtml(b.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
-      : b.avatar_config
-      ? svgAvatarBoutique(b.avatar_config, 52)
-      : null;
-  } catch {
-    contenu = null;
-  }
-  boite.innerHTML = htmlEpingle({ couleur: "#10B981", type: "produit", nom: echapperHtml(String(b.nom).slice(0, 18)), contenuHtml: contenu });
+  boite.innerHTML = htmlEpingle({ couleur: "#10B981", type: "produit", nom: echapperHtml(String(b.nom).slice(0, 18)), contenuHtml: contenuAvatar(b, 52) });
   boite.querySelector(".epingle-boite").style.pointerEvents = "auto";
   return boite;
 }
+
+// Bulle « Carrousel » d'une boutique : nom, quartier, deux articles visibles à la fois, flèches gauche / droite.
+function htmlBulle(b) {
+  const cartes = b.articles
+    .slice(0, 12)
+    .map((a) => {
+      const photo = a.photos?.[0] ? urlPhoto(a.photos[0]) : "";
+      const image = photo
+        ? `<img src="${echapperHtml(photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;">🛍️</div>`;
+      return `<div style="flex-shrink:0;width:66px;"><div style="width:66px;height:86px;border-radius:14px;overflow:hidden;background:#c4a4b8;position:relative;box-shadow:0 3px 10px rgba(0,0,0,.15);">${image}<div style="position:absolute;bottom:0;left:0;right:0;padding:5px 4px 3px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.35) 70%,transparent);color:#fff;"><div style="font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(a.titre || "Article")}</div><div style="font-size:9px;font-weight:900;color:#34d399;">${prixLisible(a.prix_xof)} F</div></div></div></div>`;
+    })
+    .join("");
+  const bouton = (cote) =>
+    `<button type="button" data-fl="${cote}" aria-label="${cote === "g" ? "Précédents" : "Suivants"}" style="position:absolute;${cote === "g" ? "left" : "right"}:-8px;top:30px;width:26px;height:26px;border-radius:9999px;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35);font-size:18px;font-weight:900;line-height:24px;cursor:pointer;display:none;padding:0;">${cote === "g" ? "‹" : "›"}</button>`;
+  const corps = b.articles.length
+    ? `<div style="position:relative;"><div class="bande3d" style="width:140px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 1px 4px;">${cartes}</div>${bouton("g")}${bouton("d")}</div>`
+    : `<div style="font-size:10px;color:#64748b;padding:6px 0;">Pas encore d'article.</div>`;
+  return `<div style="position:relative;width:172px;font-family:system-ui,sans-serif;color:#0f172a;"><div style="margin-bottom:6px;"><div style="font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(b.nom)}</div><div style="font-size:9.5px;font-weight:600;color:#64748b;margin-top:2px;">📍 ${echapperHtml(b.quartier)} · ${b.articles.length} article${b.articles.length > 1 ? "s" : ""}</div></div>${corps}</div>`;
+}
+
+function brancherFleches(racine) {
+  const bande = racine.querySelector(".bande3d");
+  if (!bande) return;
+  const g = racine.querySelector('[data-fl="g"]');
+  const d = racine.querySelector('[data-fl="d"]');
+  const maj = () => {
+    g.style.display = bande.scrollLeft > 2 ? "block" : "none";
+    d.style.display = bande.scrollLeft + bande.clientWidth < bande.scrollWidth - 2 ? "block" : "none";
+  };
+  g.onclick = () => bande.scrollBy({ left: -148, behavior: "smooth" });
+  d.onclick = () => bande.scrollBy({ left: 148, behavior: "smooth" });
+  bande.addEventListener("scroll", maj, { passive: true });
+  window.setTimeout(maj, 60);
+  window.setTimeout(maj, 500);
+}
+
+const CHIP = "shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap shadow-md flex items-center gap-1.5 cursor-pointer";
+const chipEtat = (actif) => `${CHIP} ${actif ? "bg-white text-gray-950" : "bg-gray-900/90 text-white border border-gray-700"}`;
 
 export default function Carte3D() {
   const conteneurRef = useRef(null);
@@ -66,6 +110,10 @@ export default function Carte3D() {
   const [etat, setEtat] = useState("chargement"); // chargement | pret | repli
   const [raison, setRaison] = useState("");
   const [mode3D, setMode3D] = useState(true);
+  const [carrousel, setCarrousel] = useState(true);
+  const [recherche, setRecherche] = useState("");
+  const [boutiques, setBoutiques] = useState([]);
+  const [filtre, setFiltre] = useState("tous"); // tous | live
   const [info, setInfo] = useState("");
 
   const basculerVersCarte2D = useCallback((message) => {
@@ -76,8 +124,7 @@ export default function Carte3D() {
 
   const appliquerMode = useCallback((active) => {
     const carte = carteRef.current;
-    const ml = bibliothequeRef.current;
-    if (!carte || !ml) return;
+    if (!carte) return;
     if (active && !batimentsAjoutesRef.current) {
       // Chargement différé : le fichier des bâtiments n'est téléchargé qu'à la première activation de la 3D.
       carte.addSource("batiments", { type: "geojson", data: "/carte3d/batiments.geojson" });
@@ -113,7 +160,6 @@ export default function Carte3D() {
     let annule = false;
     let carte = null;
     let minuterie = null;
-    let reperes = [];
 
     (async () => {
       try {
@@ -124,27 +170,15 @@ export default function Carte3D() {
         // MapLibre 6 déduit l'adresse de son worker du chemin du fichier qui le contient : une fois empaqueté par Next, ce chemin est faux. Le worker (et son module partagé) sont donc servis
         // par le site lui-même, dans public/carte3d/ (copie exacte de node_modules/maplibre-gl/dist, à recopier à chaque mise à jour de maplibre-gl) ; worker-src 'self' de la CSP les autorise.
         ml.setWorkerUrl("/carte3d/maplibre-gl-worker.mjs");
-        carte = new ml.Map({
-          container: conteneurRef.current,
-          style: STYLE_FOND,
-          center: CENTRE_DEFAUT,
-          zoom: 15.2,
-          pitch: INCLINAISON_3D,
-          bearing: -17,
-          maxPitch: 70,
-          attributionControl: false,
-          cooperativeGestures: false,
-        });
+        carte = new ml.Map({ container: conteneurRef.current, style: STYLE_FOND, center: CENTRE_DEFAUT, zoom: 15.2, pitch: INCLINAISON_3D, bearing: -17, maxPitch: 70, attributionControl: false });
         carteRef.current = carte;
         if (typeof window !== "undefined") window.__carte3d = carte; // outil de diagnostic (aperçu), sans effet
         carte.addControl(new ml.AttributionControl({ compact: true, customAttribution: ATTRIBUTION_BATIMENTS }), "bottom-right");
-        carte.addControl(new ml.NavigationControl({ visualizePitch: true }), "top-right");
         minuterie = window.setTimeout(() => {
           if (!annule && !carte.loaded()) basculerVersCarte2D("Le fond de carte met trop de temps à répondre : retour à la carte 2D.");
         }, DELAI_CHARGEMENT_MS);
         carte.on("error", (e) => {
           const msg = String(e?.error?.message || "");
-          console.warn("[carte 3D] erreur MapLibre :", msg.slice(0, 200));
           if (!carte.loaded() && /style|Failed to fetch|NetworkError|webgl/i.test(msg)) basculerVersCarte2D("Le fond de carte est injoignable : retour à la carte 2D.");
         });
         carte.getCanvas().addEventListener("webglcontextlost", () => basculerVersCarte2D("L'affichage 3D a été interrompu par l'appareil : retour à la carte 2D."));
@@ -153,7 +187,7 @@ export default function Carte3D() {
           if (annule) return;
           appliquerMode(true);
           setEtat("pret");
-          // Mesure de fluidité : sur 3 secondes, si l'image met en moyenne plus de 70 ms à s'afficher (moins de 14 images/s), on repasse la carte à plat.
+          // Fluidité : sur 3 secondes, moins de 14 images par seconde => la carte repasse à plat.
           let n = 0;
           const debut = performance.now();
           const compter = () => {
@@ -165,26 +199,17 @@ export default function Carte3D() {
               setInfo("Votre appareil est un peu lent : la carte est passée en 2D pour rester fluide.");
             }
           };
-          carte.easeTo({ zoom: 15.4, duration: 1200 });
           requestAnimationFrame(compter);
           try {
             const [articles, logos] = await Promise.all([chargerTousLesArticles({ limite: 500 }), chargerLogosBoutiques().catch(() => new Map())]);
             if (annule) return;
-            const boutiques = construireBoutiques(articles, logos);
-            reperes = boutiques.map((b) => {
-              const el = elementRepere(b);
-              const popup = new ml.Popup({ offset: [0, -88], closeButton: true, maxWidth: "220px" }).setHTML(
-                `<div style="font:700 13px system-ui,sans-serif;color:#0f172a"><div>${echapperHtml(b.nom)}</div><div style="font-weight:600;color:#64748b;font-size:11px;margin-top:2px">${echapperHtml(b.quartier)} · ${b.nbArticles} article${b.nbArticles > 1 ? "s" : ""}</div><a href="${ADRESSE_CARTE_2D}" style="display:block;margin-top:8px;padding:6px 8px;border-radius:10px;background:#10b981;color:#fff;text-align:center;text-decoration:none;font-size:11px">Voir sur la carte 2D</a></div>`
-              );
-              return new ml.Marker({ element: el, anchor: "top-left", offset: [-70, -85] }).setLngLat([b.lng, b.lat]).setPopup(popup).addTo(carte);
-            });
-            // Vue de départ : le groupe de boutiques de la zone de Pikine / Guinaw Rails (à moins de 4 km du centre), assez près pour voir les bâtiments en volume. Les boutiques plus lointaines
-            // (Keur Massar, Thiès...) restent sur la carte : on les atteint en déplaçant la carte.
-            const proches = boutiques.filter((b) => Math.hypot((b.lng - CENTRE_DEFAUT[0]) * 107000, (b.lat - CENTRE_DEFAUT[1]) * 111000) < 4000);
+            const liste = construireBoutiques(articles, logos);
+            setBoutiques(liste);
+            const proches = liste.filter((b) => Math.hypot((b.lng - CENTRE_DEFAUT[0]) * 107000, (b.lat - CENTRE_DEFAUT[1]) * 111000) < 4000);
             if (proches.length > 1) {
               const bornes = new ml.LngLatBounds();
               proches.forEach((b) => bornes.extend([b.lng, b.lat]));
-              carte.fitBounds(bornes, { padding: 110, maxZoom: 16.2, pitch: INCLINAISON_3D, bearing: -17, duration: 1200 });
+              carte.fitBounds(bornes, { padding: 120, maxZoom: 16, pitch: INCLINAISON_3D, bearing: -17, duration: 1200 });
             }
           } catch {
             setInfo("Les boutiques n'ont pas pu être chargées pour le moment.");
@@ -199,11 +224,49 @@ export default function Carte3D() {
     return () => {
       annule = true;
       window.clearTimeout(minuterie);
-      reperes.forEach((r) => r.remove());
       if (carte) carte.remove();
       carteRef.current = null;
     };
   }, [appliquerMode, basculerVersCarte2D]);
+
+  // Boutiques affichées : filtre « En stock » et recherche (nom, quartier ou article), comme sur la carte 2D.
+  const affichees = useMemo(() => {
+    const q = recherche.trim().toLowerCase();
+    return boutiques.filter((b) => {
+      if (filtre === "live" && !b.articles.some((a) => a.statut === "en_stock" || a.quantite > 0)) return false;
+      if (!q) return true;
+      return `${b.nom} ${b.quartier}`.toLowerCase().includes(q) || b.articles.some((a) => String(a.titre || "").toLowerCase().includes(q));
+    });
+  }, [boutiques, filtre, recherche]);
+
+  // Repères + bulles : recréés quand la liste affichée change ; les bulles sont ouvertes d'office (touche « Carrousel » active).
+  useEffect(() => {
+    const carte = carteRef.current;
+    const ml = bibliothequeRef.current;
+    if (!carte || !ml || etat !== "pret") return undefined;
+    const crees = affichees.map((b) => {
+      const el = elementRepere(b);
+      const popup = new ml.Popup({ offset: [0, -92], closeButton: true, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(b));
+      popup.on("open", () => {
+        const racine = popup.getElement();
+        if (racine) brancherFleches(racine);
+      });
+      const marqueur = new ml.Marker({ element: el, anchor: "top-left", offset: [-70, -85] }).setLngLat([b.lng, b.lat]).addTo(carte);
+      popup.setLngLat([b.lng, b.lat]);
+      el.addEventListener("click", () => {
+        if (popup.isOpen()) popup.remove();
+        else popup.addTo(carte);
+      });
+      return { marqueur, popup };
+    });
+    if (carrousel) crees.forEach((r) => r.popup.addTo(carte));
+    return () => {
+      crees.forEach((r) => {
+        r.popup.remove();
+        r.marqueur.remove();
+      });
+    };
+  }, [affichees, carrousel, etat]);
 
   const surBascule = () => {
     const suivant = !mode3D;
@@ -212,12 +275,12 @@ export default function Carte3D() {
     appliquerMode(suivant);
   };
 
+  const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.max(carteRef.current.getZoom(), 16), duration: 900 });
+
   return (
     <div className="fixed inset-0 bg-[#e8eaee]" style={{ zIndex: 50 }}>
       <div ref={conteneurRef} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} aria-label="Carte 3D des boutiques" />
-      {etat === "chargement" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>
-      )}
+      {etat === "chargement" && <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>}
       {etat === "repli" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#e8eaee] px-6 text-center">
           <p className="max-w-sm text-sm font-bold text-gray-800">{raison}</p>
@@ -228,26 +291,60 @@ export default function Carte3D() {
       )}
       {etat === "pret" && (
         <>
-          <div className="absolute left-3 top-3 flex items-center gap-2">
-            <a
-              href={ADRESSE_CARTE_2D}
-              className="rounded-full bg-white/95 px-3.5 py-2 text-xs font-black text-gray-900 shadow-lg"
-              aria-label="Retour à la carte 2D"
-            >
-              ← Carte 2D
-            </a>
-            <button
-              type="button"
-              onClick={surBascule}
-              aria-pressed={mode3D}
-              className="rounded-full bg-gray-900 px-4 py-2 text-xs font-black text-white shadow-lg"
-              title={mode3D ? "Passer en vue plate" : "Passer en 3D"}
-            >
-              {mode3D ? "3D → 2D" : "2D → 3D"}
-            </button>
-            <span className="rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gray-900">Prototype</span>
+          {/* En-tête identique à « Autour de moi » : recherche, fermeture, rangée de touches */}
+          <div className="absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-3" style={{ pointerEvents: "none" }}>
+            <div className="flex items-center gap-2.5" style={{ pointerEvents: "auto" }}>
+              <div className="flex flex-1 items-center gap-2 pl-4 pr-1.5 shadow-xl" style={{ height: 48, borderRadius: 18, backgroundColor: "#EAE3D2" }}>
+                <input
+                  value={recherche}
+                  onChange={(e) => setRecherche(e.target.value)}
+                  placeholder="Rechercher un article, une boutique..."
+                  aria-label="Rechercher un article ou une boutique"
+                  className="min-w-0 flex-1 bg-transparent text-[13.5px] font-bold text-stone-900 placeholder:text-stone-500 focus:outline-none"
+                />
+                <span className="flex items-center rounded-[14px] px-3.5 text-[13.5px] font-black text-white" style={{ height: 40, backgroundColor: "#10B981" }}>
+                  Rechercher
+                </span>
+              </div>
+              <a href={ADRESSE_CARTE_2D} aria-label="Fermer la carte 3D" className="flex h-11 w-11 items-center justify-center rounded-full text-white shadow-xl" style={{ backgroundColor: "rgba(20,24,33,0.78)" }}>
+                ✕
+              </a>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ pointerEvents: "auto", scrollbarWidth: "none" }}>
+              <button type="button" onClick={() => setFiltre("tous")} className={chipEtat(filtre === "tous")}>
+                Toutes les boutiques
+              </button>
+              <button type="button" onClick={() => setFiltre("live")} className={chipEtat(filtre === "live")}>
+                En stock (LIVE)
+              </button>
+              <button type="button" onClick={() => setCarrousel((v) => !v)} aria-pressed={carrousel} className={chipEtat(carrousel)}>
+                Carrousel
+              </button>
+              <button type="button" onClick={surBascule} aria-pressed={mode3D} title={mode3D ? "Passer en 2D" : "Passer en 3D"} className={`${CHIP} bg-sky-500 text-white`}>
+                {mode3D ? "3D → 2D" : "2D → 3D"}
+              </button>
+              <span className="shrink-0 self-center rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gray-900">Prototype</span>
+            </div>
           </div>
-          {info && <div className="absolute inset-x-3 bottom-10 rounded-2xl bg-gray-900/90 px-4 py-3 text-center text-xs font-bold text-white shadow-xl">{info}</div>}
+          {/* Bande de boutiques en bas, comme sur la carte 2D */}
+          <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none" }}>
+            {info && (
+              <div className="rounded-2xl bg-gray-900/90 px-4 py-2.5 text-center text-xs font-bold text-white shadow-xl" style={{ pointerEvents: "auto" }}>
+                {info}
+              </div>
+            )}
+            <div className="flex max-w-full gap-3 overflow-x-auto rounded-full bg-white/70 px-4 py-2 shadow-xl backdrop-blur-md" style={{ pointerEvents: "auto", scrollbarWidth: "none" }}>
+              {affichees.map((b) => (
+                <button key={b.id} type="button" onClick={() => allerA(b)} className="flex shrink-0 flex-col items-center gap-1" title={b.nom}>
+                  <span
+                    className="h-11 w-11 overflow-hidden rounded-full border-2 border-white bg-white shadow-md"
+                    dangerouslySetInnerHTML={{ __html: contenuAvatar(b, 44) || '<span style="font-size:20px;display:flex;height:100%;align-items:center;justify-content:center">🏪</span>' }}
+                  />
+                  <span className="max-w-[56px] truncate text-[9px] font-extrabold text-gray-800">{b.nom}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </>
       )}
     </div>
