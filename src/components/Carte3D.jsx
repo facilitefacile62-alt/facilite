@@ -17,6 +17,8 @@ const CENTRE_DEFAUT = [-17.384, 14.756]; // [lng, lat] : Pikine
 const INCLINAISON_3D = 60;
 const DELAI_CHARGEMENT_MS = 15000;
 const ATTRIBUTION_BATIMENTS = "Bâtiments : © Overture Maps Foundation, OpenStreetMap contributors";
+const DELAI_PREMIERES_TUILES_MS = 60000; // 60 s maximum entre l'appui et l'AFFICHAGE de la première tuile (connexion lente comprise)
+const MONTRER_MESURES = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"; // zone de mesures : aperçus seulement
 const MESSAGE_REPLI_PHOTO = "La vue 3D photo n'est pas disponible pour le moment (limite d'utilisation atteinte ou accès refusé). La vue 3D simple reste affichée.";
 
 function prixLisible(v) {
@@ -121,8 +123,10 @@ export default function Carte3D() {
   const [photo, setPhoto] = useState("off");
   const [creditsPhoto, setCreditsPhoto] = useState("");
   const [creditsOuverts, setCreditsOuverts] = useState(false);
+  const [mesures, setMesures] = useState(null);
   const photoRef = useRef(null);
   const minuterieSessionRef = useRef(null);
+  const delaiChargementRef = useRef(null);
   const activationsPhotoRef = useRef(0);
   const mode3DRef = useRef(true);
   useEffect(() => {
@@ -138,6 +142,7 @@ export default function Carte3D() {
   // Retire la vue photo (libère les tuiles et le réseau) et remet le prototype gris tel qu'il était.
   const retirerPhoto = useCallback(() => {
     window.clearTimeout(minuterieSessionRef.current);
+    window.clearTimeout(delaiChargementRef.current);
     try {
       photoRef.current?.retirer();
     } catch {
@@ -332,6 +337,7 @@ export default function Carte3D() {
     activationsPhotoRef.current += 1; // une activation = une requête racine chez Google
     setPhoto("chargement");
     setInfo("");
+    setMesures(null);
     try {
       const { creerVuePhoto } = await import("@/lib/carte3dPhoto");
       const profil = profilPhoto();
@@ -339,16 +345,50 @@ export default function Carte3D() {
         setMode3D(true);
         appliquerMode(true);
       }
+      // Délai maximal : si aucune tuile n'est AFFICHÉE en 60 secondes, on retombe sur le prototype gris (la requête déjà partie ne coûte rien de plus).
+      let abandon = false; // vrai si le délai ou une erreur a déjà ramené le prototype gris pendant que le module se chargeait
+      window.clearTimeout(delaiChargementRef.current);
+      delaiChargementRef.current = window.setTimeout(() => {
+        abandon = true;
+        retirerPhoto();
+        setInfo("La vue 3D photo met trop de temps à répondre : la vue 3D simple est affichée.");
+      }, DELAI_PREMIERES_TUILES_MS);
+      // Fluidité : mesurée SEULEMENT une fois les premières tuiles affichées (puis 3 s de pause) ; sur 4 secondes, plus de 90 ms par image en moyenne => retour au prototype gris.
+      const surveillerFluidite = () => {
+        let n = 0;
+        let debut = 0;
+        const compter = (t) => {
+          if (!photoRef.current) return;
+          if (!debut) debut = t;
+          n += 1;
+          if (t - debut < 4000) requestAnimationFrame(compter);
+          else if ((t - debut) / n > 90) {
+            retirerPhoto();
+            setInfo("Votre appareil est un peu lent pour la vue photo : la vue 3D simple est affichée.");
+          }
+        };
+        window.setTimeout(() => requestAnimationFrame(compter), 3000);
+      };
       const controleur = await creerVuePhoto({
         carte,
         cle: process.env.NEXT_PUBLIC_GOOGLE_TILES_KEY,
         profil,
         surCredits: setCreditsPhoto,
+        surMesures: setMesures,
+        surAffichee: () => {
+          window.clearTimeout(delaiChargementRef.current);
+          surveillerFluidite();
+        },
         surProbleme: () => {
+          abandon = true;
           retirerPhoto();
           setInfo(MESSAGE_REPLI_PHOTO);
         },
       });
+      if (abandon) {
+        controleur.retirer();
+        return;
+      }
       photoRef.current = controleur;
       setPhoto("on");
       if (profil.modeste) setInfo("Appareil modeste : la vue photo est allégée (moins de détail) pour rester fluide.");
@@ -361,20 +401,6 @@ export default function Carte3D() {
         retirerPhoto();
         setInfo("La session de la vue photo est terminée : appuyez de nouveau sur « Vue 3D photo » pour la relancer.");
       }, DUREE_MAX_VUE_PHOTO_MS);
-      // Fluidité : sur 4 secondes (après 2 s de chargement), plus de 90 ms par image en moyenne => retour au prototype gris.
-      let n = 0;
-      let debut = 0;
-      const compter = (t) => {
-        if (!photoRef.current) return;
-        if (!debut) debut = t;
-        n += 1;
-        if (t - debut < 4000) requestAnimationFrame(compter);
-        else if ((t - debut) / n > 90) {
-          retirerPhoto();
-          setInfo("Votre appareil est un peu lent pour la vue photo : la vue 3D simple est affichée.");
-        }
-      };
-      window.setTimeout(() => requestAnimationFrame(compter), 2000);
     } catch (erreur) {
       console.error("[carte 3D photo] démarrage impossible :", erreur?.message || erreur);
       retirerPhoto();
@@ -458,19 +484,32 @@ export default function Carte3D() {
               <span className="mt-0.5 text-[8px] font-extrabold leading-none opacity-90">{photo === "on" ? "quitter" : "Google"}</span>
             </button>
           )}
-          {/* Attribution exigée par Google : « Google Maps » + sources de données des tuiles affichées (en une ligne, dépliable) */}
+          {/* Attribution exigée par Google : logo officiel « Google Maps » (non modifié, fichier fourni par Google, 18 px de haut, marges de 10 / 10 / 10 / 5 px) + sources de données des tuiles affichées (une ligne, dépliable) */}
           {photo === "on" && (
-            <button
-              type="button"
-              onClick={() => setCreditsOuverts((v) => !v)}
-              aria-label="Google Maps. Sources de données"
-              className="absolute left-3 rounded-lg bg-black/55 px-2 py-1 text-left text-[10px] font-semibold text-white"
-              style={{ bottom: 104, maxWidth: "62%", zIndex: 5 }}
-            >
-              <span className="font-black">Google Maps</span>
-              <span className={creditsOuverts ? "block" : "block truncate"}>{creditsPhoto || "Sources de données…"}</span>
-              <span className="block text-[9px] font-extrabold underline">{creditsOuverts ? "Réduire ▴" : "Sources de données ▾"}</span>
-            </button>
+            <div className="absolute left-0" style={{ bottom: 98, maxWidth: "70%", zIndex: 5, padding: "10px 10px 5px 10px" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/carte3d/google-maps-logo.svg" alt="Google Maps" style={{ height: 18, width: "auto", display: "block" }} />
+              <button
+                type="button"
+                onClick={() => setCreditsOuverts((v) => !v)}
+                aria-label="Google Maps. Sources de données"
+                className="mt-1.5 block rounded-lg bg-black/60 px-2 py-1 text-left text-[10px] font-semibold text-white"
+                style={{ maxWidth: "100%" }}
+              >
+                <span className={creditsOuverts ? "block" : "block truncate"}>{creditsPhoto || "Sources de données…"}</span>
+                <span className="block text-[9px] font-extrabold underline">{creditsOuverts ? "Réduire ▴" : "Sources de données ▾"}</span>
+              </button>
+            </div>
+          )}
+          {/* Mesures de la vue photo (aperçus seulement) : durées depuis l'appui, pour pouvoir les transmettre sans ouvrir la console */}
+          {MONTRER_MESURES && mesures && (
+            <div className="absolute left-3 rounded-lg bg-black/65 px-2 py-1 text-[10px] font-semibold leading-snug text-white" style={{ top: 132, zIndex: 5, pointerEvents: "none", maxWidth: "68%" }}>
+              <div>Racine : {mesures.racineMs == null ? "…" : `${(mesures.racineMs / 1000).toFixed(1)} s (HTTP ${mesures.racineStatut})`}</div>
+              <div>1re tuile reçue : {mesures.premiereRecueMs == null ? "—" : `${(mesures.premiereRecueMs / 1000).toFixed(1)} s`}</div>
+              <div>1re tuile affichée : {mesures.premiereAfficheeMs == null ? "—" : `${(mesures.premiereAfficheeMs / 1000).toFixed(1)} s`}</div>
+              <div>Tuiles chargées : {mesures.tuilesChargees}</div>
+              <div>Dernière erreur : {mesures.derniereErreur || "aucune"}</div>
+            </div>
           )}
           {/* Bande de boutiques en bas, comme sur la carte 2D */}
           <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none" }}>

@@ -16,7 +16,7 @@ const HOTE_GOOGLE = "tile.googleapis.com";
  *  - signale tout 403 / 429 à `surProbleme` (clé refusée ou quota atteint) ;
  *  - refuse tout autre hôte que tile.googleapis.com.
  */
-export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, maxRacines = MAX_RACINES_PAR_PAGE }) {
+export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, surEvenement = () => {}, maxRacines = MAX_RACINES_PAR_PAGE, maintenant = () => (typeof performance !== "undefined" ? performance.now() : Date.now()) }) {
   let racines = 0;
   let coupe = false;
   const reponseVide = (status) => new Response(null, { status });
@@ -34,7 +34,20 @@ export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, maxRa
       racines += 1;
     }
     if (!u.searchParams.has("key")) u.searchParams.set("key", cle);
-    const reponse = await fetchReel(u.toString(), { signal: init?.signal });
+    const debut = maintenant();
+    const estRacine = /\/root\.json$/.test(u.pathname);
+    const estTuile = /\.(glb|gltf|b3dm)$/i.test(u.pathname);
+    let reponse;
+    try {
+      reponse = await fetchReel(u.toString(), { signal: init?.signal });
+    } catch (erreur) {
+      surEvenement({ type: "erreur", texte: `réseau : ${erreur?.message || erreur}` });
+      throw erreur;
+    }
+    const duree = maintenant() - debut;
+    if (estRacine) surEvenement({ type: "racine", ms: duree, status: reponse.status });
+    else if (estTuile) surEvenement({ type: "tuile", ms: duree, status: reponse.status });
+    if (!reponse.ok) surEvenement({ type: "erreur", texte: `HTTP ${reponse.status} (${estRacine ? "racine" : estTuile ? "tuile" : "tileset"})` });
     if (statutQuotaOuCle(reponse.status)) {
       coupe = true;
       surProbleme(reponse.status === 429 ? "quota" : "refus");
@@ -59,6 +72,25 @@ export function decalerTuile(tuile, decalageM) {
   return true;
 }
 
+/** Retire clé et session de tout texte affiché ou copié (messages d'erreur, adresses). */
+export function texteSansSecret(t) {
+  return String(t ?? "").replace(/(key|session)=[^&\s"')]+/gi, "$1=XXX");
+}
+
+/** Mesures affichées dans la zone discrète des aperçus (secondes depuis l'appui sur « Vue 3D photo », sauf la durée de réponse de la racine). */
+export function creerMesures(maintenant = () => (typeof performance !== "undefined" ? performance.now() : Date.now())) {
+  const t0 = maintenant();
+  const m = { racineMs: null, racineStatut: null, premiereRecueMs: null, premiereAfficheeMs: null, tuilesChargees: 0, derniereErreur: "" };
+  return {
+    donnees: () => ({ ...m }),
+    racine: (ms, status) => { m.racineMs = ms; m.racineStatut = status; },
+    tuileRecue: () => { if (m.premiereRecueMs === null) m.premiereRecueMs = maintenant() - t0; },
+    tuileAffichee: () => { if (m.premiereAfficheeMs === null) m.premiereAfficheeMs = maintenant() - t0; return m.premiereAfficheeMs; },
+    tuileChargee: () => { m.tuilesChargees += 1; },
+    erreur: (texte) => { m.derniereErreur = texteSansSecret(texte).slice(0, 160); },
+  };
+}
+
 /** Récupère les « copyright » des tuiles sélectionnées (glTF : asset.copyright), pour l'attribution des sources de données exigée par Google. */
 export function copyrightsDesTuiles(tuiles) {
   const liste = [];
@@ -72,10 +104,10 @@ export function copyrightsDesTuiles(tuiles) {
 /**
  * Crée la vue photo sur une carte MapLibre déjà chargée.
  *  - carte : instance MapLibre ; cle : clé Google (fournie par l'appelant) ; profil : voir profilPhoto() ;
- *  - surCredits(texte) : mentions de sources à afficher ; surProbleme(code) : coupure (le prototype gris prend le relais).
+ *  - surCredits(texte) : mentions de sources à afficher ; surProbleme(code) : coupure (le prototype gris prend le relais) ; surAffichee() : la première tuile vient d'être DESSINÉE (c'est de là que se mesure la fluidité) ; surMesures(objet) : durées et compteurs pour la zone de mesures des aperçus.
  * Renvoie { retirer() }.
  */
-export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {}, surProbleme = () => {}, fetchReel, decalageM = DECALAGE_VERTICAL_PHOTO_M }) {
+export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {}, surProbleme = () => {}, surAffichee = () => {}, surMesures = () => {}, fetchReel, decalageM = DECALAGE_VERTICAL_PHOTO_M }) {
   const [{ MapboxOverlay }, { Tile3DLayer }] = await Promise.all([import("@deck.gl/mapbox"), import("@deck.gl/geo-layers")]);
   let retire = false;
   let overlay = null;
@@ -97,7 +129,20 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
     retirer();
     surProbleme(code);
   };
-  const moteurFetch = creerFetchGoogle({ cle, fetchReel: fetchReel || ((u, i) => fetch(u, i)), surProbleme: probleme });
+  const mesures = creerMesures();
+  const emettre = () => surMesures(mesures.donnees());
+  const moteurFetch = creerFetchGoogle({
+    cle,
+    fetchReel: fetchReel || ((u, i) => fetch(u, i)),
+    surProbleme: probleme,
+    surEvenement: (e) => {
+      if (e.type === "racine") mesures.racine(e.ms, e.status);
+      else if (e.type === "tuile" && e.status === 200) mesures.tuileRecue();
+      else if (e.type === "erreur") mesures.erreur(e.texte);
+      emettre();
+    },
+  });
+  let afficheeSignalee = false;
   const couche = new Tile3DLayer({
     id: "google-3d-photo",
     data: RACINE_TUILES_GOOGLE,
@@ -118,9 +163,23 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
       },
     },
     // Appelé AVANT la création de la couche de la tuile : on peut donc corriger sa hauteur ici.
-    onTileLoad: (tuile) => decalerTuile(tuile, decalageM),
+    onTileLoad: (tuile) => {
+      decalerTuile(tuile, decalageM);
+      mesures.tuileChargee();
+      emettre();
+    },
+    onTileError: (_tuile, message) => {
+      mesures.erreur(`tuile : ${message || "erreur"}`);
+      emettre();
+    },
     onTilesetLoad: (tileset3d) => {
       tileset3d.options.onTraversalComplete = (tuilesChoisies) => {
+        if (!afficheeSignalee && tuilesChoisies.some((t) => t.tileDrawn)) {
+          afficheeSignalee = true;
+          mesures.tuileAffichee();
+          emettre();
+          surAffichee();
+        }
         const texte = creditsAgreges(copyrightsDesTuiles(tuilesChoisies));
         if (texte !== derniersCredits) {
           derniersCredits = texte;
@@ -129,7 +188,11 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
         return tuilesChoisies;
       };
     },
-    onError: () => probleme("erreur"),
+    onError: (e) => {
+      mesures.erreur(`couche : ${e?.message || e || "erreur"}`);
+      emettre();
+      probleme("erreur");
+    },
   });
   overlay = new MapboxOverlay({ interleaved: false, layers: [couche], useDevicePixels: profil.ratioPixelMax > 1 ? true : 1 });
   carte.addControl(overlay);

@@ -171,3 +171,65 @@ test("attribution : « Google Maps » + sources de données dépliables, lien «
   expect(carte).toContain("Sources de données");
   expect(carte).toContain('aria-label="Google Maps. Sources de données"');
 });
+
+test("fluidité mesurée seulement après l'affichage des premières tuiles ; délai maximal de 60 s avec repli", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("surAffichee");
+  expect(carte).toContain("DELAI_PREMIERES_TUILES_MS = 60000");
+  expect(carte).toContain("met trop de temps à répondre");
+  // la surveillance de fluidité n'est lancée que depuis surAffichee (pas à l'ouverture, pas à l'arrivée de la racine)
+  expect(carte.match(/surveillerFluidite\(\)/g).length).toBe(1);
+  expect(carte).not.toContain("surPret");
+  const photo = lire("src/lib/carte3dPhoto.js");
+  expect(photo).toContain("surAffichee()");
+  expect(photo).toContain("tileDrawn");
+});
+
+test("zone de mesures (aperçus seulement) : racine, première tuile reçue / affichée, tuiles chargées, dernière erreur", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain('NEXT_PUBLIC_VERCEL_ENV === "preview"');
+  for (const m of ["Racine :", "1re tuile reçue", "1re tuile affichée", "Tuiles chargées", "Dernière erreur"]) expect(carte).toContain(m);
+  const { creerMesures, texteSansSecret, creerFetchGoogle } = await import("../../src/lib/carte3dPhoto.js");
+  let t = 1000;
+  const m = creerMesures(() => t);
+  t = 3500;
+  m.tuileRecue();
+  t = 4200;
+  expect(m.tuileAffichee()).toBe(3200);
+  t = 9000;
+  m.tuileRecue(); // seule la première compte
+  m.tuileAffichee();
+  m.tuileChargee();
+  m.tuileChargee();
+  m.racine(30763, 200);
+  m.erreur("HTTP 403 https://tile.googleapis.com/x?key=SECRET&session=ABC123");
+  const d = m.donnees();
+  expect(d).toMatchObject({ racineMs: 30763, racineStatut: 200, premiereRecueMs: 2500, premiereAfficheeMs: 3200, tuilesChargees: 2 });
+  expect(d.derniereErreur).not.toContain("SECRET");
+  expect(d.derniereErreur).not.toContain("ABC123");
+  expect(texteSansSecret("a?key=SECRET&b=1")).toBe("a?key=XXX&b=1");
+  // le fetch émet des événements de mesure (racine, tuile, erreur) sans jamais y mettre la clé
+  const evts = [];
+  let h = 0;
+  const f = creerFetchGoogle({
+    cle: "CLE_FICTIVE",
+    fetchReel: async () => new Response(null, { status: 200 }),
+    surEvenement: (e) => evts.push(e),
+    maintenant: () => (h += 500),
+  });
+  await f("https://tile.googleapis.com/v1/3dtiles/root.json");
+  await f("/v1/3dtiles/datasets/X/files/Y.glb?session=ABC");
+  expect(evts[0]).toEqual({ type: "racine", ms: 500, status: 200 });
+  expect(evts[1].type).toBe("tuile");
+  expect(JSON.stringify(evts)).not.toContain("CLE_FICTIVE");
+});
+
+test("logo officiel Google Maps : fichier fourni par Google, non modifié, affiché à 18 px avec texte alternatif « Google Maps »", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("/carte3d/google-maps-logo.svg");
+  expect(carte).toContain('alt="Google Maps"');
+  expect(carte).toContain("height: 18"); // entre 16 et 19 dp exigés par Google
+  const svg = lire("public/carte3d/google-maps-logo.svg");
+  expect(svg).toContain('width="105px" height="22px"'); // dimensions d'origine, proportions conservées par « width: auto »
+  expect(svg).not.toMatch(/<script|onload/i);
+});
