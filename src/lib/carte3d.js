@@ -55,7 +55,13 @@ export const MAX_RACINES_PAR_PAGE = 2;
  *  - memoireMaxMo : mémoire GPU maximale allouée aux tuiles ;
  *  - ratioPixelMax : résolution de rendu (1 = pixels CSS) ;
  *  - inclinaisonMax : inclinaison maximale de la caméra (degrés) ;
+ *  - zoomMax : zoom maximal de la carte en vue photo ;
  *  - requetesSimultanees : nombre de tuiles demandées en même temps.
+ *
+ * POURQUOI CES BORNES :
+ *  - zoomMax 18,5 (18 sur appareil modeste) : à ce zoom un pixel d'écran vaut environ 21 cm au sol (à Dakar), à peu près la finesse des images aériennes de Google ; plus près, on ne voit que du flou (zoom 22 : 2 cm par pixel).
+ *  - inclinaisonMax 55° (50° sur appareil modeste) : au-delà de ~66°, le haut de l'écran approche de l'horizon ; la distance de vue du moteur deck.gl est plafonnée à 10 fois la distance de la caméra, donc le sol est coupé net et on voit
+ *    le vide derrière. À 55°, le haut de l'écran ne dépasse pas ~2 fois la distance de la caméra : l'horizon n'est jamais visible.
  */
 export function profilPhoto(env) {
   const nav = env?.navigator ?? (typeof navigator !== "undefined" ? navigator : {});
@@ -66,8 +72,8 @@ export function profilPhoto(env) {
     Boolean(c && c.saveData) ||
     Boolean(c && /(^|-)(2g|3g)$/.test(String(c.effectiveType || "")));
   return modeste
-    ? { modeste: true, erreurEcranMax: 48, memoireMaxMo: 256, ratioPixelMax: 1, inclinaisonMax: 55, requetesSimultanees: 6 }
-    : { modeste: false, erreurEcranMax: 16, memoireMaxMo: 768, ratioPixelMax: 2, inclinaisonMax: 65, requetesSimultanees: 12 };
+    ? { modeste: true, erreurEcranMax: 48, memoireMaxMo: 256, ratioPixelMax: 1, inclinaisonMax: 50, zoomMax: 18, requetesSimultanees: 8 }
+    : { modeste: false, erreurEcranMax: 16, memoireMaxMo: 768, ratioPixelMax: 2, inclinaisonMax: 55, zoomMax: 18.5, requetesSimultanees: 24 };
 }
 
 /** Mentions de sources de données : agrège les « copyright » des tuiles affichées (séparés par « ; »), sans doublon, triés par fréquence puis par ordre alphabétique, en une seule ligne. */

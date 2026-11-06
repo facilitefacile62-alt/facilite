@@ -350,8 +350,8 @@ test("vue photo : épingles et bulles au-dessus de la couche photo, groupes seul
   // l'interface (recherche, touches, bande de boutiques) reste au-dessus des épingles
   expect(carte.match(/zIndex: 4/g).length).toBeGreaterThanOrEqual(2);
   // groupes uniquement en vue photo ; en vue grise : une épingle par boutique, comme avant
-  expect(carte).toContain("const unites = groupesActifs");
-  expect(carte).toContain(": affichees.map((b) => ({ membres: [b], centre: b, decalage: [0, 0] }));"); // vue grise : une épingle par boutique, sans décalage
+  expect(carte).toContain("const enPhoto = Boolean(groupesActifs);");
+  expect(carte).toContain(": affichees.map((b) => ({ membres: [b], centre: b }));"); // vue grise : une épingle par boutique
   expect(carte).toContain("}, [affichees, carrousel, etat, groupesActifs]);");
   expect(carte).toContain('const groupesActifs = photo === "on" ? groupesPhoto : null;');
   // la pastille de boutique n'est ajoutée aux cartes d'articles que pour les groupes (a.__badge) : HTML de la vue grise inchangé
@@ -360,10 +360,9 @@ test("vue photo : épingles et bulles au-dessus de la couche photo, groupes seul
   expect(css).toMatch(/\.maplibregl-ctrl-top-right\{position:absolute;pointer-events:none;z-index:2\}|maplibregl-ctrl-top-right\{position:absolute;pointer-events:none;z-index:2/);
 });
 
-test("regroupement selon le zoom (pixels) : les boutiques se séparent en zoomant ; les boutiques confondues se déploient en cercle", async () => {
-  const { metresParPixel, grouperBoutiquesEcran, calculerGroupesPhoto, decalagesDeploiement, signatureGroupes, SEUIL_GROUPE_PX, ZOOM_DEPLOIEMENT } = await import("../../src/lib/groupesBoutiques.js");
+test("regroupement selon le zoom (pixels) : les boutiques se séparent en zoomant ; les boutiques confondues restent groupées", async () => {
+  const { metresParPixel, grouperBoutiquesEcran, calculerGroupesPhoto, signatureGroupes, cleGroupe, SEUIL_GROUPE_PX } = await import("../../src/lib/groupesBoutiques.js");
   expect(SEUIL_GROUPE_PX).toBe(50);
-  // ~4,8 m/px à z14, ~0,15 m/px à z19 (latitude de Dakar)
   expect(metresParPixel(14, 14.75)).toBeGreaterThan(4.5);
   expect(metresParPixel(14, 14.75)).toBeLessThan(5);
   expect(metresParPixel(19, 14.75)).toBeLessThan(0.16);
@@ -374,32 +373,25 @@ test("regroupement selon le zoom (pixels) : les boutiques se séparent en zooman
   const boutiques = [a, b, c, loin];
   // zoom 14 : 50 px = ~230 m => a, b, c groupées
   expect(grouperBoutiquesEcran(boutiques, 14).map((g) => g.length).sort()).toEqual([1, 3]);
-  // zoom 19 : 50 px = ~7 m => b se sépare, a et c (confondues) restent ensemble
+  // zoom 19 : 50 px = ~7 m => b se sépare ; a et c (confondues) restent groupées même à fort zoom (jamais déployées en cercle)
   expect(grouperBoutiquesEcran(boutiques, 19).map((g) => g.length).sort()).toEqual([1, 1, 2]);
-  // déploiement en cercle seulement à partir du zoom de déploiement
-  const bas = calculerGroupesPhoto(boutiques, 14);
-  expect(bas.items.every((i) => !i.deploye)).toBe(true);
-  const haut = calculerGroupesPhoto(boutiques, ZOOM_DEPLOIEMENT + 1);
-  expect(haut.items.filter((i) => i.deploye).length).toBe(1);
-  expect(haut.items.find((i) => i.deploye).membres.map((m) => m.id).sort()).toEqual(["a", "c"]);
+  expect(grouperBoutiquesEcran(boutiques, 22).map((g) => g.length).sort()).toEqual([1, 1, 2]);
   // la signature ne change pas tant que la composition est la même (pas de recréation des épingles à chaque cran de zoom)
   expect(calculerGroupesPhoto(boutiques, 14).sig).toBe(calculerGroupesPhoto(boutiques, 14.4).sig);
   expect(calculerGroupesPhoto(boutiques, 14).sig).not.toBe(calculerGroupesPhoto(boutiques, 19).sig);
-  expect(signatureGroupes([{ membres: [{ id: "x" }, { id: "y" }], deploye: false }])).toBe("g:x+y");
-  // décalages en cercle : n points distincts, le premier vers le haut, tous à la même distance
-  const d = decalagesDeploiement(4);
-  expect(d.length).toBe(4);
-  expect(d[0][0]).toBe(0);
-  expect(d[0][1]).toBeLessThan(0);
-  expect(new Set(d.map((x) => x.join(","))).size).toBe(4);
-  const rayons = d.map(([x, y]) => Math.round(Math.hypot(x, y)));
-  expect(new Set(rayons).size).toBe(1);
+  expect(signatureGroupes([{ membres: [{ id: "x" }, { id: "y" }] }])).toBe("x+y");
+  expect(cleGroupe([{ id: "y" }, { id: "x" }])).toBe("x+y");
+  const groupes = calculerGroupesPhoto(boutiques, 19).items;
+  expect(groupes.every((it) => it.deploye === undefined)).toBe(true);
+  const src = fs.readFileSync(path.join(__dirname, "..", "..", "src/lib/groupesBoutiques.js"), "utf8");
+  expect(src).not.toContain("decalagesDeploiement");
+  expect(src).not.toContain("ZOOM_DEPLOIEMENT");
 });
 
 test("clic sur une épingle de groupe : bulle ouverte et zoom sur le groupe, sans requête réseau", async () => {
   const carte = lire("src/components/Carte3D.jsx");
   expect(carte).toContain("carte.easeTo({ center: [centre.lng, centre.lat], zoom: zoomCible");
-  expect(carte).toContain("Math.min(carte.getZoom() + 2.2, 19.5)");
+  expect(carte).toContain("Math.min(carte.getZoom() + 2.2, carte.getMaxZoom())");
   expect(carte).toContain('carte.on("zoomend", recalculer)');
   expect(carte).toContain('carte.off("zoomend", recalculer)');
   // seule la composition des groupes déclenche la recréation des épingles
@@ -423,4 +415,87 @@ test("boutiques de test : visibles seulement en preview (masquage dans le code, 
   const carte = lire("src/components/Carte3D.jsx");
   expect(carte).toContain("boutiquesVisibles(construireBoutiques(articles, logos), EN_PREVIEW)");
   expect(carte).toContain('const EN_PREVIEW = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"');
+});
+
+test("vue photo : carrousel dans un panneau FIXE en bas (au-dessus de la bande de boutiques), une seule boutique à la fois, jamais sous la recherche", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  // pas de bulle sur la carte en vue photo : seulement dans la vue grise (popup créé hors du chemin « enPhoto »)
+  const chemin = carte.slice(carte.indexOf("if (enPhoto) {"), carte.indexOf("const popup = new ml.Popup"));
+  expect(chemin).toContain("setPanneau({ boutiques: groupe, index: 0 })");
+  expect(chemin).toContain("return { marqueur, popup: null };");
+  expect(chemin).not.toContain("Popup");
+  // le panneau est dans la colonne du bas, entre le message et la bande de boutiques, donc fixe à l'écran
+  const iPanneau = carte.indexOf('role="dialog"');
+  const iBande = carte.indexOf('className="flex max-w-full gap-3 overflow-x-auto rounded-full bg-white/70');
+  const iColonne = carte.indexOf('${photo === "on" ? "bottom-0" : "bottom-4"}');
+  expect(iColonne).toBeGreaterThan(0);
+  expect(iPanneau).toBeGreaterThan(iColonne);
+  expect(iPanneau).toBeLessThan(iBande);
+  expect(carte).toContain('maxHeight: "42vh"'); // ne monte jamais jusqu'à la barre de recherche
+  expect(carte).toContain("aria-label=\"Fermer le carrousel\"");
+  // un seul panneau : l'état est un seul objet { boutiques, index } ; choisir une autre épingle le remplace
+  expect(carte.match(/useState\(null\); \/\/ vue photo : \{ boutiques, index \}/g).length).toBe(1);
+  // l'épingle choisie passe devant les autres ; un clic sur la carte ferme le panneau ; un clic sur une épingle ne le ferme pas
+  expect(carte).toContain('el.style.zIndex = cle === cleChoisie ? "10" : ""');
+  expect(carte).toContain('carte.on("click", fermer)');
+  expect(carte).toContain("ev.stopPropagation()");
+  // groupe de boutiques confondues : carrousels l'un après l'autre (pastilles de choix), pas empilés
+  expect(carte).toContain("setPanneau({ boutiques: panneau.boutiques, index: k })");
+  // l'interface (z-index 40/45) reste au-dessus de l'épingle choisie (z-index 10)
+  expect(carte).not.toMatch(/zIndex: 4 \}/);
+  expect(carte).toMatch(/zIndex: 40/);
+  // vue grise : bulles inchangées (htmlBulle sans largeur => mêmes dimensions qu'avant)
+  expect(carte).toContain("function htmlBulle(b, largeur = 140)");
+  expect(carte).toContain("htmlBulle(groupe[0])");
+});
+
+test("caméra de la vue photo : zoom et inclinaison bornés, brume à la place du vide, fond MapLibre masqué", async () => {
+  const { profilPhoto } = await import("../../src/lib/carte3d.js");
+  const fort = profilPhoto({ navigator: { deviceMemory: 8, hardwareConcurrency: 8 } });
+  const modeste = profilPhoto({ navigator: { deviceMemory: 4, hardwareConcurrency: 8 } });
+  expect(fort.zoomMax).toBe(18.5);
+  expect(modeste.zoomMax).toBe(18);
+  expect(fort.inclinaisonMax).toBe(55);
+  expect(modeste.inclinaisonMax).toBe(50);
+  // au-dessus de ~66° le haut de l'écran approche de l'horizon : la portée de vue de deck.gl (10 fois la distance de la caméra) coupe le sol
+  const fov = 2 * Math.atan(1 / 3); // altitude 1,5 de deck.gl
+  for (const pitchDeg of [fort.inclinaisonMax, modeste.inclinaisonMax]) {
+    const p = (pitchDeg * Math.PI) / 180;
+    const haut = (Math.sin(fov / 2)) / Math.sin(Math.PI / 2 - p - fov / 2);
+    const plusLoin = Math.sin(p) * haut + 1; // en distances de caméra
+    expect(plusLoin).toBeLessThan(3);
+  }
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("carte.setMaxZoom(profil.zoomMax)");
+  expect(carte).toContain("carte.setMaxZoom(22)"); // restauré en quittant la vue photo
+  expect(carte).toContain("linear-gradient(to bottom, #aebfd3");
+  expect(carte).toContain(".carte-photo .maplibregl-canvas{opacity:0}");
+});
+
+test("zone de mesures : fluidité toujours affichée en aperçu (plus besoin de ?photo=sans-coupure) et statistiques des tuiles", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("if (MONTRER_MESURES || sansCoupure) mesurerEnContinu();");
+  expect(carte).not.toContain("{sansCoupureDemande() && <div>Durée moyenne par image");
+  expect(carte).toContain("dans la vue");
+  expect(carte).toContain("échecs");
+  const photo = lire("src/lib/carte3dPhoto.js");
+  for (const nom of ["Tiles In View", "Tiles To Render", "Tiles Loading", "Failed Tile Loads"]) expect(photo).toContain(nom);
+  const { creerMesures } = await import("../../src/lib/carte3dPhoto.js");
+  const m = creerMesures(() => 0);
+  m.tuiles({ dansVue: 12, aAfficher: 9, enCours: 3, echecs: 0 });
+  expect(m.donnees().tuiles).toEqual({ dansVue: 12, aAfficher: 9, enCours: 3, echecs: 0 });
+});
+
+test("panneau du carrousel : jamais recouvert par le bouton « + » du site (marge à droite sur téléphone, largeur adaptée)", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("self-start");
+  expect(carte).toContain("sm:self-center");
+  expect(carte).toContain("Math.max(140, Math.min(276, window.innerWidth - 188))");
+  expect(carte).toContain("htmlBulle(boutiqueDuPanneau, largeurCarrousel)");
+  // largeur du panneau = carrousel + 32 (bulle) + 52 (marges) ; le bord droit du panneau doit rester à 80 px au moins du bord de l'écran (bouton « + » : ~64 px + marge)
+  for (const ecran of [360, 390, 420, 480]) {
+    const l = Math.max(140, Math.min(276, ecran - 188));
+    const bordDroit = 12 + l + 32 + 52;
+    expect(ecran - bordDroit).toBeGreaterThanOrEqual(80);
+  }
 });

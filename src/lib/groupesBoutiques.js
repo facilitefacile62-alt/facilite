@@ -44,12 +44,10 @@ export function centreGroupe(groupe) {
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Regroupement selon le ZOOM : deux boutiques sont groupées quand leurs épingles seraient à moins de SEUIL_GROUPE_PX pixels à l'écran. Quand on zoome, les boutiques se séparent en épingles individuelles.
-// Les boutiques à la MÊME position (ex. 3 boutiques de Pikine) ne peuvent pas se séparer par le zoom : à partir de ZOOM_DEPLOIEMENT, elles sont déployées en cercle autour de leur position (décalage en pixels, fixe).
+// Les boutiques à la MÊME position (ex. 3 boutiques de Pikine) ne peuvent pas se séparer par le zoom : leur épingle de groupe reste à tous les zooms ; leurs carrousels s'affichent l'un après l'autre dans le panneau fixe.
 
 /** Distance en pixels en dessous de laquelle deux épingles sont regroupées. */
 export const SEUIL_GROUPE_PX = 50;
-/** Zoom à partir duquel un groupe restant (boutiques confondues) est déployé en cercle plutôt que regroupé. */
-export const ZOOM_DEPLOIEMENT = 17.5;
 
 /** Mètres par pixel CSS à un zoom MapLibre (tuiles de 512 px) et une latitude donnés. */
 export function metresParPixel(zoom, lat) {
@@ -64,24 +62,18 @@ export function grouperBoutiquesEcran(boutiques, zoom, seuilPx = SEUIL_GROUPE_PX
   return grouperBoutiques(liste, seuilPx * metresParPixel(zoom, latMoyenne));
 }
 
-/** Décalages (pixels) pour déployer n boutiques confondues en cercle, en commençant par le haut. */
-export function decalagesDeploiement(n, rayonPx = Math.max(46, 20 * n)) {
-  return Array.from({ length: n }, (_, i) => {
-    const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
-    return [Math.round(rayonPx * Math.cos(angle)), Math.round(rayonPx * Math.sin(angle))];
-  });
+/** Clé stable d'un groupe (identifiants triés) : sert à reconnaître l'épingle sélectionnée. */
+export function cleGroupe(membres) {
+  return membres.map((b) => b.id).sort().join("+");
 }
 
 /** Signature d'un ensemble de groupes (ce qui est affiché) : la carte ne recrée ses épingles que si elle change. */
 export function signatureGroupes(items) {
-  return items
-    .map((it) => `${it.deploye ? "d" : "g"}:${it.membres.map((b) => b.id).sort().join("+")}`)
-    .sort()
-    .join("|");
+  return items.map((it) => cleGroupe(it.membres)).sort().join("|");
 }
 
-/** Groupes à afficher à un zoom donné : { sig, items: [{ membres, deploye }] }. */
+/** Groupes à afficher à un zoom donné : { sig, items: [{ membres }] }. */
 export function calculerGroupesPhoto(boutiques, zoom) {
-  const items = grouperBoutiquesEcran(boutiques, zoom).map((membres) => ({ membres, deploye: membres.length > 1 && zoom >= ZOOM_DEPLOIEMENT }));
+  const items = grouperBoutiquesEcran(boutiques, zoom).map((membres) => ({ membres }));
   return { sig: signatureGroupes(items), items };
 }

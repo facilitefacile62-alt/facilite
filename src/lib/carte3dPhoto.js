@@ -104,7 +104,7 @@ export function texteSansSecret(t) {
 /** Mesures affichées dans la zone discrète des aperçus (secondes depuis l'appui sur « Vue 3D photo », sauf la durée de réponse de la racine). */
 export function creerMesures(maintenant = () => (typeof performance !== "undefined" ? performance.now() : Date.now())) {
   const t0 = maintenant();
-  const m = { racineMs: null, racineStatut: null, premiereRecueMs: null, premiereAfficheeMs: null, tuilesChargees: 0, derniereErreur: "" };
+  const m = { racineMs: null, racineStatut: null, premiereRecueMs: null, premiereAfficheeMs: null, tuilesChargees: 0, derniereErreur: "", tuiles: null };
   return {
     donnees: () => ({ ...m }),
     racine: (ms, status) => { m.racineMs = ms; m.racineStatut = status; },
@@ -112,6 +112,7 @@ export function creerMesures(maintenant = () => (typeof performance !== "undefin
     tuileAffichee: () => { if (m.premiereAfficheeMs === null) m.premiereAfficheeMs = maintenant() - t0; return m.premiereAfficheeMs; },
     tuileChargee: () => { m.tuilesChargees += 1; },
     erreur: (texte) => { m.derniereErreur = texteSansSecret(texte).slice(0, 160); },
+    tuiles: (t) => { m.tuiles = t; },
   };
 }
 
@@ -169,6 +170,7 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
     },
   });
   let afficheeSignalee = false;
+  let dernierEtat = 0;
   const couche = new Tile3DLayer({
     id: "google-3d-photo",
     data: RACINE_TUILES_GOOGLE,
@@ -205,6 +207,14 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
           mesures.tuileAffichee();
           emettre();
           surAffichee();
+        }
+        // Statistiques du moteur (au plus une par seconde) : tuiles dans la vue, à afficher, en cours de chargement, échecs.
+        const maintenantMs = Date.now();
+        if (maintenantMs - dernierEtat >= 1000) {
+          dernierEtat = maintenantMs;
+          const lire = (nom) => tileset3d.stats?.get?.(nom)?.count ?? 0;
+          mesures.tuiles({ dansVue: lire("Tiles In View"), aAfficher: lire("Tiles To Render"), enCours: lire("Tiles Loading"), echecs: lire("Failed Tile Loads") });
+          emettre();
         }
         const texte = creditsAgreges(copyrightsDesTuiles(tuilesChoisies));
         if (texte !== derniersCredits) {

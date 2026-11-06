@@ -11,7 +11,7 @@ import { ADRESSE_CARTE_2D, DUREE_MAX_VUE_PHOTO_MS, cartePhotoActive, peutAffiche
 import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto } from "@/lib/marketplaceData";
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
-import { calculerGroupesPhoto, centreGroupe, decalagesDeploiement } from "@/lib/groupesBoutiques";
+import { calculerGroupesPhoto, centreGroupe, cleGroupe } from "@/lib/groupesBoutiques";
 import { boutiquesVisibles } from "@/lib/boutiquesTest";
 
 const STYLE_FOND = "https://tiles.openfreemap.org/styles/positron";
@@ -91,7 +91,7 @@ function boutiqueDeGroupe(groupe) {
 }
 
 // Bulle « Carrousel » d'une boutique : nom, quartier, deux articles visibles à la fois, flèches gauche / droite.
-function htmlBulle(b) {
+function htmlBulle(b, largeur = 140) {
   const cartes = b.articles
     .slice(0, 12)
     .map((a) => {
@@ -105,9 +105,9 @@ function htmlBulle(b) {
   const bouton = (cote) =>
     `<button type="button" data-fl="${cote}" aria-label="${cote === "g" ? "Précédents" : "Suivants"}" style="position:absolute;${cote === "g" ? "left" : "right"}:-8px;top:30px;width:26px;height:26px;border-radius:9999px;border:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35);font-size:18px;font-weight:900;line-height:24px;cursor:pointer;display:none;padding:0;">${cote === "g" ? "‹" : "›"}</button>`;
   const corps = b.articles.length
-    ? `<div style="position:relative;"><div class="bande3d" style="width:140px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 1px 4px;">${cartes}</div>${bouton("g")}${bouton("d")}</div>`
+    ? `<div style="position:relative;"><div class="bande3d" style="width:${largeur}px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 1px 4px;">${cartes}</div>${bouton("g")}${bouton("d")}</div>`
     : `<div style="font-size:10px;color:#64748b;padding:6px 0;">Pas encore d'article.</div>`;
-  return `<div style="position:relative;width:172px;font-family:system-ui,sans-serif;color:#0f172a;"><div style="margin-bottom:6px;"><div style="font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(b.nom)}</div><div style="font-size:9.5px;font-weight:600;color:#64748b;margin-top:2px;">📍 ${echapperHtml(b.quartier)} · ${b.articles.length} article${b.articles.length > 1 ? "s" : ""}</div></div>${corps}</div>`;
+  return `<div style="position:relative;width:${largeur + 32}px;font-family:system-ui,sans-serif;color:#0f172a;"><div style="margin-bottom:6px;"><div style="font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(b.nom)}</div><div style="font-size:9.5px;font-weight:600;color:#64748b;margin-top:2px;">📍 ${echapperHtml(b.quartier)} · ${b.articles.length} article${b.articles.length > 1 ? "s" : ""}</div></div>${corps}</div>`;
 }
 
 function brancherFleches(racine) {
@@ -151,6 +151,9 @@ export default function Carte3D() {
   const photoRef = useRef(null);
   const minuterieSessionRef = useRef(null);
   const delaiChargementRef = useRef(null);
+  const [panneau, setPanneau] = useState(null); // vue photo : { boutiques, index } : carrousel de la boutique choisie, panneau FIXE en bas de l'écran
+  const panneauRef = useRef(null);
+  const reperesRef = useRef(new Map()); // clé de groupe -> élément de l'épingle (pour la mettre au premier plan)
   const [groupesPhoto, setGroupesPhoto] = useState(null); // { sig, items } : groupes selon le zoom, vue photo seulement
   const [fluidite, setFluidite] = useState(null); // { moyenneMs, imagesParS } : affiché seulement avec ?photo=sans-coupure
   const mode3DRef = useRef(true);
@@ -176,10 +179,12 @@ export default function Carte3D() {
     photoRef.current = null;
     setPhoto("off");
     setCreditsPhoto("");
+    setPanneau(null);
     const carte = carteRef.current;
     if (carte) {
       try {
         carte.setMaxPitch(70);
+        carte.setMaxZoom(22);
         if (batimentsAjoutesRef.current) carte.setLayoutProperty("batiments-3d", "visibility", mode3DRef.current ? "visible" : "none");
       } catch {
         /* carte déjà détruite */
@@ -330,45 +335,66 @@ export default function Carte3D() {
     const carte = carteRef.current;
     const ml = bibliothequeRef.current;
     if (!carte || !ml || etat !== "pret") return undefined;
-    // Vue grise : une épingle par boutique, comme avant. Vue photo : groupes selon le zoom (chiffre = nombre de boutiques) ; boutiques confondues déployées en cercle aux grands zooms.
-    const unites = groupesActifs
-      ? groupesActifs.items.flatMap((it) =>
-          it.deploye
-            ? it.membres.map((b, k) => ({ membres: [b], centre: centreGroupe(it.membres), decalage: decalagesDeploiement(it.membres.length)[k] }))
-            : [{ membres: it.membres, centre: centreGroupe(it.membres), decalage: [0, 0] }]
-        )
-      : affichees.map((b) => ({ membres: [b], centre: b, decalage: [0, 0] }));
-    const crees = unites.map(({ membres: groupe, centre, decalage }) => {
+    // Vue grise : une épingle par boutique avec sa bulle, comme avant. Vue photo : groupes selon le zoom (chiffre = nombre de boutiques) ; PAS de bulle sur la carte : le carrousel s'affiche dans un panneau fixe en bas.
+    const enPhoto = Boolean(groupesActifs);
+    const unites = enPhoto ? groupesActifs.items.map((it) => ({ membres: it.membres, centre: centreGroupe(it.membres) })) : affichees.map((b) => ({ membres: [b], centre: b }));
+    reperesRef.current = new Map();
+    const crees = unites.map(({ membres: groupe, centre }) => {
       const groupee = groupe.length > 1;
       const el = groupee ? elementRepereGroupe(groupe) : elementRepere(groupe[0]);
-      const popup = new ml.Popup({ offset: [decalage[0], -92 + decalage[1]], closeButton: false, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(groupee ? boutiqueDeGroupe(groupe) : groupe[0]));
+      const marqueur = new ml.Marker({ element: el, anchor: "top-left", offset: [-70, -85] }).setLngLat([centre.lng, centre.lat]).addTo(carte);
+      if (enPhoto) {
+        reperesRef.current.set(cleGroupe(groupe), el);
+        el.addEventListener("click", (ev) => {
+          ev.stopPropagation(); // le clic sur une épingle ne doit pas fermer le panneau (clic sur la carte)
+          setPanneau({ boutiques: groupe, index: 0 });
+          // Un clic sur une épingle de groupe zoome aussi sur le groupe (aucune requête réseau : la carte et la photo se déplacent seulement).
+          const zoomCible = Math.min(carte.getZoom() + 2.2, carte.getMaxZoom());
+          if (groupee && zoomCible > carte.getZoom() + 0.05) carte.easeTo({ center: [centre.lng, centre.lat], zoom: zoomCible, duration: 700 });
+        });
+        return { marqueur, popup: null };
+      }
+      const popup = new ml.Popup({ offset: [0, -92], closeButton: false, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(groupe[0]));
       popup.on("open", () => {
         const racine = popup.getElement();
         if (racine) brancherFleches(racine);
       });
-      const marqueur = new ml.Marker({ element: el, anchor: "top-left", offset: [-70 + decalage[0], -85 + decalage[1]] }).setLngLat([centre.lng, centre.lat]).addTo(carte);
       popup.setLngLat([centre.lng, centre.lat]);
       el.addEventListener("click", () => {
-        if (groupee) {
-          // Un clic sur une épingle de groupe ouvre la bulle regroupée ET zoome sur le groupe (aucune requête réseau : la carte et la photo se contentent de se déplacer).
-          if (!popup.isOpen()) popup.addTo(carte);
-          const zoomCible = Math.min(carte.getZoom() + 2.2, 19.5);
-          if (zoomCible > carte.getZoom() + 0.05) carte.easeTo({ center: [centre.lng, centre.lat], zoom: zoomCible, duration: 700 });
-          return;
-        }
         if (popup.isOpen()) popup.remove();
         else popup.addTo(carte);
       });
       return { marqueur, popup };
     });
-    if (carrousel) crees.forEach((r) => r.popup.addTo(carte));
+    if (carrousel) crees.forEach((r) => r.popup?.addTo(carte));
     return () => {
       crees.forEach((r) => {
-        r.popup.remove();
+        r.popup?.remove();
         r.marqueur.remove();
       });
     };
   }, [affichees, carrousel, etat, groupesActifs]);
+
+  // Vue photo : l'épingle choisie passe devant les autres (même si deux épingles se chevauchent) et le carrousel reste dans le panneau fixe ; un clic sur la carte ferme le panneau.
+  useEffect(() => {
+    const cleChoisie = panneau ? cleGroupe(panneau.boutiques) : null;
+    reperesRef.current.forEach((el, cle) => {
+      el.style.zIndex = cle === cleChoisie ? "10" : "";
+    });
+  }, [panneau, groupesActifs]);
+  useEffect(() => {
+    const carte = carteRef.current;
+    if (photo !== "on" || !carte) return undefined;
+    const fermer = () => setPanneau(null);
+    carte.on("click", fermer);
+    return () => carte.off("click", fermer);
+  }, [photo]);
+  // Sur téléphone, le panneau est aligné à gauche et laisse ~104 px libres à droite pour le bouton « + » du site (jamais recouvert) : le carrousel s'adapte à l'espace restant (140 à 276 px).
+  const largeurCarrousel = typeof window !== "undefined" ? Math.max(140, Math.min(276, window.innerWidth - 188)) : 276;
+  const boutiqueDuPanneau = panneau ? panneau.boutiques[Math.min(panneau.index, panneau.boutiques.length - 1)] : null;
+  useEffect(() => {
+    if (panneauRef.current && boutiqueDuPanneau) brancherFleches(panneauRef.current);
+  }, [boutiqueDuPanneau]);
 
   const surBascule = () => {
     const suivant = !mode3D;
@@ -407,33 +433,34 @@ export default function Carte3D() {
         setInfo("La vue 3D photo met trop de temps à répondre : la vue 3D simple est affichée.");
       }, DELAI_PREMIERES_TUILES_MS);
       // Fluidité : mesurée SEULEMENT une fois les premières tuiles affichées (puis 3 s de pause) ; sur 4 secondes, plus de 90 ms par image en moyenne => retour au prototype gris.
-      const surveillerFluidite = () => {
-        if (sansCoupure) {
-          // Sans coupure : mesure continue, affichée dans la zone de mesures (moyenne sur 1 seconde).
-          let dernier = 0;
-          let debutFenetre = 0;
-          let somme = 0;
-          let n = 0;
-          const boucle = (t) => {
-            if (!photoRef.current) return;
-            if (dernier) {
-              somme += t - dernier;
-              n += 1;
-            }
-            dernier = t;
-            if (!debutFenetre) debutFenetre = t;
-            if (t - debutFenetre >= 1000 && n > 0) {
-              const moyenne = somme / n;
-              setFluidite({ moyenneMs: Math.round(moyenne), imagesParS: Math.round(1000 / moyenne) });
-              somme = 0;
-              n = 0;
-              debutFenetre = t;
-            }
-            requestAnimationFrame(boucle);
-          };
+      const mesurerEnContinu = () => {
+        // Moyenne sur 1 seconde, affichée dans la zone de mesures des aperçus (jamais de coupure ici).
+        let dernier = 0;
+        let debutFenetre = 0;
+        let somme = 0;
+        let n = 0;
+        const boucle = (t) => {
+          if (!photoRef.current) return;
+          if (dernier) {
+            somme += t - dernier;
+            n += 1;
+          }
+          dernier = t;
+          if (!debutFenetre) debutFenetre = t;
+          if (t - debutFenetre >= 1000 && n > 0) {
+            const moyenne = somme / n;
+            setFluidite({ moyenneMs: Math.round(moyenne), imagesParS: Math.round(1000 / moyenne) });
+            somme = 0;
+            n = 0;
+            debutFenetre = t;
+          }
           requestAnimationFrame(boucle);
-          return;
-        }
+        };
+        requestAnimationFrame(boucle);
+      };
+      const surveillerFluidite = () => {
+        if (MONTRER_MESURES || sansCoupure) mesurerEnContinu();
+        if (sansCoupure) return;
         let n = 0;
         let debut = 0;
         const compter = (t) => {
@@ -473,7 +500,8 @@ export default function Carte3D() {
       if (profil.modeste) setInfo("Appareil modeste : la vue photo est allégée (moins de détail) pour rester fluide.");
       // Inclinaison plafonnée selon l'appareil ; les bâtiments gris sont masqués sous la photo.
       carte.setMaxPitch(profil.inclinaisonMax);
-      if (carte.getPitch() > profil.inclinaisonMax) carte.easeTo({ pitch: profil.inclinaisonMax, duration: 500 });
+      carte.setMaxZoom(profil.zoomMax);
+      if (carte.getPitch() > profil.inclinaisonMax || carte.getZoom() > profil.zoomMax) carte.easeTo({ pitch: Math.min(carte.getPitch(), profil.inclinaisonMax), zoom: Math.min(carte.getZoom(), profil.zoomMax), duration: 500 });
       if (batimentsAjoutesRef.current) carte.setLayoutProperty("batiments-3d", "visibility", "none");
       // La session Google dure « au moins 3 heures » : on coupe avant, pour ne jamais travailler avec une session expirée.
       minuterieSessionRef.current = window.setTimeout(() => {
@@ -493,8 +521,8 @@ export default function Carte3D() {
   const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.max(carteRef.current.getZoom(), 16), duration: 900 });
 
   return (
-    <div className={`fixed inset-0 bg-[#e8eaee]${photo === "on" ? " carte-photo" : ""}`} style={{ zIndex: 50 }}>
-      <style>{".maplibregl-ctrl-bottom-right{bottom:104px !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}.carte-photo .maplibregl-marker,.carte-photo .maplibregl-popup{z-index:3}.carte-photo .maplibregl-ctrl-bottom-right{display:none}"}</style>
+    <div className={`fixed inset-0 bg-[#e8eaee]${photo === "on" ? " carte-photo" : ""}`} style={{ zIndex: 50, ...(photo === "on" ? { background: "linear-gradient(to bottom, #aebfd3 0%, #d3dce6 40%, #e3e8ee 100%)" } : {}) }}>
+      <style>{".maplibregl-ctrl-bottom-right{bottom:104px !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}.carte-photo .maplibregl-marker,.carte-photo .maplibregl-popup{z-index:3}.carte-photo .maplibregl-ctrl-bottom-right{display:none}.carte-photo .maplibregl-canvas{opacity:0}"}</style>
       <div ref={conteneurRef} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} aria-label="Carte 3D des boutiques" />
       {etat === "chargement" && <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>}
       {etat === "repli" && (
@@ -508,7 +536,7 @@ export default function Carte3D() {
       {etat === "pret" && (
         <>
           {/* En-tête identique à « Autour de moi » : recherche, fermeture, rangée de touches */}
-          <div className="absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-3" style={{ pointerEvents: "none", zIndex: 4 }}>
+          <div className="absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-3" style={{ pointerEvents: "none", zIndex: 40 }}>
             <div className="flex items-center gap-2.5" style={{ pointerEvents: "auto" }}>
               <div className="flex flex-1 items-center gap-2 pl-4 pr-1.5 shadow-xl" style={{ height: 48, borderRadius: 18, backgroundColor: "#EAE3D2" }}>
                 <input
@@ -546,7 +574,7 @@ export default function Carte3D() {
             aria-pressed={mode3D}
             aria-label={mode3D ? "Passer en 2D" : "Passer en 3D"}
             className="absolute right-3 flex h-14 w-14 flex-col items-center justify-center rounded-full bg-sky-500 text-white shadow-2xl"
-            style={{ top: 132, zIndex: 5 }}
+            style={{ top: 132, zIndex: 45 }}
           >
             <span className="text-[15px] font-black leading-none">{mode3D ? "3D" : "2D"}</span>
             <span className="mt-0.5 text-[8px] font-extrabold leading-none opacity-90">{mode3D ? "→ 2D" : "→ 3D"}</span>
@@ -560,42 +588,26 @@ export default function Carte3D() {
               aria-pressed={photo === "on"}
               aria-label={photo === "on" ? "Quitter la vue 3D photo" : "Vue 3D photo"}
               className="absolute right-3 flex h-14 w-14 flex-col items-center justify-center rounded-full bg-indigo-600 text-white shadow-2xl disabled:opacity-70"
-              style={{ top: 196, zIndex: 5 }}
+              style={{ top: 196, zIndex: 45 }}
             >
               <span className="text-[13px] font-black leading-none">{photo === "chargement" ? "…" : "PHOTO"}</span>
               <span className="mt-0.5 text-[8px] font-extrabold leading-none opacity-90">{photo === "on" ? "quitter" : "Google"}</span>
             </button>
           )}
-          {/* Attribution exigée par Google : logo officiel « Google Maps » (non modifié, fichier fourni par Google, 18 px de haut, marges de 10 / 10 / 10 / 5 px) + sources de données des tuiles affichées (une ligne, dépliable) */}
-          {photo === "on" && (
-            <div className="absolute left-0" style={{ bottom: 98, maxWidth: "70%", zIndex: 5, padding: "10px 10px 5px 10px" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/carte3d/google-maps-logo.svg" alt="Google Maps" style={{ height: 18, width: "auto", display: "block" }} />
-              <button
-                type="button"
-                onClick={() => setCreditsOuverts((v) => !v)}
-                aria-label="Google Maps. Sources de données"
-                className="mt-1.5 block rounded-lg bg-black/60 px-2 py-1 text-left text-[10px] font-semibold text-white"
-                style={{ maxWidth: "100%" }}
-              >
-                <span className={creditsOuverts ? "block" : "block truncate"}>{creditsPhoto || "Sources de données…"}</span>
-                <span className="block text-[9px] font-extrabold underline">{creditsOuverts ? "Réduire ▴" : "Sources de données ▾"}</span>
-              </button>
-            </div>
-          )}
           {/* Mesures de la vue photo (aperçus seulement) : durées depuis l'appui, pour pouvoir les transmettre sans ouvrir la console */}
           {MONTRER_MESURES && mesures && (
-            <div className="absolute left-3 rounded-lg bg-black/65 px-2 py-1 text-[10px] font-semibold leading-snug text-white" style={{ top: 132, zIndex: 5, pointerEvents: "none", maxWidth: "68%" }}>
+            <div className="absolute left-3 rounded-lg bg-black/65 px-2 py-1 text-[10px] font-semibold leading-snug text-white" style={{ top: 132, zIndex: 45, pointerEvents: "none", maxWidth: "68%" }}>
               <div>Racine : {mesures.racineMs == null ? "…" : `${(mesures.racineMs / 1000).toFixed(1)} s (HTTP ${mesures.racineStatut})`}</div>
               <div>1re tuile reçue : {mesures.premiereRecueMs == null ? "—" : `${(mesures.premiereRecueMs / 1000).toFixed(1)} s`}</div>
               <div>1re tuile affichée : {mesures.premiereAfficheeMs == null ? "—" : `${(mesures.premiereAfficheeMs / 1000).toFixed(1)} s`}</div>
               <div>Tuiles chargées : {mesures.tuilesChargees}</div>
               <div>Dernière erreur : {mesures.derniereErreur || "aucune"}</div>
-              {sansCoupureDemande() && <div>Durée moyenne par image : {fluidite ? `${fluidite.moyenneMs} ms (${fluidite.imagesParS} images/s)` : "…"}</div>}
+              <div>Durée moyenne par image : {fluidite ? `${fluidite.moyenneMs} ms (${fluidite.imagesParS} images/s)` : "…"}</div>
+              <div>Tuiles : {mesures.tuiles ? `${mesures.tuiles.dansVue} dans la vue · ${mesures.tuiles.aAfficher} à afficher · ${mesures.tuiles.enCours} en cours · ${mesures.tuiles.echecs} échecs` : "…"}</div>
             </div>
           )}
           {/* Bande de boutiques en bas, comme sur la carte 2D */}
-          <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none", zIndex: 4 }}>
+          <div className={`absolute inset-x-0 ${photo === "on" ? "bottom-0" : "bottom-4"} flex flex-col items-center gap-2 px-3`} style={{ pointerEvents: "none", zIndex: 40, ...(photo === "on" ? { paddingLeft: 0, paddingRight: 0 } : {}) }}>
             {info && (
               <div className="rounded-2xl bg-gray-900/90 px-4 py-2.5 text-center text-xs font-bold text-white shadow-xl" style={{ pointerEvents: "auto" }}>
                 {info}
@@ -604,6 +616,30 @@ export default function Carte3D() {
                     Continuer quand même
                   </button>
                 )}
+              </div>
+            )}
+            {photo === "on" && panneau && boutiqueDuPanneau && (
+              <div className="relative mx-3 self-start rounded-2xl bg-white p-3 pr-10 shadow-2xl sm:self-center" style={{ pointerEvents: "auto", maxWidth: "min(94vw, 430px)", maxHeight: "42vh", overflowY: "auto" }} role="dialog" aria-label={`Carrousel : ${boutiqueDuPanneau.nom}`}>
+                <button type="button" onClick={() => setPanneau(null)} aria-label="Fermer le carrousel" className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-black text-gray-800">
+                  ✕
+                </button>
+                {panneau.boutiques.length > 1 && (
+                  <div className="mb-2 flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                    {panneau.boutiques.map((b, k) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setPanneau({ boutiques: panneau.boutiques, index: k })}
+                        aria-pressed={k === panneau.index}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-full border-2 px-2 py-1 text-[11px] font-extrabold ${k === panneau.index ? "border-emerald-500 bg-emerald-50 text-gray-900" : "border-gray-200 bg-white text-gray-600"}`}
+                      >
+                        <span className="h-6 w-6 overflow-hidden rounded-full bg-white" dangerouslySetInnerHTML={{ __html: contenuAvatar(b, 24) || "🏪" }} />
+                        <span className="max-w-[110px] truncate">{b.nom}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div ref={panneauRef} dangerouslySetInnerHTML={{ __html: htmlBulle(boutiqueDuPanneau, largeurCarrousel) }} />
               </div>
             )}
             <div className="flex max-w-full gap-3 overflow-x-auto rounded-full bg-white/70 px-4 py-2 shadow-xl backdrop-blur-md" style={{ pointerEvents: "auto", scrollbarWidth: "none" }}>
@@ -617,6 +653,17 @@ export default function Carte3D() {
                 </button>
               ))}
             </div>
+            {/* Attribution exigée par Google : logo officiel « Google Maps » (non modifié, 18 px de haut, marges 10 / 10 / 10 / 5 px) + sources de données des tuiles affichées (une ligne, dépliable). Sous la bande de boutiques : aucun recouvrement. */}
+            {photo === "on" && (
+              <div className="flex w-full items-start gap-3" style={{ pointerEvents: "auto", padding: "10px 10px 5px 10px" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/carte3d/google-maps-logo.svg" alt="Google Maps" style={{ height: 18, width: "auto", display: "block", flexShrink: 0 }} />
+                <button type="button" onClick={() => setCreditsOuverts((v) => !v)} aria-label="Google Maps. Sources de données" className="min-w-0 flex-1 rounded-lg bg-black/60 px-2 py-0.5 text-left text-[10px] font-semibold text-white">
+                  <span className={creditsOuverts ? "block" : "block truncate"}>{creditsPhoto || "Sources de données…"}</span>
+                  <span className="block text-[9px] font-extrabold underline">{creditsOuverts ? "Réduire ▴" : "Sources de données ▾"}</span>
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
