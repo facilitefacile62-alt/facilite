@@ -7,7 +7,7 @@
 // Repli : appareil trop faible, WebGL absent, fond injoignable, carte trop lente => retour à la carte 2D actuelle (ou carte à plat).
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ADRESSE_CARTE_2D, peutAfficher3D } from "@/lib/carte3d";
+import { ADRESSE_CARTE_2D, DUREE_MAX_VUE_PHOTO_MS, MAX_RACINES_PAR_PAGE, cartePhotoActive, peutAfficher3D, profilPhoto } from "@/lib/carte3d";
 import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto } from "@/lib/marketplaceData";
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
@@ -17,6 +17,7 @@ const CENTRE_DEFAUT = [-17.384, 14.756]; // [lng, lat] : Pikine
 const INCLINAISON_3D = 60;
 const DELAI_CHARGEMENT_MS = 15000;
 const ATTRIBUTION_BATIMENTS = "Bâtiments : © Overture Maps Foundation, OpenStreetMap contributors";
+const MESSAGE_REPLI_PHOTO = "La vue 3D photo n'est pas disponible pour le moment (limite d'utilisation atteinte ou accès refusé). La vue 3D simple reste affichée.";
 
 function prixLisible(v) {
   const n = Number(v);
@@ -115,11 +116,45 @@ export default function Carte3D() {
   const [boutiques, setBoutiques] = useState([]);
   const [filtre, setFiltre] = useState("tous"); // tous | live
   const [info, setInfo] = useState("");
+  // Vue 3D photo (Google) : « off » | « chargement » | « on ». Chargée SEULEMENT à l'appui sur le bouton ; interrupteur séparé NEXT_PUBLIC_CARTE_3D_PHOTO (voir src/lib/carte3d.js).
+  const photoPossible = cartePhotoActive();
+  const [photo, setPhoto] = useState("off");
+  const [creditsPhoto, setCreditsPhoto] = useState("");
+  const [creditsOuverts, setCreditsOuverts] = useState(false);
+  const photoRef = useRef(null);
+  const minuterieSessionRef = useRef(null);
+  const activationsPhotoRef = useRef(0);
+  const mode3DRef = useRef(true);
+  useEffect(() => {
+    mode3DRef.current = mode3D;
+  }, [mode3D]);
 
   const basculerVersCarte2D = useCallback((message) => {
     setRaison(message || "La carte 3D n'est pas disponible : retour à la carte 2D.");
     setEtat("repli");
     window.setTimeout(() => window.location.replace(ADRESSE_CARTE_2D), 2500);
+  }, []);
+
+  // Retire la vue photo (libère les tuiles et le réseau) et remet le prototype gris tel qu'il était.
+  const retirerPhoto = useCallback(() => {
+    window.clearTimeout(minuterieSessionRef.current);
+    try {
+      photoRef.current?.retirer();
+    } catch {
+      /* déjà retirée */
+    }
+    photoRef.current = null;
+    setPhoto("off");
+    setCreditsPhoto("");
+    const carte = carteRef.current;
+    if (carte) {
+      try {
+        carte.setMaxPitch(70);
+        if (batimentsAjoutesRef.current) carte.setLayoutProperty("batiments-3d", "visibility", mode3DRef.current ? "visible" : "none");
+      } catch {
+        /* carte déjà détruite */
+      }
+    }
   }, []);
 
   const appliquerMode = useCallback((active) => {
@@ -224,6 +259,13 @@ export default function Carte3D() {
     return () => {
       annule = true;
       window.clearTimeout(minuterie);
+      window.clearTimeout(minuterieSessionRef.current);
+      try {
+        photoRef.current?.retirer();
+      } catch {
+        /* déjà retirée */
+      }
+      photoRef.current = null;
       if (carte) carte.remove();
       carteRef.current = null;
     };
@@ -270,9 +312,74 @@ export default function Carte3D() {
 
   const surBascule = () => {
     const suivant = !mode3D;
+    if (!suivant && photoRef.current) retirerPhoto();
     setMode3D(suivant);
     setInfo("");
     appliquerMode(suivant);
+  };
+
+  const surPhoto = async () => {
+    const carte = carteRef.current;
+    if (!carte || photo === "chargement") return;
+    if (photo === "on") {
+      retirerPhoto();
+      return;
+    }
+    if (activationsPhotoRef.current >= MAX_RACINES_PAR_PAGE) {
+      setInfo("Pour limiter les coûts, rechargez la page pour relancer la vue 3D photo.");
+      return;
+    }
+    activationsPhotoRef.current += 1; // une activation = une requête racine chez Google
+    setPhoto("chargement");
+    setInfo("");
+    try {
+      const { creerVuePhoto } = await import("@/lib/carte3dPhoto");
+      const profil = profilPhoto();
+      if (!mode3DRef.current) {
+        setMode3D(true);
+        appliquerMode(true);
+      }
+      const controleur = await creerVuePhoto({
+        carte,
+        cle: process.env.NEXT_PUBLIC_GOOGLE_TILES_KEY,
+        profil,
+        surCredits: setCreditsPhoto,
+        surProbleme: () => {
+          retirerPhoto();
+          setInfo(MESSAGE_REPLI_PHOTO);
+        },
+      });
+      photoRef.current = controleur;
+      setPhoto("on");
+      if (profil.modeste) setInfo("Appareil modeste : la vue photo est allégée (moins de détail) pour rester fluide.");
+      // Inclinaison plafonnée selon l'appareil ; les bâtiments gris sont masqués sous la photo.
+      carte.setMaxPitch(profil.inclinaisonMax);
+      if (carte.getPitch() > profil.inclinaisonMax) carte.easeTo({ pitch: profil.inclinaisonMax, duration: 500 });
+      if (batimentsAjoutesRef.current) carte.setLayoutProperty("batiments-3d", "visibility", "none");
+      // La session Google dure « au moins 3 heures » : on coupe avant, pour ne jamais travailler avec une session expirée.
+      minuterieSessionRef.current = window.setTimeout(() => {
+        retirerPhoto();
+        setInfo("La session de la vue photo est terminée : appuyez de nouveau sur « Vue 3D photo » pour la relancer.");
+      }, DUREE_MAX_VUE_PHOTO_MS);
+      // Fluidité : sur 4 secondes (après 2 s de chargement), plus de 90 ms par image en moyenne => retour au prototype gris.
+      let n = 0;
+      let debut = 0;
+      const compter = (t) => {
+        if (!photoRef.current) return;
+        if (!debut) debut = t;
+        n += 1;
+        if (t - debut < 4000) requestAnimationFrame(compter);
+        else if ((t - debut) / n > 90) {
+          retirerPhoto();
+          setInfo("Votre appareil est un peu lent pour la vue photo : la vue 3D simple est affichée.");
+        }
+      };
+      window.setTimeout(() => requestAnimationFrame(compter), 2000);
+    } catch (erreur) {
+      console.error("[carte 3D photo] démarrage impossible :", erreur?.message || erreur);
+      retirerPhoto();
+      setInfo(MESSAGE_REPLI_PHOTO);
+    }
   };
 
   const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.max(carteRef.current.getZoom(), 16), duration: 900 });
@@ -336,6 +443,35 @@ export default function Carte3D() {
             <span className="text-[15px] font-black leading-none">{mode3D ? "3D" : "2D"}</span>
             <span className="mt-0.5 text-[8px] font-extrabold leading-none opacity-90">{mode3D ? "→ 2D" : "→ 3D"}</span>
           </button>
+          {/* Vue 3D photo (Google) : prototype derrière l'interrupteur NEXT_PUBLIC_CARTE_3D_PHOTO ; ne charge rien tant qu'on n'appuie pas */}
+          {photoPossible && (
+            <button
+              type="button"
+              onClick={surPhoto}
+              disabled={photo === "chargement"}
+              aria-pressed={photo === "on"}
+              aria-label={photo === "on" ? "Quitter la vue 3D photo" : "Vue 3D photo"}
+              className="absolute right-3 flex h-14 w-14 flex-col items-center justify-center rounded-full bg-indigo-600 text-white shadow-2xl disabled:opacity-70"
+              style={{ top: 196, zIndex: 5 }}
+            >
+              <span className="text-[13px] font-black leading-none">{photo === "chargement" ? "…" : "PHOTO"}</span>
+              <span className="mt-0.5 text-[8px] font-extrabold leading-none opacity-90">{photo === "on" ? "quitter" : "Google"}</span>
+            </button>
+          )}
+          {/* Attribution exigée par Google : « Google Maps » + sources de données des tuiles affichées (en une ligne, dépliable) */}
+          {photo === "on" && (
+            <button
+              type="button"
+              onClick={() => setCreditsOuverts((v) => !v)}
+              aria-label="Google Maps. Sources de données"
+              className="absolute left-3 rounded-lg bg-black/55 px-2 py-1 text-left text-[10px] font-semibold text-white"
+              style={{ bottom: 104, maxWidth: "62%", zIndex: 5 }}
+            >
+              <span className="font-black">Google Maps</span>
+              <span className={creditsOuverts ? "block" : "block truncate"}>{creditsPhoto || "Sources de données…"}</span>
+              <span className="block text-[9px] font-extrabold underline">{creditsOuverts ? "Réduire ▴" : "Sources de données ▾"}</span>
+            </button>
+          )}
           {/* Bande de boutiques en bas, comme sur la carte 2D */}
           <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none" }}>
             {info && (
