@@ -453,8 +453,8 @@ test("caméra de la vue photo : zoom et inclinaison bornés, brume à la place d
   const { profilPhoto } = await import("../../src/lib/carte3d.js");
   const fort = profilPhoto({ navigator: { deviceMemory: 8, hardwareConcurrency: 8 } });
   const modeste = profilPhoto({ navigator: { deviceMemory: 4, hardwareConcurrency: 8 } });
-  expect(fort.zoomMax).toBe(18.5);
-  expect(modeste.zoomMax).toBe(18);
+  expect(fort.zoomMax).toBe(17);
+  expect(modeste.zoomMax).toBe(16.5);
   expect(fort.inclinaisonMax).toBe(55);
   expect(modeste.inclinaisonMax).toBe(50);
   // au-dessus de ~66° le haut de l'écran approche de l'horizon : la portée de vue de deck.gl (10 fois la distance de la caméra) coupe le sol
@@ -498,4 +498,66 @@ test("panneau du carrousel : jamais recouvert par le bouton « + » du site (mar
     const bordDroit = 12 + l + 32 + 52;
     expect(ecran - bordDroit).toBeGreaterThanOrEqual(80);
   }
+});
+
+test("réglages d'essai par variables Vercel : zoom maximal et erreur d'écran (valeurs par défaut 17 / 16,5 et 16 / 48)", async () => {
+  const { profilPhoto, reglageNumerique } = await import("../../src/lib/carte3d.js");
+  const nav = { deviceMemory: 8, hardwareConcurrency: 8 };
+  const modeste = { deviceMemory: 4, hardwareConcurrency: 8 };
+  const sans = { zoomMax: null, erreurEcran: null };
+  expect(profilPhoto({ navigator: nav, reglages: sans })).toMatchObject({ zoomMax: 17, erreurEcranMax: 16 });
+  expect(profilPhoto({ navigator: modeste, reglages: sans })).toMatchObject({ zoomMax: 16.5, erreurEcranMax: 48 });
+  // réglages valides : appliqués aux deux profils
+  expect(profilPhoto({ navigator: nav, reglages: { zoomMax: 15.5, erreurEcran: 8 } })).toMatchObject({ zoomMax: 15.5, erreurEcranMax: 8 });
+  expect(profilPhoto({ navigator: modeste, reglages: { zoomMax: 15.5, erreurEcran: 8 } })).toMatchObject({ zoomMax: 15.5, erreurEcranMax: 8 });
+  // lecture de la variable : valeur absente, vide, hors bornes ou non numérique => défaut du profil (null)
+  expect(reglageNumerique("17.5", 10, 22)).toBe(17.5);
+  expect(reglageNumerique(" 8 ", 1, 200)).toBe(8);
+  for (const mauvais of [undefined, "", "  ", "abc", "99", "3", null]) expect(reglageNumerique(mauvais, 10, 22)).toBeNull();
+  expect(reglageNumerique("0", 1, 200)).toBeNull();
+  const src = lire("src/lib/carte3d.js");
+  expect(src).toContain("process.env.NEXT_PUBLIC_CARTE_3D_PHOTO_ZOOM_MAX");
+  expect(src).toContain("process.env.NEXT_PUBLIC_CARTE_3D_PHOTO_ERREUR_ECRAN");
+});
+
+test("zone de mesures : zoom actuel et erreur géométrique la plus fine parmi les tuiles affichées", async () => {
+  const { erreurGeometriqueLaPlusFine, creerMesures } = await import("../../src/lib/carte3dPhoto.js");
+  const tuiles = [
+    { content: {}, lodMetricValue: 131489 },
+    { content: {}, lodMetricValue: 32.5 },
+    { content: {}, lodMetricValue: 8 },
+    { content: null, lodMetricValue: 1 }, // sans contenu : ignorée
+    { content: {}, lodMetricValue: 1e100 }, // infinie : ignorée
+    { content: {}, header: { geometricError: 16 } },
+  ];
+  expect(erreurGeometriqueLaPlusFine(tuiles)).toBe(8);
+  expect(erreurGeometriqueLaPlusFine([])).toBeNull();
+  expect(erreurGeometriqueLaPlusFine(null)).toBeNull();
+  const m = creerMesures(() => 0);
+  m.erreurFine(8);
+  expect(m.donnees().erreurFine).toBe(8);
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("Zoom : ");
+  expect(carte).toContain("Erreur géométrique la plus fine affichée");
+  expect(carte).toContain('carte.on("zoom", maj)');
+  expect(lire("src/lib/carte3dPhoto.js")).toContain("mesures.erreurFine(erreurGeometriqueLaPlusFine(tuilesChoisies))");
+});
+
+test("toutes les voies de zoom passent par le zoom maximal de la carte (molette, pincement, double clic, clavier, vol vers une boutique, clic sur un groupe)", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  // MapLibre borne TOUT mouvement de caméra par maxZoom (setMaxZoom) ; nos propres déplacements le respectent aussi
+  expect(carte).toContain("carte.setMaxZoom(profil.zoomMax)");
+  expect(carte).toContain("Math.min(carte.getZoom() + 2.2, carte.getMaxZoom())"); // clic sur un groupe
+  expect(carte).toContain("Math.min(Math.max(carteRef.current.getZoom(), 16), carteRef.current.getMaxZoom())"); // bande de boutiques (vol)
+  expect(carte).toContain("carte.setMaxZoom(22)"); // restauré en quittant la vue photo
+  // les seuls zooms écrits « en dur » sont ceux du démarrage (hors vue photo) et ceux bornés ci-dessus
+  const enDur = (carte.match(/(?<![a-zA-Z])zoom: [0-9.]+/g) || []).map((x) => x.trim());
+  expect(enDur).toEqual(["zoom: 15.2"]);
+});
+
+test("garde-fou de zoom : fitBounds n'est pas borné par MapLibre, la vue photo ramène le zoom au maximum", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("if (carte.getZoom() > max + 0.01) carte.jumpTo({ zoom: max });");
+  expect(carte).toContain('carte.on("zoomend", borner)');
+  expect(carte).toContain('carte.off("zoomend", borner)');
 });

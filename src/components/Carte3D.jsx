@@ -155,6 +155,7 @@ export default function Carte3D() {
   const panneauRef = useRef(null);
   const reperesRef = useRef(new Map()); // clé de groupe -> élément de l'épingle (pour la mettre au premier plan)
   const [groupesPhoto, setGroupesPhoto] = useState(null); // { sig, items } : groupes selon le zoom, vue photo seulement
+  const [zoomActuel, setZoomActuel] = useState(null); // zoom de la carte en vue photo (zone de mesures des aperçus)
   const [fluidite, setFluidite] = useState(null); // { moyenneMs, imagesParS } : affiché seulement avec ?photo=sans-coupure
   const mode3DRef = useRef(true);
   useEffect(() => {
@@ -329,6 +330,28 @@ export default function Carte3D() {
     return () => carte.off("zoomend", recalculer);
   }, [photo, affichees]);
   const groupesActifs = photo === "on" ? groupesPhoto : null;
+  // Garde-fou : MapLibre borne molette, pincement, double clic, clavier, easeTo, flyTo et jumpTo par le zoom maximal, mais PAS fitBounds (essai local : fitBounds avec maxZoom 22 est arrivé à 18,2 alors que le maximum était 17).
+  // Si le zoom dépasse le maximum en vue photo, on le ramène au maximum.
+  useEffect(() => {
+    const carte = carteRef.current;
+    if (photo !== "on" || !carte) return undefined;
+    const borner = () => {
+      const max = carte.getMaxZoom();
+      if (carte.getZoom() > max + 0.01) carte.jumpTo({ zoom: max });
+    };
+    borner();
+    carte.on("zoomend", borner);
+    return () => carte.off("zoomend", borner);
+  }, [photo]);
+  // Zoom affiché dans la zone de mesures (aperçus) : suivi pendant la vue photo.
+  useEffect(() => {
+    const carte = carteRef.current;
+    if (photo !== "on" || !carte || !MONTRER_MESURES) return undefined;
+    const maj = () => setZoomActuel({ zoom: Math.round(carte.getZoom() * 100) / 100, max: Math.round(carte.getMaxZoom() * 100) / 100 });
+    maj();
+    carte.on("zoom", maj);
+    return () => carte.off("zoom", maj);
+  }, [photo]);
 
   // Repères + bulles : recréés quand la liste affichée change ; les bulles sont ouvertes d'office (touche « Carrousel » active).
   useEffect(() => {
@@ -518,7 +541,7 @@ export default function Carte3D() {
   const surPhoto = () => lancerPhoto(false);
   const continuerQuandMeme = () => lancerPhoto(true);
 
-  const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.max(carteRef.current.getZoom(), 16), duration: 900 });
+  const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.min(Math.max(carteRef.current.getZoom(), 16), carteRef.current.getMaxZoom()), duration: 900 });
 
   return (
     <div className={`fixed inset-0 bg-[#e8eaee]${photo === "on" ? " carte-photo" : ""}`} style={{ zIndex: 50, ...(photo === "on" ? { background: "linear-gradient(to bottom, #aebfd3 0%, #d3dce6 40%, #e3e8ee 100%)" } : {}) }}>
@@ -601,6 +624,8 @@ export default function Carte3D() {
               <div>1re tuile reçue : {mesures.premiereRecueMs == null ? "—" : `${(mesures.premiereRecueMs / 1000).toFixed(1)} s`}</div>
               <div>1re tuile affichée : {mesures.premiereAfficheeMs == null ? "—" : `${(mesures.premiereAfficheeMs / 1000).toFixed(1)} s`}</div>
               <div>Tuiles chargées : {mesures.tuilesChargees}</div>
+              <div>Zoom : {zoomActuel ? `${zoomActuel.zoom} (maximum ${zoomActuel.max})` : "…"}</div>
+              <div>Erreur géométrique la plus fine affichée : {mesures.erreurFine == null ? "…" : `${Math.round(mesures.erreurFine * 10) / 10} m`}</div>
               <div>Dernière erreur : {mesures.derniereErreur || "aucune"}</div>
               <div>Durée moyenne par image : {fluidite ? `${fluidite.moyenneMs} ms (${fluidite.imagesParS} images/s)` : "…"}</div>
               <div>Tuiles : {mesures.tuiles ? `${mesures.tuiles.dansVue} dans la vue · ${mesures.tuiles.aAfficher} à afficher · ${mesures.tuiles.enCours} en cours · ${mesures.tuiles.echecs} échecs` : "…"}</div>

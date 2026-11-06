@@ -59,10 +59,28 @@ export const MAX_RACINES_PAR_PAGE = 2;
  *  - requetesSimultanees : nombre de tuiles demandées en même temps.
  *
  * POURQUOI CES BORNES :
- *  - zoomMax 18,5 (18 sur appareil modeste) : à ce zoom un pixel d'écran vaut environ 21 cm au sol (à Dakar), à peu près la finesse des images aériennes de Google ; plus près, on ne voit que du flou (zoom 22 : 2 cm par pixel).
+ *  - zoomMax 17 (16,5 sur appareil modeste) : à ce zoom un pixel d'écran vaut environ 0,6 m au sol (à Dakar). Un essai réel à 18,5 (~0,2 m par pixel) a donné une photo floue : l'imagerie de Google n'est pas assez fine à Pikine pour ce niveau.
+ *    Réglable sans toucher au code (REGLAGES_PHOTO) ; la zone de mesures des aperçus affiche le zoom et l'erreur géométrique la plus fine affichée pour choisir la bonne valeur.
  *  - inclinaisonMax 55° (50° sur appareil modeste) : au-delà de ~66°, le haut de l'écran approche de l'horizon ; la distance de vue du moteur deck.gl est plafonnée à 10 fois la distance de la caméra, donc le sol est coupé net et on voit
  *    le vide derrière. À 55°, le haut de l'écran ne dépasse pas ~2 fois la distance de la caméra : l'horizon n'est jamais visible.
  */
+/** Lit un réglage numérique de variable d'environnement : valeur valide dans [min, max], sinon null (= valeur par défaut du profil). */
+export function reglageNumerique(brut, min, max) {
+  if (brut === undefined || brut === null || String(brut).trim() === "") return null;
+  const v = Number(brut);
+  return Number.isFinite(v) && v >= min && v <= max ? v : null;
+}
+/**
+ * RÉGLAGES D'ESSAI (aperçus Vercel, lus à la compilation : changer la valeur demande un redéploiement de la même version, jamais de modification du code) :
+ *  - NEXT_PUBLIC_CARTE_3D_PHOTO_ZOOM_MAX : zoom maximal de la vue photo (entre 10 et 22), appliqué aux deux profils ;
+ *  - NEXT_PUBLIC_CARTE_3D_PHOTO_ERREUR_ECRAN : erreur d'écran maximale tolérée (entre 1 et 200), appliquée aux deux profils. Plus basse = tuiles plus fines (8 force le détail), mais plus de données et de mémoire.
+ * Valeur absente ou invalide : valeurs par défaut du profil (zoom 17 / 16,5 sur appareil modeste ; erreur d'écran 16 / 48).
+ */
+export const REGLAGES_PHOTO = {
+  zoomMax: reglageNumerique(process.env.NEXT_PUBLIC_CARTE_3D_PHOTO_ZOOM_MAX, 10, 22),
+  erreurEcran: reglageNumerique(process.env.NEXT_PUBLIC_CARTE_3D_PHOTO_ERREUR_ECRAN, 1, 200),
+};
+
 export function profilPhoto(env) {
   const nav = env?.navigator ?? (typeof navigator !== "undefined" ? navigator : {});
   const c = nav.connection;
@@ -71,9 +89,13 @@ export function profilPhoto(env) {
     (typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 4) ||
     Boolean(c && c.saveData) ||
     Boolean(c && /(^|-)(2g|3g)$/.test(String(c.effectiveType || "")));
-  return modeste
-    ? { modeste: true, erreurEcranMax: 48, memoireMaxMo: 256, ratioPixelMax: 1, inclinaisonMax: 50, zoomMax: 18, requetesSimultanees: 8 }
-    : { modeste: false, erreurEcranMax: 16, memoireMaxMo: 768, ratioPixelMax: 2, inclinaisonMax: 55, zoomMax: 18.5, requetesSimultanees: 24 };
+  const reglages = env?.reglages ?? REGLAGES_PHOTO;
+  const profil = modeste
+    ? { modeste: true, erreurEcranMax: 48, memoireMaxMo: 256, ratioPixelMax: 1, inclinaisonMax: 50, zoomMax: 16.5, requetesSimultanees: 8 }
+    : { modeste: false, erreurEcranMax: 16, memoireMaxMo: 768, ratioPixelMax: 2, inclinaisonMax: 55, zoomMax: 17, requetesSimultanees: 24 };
+  if (reglages.zoomMax !== null && reglages.zoomMax !== undefined) profil.zoomMax = reglages.zoomMax;
+  if (reglages.erreurEcran !== null && reglages.erreurEcran !== undefined) profil.erreurEcranMax = reglages.erreurEcran;
+  return profil;
 }
 
 /** Mentions de sources de données : agrège les « copyright » des tuiles affichées (séparés par « ; »), sans doublon, triés par fréquence puis par ordre alphabétique, en une seule ligne. */

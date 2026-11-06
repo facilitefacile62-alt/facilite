@@ -102,9 +102,20 @@ export function texteSansSecret(t) {
 }
 
 /** Mesures affichées dans la zone discrète des aperçus (secondes depuis l'appui sur « Vue 3D photo », sauf la durée de réponse de la racine). */
+/** Erreur géométrique (m) la plus fine parmi les tuiles affichées (lodMetricValue de loaders.gl = geometricError de la tuile), ou null. Les tuiles sans contenu ou à erreur infinie sont ignorées. */
+export function erreurGeometriqueLaPlusFine(tuiles) {
+  let mini = null;
+  for (const t of tuiles || []) {
+    const e = t?.lodMetricValue ?? t?.header?.geometricError;
+    if (!t?.content || !Number.isFinite(e) || e >= 1e10) continue;
+    if (mini === null || e < mini) mini = e;
+  }
+  return mini;
+}
+
 export function creerMesures(maintenant = () => (typeof performance !== "undefined" ? performance.now() : Date.now())) {
   const t0 = maintenant();
-  const m = { racineMs: null, racineStatut: null, premiereRecueMs: null, premiereAfficheeMs: null, tuilesChargees: 0, derniereErreur: "", tuiles: null };
+  const m = { racineMs: null, racineStatut: null, premiereRecueMs: null, premiereAfficheeMs: null, tuilesChargees: 0, derniereErreur: "", tuiles: null, erreurFine: null };
   return {
     donnees: () => ({ ...m }),
     racine: (ms, status) => { m.racineMs = ms; m.racineStatut = status; },
@@ -113,6 +124,7 @@ export function creerMesures(maintenant = () => (typeof performance !== "undefin
     tuileChargee: () => { m.tuilesChargees += 1; },
     erreur: (texte) => { m.derniereErreur = texteSansSecret(texte).slice(0, 160); },
     tuiles: (t) => { m.tuiles = t; },
+    erreurFine: (e) => { m.erreurFine = e; },
   };
 }
 
@@ -213,6 +225,7 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
         if (maintenantMs - dernierEtat >= 1000) {
           dernierEtat = maintenantMs;
           const lire = (nom) => tileset3d.stats?.get?.(nom)?.count ?? 0;
+          mesures.erreurFine(erreurGeometriqueLaPlusFine(tuilesChoisies));
           mesures.tuiles({ dansVue: lire("Tiles In View"), aAfficher: lire("Tiles To Render"), enCours: lire("Tiles Loading"), echecs: lire("Failed Tile Loads") });
           emettre();
         }
