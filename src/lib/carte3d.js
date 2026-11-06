@@ -126,3 +126,9 @@ export const DECALAGE_VERTICAL_PHOTO_M = (() => {
   const v = Number(brut);
   return brut !== undefined && brut !== "" && Number.isFinite(v) ? v : 52;
 })();
+
+/**
+ * Plafond de boutiques affichées dans la vue (cartes 3D grise et photo). Réglable sans toucher au code : NEXT_PUBLIC_CARTE_3D_PLAFOND_BOUTIQUES (entre 1 et 2000), lu à la compilation ; 150 par défaut.
+ * Au-delà du plafond : la boutique choisie, puis celles qui ont des articles en stock, puis celles qui ont le plus d'articles, puis les plus proches du centre ; l'écran affiche un avis (jamais de choix silencieux).
+ */
+export const PLAFOND_BOUTIQUES = reglageNumerique(process.env.NEXT_PUBLIC_CARTE_3D_PLAFOND_BOUTIQUES, 1, 2000) ?? 150;
