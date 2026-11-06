@@ -617,6 +617,32 @@ test("épingles de la vue photo : calque dédié, position image par image, haut
   expect(carte).not.toContain("DECALAGE_VERTICAL_PHOTO_M ="); // la constante reste dans carte3d.js
 });
 
+test("images de la carte 3D : produits et logos passent par le Worker (cache long) ; privées, signées et externes ne sont jamais touchées", async () => {
+  const { adresseImage, lireHote } = await import("../../src/lib/imagesPubliques.js");
+  const HOTE = "https://facilite-images.facilitefacile62.workers.dev";
+  const PROJET = "https://ocfhzwwjvljintabxxlg.supabase.co/storage/v1/object";
+  // images publiques du bucket des photos de la boutique : réécrites vers le Worker
+  expect(adresseImage(`${PROJET}/public/marketplace-photos/vendeur/1788619568081-photo.jpg`, HOTE)).toBe(`${HOTE}/marketplace-photos/vendeur/1788619568081-photo.jpg`);
+  expect(adresseImage(`${PROJET}/public/marketplace-photos/vendeur/logo-1793697532943.jpg`, HOTE)).toBe(`${HOTE}/marketplace-photos/vendeur/logo-1793697532943.jpg`);
+  // images signées (jeton) ou de buckets privés (avatars, covers, documents) : jamais réécrites
+  expect(adresseImage(`${PROJET}/sign/marketplace-photos/vendeur/x.jpg?token=abc`, HOTE)).toBe(`${PROJET}/sign/marketplace-photos/vendeur/x.jpg?token=abc`);
+  expect(adresseImage(`${PROJET}/public/avatars/u/a.jpg`, HOTE)).toBe(`${PROJET}/public/avatars/u/a.jpg`);
+  expect(adresseImage(`${PROJET}/authenticated/marketplace-photos/u/x.jpg`, HOTE)).toBe(`${PROJET}/authenticated/marketplace-photos/u/x.jpg`);
+  // autre projet Supabase, image externe, image intégrée : inchangées
+  expect(adresseImage("https://autreprojet.supabase.co/storage/v1/object/public/marketplace-photos/u/x.jpg", HOTE)).toBe("https://autreprojet.supabase.co/storage/v1/object/public/marketplace-photos/u/x.jpg");
+  expect(adresseImage("https://images.unsplash.com/photo-1", HOTE)).toBe("https://images.unsplash.com/photo-1");
+  expect(adresseImage("data:image/png;base64,AAAA", HOTE)).toBe("data:image/png;base64,AAAA");
+  // interrupteur fermé (variable absente ou invalide) : adresse inchangée
+  expect(adresseImage(`${PROJET}/public/marketplace-photos/vendeur/x.jpg`, "")).toBe(`${PROJET}/public/marketplace-photos/vendeur/x.jpg`);
+  expect(lireHote("http://pas-https.exemple")).toBe("");
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain('import { adresseImage } from "@/lib/imagesPubliques";');
+  expect(carte).toContain("adresseImage(urlPhoto(a.photos[0]))");
+  expect(carte).toContain("echapperHtml(adresseImage(b.logo_url))");
+  // AFFICHAGE seulement : aucune écriture en base dans la carte 3D
+  expect(carte).not.toMatch(/\.(insert|update|upsert|delete)\(|supabase\.rpc/);
+});
+
 test("vue grise : plus de bulles empilées ; le carrousel de la boutique touchée s'ouvre dans le panneau fixe, devant les autres, jamais sous la recherche", async () => {
   const carte = lire("src/components/Carte3D.jsx");
   // aucune bulle MapLibre dans la carte (ni grise ni photo)

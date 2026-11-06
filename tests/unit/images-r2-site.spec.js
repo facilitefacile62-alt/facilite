@@ -114,6 +114,8 @@ test.describe("branchement dans le site", () => {
       "src/app/marketplace/page.js",
       "src/app/offres/[id]/page.js",
       "src/app/offres/OffresClient.jsx",
+      // Carte 3D (prototype, aperçus) : affichage seulement (photos des articles du carrousel, logos des boutiques) ; aucune écriture (voir carte-3d-photo.spec.js).
+      "src/components/Carte3D.jsx",
       "src/components/ImageAdaptative.jsx",
       "src/components/ImagesRepliSupabase.jsx",
       "src/components/LecteurAudioOffre.jsx",

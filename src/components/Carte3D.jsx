@@ -11,6 +11,7 @@ import { ADRESSE_CARTE_2D, DUREE_MAX_VUE_PHOTO_MS, cartePhotoActive, peutAffiche
 import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto } from "@/lib/marketplaceData";
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { adresseImage } from "@/lib/imagesPubliques";
 import { calculerGroupesPhoto, centreGroupe, cleGroupe } from "@/lib/groupesBoutiques";
 import { boutiquesVisibles } from "@/lib/boutiquesTest";
 
@@ -56,7 +57,8 @@ function construireBoutiques(articles, logos) {
 
 function contenuAvatar(b, taille) {
   try {
-    if (b.logo_url) return `<img src="${echapperHtml(b.logo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;" />`;
+    // Images publiques servies par le Worker « facilite-images » (cache d'un an) quand NEXT_PUBLIC_IMAGES_HOTE est posée : AFFICHAGE seulement, rien n'est réécrit en base. Interrupteur fermé : adresse inchangée.
+    if (b.logo_url) return `<img src="${echapperHtml(adresseImage(b.logo_url))}" alt="" style="width:100%;height:100%;object-fit:cover;" />`;
     if (b.avatar_config) return svgAvatarBoutique(b.avatar_config, taille);
   } catch {
     /* repli : pictogramme */
@@ -95,7 +97,7 @@ function htmlBulle(b, largeur = 140) {
   const cartes = b.articles
     .slice(0, 12)
     .map((a) => {
-      const photo = a.photos?.[0] ? urlPhoto(a.photos[0]) : "";
+      const photo = a.photos?.[0] ? adresseImage(urlPhoto(a.photos[0])) : "";
       const image = photo
         ? `<img src="${echapperHtml(photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
         : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;">🛍️</div>`;
