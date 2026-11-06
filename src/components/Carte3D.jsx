@@ -12,7 +12,7 @@ import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto }
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { adresseImage } from "@/lib/imagesPubliques";
-import { placerEpingles, selectionnerVisibles } from "@/lib/ecartementEpingles";
+import { decalerEnMetres, ecarterEnPixels, selectionnerVisibles } from "@/lib/ecartementEpingles";
 import { boutiquesVisibles } from "@/lib/boutiquesTest";
 
 const STYLE_FOND = "https://tiles.openfreemap.org/styles/positron";
@@ -77,23 +77,14 @@ function elementRepere(b) {
   return boite;
 }
 
-// Point + trait d'une épingle ÉCARTÉE (placement anti-chevauchement) : le point marque le VRAI emplacement de la boutique, le trait le relie à la pointe de l'épingle déplacée. Élément de taille nulle posé sur
-// l'emplacement vrai ; le trait part de (0, 0) vers (dx, dy). Masqué quand l'épingle n'est pas déplacée.
-function elementAncre() {
-  const el = document.createElement("div");
-  el.style.cssText = "width:0;height:0;pointer-events:none;display:none;";
-  el.innerHTML = '<svg width="1" height="1" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none;" aria-hidden="true"><line class="trait-halo" x1="0" y1="0" x2="0" y2="0" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><line class="trait" x1="0" y1="0" x2="0" y2="0" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round"/><circle cx="0" cy="0" r="4.5" fill="#0f172a" stroke="#fff" stroke-width="1.5"/></svg>';
-  return el;
-}
-
-function majAncre(el, dx, dy) {
-  if (!el) return;
-  const deplace = Boolean(dx || dy);
-  el.style.display = deplace ? "" : "none";
-  if (!deplace) return;
-  el.querySelectorAll("line").forEach((l) => {
-    l.setAttribute("x2", String(dx));
-    l.setAttribute("y2", String(dy));
+// ÉTAPE 1 du placement (voir src/lib/ecartementEpingles.js) : les boutiques qui se chevauchent à l'échelle de référence (zoom 18) ou qui ont les mêmes coordonnées sont placées sur une petite rangée de quelques mètres
+// autour de leur point commun, DANS L'ESPACE RÉEL : chaque épingle est posée à son propre emplacement, sans trait ni point, et bouge avec la carte comme un objet posé au sol. Calculé sur TOUTES les boutiques, une fois par
+// chargement : même résultat à chaque fois, quels que soient les filtres, le plafond et le zoom. La vraie position reste dans latVraie / lngVraie.
+function placerDansLEspaceReel(liste) {
+  const pos = decalerEnMetres(liste);
+  return liste.map((b) => {
+    const p = pos.get(b.id);
+    return p && p.decale ? { ...b, latVraie: b.lat, lngVraie: b.lng, lat: p.lat, lng: p.lng } : b;
   });
 }
 
@@ -164,7 +155,7 @@ export default function Carte3D() {
   const [basAttribution, setBasAttribution] = useState(null); // vue grise : hauteur (px) à partir du bas de l'écran au-dessus de laquelle la mention des données est replacée quand le panneau est ouvert
   const hauteursRef = useRef(new Map()); // identifiant de boutique -> { bas, altitude, ge } : hauteur du sol lue sous l'épingle (vue photo)
   const conteneurPinsRef = useRef(null); // calque des épingles de la vue photo (positionnées image par image à leur hauteur)
-  const entreesPinsRef = useRef([]); // [{ id, el, ancreEl, marqueurPin, marqueurAncre, lat, lng, nom, dx, dy }]
+  const entreesPinsRef = useRef([]); // [{ id, el, marqueurPin, lat, lng, nom, dx, dy }]
   const dernierCentreRef = useRef(0);
   const [hauteurCentre, setHauteurCentre] = useState(null); // zone de mesures : hauteur lue pour l'épingle la plus proche du centre de l'écran
   const reperesRef = useRef(new Map()); // identifiant de boutique -> élément de l'épingle (pour la mettre au premier plan)
@@ -177,7 +168,7 @@ export default function Carte3D() {
   const mode3DRef = useRef(true);
   useEffect(() => {
     if (!MONTRER_MESURES) return undefined;
-    window.__injecterBoutiques = (liste) => setBoutiques(liste); // outil de diagnostic des aperçus (essais de performance avec de fausses boutiques), sans effet
+    window.__injecterBoutiques = (liste) => setBoutiques(placerDansLEspaceReel(liste)); // outil de diagnostic des aperçus (essais de performance avec de fausses boutiques), sans effet
     return () => {
       delete window.__injecterBoutiques;
     };
@@ -301,8 +292,9 @@ export default function Carte3D() {
             const [articles, logos] = await Promise.all([chargerTousLesArticles({ limite: 500 }), chargerLogosBoutiques().catch(() => new Map())]);
             if (annule) return;
             const liste = boutiquesVisibles(construireBoutiques(articles, logos), EN_PREVIEW);
-            setBoutiques(liste);
-            const proches = liste.filter((b) => Math.hypot((b.lng - CENTRE_DEFAUT[0]) * 107000, (b.lat - CENTRE_DEFAUT[1]) * 111000) < 4000);
+            const placees = placerDansLEspaceReel(liste);
+            setBoutiques(placees);
+            const proches = placees.filter((b) => Math.hypot((b.lng - CENTRE_DEFAUT[0]) * 107000, (b.lat - CENTRE_DEFAUT[1]) * 111000) < 4000);
             if (proches.length > 1) {
               const bornes = new ml.LngLatBounds();
               proches.forEach((b) => bornes.extend([b.lng, b.lat]));
@@ -357,10 +349,9 @@ export default function Carte3D() {
     let plusProche = null;
     entrees.forEach((e, i) => {
       const [x, y] = pixels[i];
-      // L'épingle est décalée dans le PLAN DE L'ÉCRAN (placement anti-chevauchement) ; le point et le trait restent sur le vrai emplacement, à la hauteur lue du sol.
+      // La pointe est à la position (déjà décalée de quelques mètres dans l'espace réel si besoin) projetée à la hauteur du sol lue SOUS ELLE ; seul un petit décalage minimal en pixels (étape 2, faible zoom) s'y ajoute.
       e.el.style.transform = `translate(${Math.round((x - 70 + (e.dx || 0)) * 10) / 10}px, ${Math.round((y - 85 + (e.dy || 0)) * 10) / 10}px)`;
       e.el.style.visibility = "visible";
-      e.ancreEl.style.transform = `translate(${Math.round(x * 10) / 10}px, ${Math.round(y * 10) / 10}px)`;
       const d = Math.hypot(x - cx, y - cy);
       if (plusProche === null || d < plusProche.d) plusProche = { d, e };
     });
@@ -379,7 +370,8 @@ export default function Carte3D() {
     return () => carte.off("render", placerPins);
   }, [photo, placerPins]);
 
-  // PLACEMENT ANTI-CHEVAUCHEMENT (deux vues) : chaque boutique garde son épingle ; celles qui se recouvrent à l'écran sont écartées en lignes (voir src/lib/ecartementEpingles.js), avec un point sur le vrai emplacement et un trait.
+  // ÉTAPE 2 DU PLACEMENT (deux vues) : à faible zoom, si des têtes d'épingles se recouvrent encore à l'écran, chacune est repoussée du MINIMUM nécessaire (38 px entre deux têtes, 44 px au plus de son lieu, jamais vers le haut, ni trait ni point ;
+  // voir src/lib/ecartementEpingles.js). Ce décalage diminue en zoomant et disparaît dès qu'il y a la place.
   // Recalculé quand la carte s'arrête de bouger ou de zoomer (moveend), quand la fenêtre change de taille, quand le panneau s'ouvre ou se ferme, ou quand la hauteur du sol lue change — jamais à chaque image :
   // entre deux calculs, les épingles suivent la carte d'un bloc (décalage en pixels constant).
   const recalculerPlacement = useCallback(() => {
@@ -414,12 +406,11 @@ export default function Carte3D() {
     });
     // Repli fixe : coin bas droit d'environ 90 × 90 px où se trouve le bouton « + » du site (bottom-32 right-4 : 64 px de côté, à 128 px du bas), même si le bouton est absent ou introuvable.
     interdits.push({ x0: racine.clientWidth - 100, y0: racine.clientHeight - 205, x1: racine.clientWidth, y1: racine.clientHeight - 115 });
-    const res = placerEpingles({ items: entrees.map((e, i) => ({ id: e.id, x: pixels[i][0], y: pixels[i][1] })), interdits, ecran: { x0: 0, y0: 0, x1: racine.clientWidth, y1: racine.clientHeight } });
+    const res = ecarterEnPixels({ items: entrees.map((e, i) => ({ id: e.id, x: pixels[i][0], y: pixels[i][1] })), interdits });
     entrees.forEach((e) => {
       const d = res.get(e.id) || { dx: 0, dy: 0 };
       e.dx = d.dx;
       e.dy = d.dy;
-      majAncre(e.ancreEl, d.dx, d.dy);
       if (e.marqueurPin) e.marqueurPin.setOffset([-70 + d.dx, -85 + d.dy]);
     });
     if (enPhoto) placerPins();
@@ -496,7 +487,7 @@ export default function Carte3D() {
     return () => carte.off("zoom", maj);
   }, [photo]);
 
-  // Épingles : une par boutique affichée (jamais de regroupement). Vue grise : repères MapLibre (+ un repère « point » pour les épingles écartées). Vue photo : éléments simples dans le calque, positionnés image par image.
+  // Épingles : une par boutique affichée (jamais de regroupement), fixée à son lieu : sans trait ni point. Vue grise : repères MapLibre. Vue photo : éléments simples dans le calque, positionnés image par image à la hauteur du sol lue sous chacune.
   // Le carrousel de la boutique touchée s'ouvre dans le panneau fixe (un seul à la fois) ; l'épingle touchée passe devant ; touche « Carrousel » éteinte en vue grise : les épingles n'ouvrent rien.
   useEffect(() => {
     const carte = carteRef.current;
@@ -505,17 +496,7 @@ export default function Carte3D() {
     const enPhoto = photo === "on";
     if (enPhoto && !conteneurPinsRef.current) return undefined;
     reperesRef.current = new Map();
-    const entrees = visibles.liste.map((b) => ({ id: b.id, b, lat: b.lat, lng: b.lng, nom: b.nom, el: null, ancreEl: elementAncre(), marqueurPin: null, marqueurAncre: null, dx: 0, dy: 0 }));
-    // 1) points + traits d'abord (sous les épingles)
-    entrees.forEach((e) => {
-      if (enPhoto) {
-        e.ancreEl.style.cssText += "position:absolute;left:0;top:0;z-index:0;will-change:transform;";
-        conteneurPinsRef.current.appendChild(e.ancreEl);
-      } else {
-        e.marqueurAncre = new ml.Marker({ element: e.ancreEl, anchor: "center" }).setLngLat([e.lng, e.lat]).addTo(carte);
-      }
-    });
-    // 2) épingles
+    const entrees = visibles.liste.map((b) => ({ id: b.id, b, lat: b.lat, lng: b.lng, nom: b.nom, el: null, marqueurPin: null, dx: 0, dy: 0 }));
     entrees.forEach((e) => {
       const el = elementRepere(e.b);
       e.el = el;
@@ -541,9 +522,7 @@ export default function Carte3D() {
       window.clearTimeout(planifRef.current);
       entrees.forEach((e) => {
         e.marqueurPin?.remove();
-        e.marqueurAncre?.remove();
         e.el?.remove();
-        e.ancreEl?.remove();
       });
       if (entreesPinsRef.current === entrees) entreesPinsRef.current = [];
     };
@@ -560,13 +539,30 @@ export default function Carte3D() {
   useEffect(() => {
     planifierPlacement(250);
   }, [panneau, avisPlafond, info, planifierPlacement]);
-  useEffect(() => {
+  // Le carrousel RESTE OUVERT : un clic sur la carte, un déplacement ou un zoom ne le ferment pas. Seuls la croix du panneau, la touche « Carrousel » éteinte (vue grise) ou la sortie de la vue photo le ferment ; toucher une
+  // autre épingle le remplace par la boutique touchée.
+  const ouvrirPlusProche = useCallback(() => {
     const carte = carteRef.current;
-    if (etat !== "pret" || !carte) return undefined;
-    const fermer = () => setPanneau(null);
-    carte.on("click", fermer);
-    return () => carte.off("click", fermer);
-  }, [etat]);
+    if (!carte || !visibles.liste.length) return;
+    const c = carte.getContainer();
+    const cx = c.clientWidth / 2;
+    const cy = c.clientHeight / 2;
+    let meilleur = null;
+    for (const b of visibles.liste) {
+      const p = carte.project([b.lng, b.lat]);
+      const d = Math.hypot(p.x - cx, p.y - cy) + (b.articles.length ? 0 : 1e6); // les boutiques sans article passent après
+      if (!meilleur || d < meilleur.d) meilleur = { d, b };
+    }
+    if (meilleur) setPanneau({ boutiques: [meilleur.b], index: 0 });
+  }, [visibles]);
+  // Au premier affichage des boutiques (touche « Carrousel » active, ou vue photo), le carrousel de la boutique la plus proche du centre s'ouvre tout seul : une seule fois par chargement de la page (la croix le ferme pour de bon).
+  const ouvertureAutoRef = useRef(false);
+  useEffect(() => {
+    if (etat !== "pret" || ouvertureAutoRef.current || panneau || !visibles.liste.length) return;
+    if (photo !== "on" && !carrousel) return;
+    ouvertureAutoRef.current = true;
+    ouvrirPlusProche();
+  }, [etat, visibles, carrousel, photo, panneau, ouvrirPlusProche]);
   // Sur téléphone, le panneau est aligné à gauche et laisse ~104 px libres à droite pour le bouton « + » du site (jamais recouvert) : le carrousel s'adapte à l'espace restant (140 à 276 px).
   const largeurCarrousel = typeof window !== "undefined" ? Math.max(140, Math.min(276, window.innerWidth - 188)) : 276;
   // Vue grise : la mention OpenFreeMap / OpenStreetMap / Overture est une OBLIGATION de licence des données ; quand le panneau est ouvert, elle est replacée juste AU-DESSUS du panneau (jamais cachée).
@@ -767,6 +763,7 @@ export default function Carte3D() {
               </button>
               <button type="button" onClick={() => {
                   if (carrousel && photo !== "on") setPanneau(null);
+                  if (!carrousel && photo !== "on" && !panneau) ouvrirPlusProche();
                   setCarrousel((v) => !v);
                 }} aria-pressed={carrousel} className={chipEtat(carrousel)}>
                 Carrousel

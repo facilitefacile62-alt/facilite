@@ -364,7 +364,7 @@ test("vue photo : carrousel dans un panneau FIXE en bas (au-dessus de la bande d
   expect(carte.match(/useState\(null\); \/\/ vue photo : \{ boutiques, index \}/g).length).toBe(1);
   // l'épingle choisie passe devant les autres ; un clic sur la carte ferme le panneau ; un clic sur une épingle ne le ferme pas
   expect(carte).toContain('el.style.zIndex = id === choisie ? "10" : photo === "on" ? "1" : "";');
-  expect(carte).toContain('carte.on("click", fermer)');
+  expect(carte).not.toContain('carte.on("click", fermer)'); // le carrousel reste ouvert : un clic sur la carte ne le ferme plus
   expect(carte).toContain("ev.stopPropagation()");
   // une épingle = une boutique : plus de pastilles de choix dans le panneau
   expect(carte).not.toContain("setPanneau({ boutiques: panneau.boutiques, index: k })");
@@ -583,8 +583,8 @@ test("vue grise : plus de bulles empilées ; le carrousel de la boutique touché
   // le panneau fixe est affiché dans les deux vues et se ferme par la croix ou un clic sur la carte (deux vues)
   expect(carte).toContain("{panneau && boutiqueDuPanneau && (");
   expect(carte).not.toContain('{photo === "on" && panneau && boutiqueDuPanneau');
-  expect(carte).toContain("if (etat !== \"pret\" || !carte) return undefined;");
-  expect(carte).toContain("const fermer = () => setPanneau(null);");
+  expect(carte).not.toContain("const fermer = () => setPanneau(null);");
+  expect(carte).toContain("const ouvrirPlusProche = useCallback");
   // touche « Carrousel » éteinte (vue grise) : le panneau se ferme ; la bande de boutiques ouvre le carrousel de la boutique (vue grise seulement)
   expect(carte).toContain('if (carrousel && photo !== "on") setPanneau(null);');
   expect(carte).toContain('if (photo !== "on" && carrousel) setPanneau({ boutiques: [b], index: 0 });');
@@ -609,30 +609,42 @@ test("vue grise : la mention OpenFreeMap / OpenStreetMap n'est jamais cachée pa
   expect(carte).toContain(".carte-photo .maplibregl-ctrl-bottom-right{display:none}");
 });
 
-test("placement anti-chevauchement dans la carte : une épingle par boutique, point + trait sur le vrai emplacement, recalcul à l'arrêt du mouvement, zones interdites", async () => {
+test("épingles fixées à leur lieu : décalage réel de quelques mètres (étape 1) + petit décalage minimal en pixels (étape 2), sans trait ni point", async () => {
   const carte = lire("src/components/Carte3D.jsx");
-  // plus aucun regroupement
+  // plus aucun regroupement, plus aucun trait ni point : ni code, ni éléments de dessin
   expect(carte).not.toContain("groupesBoutiques");
   expect(carte).not.toContain("elementRepereGroupe");
-  expect(carte).not.toContain("boutiques\`");
+  expect(carte).not.toContain("elementAncre");
+  expect(carte).not.toContain("majAncre");
+  expect(carte).not.toContain("ancreEl");
+  expect(carte).not.toContain("marqueurAncre");
+  expect(carte).not.toContain("<line");
+  expect(carte).not.toContain("<circle");
+  expect(carte).not.toContain("trait-halo");
   expect(fs.existsSync(path.join(__dirname, "..", "..", "src/lib/groupesBoutiques.js"))).toBe(false);
-  expect(carte).toContain('import { placerEpingles, selectionnerVisibles } from "@/lib/ecartementEpingles";');
-  // point + trait sur le vrai emplacement (élément d'ancre), décalage en pixels appliqué au repère de l'épingle
-  expect(carte).toContain("function elementAncre()");
-  expect(carte).toContain("majAncre(e.ancreEl, d.dx, d.dy);");
+  expect(carte).toContain('import { decalerEnMetres, ecarterEnPixels, selectionnerVisibles } from "@/lib/ecartementEpingles";');
+  // étape 1 : décalage en mètres appliqué UNE fois, sur TOUTES les boutiques, au chargement (stable, indépendant des filtres, du plafond et du zoom) ; la vraie position est gardée
+  expect(carte).toContain("function placerDansLEspaceReel(liste)");
+  expect(carte).toContain("const placees = placerDansLEspaceReel(liste);");
+  expect(carte).toContain("setBoutiques(placees);");
+  expect(carte).toContain("window.__injecterBoutiques = (liste) => setBoutiques(placerDansLEspaceReel(liste));");
+  expect(carte).toContain("latVraie: b.lat, lngVraie: b.lng");
+  // vue photo : la hauteur du sol est lue AU POINT DÉCALÉ (les lieux transmis sont les positions décalées)
+  expect(carte).toContain("photoRef.current.definirLieux(entrees.map((e) => ({ id: e.id, lat: e.lat, lng: e.lng })));");
+  expect(carte).toContain("lat: b.lat, lng: b.lng, nom: b.nom");
+  // étape 2 : décalage minimal en pixels ; recalcul quand la carte s'arrête (pas à chaque image), à la taille de la fenêtre, à l'ouverture du panneau et quand la hauteur du sol change
+  expect(carte).toContain("const res = ecarterEnPixels({");
   expect(carte).toContain("e.marqueurPin.setOffset([-70 + d.dx, -85 + d.dy]);");
-  // vue photo : l'écartement est dans le plan de l'écran, la hauteur du sol lue est conservée pour le point
   expect(carte).toContain("(x - 70 + (e.dx || 0))");
-  expect(carte).toContain("e.ancreEl.style.transform = `translate(");
-  expect(carte).toContain("hauteursRef.current.get(e.id)?.altitude ?? 0");
-  // recalcul quand la carte s'arrête (pas à chaque image), à la taille de la fenêtre, à l'ouverture du panneau et quand la hauteur du sol change
   expect(carte).toContain('carte.on("moveend", surMouvement);');
   expect(carte).toContain('window.addEventListener("resize", surTaille);');
   expect(carte).toContain("planifierPlacement(250);");
   expect(carte).toContain("planifierPlacement(200);");
-  // zones interdites : recherche + filtres, panneau + bande de boutiques, boutons 3D / PHOTO
+  // zones interdites : recherche + filtres, panneau + bande de boutiques, boutons 3D / PHOTO (et éléments du site, voir le test dédié)
   expect((carte.match(/data-zone-interdite="1"/g) || []).length).toBeGreaterThanOrEqual(4);
   expect(carte).toContain('racine.querySelectorAll("[data-zone-interdite]")');
+  // chaque épingle ouvre sa propre boutique ; l'épingle touchée passe devant
+  expect(carte).toContain("setPanneau({ boutiques: [e.b], index: 0 })");
 });
 
 test("plafond de boutiques affichées : réglable par variable (150 par défaut), avis jamais silencieux", async () => {
@@ -675,4 +687,23 @@ test("zones interdites du site : bouton vert « + » (~90 × 90 px, coin bas dro
   expect(bouton).toContain("fixed bottom-32 right-4");
   expect(bouton).toContain("z-[999]");
   expect(bouton).toContain("w-16 h-16");
+});
+
+test("les carrousels restent ouverts : ouverture automatique de la boutique la plus proche du centre, fermeture seulement par la croix, la touche éteinte ou la sortie de la vue photo", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  // ouverture automatique, une seule fois par chargement de la page (la croix ferme pour de bon)
+  expect(carte).toContain("const ouvertureAutoRef = useRef(false);");
+  expect(carte).toContain("if (etat !== \"pret\" || ouvertureAutoRef.current || panneau || !visibles.liste.length) return;");
+  expect(carte).toContain("ouvertureAutoRef.current = true;");
+  expect(carte).toContain('if (photo !== "on" && !carrousel) return;');
+  // les boutiques sans article passent après les autres
+  expect(carte).toContain("(b.articles.length ? 0 : 1e6)");
+  // un clic sur la carte, un déplacement ou un zoom ne ferment pas le panneau
+  expect(carte).not.toContain("carte.on(\"click\"");
+  // la touche « Carrousel » rallumée ouvre le carrousel le plus proche du centre (vue grise)
+  expect(carte).toContain('if (!carrousel && photo !== "on" && !panneau) ouvrirPlusProche();');
+  // fermetures conservées : croix, touche éteinte (vue grise), sortie de la vue photo
+  expect(carte).toContain('aria-label="Fermer le carrousel"');
+  expect(carte).toContain('if (carrousel && photo !== "on") setPanneau(null);');
+  expect(carte).toContain("setHauteurCentre(null);"); // sortie de la vue photo : retirerPhoto ferme le panneau
 });
