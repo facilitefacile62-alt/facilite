@@ -153,6 +153,8 @@ export default function Carte3D() {
   const delaiChargementRef = useRef(null);
   const [panneau, setPanneau] = useState(null); // vue photo : { boutiques, index } : carrousel de la boutique choisie, panneau FIXE en bas de l'écran
   const panneauRef = useRef(null);
+  const dialogueRef = useRef(null);
+  const [basAttribution, setBasAttribution] = useState(null); // vue grise : hauteur (px) à partir du bas de l'écran au-dessus de laquelle la mention des données est replacée quand le panneau est ouvert
   const hauteursRef = useRef(new Map()); // clé d'épingle -> { bas, altitude, ge } : hauteur du sol lue sous l'épingle (vue photo)
   const conteneurPinsRef = useRef(null); // calque des épingles de la vue photo (positionnées image par image à leur hauteur)
   const entreesPinsRef = useRef([]); // [{ cle, el, lat, lng, nom }]
@@ -424,26 +426,21 @@ export default function Carte3D() {
         return { marqueur: { remove: () => el.remove() }, popup: null };
       }
       const marqueur = new ml.Marker({ element: el, anchor: "top-left", offset: [-70, -85] }).setLngLat([centre.lng, centre.lat]).addTo(carte);
-      const popup = new ml.Popup({ offset: [0, -92], closeButton: false, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(groupe[0]));
-      popup.on("open", () => {
-        const racine = popup.getElement();
-        if (racine) brancherFleches(racine);
+      // Vue grise : PLUS de bulles sur la carte (elles s'empilaient et montaient sous la recherche). Le carrousel de la boutique touchée s'ouvre dans le même panneau fixe qu'en vue photo (un seul à la fois,
+      // au-dessus de la bande de boutiques) ; l'épingle touchée passe devant les autres. Touche « Carrousel » éteinte : les épingles n'ouvrent rien.
+      reperesRef.current.set(cleGroupe(groupe), el);
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation(); // le clic sur une épingle ne doit pas fermer le panneau (clic sur la carte)
+        if (carrousel) setPanneau({ boutiques: groupe, index: 0 });
       });
-      popup.setLngLat([centre.lng, centre.lat]);
-      el.addEventListener("click", () => {
-        if (popup.isOpen()) popup.remove();
-        else popup.addTo(carte);
-      });
-      return { marqueur, popup };
+      return { marqueur, popup: null };
     });
     if (enPhoto && photoRef.current) {
       photoRef.current.definirLieux(entreesPinsRef.current.map((e) => ({ id: e.cle, lat: e.lat, lng: e.lng })));
       placerPins();
     }
-    if (carrousel) crees.forEach((r) => r.popup?.addTo(carte));
     return () => {
       crees.forEach((r) => {
-        r.popup?.remove();
         r.marqueur.remove();
       });
     };
@@ -455,16 +452,32 @@ export default function Carte3D() {
     reperesRef.current.forEach((el, cle) => {
       el.style.zIndex = cle === cleChoisie ? "10" : "";
     });
-  }, [panneau, groupesActifs]);
+  }, [panneau, groupesActifs, affichees]);
   useEffect(() => {
     const carte = carteRef.current;
-    if (photo !== "on" || !carte) return undefined;
+    if (etat !== "pret" || !carte) return undefined;
     const fermer = () => setPanneau(null);
     carte.on("click", fermer);
     return () => carte.off("click", fermer);
-  }, [photo]);
+  }, [etat]);
   // Sur téléphone, le panneau est aligné à gauche et laisse ~104 px libres à droite pour le bouton « + » du site (jamais recouvert) : le carrousel s'adapte à l'espace restant (140 à 276 px).
   const largeurCarrousel = typeof window !== "undefined" ? Math.max(140, Math.min(276, window.innerWidth - 188)) : 276;
+  // Vue grise : la mention OpenFreeMap / OpenStreetMap / Overture est une OBLIGATION de licence des données ; quand le panneau est ouvert, elle est replacée juste AU-DESSUS du panneau (jamais cachée).
+  const panneauOuvertGris = Boolean(panneau) && photo !== "on";
+  useEffect(() => {
+    const el = dialogueRef.current;
+    if (!panneauOuvertGris || !el) return undefined;
+    const mesurer = () => setBasAttribution(Math.max(104, Math.round(window.innerHeight - el.getBoundingClientRect().top + 8)));
+    mesurer();
+    const obs = typeof ResizeObserver !== "undefined" ? new ResizeObserver(mesurer) : null;
+    obs?.observe(el);
+    window.addEventListener("resize", mesurer);
+    return () => {
+      obs?.disconnect();
+      window.removeEventListener("resize", mesurer);
+      setBasAttribution(null);
+    };
+  }, [panneauOuvertGris, panneau]);
   const boutiqueDuPanneau = panneau ? panneau.boutiques[Math.min(panneau.index, panneau.boutiques.length - 1)] : null;
   useEffect(() => {
     if (panneauRef.current && boutiqueDuPanneau) brancherFleches(panneauRef.current);
@@ -597,11 +610,14 @@ export default function Carte3D() {
   const surPhoto = () => lancerPhoto(false);
   const continuerQuandMeme = () => lancerPhoto(true);
 
-  const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.min(Math.max(carteRef.current.getZoom(), 16), carteRef.current.getMaxZoom()), duration: 900 });
+  const allerA = (b) => {
+    carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.min(Math.max(carteRef.current.getZoom(), 16), carteRef.current.getMaxZoom()), duration: 900 });
+    if (photo !== "on" && carrousel) setPanneau({ boutiques: [b], index: 0 });
+  };
 
   return (
-    <div className={`fixed inset-0 bg-[#e8eaee]${photo === "on" ? " carte-photo" : ""}`} style={{ zIndex: 50, ...(photo === "on" ? { background: "linear-gradient(to bottom, #aebfd3 0%, #d3dce6 40%, #e3e8ee 100%)" } : {}) }}>
-      <style>{".maplibregl-ctrl-bottom-right{bottom:104px !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}.carte-photo .maplibregl-marker,.carte-photo .maplibregl-popup{z-index:3}.carte-photo .maplibregl-ctrl-bottom-right{display:none}.carte-photo .maplibregl-canvas{opacity:0}"}</style>
+    <div className={`fixed inset-0 bg-[#e8eaee]${photo === "on" ? " carte-photo" : ""}`} style={{ zIndex: 50, ...(photo === "on" ? { background: "linear-gradient(to bottom, #aebfd3 0%, #d3dce6 40%, #e3e8ee 100%)" } : {}), ...(basAttribution ? { "--bas-attribution": `${basAttribution}px` } : {}) }}>
+      <style>{".maplibregl-ctrl-bottom-right{bottom:var(--bas-attribution,104px) !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}.carte-photo .maplibregl-marker,.carte-photo .maplibregl-popup{z-index:3}.carte-photo .maplibregl-ctrl-bottom-right{display:none}.carte-photo .maplibregl-canvas{opacity:0}"}</style>
       <div ref={conteneurRef} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} aria-label="Carte 3D des boutiques" />
       {photo === "on" && <div ref={conteneurPinsRef} className="absolute inset-0" style={{ pointerEvents: "none", zIndex: 3, overflow: "hidden" }} aria-hidden="false" />}
       {etat === "chargement" && <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>}
@@ -641,7 +657,10 @@ export default function Carte3D() {
               <button type="button" onClick={() => setFiltre("live")} className={chipEtat(filtre === "live")}>
                 En stock (LIVE)
               </button>
-              <button type="button" onClick={() => setCarrousel((v) => !v)} aria-pressed={carrousel} className={chipEtat(carrousel)}>
+              <button type="button" onClick={() => {
+                  if (carrousel && photo !== "on") setPanneau(null);
+                  setCarrousel((v) => !v);
+                }} aria-pressed={carrousel} className={chipEtat(carrousel)}>
                 Carrousel
               </button>
               <span className="shrink-0 self-center rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gray-900">Prototype</span>
@@ -701,8 +720,8 @@ export default function Carte3D() {
                 )}
               </div>
             )}
-            {photo === "on" && panneau && boutiqueDuPanneau && (
-              <div className="relative mx-3 self-start rounded-2xl bg-white p-3 pr-10 shadow-2xl sm:self-center" style={{ pointerEvents: "auto", maxWidth: "min(94vw, 430px)", maxHeight: "42vh", overflowY: "auto" }} role="dialog" aria-label={`Carrousel : ${boutiqueDuPanneau.nom}`}>
+            {panneau && boutiqueDuPanneau && (
+              <div className="relative mx-3 self-start rounded-2xl bg-white p-3 pr-10 shadow-2xl sm:self-center" style={{ pointerEvents: "auto", maxWidth: "min(94vw, 430px)", maxHeight: "42vh", overflowY: "auto" }} role="dialog" ref={dialogueRef} aria-label={`Carrousel : ${boutiqueDuPanneau.nom}`}>
                 <button type="button" onClick={() => setPanneau(null)} aria-label="Fermer le carrousel" className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-black text-gray-800">
                   ✕
                 </button>

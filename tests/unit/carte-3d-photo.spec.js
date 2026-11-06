@@ -419,7 +419,7 @@ test("boutiques de test : visibles seulement en preview (masquage dans le code, 
 
 test("vue photo : carrousel dans un panneau FIXE en bas (au-dessus de la bande de boutiques), une seule boutique à la fois, jamais sous la recherche", async () => {
   const carte = lire("src/components/Carte3D.jsx");
-  // pas de bulle sur la carte en vue photo : seulement dans la vue grise (popup créé hors du chemin « enPhoto »)
+  // pas de bulle sur la carte en vue photo (ni, désormais, en vue grise)
   const chemin = carte.slice(carte.indexOf("if (enPhoto && conteneurPinsRef.current) {"), carte.indexOf("const marqueur = new ml.Marker"));
   expect(chemin).toContain("setPanneau({ boutiques: groupe, index: 0 })");
   expect(chemin).toContain("popup: null };");
@@ -444,9 +444,8 @@ test("vue photo : carrousel dans un panneau FIXE en bas (au-dessus de la bande d
   // l'interface (z-index 40/45) reste au-dessus de l'épingle choisie (z-index 10)
   expect(carte).not.toMatch(/zIndex: 4 \}/);
   expect(carte).toMatch(/zIndex: 40/);
-  // vue grise : bulles inchangées (htmlBulle sans largeur => mêmes dimensions qu'avant)
+  // htmlBulle sans largeur => mêmes dimensions que la bulle d'origine (utilisée désormais par le panneau fixe des deux vues)
   expect(carte).toContain("function htmlBulle(b, largeur = 140)");
-  expect(carte).toContain("htmlBulle(groupe[0])");
 });
 
 test("caméra de la vue photo : zoom et inclinaison bornés, brume à la place du vide, fond MapLibre masqué", async () => {
@@ -616,4 +615,46 @@ test("épingles de la vue photo : calque dédié, position image par image, haut
   expect(photo).toContain("traiterTuiles(tuilesChoisies)");
   expect(photo).toContain("lecture.ge <= ancienne.ge"); // lecture la plus fine conservée : pas de saut quand une tuile quitte la sélection
   expect(carte).not.toContain("DECALAGE_VERTICAL_PHOTO_M ="); // la constante reste dans carte3d.js
+});
+
+test("vue grise : plus de bulles empilées ; le carrousel de la boutique touchée s'ouvre dans le panneau fixe, devant les autres, jamais sous la recherche", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  // aucune bulle MapLibre dans la carte (ni grise ni photo)
+  expect(carte).not.toContain("new ml.Popup");
+  expect(carte).not.toContain("popup.addTo");
+  expect(carte).not.toContain("crees.forEach((r) => r.popup");
+  // clic sur une épingle grise : panneau fixe si la touche « Carrousel » est active ; l'épingle touchée passe devant ; le clic ne ferme pas le panneau
+  const iGris = carte.indexOf("// Vue grise : PLUS de bulles sur la carte");
+  const gris = carte.slice(iGris, carte.indexOf("if (enPhoto && photoRef.current)"));
+  expect(gris).toContain("reperesRef.current.set(cleGroupe(groupe), el);");
+  expect(gris).toContain("ev.stopPropagation()");
+  expect(gris).toContain("if (carrousel) setPanneau({ boutiques: groupe, index: 0 });");
+  expect(carte).toContain("}, [panneau, groupesActifs, affichees]);"); // z-index 10 de l'épingle choisie, aussi quand la liste change
+  // le panneau fixe est affiché dans les deux vues et se ferme par la croix ou un clic sur la carte (deux vues)
+  expect(carte).toContain("{panneau && boutiqueDuPanneau && (");
+  expect(carte).not.toContain('{photo === "on" && panneau && boutiqueDuPanneau');
+  expect(carte).toContain("if (etat !== \"pret\" || !carte) return undefined;");
+  expect(carte).toContain("const fermer = () => setPanneau(null);");
+  // touche « Carrousel » éteinte (vue grise) : le panneau se ferme ; la bande de boutiques ouvre le carrousel de la boutique (vue grise seulement)
+  expect(carte).toContain('if (carrousel && photo !== "on") setPanneau(null);');
+  expect(carte).toContain('if (photo !== "on" && carrousel) setPanneau({ boutiques: [b], index: 0 });');
+  // le panneau est au-dessus de la bande de boutiques (même colonne), donc sous la recherche : hauteur limitée à 42 % de l'écran
+  expect(carte).toContain('maxHeight: "42vh"');
+  // vue photo : le chemin des épingles reste celui de l'ancrage (calque dédié)
+  expect(carte).toContain("conteneurPinsRef.current.appendChild(el)");
+  expect(carte).toContain("photoRef.current.definirLieux(");
+});
+
+test("vue grise : la mention OpenFreeMap / OpenStreetMap n'est jamais cachée par le panneau (obligation de licence)", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain(".maplibregl-ctrl-bottom-right{bottom:var(--bas-attribution,104px) !important}");
+  expect(carte).toContain("const panneauOuvertGris = Boolean(panneau) && photo !== \"on\";");
+  expect(carte).toContain("window.innerHeight - el.getBoundingClientRect().top + 8"); // juste au-dessus du panneau
+  expect(carte).toContain("ref={dialogueRef}");
+  expect(carte).toContain('"--bas-attribution": `${basAttribution}px`');
+  expect(carte).toContain("new ResizeObserver(mesurer)"); // suit la taille du panneau (carrousel qui se charge)
+  expect(carte).toContain('window.addEventListener("resize", mesurer)');
+  // la mention reste affichée en vue grise (contrôle d'attribution MapLibre) et n'est masquée qu'en vue photo (fond remplacé par la photo)
+  expect(carte).toContain("ATTRIBUTION_BATIMENTS");
+  expect(carte).toContain(".carte-photo .maplibregl-ctrl-bottom-right{display:none}");
 });
