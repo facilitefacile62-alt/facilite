@@ -11,6 +11,8 @@ import { ADRESSE_CARTE_2D, DUREE_MAX_VUE_PHOTO_MS, cartePhotoActive, peutAffiche
 import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto } from "@/lib/marketplaceData";
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
+import { calculerGroupesPhoto, centreGroupe, decalagesDeploiement } from "@/lib/groupesBoutiques";
+import { boutiquesVisibles } from "@/lib/boutiquesTest";
 
 const STYLE_FOND = "https://tiles.openfreemap.org/styles/positron";
 const CENTRE_DEFAUT = [-17.384, 14.756]; // [lng, lat] : Pikine
@@ -19,6 +21,7 @@ const DELAI_CHARGEMENT_MS = 15000;
 const ATTRIBUTION_BATIMENTS = "Bâtiments : © Overture Maps Foundation, OpenStreetMap contributors";
 const DELAI_PREMIERES_TUILES_MS = 60000; // 60 s maximum entre l'appui et l'AFFICHAGE de la première tuile (connexion lente comprise)
 const MONTRER_MESURES = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"; // zone de mesures : aperçus seulement
+const EN_PREVIEW = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"; // les boutiques de test (voir src/lib/boutiquesTest.js) ne sont affichées que sur les aperçus
 const DEBUT_MESSAGE_LENT = "Votre appareil est un peu lent pour la vue photo";
 // Réglage d'essai : « ?photo=sans-coupure » dans l'adresse désactive les coupures automatiques de fluidité (carte grise comprise) et affiche la durée moyenne par image dans la zone de mesures.
 const sansCoupureDemande = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("photo") === "sans-coupure";
@@ -69,6 +72,24 @@ function elementRepere(b) {
   return boite;
 }
 
+// Vue 3D photo : boutiques à 100 m ou moins regroupées sous UNE épingle (chiffre = nombre de boutiques) et UNE bulle Carrousel (articles de toutes les boutiques, pastille de boutique sur chaque carte).
+function elementRepereGroupe(groupe) {
+  const boite = document.createElement("div");
+  boite.style.cssText = "width:140px;height:90px;cursor:pointer;";
+  const chiffre = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#047857;color:#fff;font-weight:900;font-size:26px;font-family:system-ui,sans-serif;">${groupe.length}</div>`;
+  boite.innerHTML = htmlEpingle({ couleur: "#10B981", type: "produit", nom: `${groupe.length} boutiques`, contenuHtml: chiffre });
+  boite.querySelector(".epingle-boite").style.pointerEvents = "auto";
+  return boite;
+}
+
+function boutiqueDeGroupe(groupe) {
+  return {
+    nom: groupe.map((b) => b.nom).join(", "),
+    quartier: `${groupe.length} boutiques · ${groupe[0].quartier}`,
+    articles: groupe.flatMap((b) => b.articles.slice(0, 4).map((a) => ({ ...a, __badge: contenuAvatar(b, 22) || "🏪" }))),
+  };
+}
+
 // Bulle « Carrousel » d'une boutique : nom, quartier, deux articles visibles à la fois, flèches gauche / droite.
 function htmlBulle(b) {
   const cartes = b.articles
@@ -78,7 +99,7 @@ function htmlBulle(b) {
       const image = photo
         ? `<img src="${echapperHtml(photo)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
         : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;">🛍️</div>`;
-      return `<div style="flex-shrink:0;width:66px;"><div style="width:66px;height:86px;border-radius:14px;overflow:hidden;background:#c4a4b8;position:relative;box-shadow:0 3px 10px rgba(0,0,0,.15);">${image}<div style="position:absolute;bottom:0;left:0;right:0;padding:5px 4px 3px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.35) 70%,transparent);color:#fff;"><div style="font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(a.titre || "Article")}</div><div style="font-size:9px;font-weight:900;color:#34d399;">${prixLisible(a.prix_xof)} F</div></div></div></div>`;
+      return `<div style="flex-shrink:0;width:66px;"><div style="width:66px;height:86px;border-radius:14px;overflow:hidden;background:#c4a4b8;position:relative;box-shadow:0 3px 10px rgba(0,0,0,.15);">${image}${a.__badge ? `<div style="position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:9999px;overflow:hidden;background:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:12px;">${a.__badge}</div>` : ""}<div style="position:absolute;bottom:0;left:0;right:0;padding:5px 4px 3px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.35) 70%,transparent);color:#fff;"><div style="font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${echapperHtml(a.titre || "Article")}</div><div style="font-size:9px;font-weight:900;color:#34d399;">${prixLisible(a.prix_xof)} F</div></div></div></div>`;
     })
     .join("");
   const bouton = (cote) =>
@@ -130,6 +151,7 @@ export default function Carte3D() {
   const photoRef = useRef(null);
   const minuterieSessionRef = useRef(null);
   const delaiChargementRef = useRef(null);
+  const [groupesPhoto, setGroupesPhoto] = useState(null); // { sig, items } : groupes selon le zoom, vue photo seulement
   const [fluidite, setFluidite] = useState(null); // { moyenneMs, imagesParS } : affiché seulement avec ?photo=sans-coupure
   const mode3DRef = useRef(true);
   useEffect(() => {
@@ -246,7 +268,7 @@ export default function Carte3D() {
           try {
             const [articles, logos] = await Promise.all([chargerTousLesArticles({ limite: 500 }), chargerLogosBoutiques().catch(() => new Map())]);
             if (annule) return;
-            const liste = construireBoutiques(articles, logos);
+            const liste = boutiquesVisibles(construireBoutiques(articles, logos), EN_PREVIEW);
             setBoutiques(liste);
             const proches = liste.filter((b) => Math.hypot((b.lng - CENTRE_DEFAUT[0]) * 107000, (b.lat - CENTRE_DEFAUT[1]) * 111000) < 4000);
             if (proches.length > 1) {
@@ -289,21 +311,51 @@ export default function Carte3D() {
     });
   }, [boutiques, filtre, recherche]);
 
+  // Vue photo : groupes recalculés selon le ZOOM (distance en pixels). On ne remplace l'état que si la composition change : les épingles ne sont pas recréées à chaque cran de zoom.
+  useEffect(() => {
+    const carte = carteRef.current;
+    if (photo !== "on" || !carte) return undefined;
+    const recalculer = () => setGroupesPhoto((prec) => {
+      const suivant = calculerGroupesPhoto(affichees, carte.getZoom());
+      return prec && prec.sig === suivant.sig ? prec : suivant;
+    });
+    recalculer();
+    carte.on("zoomend", recalculer);
+    return () => carte.off("zoomend", recalculer);
+  }, [photo, affichees]);
+  const groupesActifs = photo === "on" ? groupesPhoto : null;
+
   // Repères + bulles : recréés quand la liste affichée change ; les bulles sont ouvertes d'office (touche « Carrousel » active).
   useEffect(() => {
     const carte = carteRef.current;
     const ml = bibliothequeRef.current;
     if (!carte || !ml || etat !== "pret") return undefined;
-    const crees = affichees.map((b) => {
-      const el = elementRepere(b);
-      const popup = new ml.Popup({ offset: [0, -92], closeButton: false, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(b));
+    // Vue grise : une épingle par boutique, comme avant. Vue photo : groupes selon le zoom (chiffre = nombre de boutiques) ; boutiques confondues déployées en cercle aux grands zooms.
+    const unites = groupesActifs
+      ? groupesActifs.items.flatMap((it) =>
+          it.deploye
+            ? it.membres.map((b, k) => ({ membres: [b], centre: centreGroupe(it.membres), decalage: decalagesDeploiement(it.membres.length)[k] }))
+            : [{ membres: it.membres, centre: centreGroupe(it.membres), decalage: [0, 0] }]
+        )
+      : affichees.map((b) => ({ membres: [b], centre: b, decalage: [0, 0] }));
+    const crees = unites.map(({ membres: groupe, centre, decalage }) => {
+      const groupee = groupe.length > 1;
+      const el = groupee ? elementRepereGroupe(groupe) : elementRepere(groupe[0]);
+      const popup = new ml.Popup({ offset: [decalage[0], -92 + decalage[1]], closeButton: false, closeOnClick: false, closeOnMove: false, maxWidth: "200px" }).setHTML(htmlBulle(groupee ? boutiqueDeGroupe(groupe) : groupe[0]));
       popup.on("open", () => {
         const racine = popup.getElement();
         if (racine) brancherFleches(racine);
       });
-      const marqueur = new ml.Marker({ element: el, anchor: "top-left", offset: [-70, -85] }).setLngLat([b.lng, b.lat]).addTo(carte);
-      popup.setLngLat([b.lng, b.lat]);
+      const marqueur = new ml.Marker({ element: el, anchor: "top-left", offset: [-70 + decalage[0], -85 + decalage[1]] }).setLngLat([centre.lng, centre.lat]).addTo(carte);
+      popup.setLngLat([centre.lng, centre.lat]);
       el.addEventListener("click", () => {
+        if (groupee) {
+          // Un clic sur une épingle de groupe ouvre la bulle regroupée ET zoome sur le groupe (aucune requête réseau : la carte et la photo se contentent de se déplacer).
+          if (!popup.isOpen()) popup.addTo(carte);
+          const zoomCible = Math.min(carte.getZoom() + 2.2, 19.5);
+          if (zoomCible > carte.getZoom() + 0.05) carte.easeTo({ center: [centre.lng, centre.lat], zoom: zoomCible, duration: 700 });
+          return;
+        }
         if (popup.isOpen()) popup.remove();
         else popup.addTo(carte);
       });
@@ -316,7 +368,7 @@ export default function Carte3D() {
         r.marqueur.remove();
       });
     };
-  }, [affichees, carrousel, etat]);
+  }, [affichees, carrousel, etat, groupesActifs]);
 
   const surBascule = () => {
     const suivant = !mode3D;
@@ -441,8 +493,8 @@ export default function Carte3D() {
   const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.max(carteRef.current.getZoom(), 16), duration: 900 });
 
   return (
-    <div className="fixed inset-0 bg-[#e8eaee]" style={{ zIndex: 50 }}>
-      <style>{".maplibregl-ctrl-bottom-right{bottom:104px !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}"}</style>
+    <div className={`fixed inset-0 bg-[#e8eaee]${photo === "on" ? " carte-photo" : ""}`} style={{ zIndex: 50 }}>
+      <style>{".maplibregl-ctrl-bottom-right{bottom:104px !important}.maplibregl-popup-content{padding:10px 10px 8px !important;border-radius:18px !important}.carte-photo .maplibregl-marker,.carte-photo .maplibregl-popup{z-index:3}.carte-photo .maplibregl-ctrl-bottom-right{display:none}"}</style>
       <div ref={conteneurRef} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} aria-label="Carte 3D des boutiques" />
       {etat === "chargement" && <div className="absolute inset-0 flex items-center justify-center bg-[#e8eaee] text-sm font-bold text-gray-600">Chargement de la carte 3D…</div>}
       {etat === "repli" && (
@@ -456,7 +508,7 @@ export default function Carte3D() {
       {etat === "pret" && (
         <>
           {/* En-tête identique à « Autour de moi » : recherche, fermeture, rangée de touches */}
-          <div className="absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-3" style={{ pointerEvents: "none" }}>
+          <div className="absolute inset-x-0 top-0 flex flex-col gap-2.5 px-3 pt-3" style={{ pointerEvents: "none", zIndex: 4 }}>
             <div className="flex items-center gap-2.5" style={{ pointerEvents: "auto" }}>
               <div className="flex flex-1 items-center gap-2 pl-4 pr-1.5 shadow-xl" style={{ height: 48, borderRadius: 18, backgroundColor: "#EAE3D2" }}>
                 <input
@@ -543,7 +595,7 @@ export default function Carte3D() {
             </div>
           )}
           {/* Bande de boutiques en bas, comme sur la carte 2D */}
-          <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none" }}>
+          <div className="absolute inset-x-0 bottom-4 flex flex-col items-center gap-2 px-3" style={{ pointerEvents: "none", zIndex: 4 }}>
             {info && (
               <div className="rounded-2xl bg-gray-900/90 px-4 py-2.5 text-center text-xs font-bold text-white shadow-xl" style={{ pointerEvents: "auto" }}>
                 {info}

@@ -312,3 +312,115 @@ test("réglage ?photo=sans-coupure et bouton « Continuer quand même »", async
   // un seul import dynamique du module photo (le bouton « Continuer quand même » réutilise lancerPhoto)
   expect(carte.match(/import\("@\/lib\/carte3dPhoto"\)/g).length).toBe(1);
 });
+
+test("regroupement des boutiques proches (vue photo) : 4 boutiques de Pikine = 1 groupe, indépendant du zoom", async () => {
+  const { grouperBoutiques, centreGroupe, distanceMetres, SEUIL_GROUPE_M } = await import("../../src/lib/groupesBoutiques.js");
+  expect(SEUIL_GROUPE_M).toBe(100);
+  const pikine = { lat: 14.756, lng: -17.384 };
+  const boutiques = [
+    { nom: "Ndiaye électrique", ...pikine },
+    { nom: "Moïse Couture", ...pikine },
+    { nom: "facile demo", ...pikine },
+    { nom: "masque", lat: pikine.lat + 0.0003, lng: pikine.lng }, // ~33 m
+    { nom: "Binetou Seck", lat: 14.773, lng: -17.356 }, // loin
+    { nom: "Fayli Shop", lat: 14.789, lng: -17.339 }, // loin
+    { nom: "sans position", lat: null, lng: null },
+  ];
+  const groupes = grouperBoutiques(boutiques);
+  expect(groupes.map((g) => g.length).sort()).toEqual([1, 1, 4]);
+  const grand = groupes.find((g) => g.length === 4);
+  expect(grand.map((b) => b.nom).sort()).toEqual(["Moïse Couture", "Ndiaye électrique", "facile demo", "masque"]);
+  const c = centreGroupe(grand);
+  expect(distanceMetres(c, pikine)).toBeLessThan(40);
+  // de proche en proche : A-B à 80 m et B-C à 80 m => un seul groupe même si A-C à 160 m
+  const chaine = grouperBoutiques([{ lat: 14.7, lng: -17.4 }, { lat: 14.7 + 80 / 111320, lng: -17.4 }, { lat: 14.7 + 160 / 111320, lng: -17.4 }]);
+  expect(chaine.length).toBe(1);
+  // à 150 m : deux groupes
+  expect(grouperBoutiques([{ lat: 14.7, lng: -17.4 }, { lat: 14.7 + 150 / 111320, lng: -17.4 }]).length).toBe(2);
+  expect(grouperBoutiques([])).toEqual([]);
+});
+
+test("vue photo : épingles et bulles au-dessus de la couche photo, groupes seulement en vue photo, vue grise inchangée", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  // cause : le conteneur de deck.gl est dans un coin de commandes MapLibre (z-index 2), au-dessus des épingles et des bulles (z-index automatique)
+  expect(carte).toContain(".carte-photo .maplibregl-marker,.carte-photo .maplibregl-popup{z-index:3}");
+  // sous la photo, la mention OpenFreeMap / Overture (fond masqué) est retirée : elle recouvrait le logo et les sources de Google sur un écran étroit
+  expect(carte).toContain(".carte-photo .maplibregl-ctrl-bottom-right{display:none}");
+  expect(carte).toContain('photo === "on" ? " carte-photo" : ""');
+  // l'interface (recherche, touches, bande de boutiques) reste au-dessus des épingles
+  expect(carte.match(/zIndex: 4/g).length).toBeGreaterThanOrEqual(2);
+  // groupes uniquement en vue photo ; en vue grise : une épingle par boutique, comme avant
+  expect(carte).toContain("const unites = groupesActifs");
+  expect(carte).toContain(": affichees.map((b) => ({ membres: [b], centre: b, decalage: [0, 0] }));"); // vue grise : une épingle par boutique, sans décalage
+  expect(carte).toContain("}, [affichees, carrousel, etat, groupesActifs]);");
+  expect(carte).toContain('const groupesActifs = photo === "on" ? groupesPhoto : null;');
+  // la pastille de boutique n'est ajoutée aux cartes d'articles que pour les groupes (a.__badge) : HTML de la vue grise inchangé
+  expect(carte).toContain("${a.__badge ?");
+  const css = fs.readFileSync(path.join(__dirname, "..", "..", "node_modules/maplibre-gl/dist/maplibre-gl.css"), "utf8");
+  expect(css).toMatch(/\.maplibregl-ctrl-top-right\{position:absolute;pointer-events:none;z-index:2\}|maplibregl-ctrl-top-right\{position:absolute;pointer-events:none;z-index:2/);
+});
+
+test("regroupement selon le zoom (pixels) : les boutiques se séparent en zoomant ; les boutiques confondues se déploient en cercle", async () => {
+  const { metresParPixel, grouperBoutiquesEcran, calculerGroupesPhoto, decalagesDeploiement, signatureGroupes, SEUIL_GROUPE_PX, ZOOM_DEPLOIEMENT } = await import("../../src/lib/groupesBoutiques.js");
+  expect(SEUIL_GROUPE_PX).toBe(50);
+  // ~4,8 m/px à z14, ~0,15 m/px à z19 (latitude de Dakar)
+  expect(metresParPixel(14, 14.75)).toBeGreaterThan(4.5);
+  expect(metresParPixel(14, 14.75)).toBeLessThan(5);
+  expect(metresParPixel(19, 14.75)).toBeLessThan(0.16);
+  const a = { id: "a", lat: 14.756, lng: -17.384 };
+  const b = { id: "b", lat: 14.756 + 33 / 111320, lng: -17.384 }; // à ~33 m de a
+  const c = { id: "c", lat: 14.756, lng: -17.384 }; // confondue avec a
+  const loin = { id: "loin", lat: 14.789, lng: -17.339 };
+  const boutiques = [a, b, c, loin];
+  // zoom 14 : 50 px = ~230 m => a, b, c groupées
+  expect(grouperBoutiquesEcran(boutiques, 14).map((g) => g.length).sort()).toEqual([1, 3]);
+  // zoom 19 : 50 px = ~7 m => b se sépare, a et c (confondues) restent ensemble
+  expect(grouperBoutiquesEcran(boutiques, 19).map((g) => g.length).sort()).toEqual([1, 1, 2]);
+  // déploiement en cercle seulement à partir du zoom de déploiement
+  const bas = calculerGroupesPhoto(boutiques, 14);
+  expect(bas.items.every((i) => !i.deploye)).toBe(true);
+  const haut = calculerGroupesPhoto(boutiques, ZOOM_DEPLOIEMENT + 1);
+  expect(haut.items.filter((i) => i.deploye).length).toBe(1);
+  expect(haut.items.find((i) => i.deploye).membres.map((m) => m.id).sort()).toEqual(["a", "c"]);
+  // la signature ne change pas tant que la composition est la même (pas de recréation des épingles à chaque cran de zoom)
+  expect(calculerGroupesPhoto(boutiques, 14).sig).toBe(calculerGroupesPhoto(boutiques, 14.4).sig);
+  expect(calculerGroupesPhoto(boutiques, 14).sig).not.toBe(calculerGroupesPhoto(boutiques, 19).sig);
+  expect(signatureGroupes([{ membres: [{ id: "x" }, { id: "y" }], deploye: false }])).toBe("g:x+y");
+  // décalages en cercle : n points distincts, le premier vers le haut, tous à la même distance
+  const d = decalagesDeploiement(4);
+  expect(d.length).toBe(4);
+  expect(d[0][0]).toBe(0);
+  expect(d[0][1]).toBeLessThan(0);
+  expect(new Set(d.map((x) => x.join(","))).size).toBe(4);
+  const rayons = d.map(([x, y]) => Math.round(Math.hypot(x, y)));
+  expect(new Set(rayons).size).toBe(1);
+});
+
+test("clic sur une épingle de groupe : bulle ouverte et zoom sur le groupe, sans requête réseau", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("carte.easeTo({ center: [centre.lng, centre.lat], zoom: zoomCible");
+  expect(carte).toContain("Math.min(carte.getZoom() + 2.2, 19.5)");
+  expect(carte).toContain('carte.on("zoomend", recalculer)');
+  expect(carte).toContain('carte.off("zoomend", recalculer)');
+  // seule la composition des groupes déclenche la recréation des épingles
+  expect(carte).toContain("prec && prec.sig === suivant.sig ? prec : suivant");
+  // l'ancienne règle à 100 m fixes n'est plus utilisée par la carte
+  expect(carte).not.toContain("grouperBoutiques(");
+});
+
+test("boutiques de test : visibles seulement en preview (masquage dans le code, sans toucher à la base)", async () => {
+  const { estBoutiqueDeTest, boutiquesVisibles, IDS_BOUTIQUES_TEST } = await import("../../src/lib/boutiquesTest.js");
+  expect(IDS_BOUTIQUES_TEST.size).toBe(3);
+  expect(estBoutiqueDeTest({ id: "d23fe736-1609-464b-a5c4-dacd19b0203c", nom: "facile demo" })).toBe(true);
+  expect(estBoutiqueDeTest({ id: "dd828aa7-a34f-4bfa-b7c6-a12967c92d8b", nom: "masque" })).toBe(true);
+  expect(estBoutiqueDeTest({ id: "zzz", nom: "Candidat Test E2E" })).toBe(true); // par le nom
+  expect(estBoutiqueDeTest({ id: "zzz", nom: "Boutique e2e 12" })).toBe(true);
+  expect(estBoutiqueDeTest({ id: "zzz", nom: "Ndiaye électrique" })).toBe(false);
+  expect(estBoutiqueDeTest({ id: "zzz", nom: "Fastest Phones" })).toBe(false); // « test » seulement en mot entier
+  const liste = [{ id: "d23fe736-1609-464b-a5c4-dacd19b0203c", nom: "facile demo" }, { id: "r1", nom: "Fayli Shop" }, { id: "r2", nom: "Candidat Test E2E" }];
+  expect(boutiquesVisibles(liste, true).length).toBe(3); // preview : tout
+  expect(boutiquesVisibles(liste, false).map((b) => b.nom)).toEqual(["Fayli Shop"]); // production : sans les tests
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("boutiquesVisibles(construireBoutiques(articles, logos), EN_PREVIEW)");
+  expect(carte).toContain('const EN_PREVIEW = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"');
+});
