@@ -5,19 +5,30 @@
 //  - le NAVIGATEUR charge les tuiles directement chez Google : aucune tuile n'est stockée ni relayée par nos serveurs ni par R2 ; le cache est celui du navigateur, qui suit les en-têtes de Google (Cache-Control) ;
 //  - la clé (variable d'environnement NEXT_PUBLIC_GOOGLE_TILES_KEY, restreinte côté Google à nos adresses) n'est jamais écrite dans le code ; elle est passée par l'appelant et ajoutée en paramètre « key » des requêtes ;
 //  - garde-fous : une seule requête racine par activation (2 par page au maximum), statuts 403 / 429 => coupure immédiate et retour au prototype gris, aucune requête vers un autre hôte que tile.googleapis.com.
-import { DECALAGE_VERTICAL_PHOTO_M, MAX_RACINES_PAR_PAGE, RACINE_TUILES_GOOGLE, creditsAgreges, statutQuotaOuCle } from "./carte3d.js";
+import { DECALAGE_VERTICAL_PHOTO_M, DUREE_MAX_VUE_PHOTO_MS, MAX_RACINES_PAR_PAGE, RACINE_TUILES_GOOGLE, creditsAgreges, statutQuotaOuCle } from "./carte3d.js";
 
 const HOTE_GOOGLE = "tile.googleapis.com";
 
 /**
+ * État de session de la PAGE, partagé par toutes les activations de la vue photo tant que la page n'est pas rechargée :
+ *  - racines : nombre de requêtes racine réellement envoyées à Google (plafond MAX_RACINES_PAR_PAGE) ;
+ *  - texteRacine / obtenueA : réponse de la racine gardée EN MÉMOIRE VIVE (jamais écrite sur disque ni envoyée ailleurs), pour relancer la vue sans nouvelle requête racine tant que la session Google
+ *    (« au moins 3 heures ») est valable. Comme la racine et ses adresses de tuiles contiennent le jeton de session, les rejouer ne coûte pas de nouvelle racine ; les tuiles, elles, sont redemandées à Google.
+ */
+export function creerEtatSession() {
+  return { racines: 0, texteRacine: null, obtenueA: 0 };
+}
+const etatSessionPage = creerEtatSession();
+
+/**
  * Fonction « fetch » prêtée au moteur de tuiles. Pure et testable : le vrai fetch est injecté.
  *  - ajoute la clé en paramètre (requête « simple », sans en-tête personnalisé, donc sans pré-requête CORS) ;
- *  - compte les requêtes racine : au-delà de MAX_RACINES_PAR_PAGE, répond 429 SANS rien envoyer ;
+ *  - compte les requêtes racine (au niveau de la page, voir creerEtatSession) : au-delà de MAX_RACINES_PAR_PAGE, répond 429 SANS rien envoyer ;
+ *  - rejoue la racine gardée en mémoire tant que la session est valable (aucune nouvelle requête racine) ;
  *  - signale tout 403 / 429 à `surProbleme` (clé refusée ou quota atteint) ;
  *  - refuse tout autre hôte que tile.googleapis.com.
  */
-export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, surEvenement = () => {}, maxRacines = MAX_RACINES_PAR_PAGE, maintenant = () => (typeof performance !== "undefined" ? performance.now() : Date.now()) }) {
-  let racines = 0;
+export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, surEvenement = () => {}, maxRacines = MAX_RACINES_PAR_PAGE, etat = etatSessionPage, maintenant = () => (typeof performance !== "undefined" ? performance.now() : Date.now()) }) {
   let coupe = false;
   const reponseVide = (status) => new Response(null, { status });
   const fonction = async (entree, init) => {
@@ -26,12 +37,17 @@ export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, surEv
     const u = new URL(brut, `https://${HOTE_GOOGLE}/`);
     if (u.hostname !== HOTE_GOOGLE) throw new Error("hôte inattendu");
     if (/\/root\.json$/.test(u.pathname)) {
-      if (racines >= maxRacines) {
+      if (etat.texteRacine !== null && maintenant() - etat.obtenueA < DUREE_MAX_VUE_PHOTO_MS) {
+        surEvenement({ type: "racine-reutilisee" });
+        return new Response(etat.texteRacine, { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (etat.racines >= maxRacines) {
         coupe = true;
         surProbleme("limite");
         return reponseVide(429);
       }
-      racines += 1;
+      etat.racines += 1;
+      etat.texteRacine = null;
     }
     if (!u.searchParams.has("key")) u.searchParams.set("key", cle);
     const debut = maintenant();
@@ -45,6 +61,14 @@ export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, surEv
       throw erreur;
     }
     const duree = maintenant() - debut;
+    if (estRacine && reponse.ok) {
+      try {
+        etat.texteRacine = await reponse.clone().text();
+        etat.obtenueA = maintenant();
+      } catch {
+        etat.texteRacine = null;
+      }
+    }
     if (estRacine) surEvenement({ type: "racine", ms: duree, status: reponse.status });
     else if (estTuile) surEvenement({ type: "tuile", ms: duree, status: reponse.status });
     if (!reponse.ok) surEvenement({ type: "erreur", texte: `HTTP ${reponse.status} (${estRacine ? "racine" : estTuile ? "tuile" : "tileset"})` });
@@ -54,7 +78,7 @@ export function creerFetchGoogle({ cle, fetchReel, surProbleme = () => {}, surEv
     }
     return reponse;
   };
-  fonction.racines = () => racines;
+  fonction.racines = () => etat.racines;
   return fonction;
 }
 
@@ -107,7 +131,7 @@ export function copyrightsDesTuiles(tuiles) {
  *  - surCredits(texte) : mentions de sources à afficher ; surProbleme(code) : coupure (le prototype gris prend le relais) ; surAffichee() : la première tuile vient d'être DESSINÉE (c'est de là que se mesure la fluidité) ; surMesures(objet) : durées et compteurs pour la zone de mesures des aperçus.
  * Renvoie { retirer() }.
  */
-export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {}, surProbleme = () => {}, surAffichee = () => {}, surMesures = () => {}, fetchReel, decalageM = DECALAGE_VERTICAL_PHOTO_M }) {
+export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {}, surProbleme = () => {}, surAffichee = () => {}, surMesures = () => {}, fetchReel, etat, decalageM = DECALAGE_VERTICAL_PHOTO_M }) {
   const [{ MapboxOverlay }, { Tile3DLayer }] = await Promise.all([import("@deck.gl/mapbox"), import("@deck.gl/geo-layers")]);
   let retire = false;
   let overlay = null;
@@ -135,8 +159,10 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
     cle,
     fetchReel: fetchReel || ((u, i) => fetch(u, i)),
     surProbleme: probleme,
+    ...(etat ? { etat } : {}),
     surEvenement: (e) => {
       if (e.type === "racine") mesures.racine(e.ms, e.status);
+      else if (e.type === "racine-reutilisee") mesures.racine(0, "racine réutilisée");
       else if (e.type === "tuile" && e.status === 200) mesures.tuileRecue();
       else if (e.type === "erreur") mesures.erreur(e.texte);
       emettre();

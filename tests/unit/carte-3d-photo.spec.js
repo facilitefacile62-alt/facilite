@@ -70,9 +70,9 @@ function fauxFetch(statuts) {
 }
 
 test("le fetch prêté au moteur ajoute la clé en paramètre, sans en-tête personnalisé, et refuse un autre hôte", async () => {
-  const { creerFetchGoogle } = await import("../../src/lib/carte3dPhoto.js");
+  const { creerFetchGoogle, creerEtatSession } = await import("../../src/lib/carte3dPhoto.js");
   const reel = fauxFetch([]);
-  const f = creerFetchGoogle({ cle: "CLE_FICTIVE", fetchReel: reel });
+  const f = creerFetchGoogle({ cle: "CLE_FICTIVE", fetchReel: reel, etat: creerEtatSession() });
   await f("https://tile.googleapis.com/v1/3dtiles/root.json");
   await f("/v1/3dtiles/datasets/X/files/Y.json?session=ABC");
   expect(reel.appels[0].url).toContain("key=CLE_FICTIVE");
@@ -84,28 +84,32 @@ test("le fetch prêté au moteur ajoute la clé en paramètre, sans en-tête per
   expect(reel.appels.length).toBe(2);
 });
 
-test("une seule requête racine par activation : la seconde est refusée SANS rien envoyer (429) et déclenche le repli", async () => {
-  const { creerFetchGoogle } = await import("../../src/lib/carte3dPhoto.js");
+test("une racine déjà obtenue est rejouée depuis la mémoire (aucune requête) ; le plafond de racines réelles coupe tout, sans rien envoyer", async () => {
+  const { creerFetchGoogle, creerEtatSession } = await import("../../src/lib/carte3dPhoto.js");
   const reel = fauxFetch([]);
   const problemes = [];
-  const f = creerFetchGoogle({ cle: "CLE_FICTIVE", fetchReel: reel, surProbleme: (c) => problemes.push(c), maxRacines: 1 });
+  const f = creerFetchGoogle({ cle: "CLE_FICTIVE", fetchReel: reel, surProbleme: (c) => problemes.push(c), maxRacines: 1, etat: creerEtatSession() });
   expect((await f("https://tile.googleapis.com/v1/3dtiles/root.json")).status).toBe(200);
   expect(f.racines()).toBe(1);
-  const refus = await f("https://tile.googleapis.com/v1/3dtiles/root.json");
-  expect(refus.status).toBe(429);
-  expect(reel.appels.length).toBe(1); // rien n'est parti vers Google
-  expect(problemes).toEqual(["limite"]);
-  // tout est coupé ensuite : plus aucune requête, même de tuile
-  expect((await f("/v1/3dtiles/datasets/X/files/Y.glb?session=ABC")).status).toBe(429);
-  expect(reel.appels.length).toBe(1);
+  expect((await f("https://tile.googleapis.com/v1/3dtiles/root.json")).status).toBe(200); // rejouée depuis la mémoire
+  expect(reel.appels.length).toBe(1); // rien de plus n'est parti vers Google
+  expect(problemes).toEqual([]);
+  // plafond atteint (maxRacines: 0) : refus sans rien envoyer et coupure totale
+  const reel2 = fauxFetch([]);
+  const p2 = [];
+  const g = creerFetchGoogle({ cle: "CLE_FICTIVE", fetchReel: reel2, surProbleme: (c) => p2.push(c), maxRacines: 0, etat: creerEtatSession() });
+  expect((await g("https://tile.googleapis.com/v1/3dtiles/root.json")).status).toBe(429);
+  expect(p2).toEqual(["limite"]);
+  expect((await g("/v1/3dtiles/datasets/X/files/Y.glb?session=ABC")).status).toBe(429);
+  expect(reel2.appels.length).toBe(0);
 });
 
 test("403 (clé refusée) et 429 (quota) coupent la vue photo et préviennent le repli sur le prototype gris", async () => {
-  const { creerFetchGoogle } = await import("../../src/lib/carte3dPhoto.js");
+  const { creerFetchGoogle, creerEtatSession } = await import("../../src/lib/carte3dPhoto.js");
   for (const [statut, code] of [[403, "refus"], [429, "quota"]]) {
     const reel = fauxFetch([statut]);
     const problemes = [];
-    const f = creerFetchGoogle({ cle: "K", fetchReel: reel, surProbleme: (c) => problemes.push(c) });
+    const f = creerFetchGoogle({ cle: "K", fetchReel: reel, surProbleme: (c) => problemes.push(c), etat: creerEtatSession() });
     expect((await f("https://tile.googleapis.com/v1/3dtiles/root.json")).status).toBe(statut);
     expect(problemes).toEqual([code]);
     await f("/v1/3dtiles/datasets/X/files/Y.glb");
@@ -139,7 +143,7 @@ test("interface : bouton « Vue 3D photo » séparé, attribution Google Maps, r
   expect(carte).toContain("Google Maps");
   expect(carte).toContain("DUREE_MAX_VUE_PHOTO_MS");
   expect(carte).toContain("MESSAGE_REPLI_PHOTO");
-  expect(carte).toContain("MAX_RACINES_PAR_PAGE");
+  expect(carte).toContain("lancerPhoto");
   // le bouton 2D/3D et la vue gris existants sont conservés
   expect(carte).toContain("Passer en 2D");
   expect(carte).toContain("Passer en 3D");
@@ -189,7 +193,7 @@ test("zone de mesures (aperçus seulement) : racine, première tuile reçue / af
   const carte = lire("src/components/Carte3D.jsx");
   expect(carte).toContain('NEXT_PUBLIC_VERCEL_ENV === "preview"');
   for (const m of ["Racine :", "1re tuile reçue", "1re tuile affichée", "Tuiles chargées", "Dernière erreur"]) expect(carte).toContain(m);
-  const { creerMesures, texteSansSecret, creerFetchGoogle } = await import("../../src/lib/carte3dPhoto.js");
+  const { creerMesures, texteSansSecret, creerFetchGoogle, creerEtatSession } = await import("../../src/lib/carte3dPhoto.js");
   let t = 1000;
   const m = creerMesures(() => t);
   t = 3500;
@@ -216,6 +220,7 @@ test("zone de mesures (aperçus seulement) : racine, première tuile reçue / af
     fetchReel: async () => new Response(null, { status: 200 }),
     surEvenement: (e) => evts.push(e),
     maintenant: () => (h += 500),
+    etat: creerEtatSession(),
   });
   await f("https://tile.googleapis.com/v1/3dtiles/root.json");
   await f("/v1/3dtiles/datasets/X/files/Y.glb?session=ABC");
@@ -232,4 +237,78 @@ test("logo officiel Google Maps : fichier fourni par Google, non modifié, affic
   const svg = lire("public/carte3d/google-maps-logo.svg");
   expect(svg).toContain('width="105px" height="22px"'); // dimensions d'origine, proportions conservées par « width: auto »
   expect(svg).not.toMatch(/<script|onload/i);
+});
+
+function fauxFetchRacine(corps) {
+  const appels = [];
+  const f = async (url) => {
+    appels.push(url);
+    return new Response(/root\.json/.test(url) ? corps : null, { status: 200 });
+  };
+  f.appels = appels;
+  return f;
+}
+
+test("relance sans nouvelle requête racine tant que la session est valable ; nouvelle racine seulement après expiration", async () => {
+  const { creerFetchGoogle, creerEtatSession } = await import("../../src/lib/carte3dPhoto.js");
+  const { DUREE_MAX_VUE_PHOTO_MS } = await import("../../src/lib/carte3d.js");
+  const etat = creerEtatSession(); // état de la page : partagé par toutes les activations
+  const reel = fauxFetchRacine('{"root":{"children":[]}}');
+  let horloge = 1000;
+  const evts = [];
+  const nouvelleActivation = () => creerFetchGoogle({ cle: "K", fetchReel: reel, etat, maintenant: () => horloge, surEvenement: (e) => evts.push(e.type) });
+  // 1re activation : une vraie requête racine
+  const a1 = nouvelleActivation();
+  const r1 = await a1("https://tile.googleapis.com/v1/3dtiles/root.json");
+  expect(r1.status).toBe(200);
+  expect(reel.appels.length).toBe(1);
+  expect(etat.racines).toBe(1);
+  // « Continuer quand même » ou nouvel appui : nouvelle activation, la racine vient de la mémoire (aucune requête)
+  horloge += 10 * 60 * 1000;
+  const a2 = nouvelleActivation();
+  const r2 = await a2("https://tile.googleapis.com/v1/3dtiles/root.json");
+  expect(r2.status).toBe(200);
+  expect(await r2.json()).toEqual({ root: { children: [] } });
+  expect(reel.appels.length).toBe(1); // toujours une seule requête racine envoyée
+  expect(etat.racines).toBe(1);
+  expect(evts).toContain("racine-reutilisee");
+  // les tuiles, elles, sont redemandées à Google (le moteur est neuf)
+  await a2("/v1/3dtiles/datasets/X/files/Y.glb?session=ABC");
+  expect(reel.appels.length).toBe(2);
+  // session expirée : nouvelle requête racine réelle (deuxième et dernière autorisée par page)
+  horloge += DUREE_MAX_VUE_PHOTO_MS + 1000;
+  const a3 = nouvelleActivation();
+  await a3("https://tile.googleapis.com/v1/3dtiles/root.json");
+  expect(reel.appels.filter((u) => /root\.json/.test(u)).length).toBe(2);
+  expect(etat.racines).toBe(2);
+  // une troisième racine réelle est refusée sans rien envoyer
+  horloge += DUREE_MAX_VUE_PHOTO_MS + 1000;
+  const problemes = [];
+  const a4 = creerFetchGoogle({ cle: "K", fetchReel: reel, etat, maintenant: () => horloge, surProbleme: (c) => problemes.push(c) });
+  expect((await a4("https://tile.googleapis.com/v1/3dtiles/root.json")).status).toBe(429);
+  expect(problemes).toEqual(["limite"]);
+  expect(reel.appels.filter((u) => /root\.json/.test(u)).length).toBe(2);
+});
+
+test("une racine refusée (403) n'est pas gardée en mémoire", async () => {
+  const { creerFetchGoogle, creerEtatSession } = await import("../../src/lib/carte3dPhoto.js");
+  const etat = creerEtatSession();
+  const f = creerFetchGoogle({ cle: "K", fetchReel: async () => new Response("interdit", { status: 403 }), etat });
+  await f("https://tile.googleapis.com/v1/3dtiles/root.json");
+  expect(etat.texteRacine).toBeNull();
+});
+
+test("réglage ?photo=sans-coupure et bouton « Continuer quand même »", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain('get("photo") === "sans-coupure"');
+  expect(carte).toContain("Durée moyenne par image");
+  expect(carte).toContain("Continuer quand même");
+  expect(carte).toContain("continuerQuandMeme");
+  expect(carte).toContain("lancerPhoto(true)");
+  // le contrôle de fluidité de la carte grise est lui aussi désactivé par le réglage
+  expect(carte).toContain("!sansCoupureDemande() && (performance.now() - debut) / n > 70");
+  // le message de coupure indique la durée moyenne mesurée
+  expect(carte).toContain("ms par image en moyenne");
+  // un seul import dynamique du module photo (le bouton « Continuer quand même » réutilise lancerPhoto)
+  expect(carte.match(/import\("@\/lib\/carte3dPhoto"\)/g).length).toBe(1);
 });

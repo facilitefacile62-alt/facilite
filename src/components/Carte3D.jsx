@@ -7,7 +7,7 @@
 // Repli : appareil trop faible, WebGL absent, fond injoignable, carte trop lente => retour à la carte 2D actuelle (ou carte à plat).
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ADRESSE_CARTE_2D, DUREE_MAX_VUE_PHOTO_MS, MAX_RACINES_PAR_PAGE, cartePhotoActive, peutAfficher3D, profilPhoto } from "@/lib/carte3d";
+import { ADRESSE_CARTE_2D, DUREE_MAX_VUE_PHOTO_MS, cartePhotoActive, peutAfficher3D, profilPhoto } from "@/lib/carte3d";
 import { chargerLogosBoutiques, chargerTousLesArticles, echapperHtml, urlPhoto } from "@/lib/marketplaceData";
 import { htmlEpingle } from "@/lib/epingleCarte";
 import { svgAvatarBoutique } from "@/lib/avatarBoutique";
@@ -19,6 +19,9 @@ const DELAI_CHARGEMENT_MS = 15000;
 const ATTRIBUTION_BATIMENTS = "Bâtiments : © Overture Maps Foundation, OpenStreetMap contributors";
 const DELAI_PREMIERES_TUILES_MS = 60000; // 60 s maximum entre l'appui et l'AFFICHAGE de la première tuile (connexion lente comprise)
 const MONTRER_MESURES = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"; // zone de mesures : aperçus seulement
+const DEBUT_MESSAGE_LENT = "Votre appareil est un peu lent pour la vue photo";
+// Réglage d'essai : « ?photo=sans-coupure » dans l'adresse désactive les coupures automatiques de fluidité (carte grise comprise) et affiche la durée moyenne par image dans la zone de mesures.
+const sansCoupureDemande = () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("photo") === "sans-coupure";
 const MESSAGE_REPLI_PHOTO = "La vue 3D photo n'est pas disponible pour le moment (limite d'utilisation atteinte ou accès refusé). La vue 3D simple reste affichée.";
 
 function prixLisible(v) {
@@ -127,7 +130,7 @@ export default function Carte3D() {
   const photoRef = useRef(null);
   const minuterieSessionRef = useRef(null);
   const delaiChargementRef = useRef(null);
-  const activationsPhotoRef = useRef(0);
+  const [fluidite, setFluidite] = useState(null); // { moyenneMs, imagesParS } : affiché seulement avec ?photo=sans-coupure
   const mode3DRef = useRef(true);
   useEffect(() => {
     mode3DRef.current = mode3D;
@@ -233,7 +236,7 @@ export default function Carte3D() {
           const compter = () => {
             n += 1;
             if (performance.now() - debut < 3000 && !annule) requestAnimationFrame(compter);
-            else if (!annule && (performance.now() - debut) / n > 70) {
+            else if (!annule && !sansCoupureDemande() && (performance.now() - debut) / n > 70) {
               setMode3D(false);
               appliquerMode(false);
               setInfo("Votre appareil est un peu lent : la carte est passée en 2D pour rester fluide.");
@@ -323,21 +326,19 @@ export default function Carte3D() {
     appliquerMode(suivant);
   };
 
-  const surPhoto = async () => {
+  const lancerPhoto = async (forcer) => {
     const carte = carteRef.current;
     if (!carte || photo === "chargement") return;
     if (photo === "on") {
       retirerPhoto();
       return;
     }
-    if (activationsPhotoRef.current >= MAX_RACINES_PAR_PAGE) {
-      setInfo("Pour limiter les coûts, rechargez la page pour relancer la vue 3D photo.");
-      return;
-    }
-    activationsPhotoRef.current += 1; // une activation = une requête racine chez Google
+    // Une réactivation pendant la session Google ne redemande PAS la racine (gardée en mémoire par carte3dPhoto.js) ; le plafond de racines par page y est appliqué.
+    const sansCoupure = forcer || sansCoupureDemande();
     setPhoto("chargement");
     setInfo("");
     setMesures(null);
+    setFluidite(null);
     try {
       const { creerVuePhoto } = await import("@/lib/carte3dPhoto");
       const profil = profilPhoto();
@@ -355,6 +356,32 @@ export default function Carte3D() {
       }, DELAI_PREMIERES_TUILES_MS);
       // Fluidité : mesurée SEULEMENT une fois les premières tuiles affichées (puis 3 s de pause) ; sur 4 secondes, plus de 90 ms par image en moyenne => retour au prototype gris.
       const surveillerFluidite = () => {
+        if (sansCoupure) {
+          // Sans coupure : mesure continue, affichée dans la zone de mesures (moyenne sur 1 seconde).
+          let dernier = 0;
+          let debutFenetre = 0;
+          let somme = 0;
+          let n = 0;
+          const boucle = (t) => {
+            if (!photoRef.current) return;
+            if (dernier) {
+              somme += t - dernier;
+              n += 1;
+            }
+            dernier = t;
+            if (!debutFenetre) debutFenetre = t;
+            if (t - debutFenetre >= 1000 && n > 0) {
+              const moyenne = somme / n;
+              setFluidite({ moyenneMs: Math.round(moyenne), imagesParS: Math.round(1000 / moyenne) });
+              somme = 0;
+              n = 0;
+              debutFenetre = t;
+            }
+            requestAnimationFrame(boucle);
+          };
+          requestAnimationFrame(boucle);
+          return;
+        }
         let n = 0;
         let debut = 0;
         const compter = (t) => {
@@ -364,7 +391,7 @@ export default function Carte3D() {
           if (t - debut < 4000) requestAnimationFrame(compter);
           else if ((t - debut) / n > 90) {
             retirerPhoto();
-            setInfo("Votre appareil est un peu lent pour la vue photo : la vue 3D simple est affichée.");
+            setInfo(`${DEBUT_MESSAGE_LENT} (${Math.round((t - debut) / n)} ms par image en moyenne) : la vue 3D simple est affichée.`);
           }
         };
         window.setTimeout(() => requestAnimationFrame(compter), 3000);
@@ -379,10 +406,10 @@ export default function Carte3D() {
           window.clearTimeout(delaiChargementRef.current);
           surveillerFluidite();
         },
-        surProbleme: () => {
+        surProbleme: (code) => {
           abandon = true;
           retirerPhoto();
-          setInfo(MESSAGE_REPLI_PHOTO);
+          setInfo(code === "limite" ? "Pour limiter les coûts, rechargez la page pour relancer la vue 3D photo." : MESSAGE_REPLI_PHOTO);
         },
       });
       if (abandon) {
@@ -407,6 +434,9 @@ export default function Carte3D() {
       setInfo(MESSAGE_REPLI_PHOTO);
     }
   };
+
+  const surPhoto = () => lancerPhoto(false);
+  const continuerQuandMeme = () => lancerPhoto(true);
 
   const allerA = (b) => carteRef.current?.flyTo({ center: [b.lng, b.lat], zoom: Math.max(carteRef.current.getZoom(), 16), duration: 900 });
 
@@ -509,6 +539,7 @@ export default function Carte3D() {
               <div>1re tuile affichée : {mesures.premiereAfficheeMs == null ? "—" : `${(mesures.premiereAfficheeMs / 1000).toFixed(1)} s`}</div>
               <div>Tuiles chargées : {mesures.tuilesChargees}</div>
               <div>Dernière erreur : {mesures.derniereErreur || "aucune"}</div>
+              {sansCoupureDemande() && <div>Durée moyenne par image : {fluidite ? `${fluidite.moyenneMs} ms (${fluidite.imagesParS} images/s)` : "…"}</div>}
             </div>
           )}
           {/* Bande de boutiques en bas, comme sur la carte 2D */}
@@ -516,6 +547,11 @@ export default function Carte3D() {
             {info && (
               <div className="rounded-2xl bg-gray-900/90 px-4 py-2.5 text-center text-xs font-bold text-white shadow-xl" style={{ pointerEvents: "auto" }}>
                 {info}
+                {info.startsWith(DEBUT_MESSAGE_LENT) && photoPossible && (
+                  <button type="button" onClick={continuerQuandMeme} className="mt-2 block w-full rounded-full bg-indigo-500 px-3 py-1.5 text-xs font-black text-white">
+                    Continuer quand même
+                  </button>
+                )}
               </div>
             )}
             <div className="flex max-w-full gap-3 overflow-x-auto rounded-full bg-white/70 px-4 py-2 shadow-xl backdrop-blur-md" style={{ pointerEvents: "auto", scrollbarWidth: "none" }}>
