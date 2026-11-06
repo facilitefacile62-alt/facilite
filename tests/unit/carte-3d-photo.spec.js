@@ -352,7 +352,7 @@ test("vue photo : épingles et bulles au-dessus de la couche photo, groupes seul
   // groupes uniquement en vue photo ; en vue grise : une épingle par boutique, comme avant
   expect(carte).toContain("const enPhoto = Boolean(groupesActifs);");
   expect(carte).toContain(": affichees.map((b) => ({ membres: [b], centre: b }));"); // vue grise : une épingle par boutique
-  expect(carte).toContain("}, [affichees, carrousel, etat, groupesActifs]);");
+  expect(carte).toContain("}, [affichees, carrousel, etat, groupesActifs, placerPins]);");
   expect(carte).toContain('const groupesActifs = photo === "on" ? groupesPhoto : null;');
   // la pastille de boutique n'est ajoutée aux cartes d'articles que pour les groupes (a.__badge) : HTML de la vue grise inchangé
   expect(carte).toContain("${a.__badge ?");
@@ -420,9 +420,9 @@ test("boutiques de test : visibles seulement en preview (masquage dans le code, 
 test("vue photo : carrousel dans un panneau FIXE en bas (au-dessus de la bande de boutiques), une seule boutique à la fois, jamais sous la recherche", async () => {
   const carte = lire("src/components/Carte3D.jsx");
   // pas de bulle sur la carte en vue photo : seulement dans la vue grise (popup créé hors du chemin « enPhoto »)
-  const chemin = carte.slice(carte.indexOf("if (enPhoto) {"), carte.indexOf("const popup = new ml.Popup"));
+  const chemin = carte.slice(carte.indexOf("if (enPhoto && conteneurPinsRef.current) {"), carte.indexOf("const marqueur = new ml.Marker"));
   expect(chemin).toContain("setPanneau({ boutiques: groupe, index: 0 })");
-  expect(chemin).toContain("return { marqueur, popup: null };");
+  expect(chemin).toContain("popup: null };");
   expect(chemin).not.toContain("Popup");
   // le panneau est dans la colonne du bas, entre le message et la bande de boutiques, donc fixe à l'écran
   const iPanneau = carte.indexOf('role="dialog"');
@@ -560,4 +560,60 @@ test("garde-fou de zoom : fitBounds n'est pas borné par MapLibre, la vue photo 
   expect(carte).toContain("if (carte.getZoom() > max + 0.01) carte.jumpTo({ zoom: max });");
   expect(carte).toContain('carte.on("zoomend", borner)');
   expect(carte).toContain('carte.off("zoomend", borner)');
+});
+
+// Boîte orientée locale (est, nord, verticale), centrée à `haut` m au-dessus de l'ellipsoïde, demi-axe vertical `demiVertical`.
+function boiteFine(lieu, p0, haut, demiVertical) {
+  const la = (lieu.lat * Math.PI) / 180, lo = (lieu.lng * Math.PI) / 180;
+  const est = [-Math.sin(lo), Math.cos(lo), 0];
+  const nord = [-Math.sin(la) * Math.cos(lo), -Math.sin(la) * Math.sin(lo), Math.cos(la)];
+  const h3 = [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)];
+  const c = p0.map((v, i) => v + haut * h3[i]);
+  return { box: [...c, ...est.map((v) => v * 1000), ...nord.map((v) => v * 1000), ...h3.map((v) => v * demiVertical)] };
+}
+
+test("ancrage des épingles : hauteur du sol lue dans les boîtes des tuiles affichées (la plus fine), repli à 0 m", async () => {
+  const { hauteurSolSousPoint, altitudeAncrage, BORNES_HAUTEUR_SOL_M } = await import("../../src/lib/hauteurSol.js");
+  const { versEcef } = await import("../../src/lib/couvertureTuiles3d.js");
+  const lieu = { lat: 14.7557, lng: -17.3843 };
+  const p0 = versEcef(lieu.lat, lieu.lng);
+  const tuile = (haut, demi, ge, extra = {}) => ({ content: {}, lodMetricValue: ge, header: { boundingVolume: boiteFine(lieu, p0, haut, demi) }, computedTransform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], ...extra });
+  const grossiere = tuile(60, 60, 100); // sol de 0 à 120 m
+  const fine = tuile(30, 12, 8); // sol de 18 à 42 m
+  const lecture = hauteurSolSousPoint([grossiere, fine], lieu);
+  expect(lecture.ge).toBe(8); // la tuile la plus fine l'emporte
+  expect(lecture.bas).toBeCloseTo(18, 1);
+  expect(lecture.haut).toBeCloseTo(42, 1);
+  expect(altitudeAncrage(lecture, 52)).toBeCloseTo(18 - 52, 1); // dans la scène : le décalage vertical des tuiles est retranché
+  // tuiles ignorées : sans contenu, sans boîte, erreur infinie, boîte ailleurs
+  const loin = { content: {}, lodMetricValue: 1, header: { boundingVolume: boiteFine({ lat: 14.9, lng: -17.1 }, versEcef(14.9, -17.1), 30, 12) } };
+  expect(hauteurSolSousPoint([tuile(30, 12, 8, { content: null }), tuile(30, 12, 8, { header: {} }), tuile(30, 12, 1e100), loin], lieu)).toBeNull();
+  expect(hauteurSolSousPoint([], lieu)).toBeNull();
+  expect(hauteurSolSousPoint(null, lieu)).toBeNull();
+  expect(altitudeAncrage(null, 52)).toBeNull(); // l'appelant retombe sur 0 m
+  // hauteurs hors de la fenêtre du test de couverture (-50..400 m) : la plage de lecture est plus large
+  expect(BORNES_HAUTEUR_SOL_M[0]).toBeLessThan(-50);
+  expect(BORNES_HAUTEUR_SOL_M[1]).toBeGreaterThan(400);
+  const haute = hauteurSolSousPoint([tuile(900, 40, 4)], lieu);
+  expect(haute.bas).toBeCloseTo(860, 0);
+});
+
+test("épingles de la vue photo : calque dédié, position image par image, hauteur lue affichée", async () => {
+  const carte = lire("src/components/Carte3D.jsx");
+  expect(carte).toContain("const placerPins = useCallback");
+  expect(carte).toContain('carte.on("render", placerPins)');
+  expect(carte).toContain("hauteursRef.current.get(e.cle)?.altitude ?? 0"); // repli : 0 m
+  expect(carte).toContain("ctl.projeter(points)");
+  expect(carte).toContain("photoRef.current.definirLieux(");
+  expect(carte).toContain("Hauteur du sol lue sous");
+  // vue grise : toujours des repères MapLibre (ml.Marker) ; vue photo : éléments simples dans le calque
+  expect(carte).toContain("new ml.Marker({ element: el, anchor: \"top-left\", offset: [-70, -85] }).setLngLat([centre.lng, centre.lat]).addTo(carte);");
+  expect(carte).toContain("conteneurPinsRef.current.appendChild(el)");
+  const photo = lire("src/lib/carte3dPhoto.js");
+  expect(photo).toContain("WebMercatorViewport");
+  expect(photo).toContain("definirLieux");
+  expect(photo).toContain("hauteurSolSousPoint(dernieresTuiles, l)");
+  expect(photo).toContain("traiterTuiles(tuilesChoisies)");
+  expect(photo).toContain("lecture.ge <= ancienne.ge"); // lecture la plus fine conservée : pas de saut quand une tuile quitte la sélection
+  expect(carte).not.toContain("DECALAGE_VERTICAL_PHOTO_M ="); // la constante reste dans carte3d.js
 });

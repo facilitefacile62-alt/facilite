@@ -65,8 +65,8 @@ export function rapports(tuile, m, p) {
  * Exact et sans échantillonnage : pour une boîte orientée, chaque rapport de projection est une fonction affine de la hauteur (a + b*h), donc chaque demi-axe donne un intervalle, et on les intersecte.
  * Un volume inconnu (sphère, absent) est traité comme « contient » pour ne jamais couper une branche à tort ; le type est signalé dans le diagnostic.
  */
-export function intervalleHauteur(tuile, m, lieu, p) {
-  let h0 = HAUTEUR_MIN_M, h1 = HAUTEUR_MAX_M;
+export function intervalleHauteur(tuile, m, lieu, p, bornes = [HAUTEUR_MIN_M, HAUTEUR_MAX_M]) {
+  let h0 = bornes[0], h1 = bornes[1];
   const bv = tuile?.boundingVolume;
   if (bv?.region) {
     const [o, s, e, n, hMin, hMax] = bv.region;

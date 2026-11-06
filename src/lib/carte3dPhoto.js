@@ -5,6 +5,7 @@
 //  - le NAVIGATEUR charge les tuiles directement chez Google : aucune tuile n'est stockée ni relayée par nos serveurs ni par R2 ; le cache est celui du navigateur, qui suit les en-têtes de Google (Cache-Control) ;
 //  - la clé (variable d'environnement NEXT_PUBLIC_GOOGLE_TILES_KEY, restreinte côté Google à nos adresses) n'est jamais écrite dans le code ; elle est passée par l'appelant et ajoutée en paramètre « key » des requêtes ;
 //  - garde-fous : une seule requête racine par activation (2 par page au maximum), statuts 403 / 429 => coupure immédiate et retour au prototype gris, aucune requête vers un autre hôte que tile.googleapis.com.
+import { altitudeAncrage, hauteurSolSousPoint } from "./hauteurSol.js";
 import { DECALAGE_VERTICAL_PHOTO_M, DUREE_MAX_VUE_PHOTO_MS, MAX_RACINES_PAR_PAGE, RACINE_TUILES_GOOGLE, creditsAgreges, statutQuotaOuCle } from "./carte3d.js";
 
 const HOTE_GOOGLE = "tile.googleapis.com";
@@ -144,8 +145,8 @@ export function copyrightsDesTuiles(tuiles) {
  *  - surCredits(texte) : mentions de sources à afficher ; surProbleme(code) : coupure (le prototype gris prend le relais) ; surAffichee() : la première tuile vient d'être DESSINÉE (c'est de là que se mesure la fluidité) ; surMesures(objet) : durées et compteurs pour la zone de mesures des aperçus.
  * Renvoie { retirer() }.
  */
-export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {}, surProbleme = () => {}, surAffichee = () => {}, surMesures = () => {}, fetchReel, etat, decalageM = DECALAGE_VERTICAL_PHOTO_M }) {
-  const [{ MapboxOverlay }, { Tile3DLayer }] = await Promise.all([import("@deck.gl/mapbox"), import("@deck.gl/geo-layers")]);
+export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {}, surProbleme = () => {}, surAffichee = () => {}, surMesures = () => {}, surHauteurs = () => {}, fetchReel, etat, decalageM = DECALAGE_VERTICAL_PHOTO_M }) {
+  const [{ MapboxOverlay }, { Tile3DLayer }, { WebMercatorViewport }] = await Promise.all([import("@deck.gl/mapbox"), import("@deck.gl/geo-layers"), import("@deck.gl/core")]);
   let retire = false;
   let overlay = null;
   let derniersCredits = "";
@@ -183,6 +184,42 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
   });
   let afficheeSignalee = false;
   let dernierEtat = 0;
+  // Ancrage des épingles : hauteur du sol sous chaque lieu (épingle), relue quand les tuiles changent (au plus toutes les 400 ms) et à chaque nouvelle liste de lieux.
+  let lieux = [];
+  const meilleuresLectures = new Map();
+  let dernieresTuiles = [];
+  let dernierCalculSol = 0;
+  let signatureSol = "";
+  const calculerHauteurs = (force = false) => {
+    const maintenantMs = Date.now();
+    if (!force && maintenantMs - dernierCalculSol < 400) return;
+    dernierCalculSol = maintenantMs;
+    const resultat = new Map();
+    for (const l of lieux) {
+      // On garde, pour chaque lieu, la lecture la plus FINE jamais vue (plus petite erreur géométrique) : une tuile momentanément absente de la sélection ne fait pas « sauter » l'épingle, et une tuile plus fine la précise.
+      const lecture = hauteurSolSousPoint(dernieresTuiles, l);
+      const ancienne = meilleuresLectures.get(l.id);
+      if (lecture && (!ancienne || lecture.ge <= ancienne.ge)) meilleuresLectures.set(l.id, lecture);
+      const retenue = meilleuresLectures.get(l.id) || null;
+      resultat.set(l.id, retenue ? { bas: retenue.bas, altitude: altitudeAncrage(retenue, decalageM), ge: retenue.ge } : null);
+    }
+    const sig = [...resultat.entries()].map(([id, v]) => `${id}:${v ? `${Math.round(v.bas * 10)}/${Math.round(v.ge)}` : "-"}`).join("|");
+    if (sig === signatureSol) return;
+    signatureSol = sig;
+    surHauteurs(resultat);
+  };
+  /** Même traitement que le passage du moteur de tuiles (sert aussi aux essais hors ligne avec de fausses tuiles). */
+  const traiterTuiles = (tuiles) => {
+    dernieresTuiles = tuiles || [];
+    calculerHauteurs();
+  };
+  // Projection EXACTEMENT comme deck.gl (même fenêtre, même caméra que la carte) : sert à placer les épingles à leur hauteur dans la scène, image par image.
+  const projeter = (points) => {
+    const c = carte.getCenter();
+    const conteneur = carte.getContainer();
+    const vp = new WebMercatorViewport({ width: conteneur.clientWidth, height: conteneur.clientHeight, longitude: c.lng, latitude: c.lat, zoom: carte.getZoom(), pitch: carte.getPitch(), bearing: carte.getBearing() });
+    return points.map(([lng, lat, alt]) => vp.project([lng, lat, alt]));
+  };
   const couche = new Tile3DLayer({
     id: "google-3d-photo",
     data: RACINE_TUILES_GOOGLE,
@@ -220,6 +257,7 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
           emettre();
           surAffichee();
         }
+        traiterTuiles(tuilesChoisies);
         // Statistiques du moteur (au plus une par seconde) : tuiles dans la vue, à afficher, en cours de chargement, échecs.
         const maintenantMs = Date.now();
         if (maintenantMs - dernierEtat >= 1000) {
@@ -245,5 +283,15 @@ export async function creerVuePhoto({ carte, cle, profil, surCredits = () => {},
   });
   overlay = new MapboxOverlay({ interleaved: false, layers: [couche], useDevicePixels: profil.ratioPixelMax > 1 ? true : 1 });
   carte.addControl(overlay);
-  return { retirer, racines: () => moteurFetch.racines() };
+  return {
+    retirer,
+    racines: () => moteurFetch.racines(),
+    projeter,
+    definirLieux: (liste) => {
+      lieux = liste || [];
+      signatureSol = "";
+      calculerHauteurs(true);
+    },
+    injecterTuiles: traiterTuiles,
+  };
 }
