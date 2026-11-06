@@ -90,3 +90,45 @@ test("l'ancien défaut est bien reproduit : le premier enfant seul est une impas
   // les 4 enfants de la racine contiennent tous le point : l'ordre seul ne permet pas de choisir
   expect(racine.children.every((e) => contient(e, IDENTITE, LIEU, p))).toBe(true);
 });
+
+// Boîte fine orientée localement : est, nord, verticale (demi-axe vertical court), centrée à `haut` mètres au-dessus de l'ellipsoïde.
+function boiteFine(lieu, p0, haut, demiVertical) {
+  const la = (lieu.lat * Math.PI) / 180, lo = (lieu.lng * Math.PI) / 180;
+  const est = [-Math.sin(lo), Math.cos(lo), 0];
+  const nord = [-Math.sin(la) * Math.cos(lo), -Math.sin(la) * Math.sin(lo), Math.cos(la)];
+  const haut3 = [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)];
+  const c = p0.map((v, i) => v + haut * haut3[i]);
+  return { box: [...c, ...est.map((v) => v * 1000), ...nord.map((v) => v * 1000), ...haut3.map((v) => v * demiVertical)] };
+}
+
+test("une boîte fine (demi-axe vertical 40 m) centrée à 60 m ne contient pas le point à 0 m, mais le contient avec la colonne verticale", async () => {
+  const { versEcef, rapports, intervalleHauteur, contient, IDENTITE } = await charger();
+  const p0 = versEcef(LIEU.lat, LIEU.lng);
+  const tuile = { boundingVolume: boiteFine(LIEU, p0, 60, 40) };
+  const r0 = rapports(tuile, IDENTITE, p0);
+  expect(Math.abs(r0[2])).toBeGreaterThan(1); // à 0 m : -1,5, hors de la boîte (ancienne logique : rejetée)
+  const inter = intervalleHauteur(tuile, IDENTITE, LIEU, p0);
+  expect(inter).not.toBeNull();
+  expect(inter[0]).toBeCloseTo(20, 1);
+  expect(inter[1]).toBeCloseTo(100, 1);
+  expect(contient(tuile, IDENTITE, LIEU, p0)).toBe(true);
+  // une boîte trop haute (centrée à 600 m) n'est pas retenue, même avec la colonne (limite +400 m)
+  expect(intervalleHauteur({ boundingVolume: boiteFine(LIEU, p0, 600, 40) }, IDENTITE, LIEU, p0)).toBeNull();
+  // une boîte trop basse (centrée à -200 m) non plus
+  expect(intervalleHauteur({ boundingVolume: boiteFine(LIEU, p0, -200, 40) }, IDENTITE, LIEU, p0)).toBeNull();
+});
+
+test("la descente traverse des boîtes fines situées au-dessus de l'ellipsoïde et rapporte la hauteur trouvée", async () => {
+  const { chercherTuile, versEcef, verdictCouverture } = await charger();
+  const p0 = versEcef(LIEU.lat, LIEU.lng);
+  const fine = { boundingVolume: boiteFine(LIEU, p0, 60, 40), geometricError: 8, content: { uri: "/fin.glb" } };
+  const racine = {
+    boundingVolume: BOITE_TERRE,
+    geometricError: 1e100,
+    children: [{ boundingVolume: boiteFine(LIEU, p0, 60, 400), geometricError: 100, children: [fine] }],
+  };
+  const res = await chercherTuile({ racine, lieu: LIEU, ouvrir: async () => { throw new Error("aucun tileset externe attendu"); }, restantes: () => 20 });
+  expect(res.meilleur.uri).toBe("/fin.glb");
+  expect(res.meilleur.hauteur).toBeCloseTo(60, 1);
+  expect(verdictCouverture(res).code).toBe("COUVERT");
+});

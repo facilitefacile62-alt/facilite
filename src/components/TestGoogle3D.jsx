@@ -4,7 +4,7 @@
 // La clé vient de NEXT_PUBLIC_GOOGLE_TILES_KEY (lue au build) ; ni la clé ni la session ne sont affichées ni copiées. La logique de recherche est dans src/lib/couvertureTuiles3d.js (testée hors ligne).
 
 import { useRef, useState } from "react";
-import { chercherTuile, erreurTxt, resumeTuile, verdictCouverture, versEcef } from "@/lib/couvertureTuiles3d";
+import { chercherTuile, erreurTxt, HAUTEUR_MAX_M, HAUTEUR_MIN_M, resumeTuile, verdictCouverture, versEcef } from "@/lib/couvertureTuiles3d";
 
 const RACINE = "https://tile.googleapis.com/v1/3dtiles/root.json";
 const MAX_REQUETES = 20;
@@ -80,6 +80,7 @@ export default function TestGoogle3D() {
       });
       brut.cheminTrouve = res.meilleur ? res.meilleur.chemin : null;
       ligne(`Chemin suivi (indices d'enfants depuis la racine) : ${res.meilleur ? res.meilleur.chemin.join(" > ") : "aucun"}. Tilesets externes ouverts : ${res.ouverts}${res.plafond ? " ; arrêt par le plafond de requêtes" : ""}. Plus fine erreur géométrique atteinte : ${res.meilleur ? erreurTxt(res.meilleur.ge) : "aucun modèle"}.`);
+      if (res.meilleur?.hauteur != null) ligne(`Hauteur ellipsoïdale à laquelle le point a été trouvé dans la dernière tuile : ${res.meilleur.hauteur} m (intervalle compatible ${res.meilleur.intervalle[0]} à ${res.meilleur.intervalle[1]} m ; colonne testée de ${HAUTEUR_MIN_M} à ${HAUTEUR_MAX_M} m).`);
       if (res.meilleur) {
         // Un seul modèle de contrôle est téléchargé, jamais plus.
         const buf = await get(res.meilleur.uri, true);

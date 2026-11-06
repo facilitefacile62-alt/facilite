@@ -9,6 +9,17 @@
  *  en dessous les volumes commencent à se distinguer (et chaque niveau divise l'erreur par 2 : 32 m est atteint au niveau précédant 16 m, 8 m…). Ce n'est pas la valeur finale du rendu, seulement la preuve qu'on atteint le détail bâti. */
 export const SEUIL_FIN_M = 32;
 
+/** Colonne verticale testée au-dessus du point : le sol réel n'est pas à 0 m de hauteur ellipsoïdale (WGS84) — environ 40 m à Dakar, 50 à 80 m à Paris — et les boîtes fines ont un demi-axe vertical très court
+ *  (quelques dizaines de mètres) : à 0 m, un point bien placé sort de la boîte de quelques pour cent. Une boîte est donc retenue si elle contient le point à AU MOINS UNE hauteur de cet intervalle. */
+export const HAUTEUR_MIN_M = -50;
+export const HAUTEUR_MAX_M = 400;
+
+/** Direction « verticale » (normale à l'ellipsoïde) au point : le point à la hauteur h vaut exactement p0 + h * normale. */
+export function normale(latDeg, lngDeg) {
+  const la = (latDeg * Math.PI) / 180, lo = (lngDeg * Math.PI) / 180;
+  return [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)];
+}
+
 export function versEcef(latDeg, lngDeg) {
   const a = 6378137, f = 1 / 298.257223563, e2 = f * (2 - f);
   const la = (latDeg * Math.PI) / 180, lo = (lngDeg * Math.PI) / 180;
@@ -49,19 +60,49 @@ export function rapports(tuile, m, p) {
   });
 }
 
-// Un volume inconnu (sphère, absent) est traité comme « contient » pour ne jamais couper une branche à tort ; le type est signalé dans le diagnostic.
-export function contient(tuile, m, lieu, p) {
+/**
+ * Intervalle de hauteurs ellipsoïdales [h0, h1] (borné à HAUTEUR_MIN_M..HAUTEUR_MAX_M) pour lesquelles le point de la colonne est dans la tuile, ou null s'il n'y en a aucune.
+ * Exact et sans échantillonnage : pour une boîte orientée, chaque rapport de projection est une fonction affine de la hauteur (a + b*h), donc chaque demi-axe donne un intervalle, et on les intersecte.
+ * Un volume inconnu (sphère, absent) est traité comme « contient » pour ne jamais couper une branche à tort ; le type est signalé dans le diagnostic.
+ */
+export function intervalleHauteur(tuile, m, lieu, p) {
+  let h0 = HAUTEUR_MIN_M, h1 = HAUTEUR_MAX_M;
   const bv = tuile?.boundingVolume;
   if (bv?.region) {
-    const [o, s, e, n] = bv.region;
+    const [o, s, e, n, hMin, hMax] = bv.region;
     const la = (lieu.lat * Math.PI) / 180, lo = (lieu.lng * Math.PI) / 180;
-    return lo >= o && lo <= e && la >= s && la <= n;
+    if (!(lo >= o && lo <= e && la >= s && la <= n)) return null;
+    if (Number.isFinite(hMin)) h0 = Math.max(h0, hMin);
+    if (Number.isFinite(hMax)) h1 = Math.min(h1, hMax);
+    return h0 <= h1 ? [h0, h1] : null;
   }
-  if (bv?.box) {
-    const r = rapports(tuile, m, p);
-    return r.every((v) => v === null || Math.abs(v) <= 1.0001);
+  if (!bv?.box) return [h0, h1];
+  const b = bv.box;
+  const c = appliquer(m, b.slice(0, 3), true);
+  const axes = [b.slice(3, 6), b.slice(6, 9), b.slice(9, 12)].map((x) => appliquer(m, x, false));
+  const nv = normale(lieu.lat, lieu.lng);
+  const d = [p[0] - c[0], p[1] - c[1], p[2] - c[2]];
+  for (const u of axes) {
+    const n2 = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
+    if (n2 === 0) continue;
+    const a = (d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / n2; // rapport à la hauteur 0
+    const k = (nv[0] * u[0] + nv[1] * u[1] + nv[2] * u[2]) / n2; // variation du rapport par mètre de hauteur
+    const tol = 1.0001;
+    if (Math.abs(k) < 1e-15) {
+      if (Math.abs(a) > tol) return null;
+      continue;
+    }
+    const x1 = (-tol - a) / k, x2 = (tol - a) / k;
+    h0 = Math.max(h0, Math.min(x1, x2));
+    h1 = Math.min(h1, Math.max(x1, x2));
+    if (h0 > h1) return null;
   }
-  return true;
+  return [h0, h1];
+}
+
+/** Vrai si la colonne verticale du point traverse la tuile. */
+export function contient(tuile, m, lieu, p) {
+  return intervalleHauteur(tuile, m, lieu, p) !== null;
 }
 
 /** Adresse du contenu d'une tuile : « content » (1.0) ou « contents » (1.1, plusieurs contenus). */
@@ -81,17 +122,17 @@ export function resumeTuile(t) {
  *  - racine : le champ « root » du tileset de départ ;
  *  - ouvrir(uri) : charge un tileset externe et renvoie son JSON (c'est là que la clé et la session sont gérées, jamais ici) ;
  *  - restantes() : nombre de requêtes encore permises. Une requête est gardée en réserve (téléchargement du modèle de contrôle) : on n'ouvre plus de tileset quand il n'en reste qu'une.
- * Renvoie { meilleur: { uri, ge, chemin, prof } | null, plafond, ouverts } ; « chemin » = indices d'enfants suivis depuis la racine.
+ * Renvoie { meilleur: { uri, ge, chemin, prof, hauteur, intervalle } | null, plafond, ouverts } (hauteur = hauteur ellipsoïdale au milieu de l'intervalle compatible dans la dernière tuile) ; « chemin » = indices d'enfants suivis depuis la racine.
  */
 export async function chercherTuile({ racine, lieu, ouvrir, restantes, surLigne = () => {}, surEvaluation = () => {}, surTileset = () => {} }) {
   const p = versEcef(lieu.lat, lieu.lng);
   let meilleur = null, plafond = false, ouverts = 0;
   const prefixe = (a, b) => b.every((x, i) => a[i] === x);
 
-  async function explorer(tuile, mt, chemin, prof) {
+  async function explorer(tuile, mt, chemin, prof, inter) {
     if (prof > 60) return;
     const uri = adresseContenu(tuile);
-    if (uri && estModele(uri) && (!meilleur || prof > meilleur.prof)) meilleur = { uri, ge: tuile.geometricError, chemin: chemin.slice(), prof };
+    if (uri && estModele(uri) && (!meilleur || prof > meilleur.prof)) meilleur = { uri, ge: tuile.geometricError, chemin: chemin.slice(), prof, hauteur: inter ? Math.round(((inter[0] + inter[1]) / 2) * 10) / 10 : null, intervalle: inter ? inter.map((x) => Math.round(x * 10) / 10) : null };
     if (uri && !estModele(uri)) {
       if (restantes() <= 1) { plafond = true; return; }
       const sous = await ouvrir(uri);
@@ -99,28 +140,30 @@ export async function chercherTuile({ racine, lieu, ouvrir, restantes, surLigne 
       surTileset(sous);
       const ms = produit(mt, sous.root.transform || IDENTITE);
       surLigne(`Tileset externe ${ouverts} ouvert (chemin ${chemin.join(" > ") || "racine"}) : ${resumeTuile(sous.root)}.`);
-      if (contient(sous.root, ms, lieu, p)) await explorer(sous.root, ms, chemin, prof + 1);
+      const is = intervalleHauteur(sous.root, ms, lieu, p);
+      if (is) await explorer(sous.root, ms, chemin, prof + 1, is);
       return;
     }
     const candidats = (tuile.children || [])
       .map((e, i) => {
         // Le « transform » d'une tuile s'applique à son volume, à son contenu et à ses enfants : composé avant le test.
         const me = produit(mt, e.transform || IDENTITE);
-        const ok = contient(e, me, lieu, p);
-        surEvaluation({ chemin: chemin.concat(i).join(">"), volume: typeVolume(e), aTransform: !!e.transform, rapportsAxes: rapports(e, me, p), dedans: ok });
-        return { e, me, i, ok };
+        const inter = intervalleHauteur(e, me, lieu, p);
+        const ok = inter !== null;
+        surEvaluation({ chemin: chemin.concat(i).join(">"), volume: typeVolume(e), aTransform: !!e.transform, rapportsAxesHauteur0: rapports(e, me, p), intervalleHauteurM: inter ? inter.map((x) => Math.round(x * 10) / 10) : null, dedans: ok });
+        return { e, me, i, ok, inter };
       })
       .filter((x) => x.ok)
       .sort((a, b) => (a.e.geometricError ?? 1e300) - (b.e.geometricError ?? 1e300) || a.i - b.i);
     for (const x of candidats) {
       const c = chemin.concat(x.i);
-      await explorer(x.e, x.me, c, prof + 1);
+      await explorer(x.e, x.me, c, prof + 1, x.inter);
       if (plafond) return;
       if (meilleur && prefixe(meilleur.chemin, c)) return; // cette branche a abouti : inutile d'essayer les frères
     }
   }
 
-  await explorer(racine, produit(IDENTITE, racine.transform || IDENTITE), [], 0);
+  await explorer(racine, produit(IDENTITE, racine.transform || IDENTITE), [], 0, [HAUTEUR_MIN_M, HAUTEUR_MAX_M]);
   return { meilleur, plafond, ouverts };
 }
 
