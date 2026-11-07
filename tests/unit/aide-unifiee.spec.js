@@ -49,7 +49,7 @@ function faux({ cout = { cout_jour: 0, cout_mois: 0 }, reserve = true, texteIA =
       },
     },
     fournisseur: {
-      nom: "faux",
+      nom: "test",
       repondre: async (arg) => {
         appels.ia.push(arg);
         if (erreurIA) throw new Error("réseau");
@@ -528,5 +528,15 @@ test.describe("Corrections de relecture (migration, vocal, accès restreint)", (
     expect(route).toContain("{ ouvert }");
     expect(route).not.toContain("idsAutorises");
     expect(lire("src/components/aide/AideUnifiee.jsx")).toContain("/api/aide/acces");
+  });
+});
+
+test.describe("Le fournisseur « faux » ne remplit jamais la mémoire", () => {
+  test("même question générique : aucune écriture en mémoire avec le fournisseur faux", async () => {
+    const f = faux({});
+    f.deps.fournisseur = creerFournisseurFaux();
+    const r = await traiterMessage({ userId: "u1", texte: "Comment fonctionne le tri des offres sur la page ?", dernierEchange: [], reglages: REGLAGES, deps: f.deps });
+    expect(r.source).toBe("ia");
+    expect(f.appels.ecrits).toHaveLength(0);
   });
 });

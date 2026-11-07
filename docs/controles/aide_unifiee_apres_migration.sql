@@ -52,7 +52,7 @@ WHERE g.table_schema = 'public'
 UNION ALL
 -- 5. Les 7 fonctions existent, sont SECURITY DEFINER avec search_path figé à '' (invariant 3)
 SELECT 'fonction_definer_search_path:' || f.nom,
-       coalesce(p.prosecdef AND coalesce(p.proconfig::text LIKE '%search_path=""%', false), false),
+       coalesce(p.prosecdef AND coalesce(p.proconfig @> ARRAY['search_path=""'], false), false),
        CASE WHEN p.oid IS NULL THEN 'fonction absente'
             ELSE 'prosecdef=' || p.prosecdef || ' config=' || coalesce(p.proconfig::text, 'NULL') END
 FROM (SELECT nom FROM fonctions_serveur UNION ALL SELECT nom FROM fonctions_admin) f

@@ -121,7 +121,8 @@ export async function traiterMessage({ userId, texte, dernierEchange = [], regla
   if (!texteIA || texteIA.includes(MARQUEUR_EQUIPE)) {
     return sortie("ia", MSG_EQUIPE, { passerEquipe: true, usage });
   }
-  if (cle && peutMemoriser(message, texteIA)) {
+  // Jamais de mémorisation d'une réponse du fournisseur « faux » : elle serait resservie ensuite à de vraies personnes.
+  if (cle && deps.fournisseur.nom !== "faux" && peutMemoriser(message, texteIA)) {
     try {
       await deps.memoire.ecrire(cle, texteIA);
     } catch {
