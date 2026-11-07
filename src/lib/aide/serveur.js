@@ -9,9 +9,30 @@ import { lireReglages } from "./reglages.js";
 export const ID_INTERRUPTEUR = "feat_aide_unifiee";
 export const BUCKET_VOCAUX = "aide-vocaux";
 
-/** L'aide est-elle ouverte à cette personne ? Fail-closed : au moindre doute, non. L'admin y a toujours accès. */
-export async function aideOuverte(admin, userId) {
+const MOTIF_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * AIDE_IDS_AUTORISES : identifiants (UUID) séparés par des virgules, espaces ou retours à la ligne, qui voient
+ * l'aide EN PLUS des admins pendant les tests. Vide ou absente = admins seulement. Une valeur qui n'est pas un
+ * UUID est ignorée (jamais de correspondance approximative).
+ */
+export function idsAutorises(env = process.env) {
+  return new Set(
+    String(env?.AIDE_IDS_AUTORISES || "")
+      .split(/[\s,;]+/)
+      .map((v) => v.trim().toLowerCase())
+      .filter((v) => MOTIF_UUID.test(v))
+  );
+}
+
+/**
+ * L'aide est-elle ouverte à cette personne ? Fail-closed : au moindre doute, non.
+ * Ordre : un admin y a toujours accès ; une personne de AIDE_IDS_AUTORISES aussi ; sinon l'interrupteur
+ * feat_aide_unifiee doit être activé ET laisser son rôle passer.
+ */
+export async function aideOuverte(admin, userId, { env = process.env } = {}) {
   try {
+    if (idsAutorises(env).has(String(userId || "").toLowerCase())) return true;
     if (await isCallerAdmin(admin, userId)) return true;
     const { data, error } = await admin.from("feature_flags").select("enabled, roles").eq("id", ID_INTERRUPTEUR).maybeSingle();
     if (error || !data || data.enabled !== true) return false;

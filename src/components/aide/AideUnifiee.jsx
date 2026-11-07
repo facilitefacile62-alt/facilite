@@ -24,7 +24,47 @@ export default function AideUnifiee() {
   useEffect(() => subscribeFeatureFlagsTree(setArbre), []);
 
   const role = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
-  const autorise = Boolean(session) && isFeatureAllowed(arbre, ID_INTERRUPTEUR_AIDE, role);
+  const autoriseParInterrupteur = Boolean(session) && isFeatureAllowed(arbre, ID_INTERRUPTEUR_AIDE, role);
+
+  // AIDE_IDS_AUTORISES n'existe que côté serveur : pour une personne que l'interrupteur laisse dehors, on demande
+  // au serveur (un booléen). Réponse gardée 10 minutes dans sessionStorage pour ne pas la redemander à chaque page.
+  const [autoriseParServeur, setAutoriseParServeur] = useState(false);
+  const idPersonne = session?.user?.id;
+  const jeton = session?.access_token;
+  useEffect(() => {
+    if (!idPersonne || !jeton || autoriseParInterrupteur) {
+      setAutoriseParServeur(false);
+      return undefined;
+    }
+    let annule = false;
+    const cle = `aide-acces:${idPersonne}`;
+    try {
+      const gardee = JSON.parse(sessionStorage.getItem(cle) || "null");
+      if (gardee && Date.now() - gardee.le < 600000) {
+        setAutoriseParServeur(gardee.ouvert === true);
+        return undefined;
+      }
+    } catch {
+      /* stockage indisponible : on demande au serveur */
+    }
+    fetch("/api/aide/acces", { headers: { Authorization: `Bearer ${jeton}` } })
+      .then((r) => (r.ok ? r.json() : { ouvert: false }))
+      .then((j) => {
+        if (annule) return;
+        setAutoriseParServeur(j.ouvert === true);
+        try {
+          sessionStorage.setItem(cle, JSON.stringify({ ouvert: j.ouvert === true, le: Date.now() }));
+        } catch {
+          /* sans conséquence */
+        }
+      })
+      .catch(() => !annule && setAutoriseParServeur(false));
+    return () => {
+      annule = true;
+    };
+  }, [idPersonne, jeton, autoriseParInterrupteur]);
+
+  const autorise = autoriseParInterrupteur || autoriseParServeur;
 
   // Les autres composants (menu « + », anciens raccourcis) peuvent demander l'ouverture par un évènement window.
   useEffect(() => {

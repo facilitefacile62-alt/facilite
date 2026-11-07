@@ -103,12 +103,34 @@ JOIN pg_class t ON t.oid = p.polrelid AND t.relname = 'objects' AND t.relnamespa
 WHERE coalesce(pg_get_expr(p.polqual, p.polrelid), '') || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '') LIKE '%aide-vocaux%'
 
 UNION ALL
--- 10. Interrupteur du panneau : présent et DÉSACTIVÉ
-SELECT 'interrupteur_feat_aide_unifiee_desactive',
-       ff.id IS NOT NULL AND ff.enabled = false,
-       CASE WHEN ff.id IS NULL THEN 'ligne absente' ELSE 'enabled=' || ff.enabled END
+-- 10. Interrupteur du panneau : présent, DÉSACTIVÉ, et les TROIS rôles à false (seuls les admins y accèdent)
+SELECT 'interrupteur_feat_aide_unifiee_ferme',
+       ff.id IS NOT NULL
+         AND ff.enabled = false
+         AND ff.roles->>'user' = 'false'
+         AND ff.roles->>'visitor' = 'false'
+         AND ff.roles->>'recruiter' = 'false',
+       CASE WHEN ff.id IS NULL THEN 'ligne absente'
+            ELSE 'enabled=' || ff.enabled || ' roles=' || ff.roles::text END
 FROM (SELECT 1) un
 LEFT JOIN public.feature_flags ff ON ff.id = 'feat_aide_unifiee'
+
+UNION ALL
+-- 10 bis. Les fonctions de réservation refusent une limite <= 0 AVANT toute écriture
+SELECT 'reservation_refuse_limite_nulle:' || f.nom,
+       p.oid IS NOT NULL AND position('p_limite <= 0' in p.prosrc) > 0
+         AND position('p_limite <= 0' in p.prosrc) < position('INSERT INTO' in p.prosrc),
+       CASE WHEN p.oid IS NULL THEN 'fonction absente' ELSE 'garde présente avant INSERT' END
+FROM (VALUES ('aide_reserver_ia'), ('aide_reserver_vocal')) f(nom)
+LEFT JOIN pg_proc p ON p.proname = f.nom AND p.pronamespace = 'public'::regnamespace
+
+UNION ALL
+-- 10 ter. La purge des vocaux exclut toute personne ayant un fil non résolu
+SELECT 'purge_exclut_fils_ouverts',
+       p.oid IS NOT NULL AND position('NOT EXISTS' in p.prosrc) > 0 AND position('IS DISTINCT FROM' in p.prosrc) > 0,
+       CASE WHEN p.oid IS NULL THEN 'fonction absente' ELSE 'NOT EXISTS présent' END
+FROM (SELECT 1) un
+LEFT JOIN pg_proc p ON p.proname = 'aide_vocaux_a_purger' AND p.pronamespace = 'public'::regnamespace
 
 UNION ALL
 -- 11. Réglages : une seule ligne, IA COUPÉE par défaut, plafonds 1 $ / 5 $

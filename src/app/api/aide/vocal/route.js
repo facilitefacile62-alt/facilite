@@ -4,11 +4,9 @@ import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { aideOuverte, lireReglages, BUCKET_VOCAUX } from "@/lib/aide/serveur";
+import { TAILLE_MAX_OCTETS, formatAudioAccepte } from "@/lib/aide/vocal";
 
 export const runtime = "nodejs";
-
-const TAILLE_MAX_OCTETS = 1024 * 1024; // 1 Mo : ~4 minutes d'audio à 32 kbps, très au-dessus de 60 s
-const EXTENSIONS = { "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/mpeg": "mp3", "audio/aac": "aac", "audio/x-m4a": "m4a" };
 
 /**
  * Message vocal à l'équipe : 60 s maximum (réglable), 5 par jour et par personne (réglable), stocké dans le
@@ -37,9 +35,10 @@ export async function POST(req) {
   if (!fichier || typeof fichier === "string" || typeof fichier.arrayBuffer !== "function") {
     return NextResponse.json({ error: "Aucun enregistrement reçu." }, { status: 400 });
   }
-  const type = String(fichier.type || "").split(";")[0].toLowerCase();
-  const extension = EXTENSIONS[type];
-  if (!extension) return NextResponse.json({ error: "Format audio non pris en charge." }, { status: 415 });
+  // Type SANS paramètre (audio/webm, jamais audio/webm;codecs=opus) : sinon le bucket refuse l'objet.
+  const format = formatAudioAccepte(fichier.type);
+  if (!format) return NextResponse.json({ error: "Format audio non pris en charge." }, { status: 415 });
+  const { type, extension } = format;
   if (fichier.size > TAILLE_MAX_OCTETS) return NextResponse.json({ error: "Enregistrement trop lourd." }, { status: 413 });
   if (!Number.isFinite(duree) || duree < 1 || duree > reglages.vocal_secondes_max) {
     return NextResponse.json({ error: `Un message vocal dure ${reglages.vocal_secondes_max} secondes au maximum.` }, { status: 400 });

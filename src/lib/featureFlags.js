@@ -350,9 +350,10 @@ export const DEFAULT_FEATURE_TREE = [
         icon: "🛟",
         // Coupé par défaut (migration 20261107120000, non appliquée tant que le « go » n'est pas donné) : un seul
         // bouton « Aide » (orbe) ouvre le panneau questions fréquentes + assistant + équipe. Quand il est actif,
-        // l'ancien Assistant vocal (feat_voice_assistant) est masqué.
+        // l'ancien Assistant vocal (feat_voice_assistant) est masqué. Au départ, aucun rôle n'y a accès : seuls
+        // les admins (et les identifiants de AIDE_IDS_AUTORISES, côté serveur) le voient, le temps des essais.
         enabled: false,
-        roles: { user: true, recruiter: true, visitor: false },
+        roles: { user: false, recruiter: false, visitor: false },
         description: "Bouton « Aide » (orbe) : questions fréquentes, assistant, messages vocaux et passage à l'équipe",
       },
       {

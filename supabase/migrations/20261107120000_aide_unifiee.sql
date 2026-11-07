@@ -127,6 +127,10 @@ AS $$
 DECLARE
   v_lignes INTEGER;
 BEGIN
+  -- Limite nulle ou négative (ou absente) : refus immédiat, avant toute écriture.
+  IF p_limite IS NULL OR p_limite <= 0 THEN
+    RETURN false;
+  END IF;
   INSERT INTO public.aide_usage_utilisateur_jour (user_id, jour, appels_ia)
   VALUES (p_user_id, CURRENT_DATE, 1)
   ON CONFLICT (user_id, jour) DO UPDATE
@@ -147,6 +151,10 @@ AS $$
 DECLARE
   v_lignes INTEGER;
 BEGIN
+  -- Limite nulle ou négative (ou absente) : refus immédiat, avant toute écriture.
+  IF p_limite IS NULL OR p_limite <= 0 THEN
+    RETURN false;
+  END IF;
   INSERT INTO public.aide_usage_utilisateur_jour (user_id, jour, vocaux)
   VALUES (p_user_id, CURRENT_DATE, 1)
   ON CONFLICT (user_id, jour) DO UPDATE
@@ -203,7 +211,8 @@ AS $$
   FROM public.aide_usage_jour u;
 $$;
 
--- Vocaux dont le fil de support est résolu depuis plus de p_jours jours.
+-- Vocaux dont le fil de support est résolu depuis plus de p_jours jours, et seulement si la personne n'a
+-- AUCUN fil non résolu (un vocal n'est jamais purgé tant qu'un fil est ouvert pour elle).
 CREATE OR REPLACE FUNCTION public.aide_vocaux_a_purger(p_jours INTEGER)
 RETURNS TABLE (id UUID, chemin TEXT)
 LANGUAGE sql
@@ -215,7 +224,12 @@ AS $$
   FROM public.aide_messages_vocaux v
   JOIN public.support_threads t ON t.user_id = v.user_id
   WHERE t.status = 'resolved'
-    AND t.updated_at < now() - make_interval(days => p_jours);
+    AND t.updated_at < now() - make_interval(days => p_jours)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.support_threads autre
+      WHERE autre.user_id = v.user_id
+        AND autre.status IS DISTINCT FROM 'resolved'
+    );
 $$;
 
 REVOKE ALL ON FUNCTION public.aide_reserver_ia(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
@@ -288,7 +302,7 @@ REVOKE ALL ON FUNCTION public.aide_modifier_reglages(JSONB) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.aide_historique_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.aide_modifier_reglages(JSONB) TO authenticated;
 
--- 7. Interrupteur du panneau « Aide » (désactivé par défaut) ---------------------------------
+-- 7. Interrupteur du panneau « Aide » (désactivé par défaut, et fermé à tous les rôles : seuls les admins y accèdent) ---
 INSERT INTO public.feature_flags (id, branch_id, name, path, enabled, roles, updated_at)
 VALUES (
   'feat_aide_unifiee',
@@ -296,7 +310,7 @@ VALUES (
   'Aide unifiée (support + assistant IA)',
   NULL,
   false,
-  '{"user": true, "visitor": false, "recruiter": true}'::jsonb,
+  '{"user": false, "visitor": false, "recruiter": false}'::jsonb,
   now()
 )
 ON CONFLICT (id) DO NOTHING;

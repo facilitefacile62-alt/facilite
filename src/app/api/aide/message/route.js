@@ -42,10 +42,13 @@ export async function POST(req) {
   const reglages = await lireReglages(admin);
   const { data: derniers } = await admin
     .from("assistant_messages")
-    .select("role, content")
+    .select("role, content, conversation_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(2);
+  // conversation_id est NOT NULL (défaut : un UUID aléatoire par ligne) : sans le fixer, chaque message
+  // deviendrait une « conversation » à part dans la messagerie. On reprend celle de la dernière ligne.
+  const conversationId = derniers?.[0]?.conversation_id || crypto.randomUUID();
   const dernierEchange = (derniers || []).reverse();
 
   const deps = await construireDeps(admin);
@@ -54,8 +57,8 @@ export async function POST(req) {
   // Les refus de forme (message vide ou trop long) ne sont ni enregistrés ni comptés.
   if (resultat.source !== "refus" || resultat.proposerEquipe) {
     await admin.from("assistant_messages").insert([
-      { user_id: user.id, role: "user", content: texte.trim().slice(0, 2000) },
-      { user_id: user.id, role: "assistant", content: resultat.reponse },
+      { user_id: user.id, conversation_id: conversationId, role: "user", content: texte.trim().slice(0, 2000) },
+      { user_id: user.id, conversation_id: conversationId, role: "assistant", content: resultat.reponse },
     ]);
     await enregistrerUsage(admin, resultat);
   }

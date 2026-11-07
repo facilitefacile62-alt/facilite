@@ -13,6 +13,8 @@ const { traiterMessage, SYSTEME_AIDE } = require("../../src/lib/aide/orchestrate
 const { resoudreMode, choisirFournisseur } = require("../../src/lib/aide/fournisseurs/index.js");
 const { creerFournisseurClaude } = require("../../src/lib/aide/fournisseurs/claude.js");
 const { creerFournisseurFaux } = require("../../src/lib/aide/fournisseurs/faux.js");
+const { idsAutorises, aideOuverte } = require("../../src/lib/aide/serveur.js");
+const { typeAudioSansParametres, formatAudioAccepte, EXTENSIONS_AUDIO } = require("../../src/lib/aide/vocal.js");
 
 /**
  * Aide unifiée (support + assistant IA) — site web. Données SIMULÉES uniquement : aucun appel réseau,
@@ -419,5 +421,112 @@ test.describe("Structure du livrable (migration non appliquée, interrupteur cou
   test("paiements, PIN, hook SMS et ORANGE_TEST_PRIX_USER_IDS non touchés par ce chantier", () => {
     const touche = `${migration}${lire("src/lib/aide/serveur.js")}${lire("src/app/api/aide/message/route.js")}`;
     expect(touche).not.toMatch(/ORANGE_TEST_PRIX_USER_IDS|orange-money|sms_hook|send_sms/i);
+  });
+});
+
+test.describe("Corrections de relecture (migration, vocal, accès restreint)", () => {
+  const migration = lire("supabase/migrations/20261107120000_aide_unifiee.sql");
+  const corps = (nom) => {
+    const debut = migration.indexOf(`FUNCTION public.${nom}(`);
+    return migration.slice(debut, migration.indexOf("$$;", migration.indexOf("AS $$", debut) + 5));
+  };
+
+  test("l'interrupteur est inséré avec les TROIS rôles à false, dans la migration et dans le code", () => {
+    expect(migration).toContain(`'{"user": false, "visitor": false, "recruiter": false}'::jsonb`);
+    expect(lire("src/lib/featureFlags.js")).toMatch(/id: "feat_aide_unifiee"[\s\S]*?enabled: false,[\s\S]*?roles: \{ user: false, recruiter: false, visitor: false \}/);
+  });
+  test("réservation IA et vocal : une limite <= 0 (ou absente) refuse AVANT toute écriture", () => {
+    for (const nom of ["aide_reserver_ia", "aide_reserver_vocal"]) {
+      const f = corps(nom);
+      const garde = f.indexOf("p_limite IS NULL OR p_limite <= 0");
+      expect(garde, nom).toBeGreaterThan(-1);
+      expect(garde, nom).toBeLessThan(f.indexOf("INSERT INTO"));
+      expect(f.slice(garde, f.indexOf("INSERT INTO"))).toContain("RETURN false");
+    }
+  });
+  test("la purge des vocaux exclut toute personne ayant un fil non résolu (IS DISTINCT FROM, pas <>)", () => {
+    const f = corps("aide_vocaux_a_purger");
+    expect(f).toMatch(/NOT EXISTS \(\s*SELECT 1 FROM public\.support_threads autre\s*WHERE autre\.user_id = v\.user_id\s*AND autre\.status IS DISTINCT FROM 'resolved'/);
+    expect(f).toContain("t.status = 'resolved'");
+    expect(migration).not.toMatch(/<>|!=/);
+  });
+  test("la requête de contrôle vérifie les trois rôles à false, la garde de limite et l'exclusion des fils ouverts, sans rien écrire", () => {
+    const controle = lire("docs/controles/aide_unifiee_apres_migration.sql");
+    for (const r of ["user", "visitor", "recruiter"]) expect(controle).toContain(`ff.roles->>'${r}' = 'false'`);
+    expect(controle).toContain("p_limite <= 0");
+    expect(controle).toContain("purge_exclut_fils_ouverts");
+    // commentaires et littéraux entre apostrophes retirés : le contrôle CITE des mots-clés dans des chaînes sans les exécuter
+    const sansCommentaires = controle.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n").replace(/'[^']*'/g, "''");
+    expect(sansCommentaires).not.toMatch(/\b(INSERT INTO|UPDATE |DELETE FROM|DROP |ALTER |TRUNCATE|GRANT |REVOKE |CREATE )/);
+  });
+  test("le down.sql supprime tout ce que crée la migration", () => {
+    const down = lire("docs/rollbacks/20261107120000_aide_unifiee.down.sql");
+    const tables = [...migration.matchAll(/CREATE TABLE IF NOT EXISTS public\.(\w+)/g)];
+    const fonctions = [...migration.matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)/g)];
+    expect(tables.length).toBe(5);
+    expect(fonctions.length).toBe(7);
+    for (const t of tables) expect(down).toContain(`DROP TABLE IF EXISTS public.${t[1]};`);
+    for (const f of fonctions) expect(down).toContain(`DROP FUNCTION IF EXISTS public.${f[1]}(`);
+    expect(down).toContain("DELETE FROM public.feature_flags WHERE id = 'feat_aide_unifiee'");
+    expect(down).toContain("DELETE FROM storage.buckets WHERE id = 'aide-vocaux'");
+  });
+  test("vocal : le type part SANS paramètre vers Storage, et le format est vérifié", () => {
+    expect(typeAudioSansParametres("audio/webm;codecs=opus")).toBe("audio/webm");
+    expect(typeAudioSansParametres("Audio/MP4; codecs=mp4a.40.2")).toBe("audio/mp4");
+    expect(formatAudioAccepte("audio/webm;codecs=opus")).toEqual({ type: "audio/webm", extension: "webm" });
+    expect(formatAudioAccepte("video/webm")).toBeNull();
+    expect(formatAudioAccepte("")).toBeNull();
+    const bucket = migration.match(/ARRAY\[([^\]]+)\]/)[1].replace(/'/g, "").split(",");
+    for (const t of Object.keys(EXTENSIONS_AUDIO)) expect(bucket).toContain(t);
+    const route = lire("src/app/api/aide/vocal/route.js");
+    expect(route).toContain("formatAudioAccepte(fichier.type)");
+    expect(route).toContain("contentType: type");
+  });
+  test("les lignes de l'assistant partagent un conversation_id (colonne NOT NULL à défaut aléatoire)", () => {
+    const route = lire("src/app/api/aide/message/route.js");
+    expect((route.match(/conversation_id: conversationId/g) || []).length).toBe(2);
+  });
+
+  test("AIDE_IDS_AUTORISES : vide = personne en plus ; seuls de vrais UUID comptent", () => {
+    const a = "11111111-1111-4111-8111-111111111111";
+    const b = "22222222-2222-4222-8222-222222222222";
+    expect(idsAutorises({}).size).toBe(0);
+    expect(idsAutorises({ AIDE_IDS_AUTORISES: "" }).size).toBe(0);
+    expect([...idsAutorises({ AIDE_IDS_AUTORISES: `${a}, ${b.toUpperCase()}\n  n-importe-quoi ; 123` })].sort()).toEqual([a, b]);
+  });
+
+  /** Faux client service_role : user_roles (admin ou non) et feature_flags (une ligne ou rien). */
+  const fauxAdmin = ({ role = "user", flag = null, erreurFlag = false } = {}) => ({
+    from: (table) => ({
+      select: () => ({
+        eq: () => ({
+          single: async () => (table === "user_roles" ? { data: { role, status: "active" }, error: null } : { data: null, error: { message: "x" } }),
+          maybeSingle: async () => (erreurFlag ? { data: null, error: { message: "panne" } } : { data: flag, error: null }),
+        }),
+      }),
+    }),
+  });
+  const MOI = "11111111-1111-4111-8111-111111111111";
+  const AUTRE = "33333333-3333-4333-8333-333333333333";
+
+  test("aideOuverte : admin oui ; personne listée oui ; autre personne non tant que l'interrupteur est fermé", async () => {
+    const ferme = { enabled: true, roles: { user: false, visitor: false, recruiter: false } };
+    expect(await aideOuverte(fauxAdmin({ role: "admin", flag: null }), AUTRE, { env: {} })).toBe(true);
+    expect(await aideOuverte(fauxAdmin({ flag: ferme }), MOI, { env: { AIDE_IDS_AUTORISES: MOI } })).toBe(true);
+    expect(await aideOuverte(fauxAdmin({ flag: ferme }), AUTRE, { env: { AIDE_IDS_AUTORISES: MOI } })).toBe(false);
+    expect(await aideOuverte(fauxAdmin({ flag: ferme }), AUTRE, { env: {} })).toBe(false);
+  });
+  test("aideOuverte : interrupteur absent, coupé ou illisible = fermé (fail-closed) ; ouvert à un rôle = ouvert", async () => {
+    expect(await aideOuverte(fauxAdmin({ flag: null }), AUTRE, { env: {} })).toBe(false);
+    expect(await aideOuverte(fauxAdmin({ flag: { enabled: false, roles: { user: true } } }), AUTRE, { env: {} })).toBe(false);
+    expect(await aideOuverte(fauxAdmin({ erreurFlag: true }), AUTRE, { env: {} })).toBe(false);
+    expect(await aideOuverte(fauxAdmin({ flag: { enabled: true, roles: { user: true, recruiter: false, visitor: false } } }), AUTRE, { env: {} })).toBe(true);
+  });
+  test("la route d'accès ne renvoie qu'un booléen et le panneau la consulte", () => {
+    const route = lire("src/app/api/aide/acces/route.js");
+    expect(route).toContain("requireUser");
+    expect(route).toContain("{ ouvert }");
+    expect(route).not.toContain("idsAutorises");
+    expect(lire("src/components/aide/AideUnifiee.jsx")).toContain("/api/aide/acces");
   });
 });
