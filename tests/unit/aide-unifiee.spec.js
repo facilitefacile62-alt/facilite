@@ -602,3 +602,100 @@ test.describe("Le fournisseur « faux » ne remplit jamais la mémoire", () => {
     expect(f.appels.ecrits).toHaveLength(0);
   });
 });
+
+test.describe("Disposition du panneau (apparence seulement)", () => {
+  const { tailleOrbe, libelleEtat, separerQuestions, TAILLE_ORBE, MENTION_ASSISTANT } = require("../../src/lib/aide/disposition.js");
+  const panneau = lire("src/components/aide/AidePanneau.jsx");
+  const orbe = lire("src/components/aide/AideOrbe.jsx");
+
+  test("l'orbe est grand seulement pour l'accueil seul ; petit dès que la conversation commence, au défilement, sur petit écran ou clavier ouvert", () => {
+    expect(TAILLE_ORBE).toEqual({ grand: 104, petit: 48 });
+    expect(tailleOrbe({})).toBe("grand");
+    expect(tailleOrbe({ conversationCommencee: true })).toBe("petit");
+    expect(tailleOrbe({ aDefile: true })).toBe("petit");
+    expect(tailleOrbe({ petitEcran: true })).toBe("petit");
+    expect(tailleOrbe({ clavierOuvert: true })).toBe("petit");
+    expect(tailleOrbe()).toBe("grand");
+  });
+  test("ligne d'état de l'en-tête : « Assistant en ligne » ou « En attente d'un conseiller »", () => {
+    expect(libelleEtat("ia")).toBe("Assistant en ligne");
+    expect(libelleEtat(undefined)).toBe("Assistant en ligne");
+    expect(libelleEtat("attente_humain")).toBe("En attente d'un conseiller");
+    expect(libelleEtat("humain")).toBe("Un conseiller vous répond");
+  });
+  test("3 pilules d'emblée (postuler, mot de passe, CV), les 5 autres derrière « Plus de questions »", () => {
+    const { principales, autres } = separerQuestions();
+    expect(principales.map((q) => q.id)).toEqual(["postuler", "mot_de_passe", "creer_cv"]);
+    expect(autres).toHaveLength(5);
+    expect(new Set([...principales, ...autres].map((q) => q.id)).size).toBe(8);
+    expect(panneau).toContain("Plus de questions");
+    expect(panneau).toContain("QUESTIONS_AUTRES");
+  });
+  test("en-tête : icône ronde, titre « Aide Facilité », état, « Parler à un conseiller » (texte caché sur petit écran, étiquette conservée), agrandir/réduire, fermer", () => {
+    const entete = panneau.slice(panneau.indexOf("<header"), panneau.indexOf("</header>"));
+    expect(entete).toContain("Aide Facilité");
+    expect(entete).toContain("libelleEtat(mode)");
+    expect(entete).toContain('aria-label="Parler à un conseiller"');
+    // texte court (« Conseiller ») à 400 px pour ne pas tronquer le titre ; texte complet une fois agrandi ; caché sur petit écran
+    expect(entete).toContain('<span className="hidden sm:inline whitespace-nowrap">{agrandi ? "Parler à un conseiller" : "Conseiller"}</span>');
+    expect(entete).toContain('title="Parler à un conseiller"');
+    expect(entete).toContain("onClick={parlerALEquipe}");
+    expect(entete).toMatch(/Agrandir l'aide/);
+    expect(entete).toMatch(/Réduire l'aide/);
+    expect(entete).toContain('aria-label="Fermer l\'aide"');
+    // plus de bouton « Parler à l'équipe » au milieu ou en bas
+    expect(panneau.slice(panneau.indexOf("</header>"))).not.toContain("onClick={parlerALEquipe}");
+    expect(panneau).not.toContain("Parler à l'équipe");
+  });
+  test("l'orbe est DANS le panneau, fixe au-dessus de la zone qui défile (qui a un fondu en haut), et ne défile pas avec les messages", () => {
+    const iOrbe = panneau.indexOf("<OrbeGrande");
+    const iDefile = panneau.indexOf("ref={defilRef}");
+    expect(iOrbe).toBeGreaterThan(panneau.indexOf("</header>"));
+    expect(iOrbe).toBeLessThan(iDefile);
+    expect(panneau.slice(iDefile)).not.toContain("<OrbeGrande");
+    expect(panneau).toContain("maskImage: masqueFondu");
+    expect(panneau).toContain("shrink-0 flex justify-center"); // conteneur de l'orbe : ne se comprime pas, ne défile pas
+    expect(panneau).toContain("flex-1 min-h-0 overflow-y-auto"); // seuls les messages défilent
+    expect(panneau).toMatch(/setADefile\(true\)/);
+  });
+  test("pied : champ arrondi « Écrivez à l'assistant… », micro (dicter ou vocal), envoi rond, mention grise", () => {
+    expect(panneau).toContain('placeholder="Écrivez à l\'assistant…"');
+    expect(panneau).toContain("Dicter mon message");
+    expect(panneau).toContain("Message vocal à l&apos;équipe");
+    expect(panneau).toContain('role="menu"');
+    expect(panneau).toContain("{MENTION_ASSISTANT}");
+    expect(MENTION_ASSISTANT).toBe("L'assistant peut faire des erreurs. Vérifiez les informations importantes.");
+    expect(panneau).toContain("<form");
+    expect(panneau.indexOf("<form")).toBeGreaterThan(panneau.indexOf("ref={defilRef}"));
+  });
+  test("mobile : plein écran, zones de sécurité et clavier (visualViewport) ; ordinateur : 400 px ancré en bas à droite", () => {
+    expect(panneau).toContain("h-[100dvh]");
+    expect(panneau).toContain("env(safe-area-inset-top)");
+    expect(panneau).toContain("env(safe-area-inset-bottom)");
+    expect(panneau).toContain("visualViewport");
+    expect(panneau).toContain("sm:w-[400px]");
+    expect(panneau).toContain("sm:right-4 sm:bottom-4");
+    expect(panneau).toContain("sm:rounded-3xl");
+  });
+  test("petit bouton flottant : 48 px, miniature de l'orbe, étiquette « Ouvrir l'aide », à gauche du « + », caché quand le panneau est ouvert", () => {
+    expect(orbe).toContain('aria-label="Ouvrir l\'aide"');
+    expect(orbe).toMatch(/className="relative w-12 h-12 rounded-full/);
+    const conteneur = lire("src/components/aide/AideUnifiee.jsx");
+    expect(conteneur).toContain("right-[5.75rem]");
+    expect(conteneur).toContain("ouvert ? null");
+  });
+  test("animations : respiration et transitions coupées si mouvement réduit ou appareil modeste, jamais de bibliothèque lourde", () => {
+    expect(orbe).toContain("prefers-reduced-motion");
+    expect(orbe).toContain("deviceMemory");
+    expect(orbe).toContain("hardwareConcurrency");
+    expect(orbe).toContain('animer ? "aide-halo--anime" : ""');
+    expect(orbe).toContain('animer ? "aide-orbe-taille--anime" : ""');
+    expect(panneau).toContain('transition: animer ? "padding .35s ease" : "none"');
+    expect(orbe).not.toMatch(/from "(three|lottie|framer-motion|gsap)/);
+  });
+  test("la logique n'a pas bougé : mêmes appels (messages, vocal, équipe, dictée, liens filtrés)", () => {
+    for (const trace of ['fetch("/api/aide/message"', 'fetch("/api/aide/vocal"', 'rpc("demander_un_humain"', "evaluerDictee(", "isFeatureAllowed(arbre, l.href, role)", "json.repliSansLien", "resolveSupportConversation(userId)", "aide-vocal:"]) {
+      expect(panneau, trace).toContain(trace);
+    }
+  });
+});

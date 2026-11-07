@@ -82,6 +82,9 @@ export const QUESTIONS_FREQUENTES = [
   },
 ];
 
+/** Les trois questions affichées d'emblée dans le panneau (les plus utiles) ; les autres sont derrière « Plus de questions ». */
+export const IDS_PRINCIPAUX = ["postuler", "mot_de_passe", "creer_cv"];
+
 /** Formulations qui demandent clairement une personne : on passe à l'équipe sans passer par l'IA. */
 // Appliqués au texte NORMALISÉ (sans accents ni apostrophes : « l'équipe » devient « l equipe »).
 const MOTIFS_HUMAIN = [

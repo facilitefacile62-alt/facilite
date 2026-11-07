@@ -4,15 +4,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { sendMessage, resolveSupportConversation, touchConversation } from "@/lib/messages";
-import { QUESTIONS_FREQUENTES } from "@/lib/aide/preparees";
 import { evaluerDictee } from "@/lib/aide/parole";
 import { isFeatureAllowed } from "@/lib/featureFlags";
+import { MENTION_ASSISTANT, libelleEtat, separerQuestions, tailleOrbe } from "@/lib/aide/disposition";
+import { OrbeGrande, useMouvement } from "./AideOrbe";
 
 // Panneau « Aide » : UNE seule conversation. L'historique de l'assistant (assistant_messages) et le fil
 // du support humain (messages SUPPORT) sont fusionnés par date ; passer à l'équipe ne change pas d'écran.
 const LONGUEUR_MAX = 500;
 const VOCAL_SECONDES_MAX = 60;
-const ACCUEIL = "Bonjour ! Choisissez une question ci-dessus, écrivez votre message ou touchez le micro. Vous pouvez aussi parler à l'équipe à tout moment.";
+const ACCUEIL = "Bonjour ! Je suis l'assistant de Facilité. Choisissez une question ci-dessous, écrivez votre message ou touchez le micro. Vous pouvez aussi parler à un conseiller à tout moment.";
+const { principales: QUESTIONS_PRINCIPALES, autres: QUESTIONS_AUTRES } = separerQuestions();
+
+/** Écran étroit (< 640 px) et zone réellement visible : suit le clavier du téléphone grâce à visualViewport. */
+function lireEcran() {
+  if (typeof window === "undefined") return { petitEcran: false, clavierOuvert: false, haut: 0, hauteur: null };
+  const petitEcran = window.matchMedia("(max-width: 639px)").matches;
+  const vv = window.visualViewport;
+  return {
+    petitEcran,
+    clavierOuvert: Boolean(vv) && petitEcran && vv.height < window.innerHeight * 0.75,
+    haut: vv ? Math.round(vv.offsetTop) : 0,
+    hauteur: petitEcran && vv ? Math.round(vv.height) : null,
+  };
+}
 
 function horodatage(iso) {
   try {
@@ -33,7 +48,13 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
   const [dictee, setDictee] = useState({ etat: "repos", echecs: 0, texte: "" }); // repos | ecoute | confirmer
   const [enregistre, setEnregistre] = useState(0); // secondes d'enregistrement vocal (0 = inactif)
   const [alternatives, setAlternatives] = useState(false);
-  const finRef = useRef(null);
+  const defilRef = useRef(null);
+  const [agrandi, setAgrandi] = useState(false);
+  const [plusDeQuestions, setPlusDeQuestions] = useState(false);
+  const [menuMicro, setMenuMicro] = useState(false);
+  const [aDefile, setADefile] = useState(false);
+  const [ecran, setEcran] = useState(lireEcran);
+  const animer = useMouvement();
   const rec = useRef(null);
   const recFlux = useRef(null);
   const recMorceaux = useRef([]);
@@ -72,15 +93,36 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
     return () => clearInterval(t);
   }, [mode, charger]);
 
+  // Seuls les messages défilent : on garde le bas visible à chaque nouveau message.
   useEffect(() => {
-    finRef.current?.scrollIntoView?.({ block: "end" });
+    const zone = defilRef.current;
+    if (zone) zone.scrollTop = zone.scrollHeight;
   }, [fil, dictee.etat]);
 
+  // Échap ferme d'abord le petit menu du micro, puis le panneau.
   useEffect(() => {
-    const surTouche = (e) => e.key === "Escape" && onFermer();
+    const surTouche = (e) => {
+      if (e.key !== "Escape") return;
+      if (menuMicro) setMenuMicro(false);
+      else onFermer();
+    };
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
-  }, [onFermer]);
+  }, [onFermer, menuMicro]);
+
+  // Taille de l'écran et clavier (téléphone) : le panneau épouse la zone réellement visible.
+  useEffect(() => {
+    const maj = () => setEcran(lireEcran());
+    maj();
+    window.addEventListener("resize", maj);
+    window.visualViewport?.addEventListener("resize", maj);
+    window.visualViewport?.addEventListener("scroll", maj);
+    return () => {
+      window.removeEventListener("resize", maj);
+      window.visualViewport?.removeEventListener("resize", maj);
+      window.visualViewport?.removeEventListener("scroll", maj);
+    };
+  }, []);
 
   useEffect(() => () => arreterEnregistrement(true), []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -274,125 +316,184 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
     if (l.qui === "systeme") return "mx-auto bg-amber-50 text-amber-900 border border-amber-200 text-xs";
     if (l.qui === "moi") return "ml-auto bg-blue-600 text-white";
     if (l.qui === "equipe") return "mr-auto bg-emerald-50 text-emerald-900 border border-emerald-200";
-    return "mr-auto bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100";
+    return "mr-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm";
   };
+
+  const petiteOrbe = tailleOrbe({ conversationCommencee: fil.length > 0 || occupe, aDefile, petitEcran: ecran.petitEcran, clavierOuvert: ecran.clavierOuvert }) === "petit";
+  const pilule = "inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm text-left bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-blue-100 dark:border-gray-700 shadow-sm hover:bg-blue-50 dark:hover:bg-gray-700 disabled:opacity-50";
+  // Sur téléphone : plein écran, zones de sécurité respectées, hauteur = zone visible (clavier compris).
+  const styleTelephone = ecran.petitEcran
+    ? { top: ecran.haut, height: ecran.hauteur ?? undefined, paddingTop: "env(safe-area-inset-top)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }
+    : undefined;
+  const iconeEnTete = "w-9 h-9 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800";
+  const masqueFondu = "linear-gradient(to bottom, transparent 0, #000 22px)";
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Aide Facilité"
-      className="fixed z-[1000] inset-x-0 bottom-0 sm:inset-x-auto sm:right-6 sm:bottom-28 sm:w-[400px] h-[85vh] sm:h-[600px] max-h-[100dvh] bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden"
+      style={styleTelephone}
+      className={`fixed z-[1000] inset-x-0 top-0 h-[100dvh] sm:inset-x-auto sm:top-auto sm:right-4 sm:bottom-4 ${
+        agrandi ? "sm:w-[min(680px,calc(100vw-2rem))] sm:h-[min(820px,calc(100dvh-2rem))]" : "sm:w-[400px] sm:h-[min(640px,calc(100dvh-2rem))]"
+      } bg-white dark:bg-gray-900 sm:rounded-3xl sm:shadow-2xl sm:border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden`}
     >
-      <header className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#0b3fae] to-[#2f86f5] text-white">
-        <div>
-          <p className="font-extrabold text-base leading-tight">Aide</p>
-          <p className="text-[11px] opacity-90">
-            {mode === "humain" ? "Un conseiller vous répond" : mode === "attente_humain" ? "En attente d'un conseiller" : "Réponses rapides et équipe Facilité"}
+      <header className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <span className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-[#4aa3ff] to-[#0b3fae] flex items-center justify-center text-white" aria-hidden="true">
+          <i className="fa-solid fa-life-ring"></i>
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-extrabold text-base leading-tight text-gray-900 dark:text-white truncate">Aide Facilité</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 whitespace-nowrap">
+            <span className={`w-2 h-2 rounded-full ${mode === "ia" ? "bg-emerald-500" : "bg-amber-500"}`} aria-hidden="true"></span>
+            {libelleEtat(mode)}
           </p>
         </div>
-        <button type="button" onClick={onFermer} aria-label="Fermer l'aide" className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center">
+        {mode === "ia" ? (
+          <button
+            type="button"
+            onClick={parlerALEquipe}
+            disabled={occupe}
+            aria-label="Parler à un conseiller"
+            title="Parler à un conseiller"
+            className="h-9 shrink-0 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 text-xs font-extrabold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            <i className="fa-solid fa-headset" aria-hidden="true"></i>
+            {/* Texte court au format normal (400 px) pour laisser la place au titre ; texte complet une fois agrandi. */}
+            <span className="hidden sm:inline whitespace-nowrap">{agrandi ? "Parler à un conseiller" : "Conseiller"}</span>
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setAgrandi((a) => !a)}
+          aria-label={agrandi ? "Réduire l'aide" : "Agrandir l'aide"}
+          aria-pressed={agrandi}
+          className={`${iconeEnTete} hidden sm:flex`}
+        >
+          <i className={`fa-solid ${agrandi ? "fa-compress" : "fa-expand"}`} aria-hidden="true"></i>
+        </button>
+        <button type="button" onClick={onFermer} aria-label="Fermer l'aide" className={iconeEnTete}>
           <i className="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
       </header>
 
-      <div className="px-3 pt-3 pb-2 flex gap-2 overflow-x-auto border-b border-gray-100 dark:border-gray-800" aria-label="Questions fréquentes">
-        {QUESTIONS_FREQUENTES.map((q) => (
-          <button
-            key={q.id}
-            type="button"
-            disabled={occupe}
-            onClick={() => envoyer(q.libelle)}
-            className="shrink-0 text-xs font-bold px-3 py-2 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-          >
-            {q.libelle}
-          </button>
-        ))}
-      </div>
+      <div className="flex-1 min-h-0 flex flex-col bg-gradient-to-b from-blue-50/80 to-white dark:from-gray-900 dark:to-gray-900">
+        {/* L'orbe reste FIXE en haut de la zone : il ne défile pas, il rétrécit en douceur. */}
+        <div className="shrink-0 flex justify-center" style={{ paddingTop: petiteOrbe ? 10 : 18, paddingBottom: petiteOrbe ? 10 : 14, transition: animer ? "padding .35s ease" : "none" }}>
+          <OrbeGrande petit={petiteOrbe} animer={animer} />
+        </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2" aria-live="polite">
-        <div className="mr-auto max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">{ACCUEIL}</div>
-        {fil.map((l) => (
-          <div key={l.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${bulle(l)}`}>
-            {l.qui === "equipe" ? <span className="block text-[10px] font-extrabold uppercase tracking-wide mb-0.5">Équipe Facilité</span> : null}
-            {l.texte}
-            {(l.liens || []).map((lien) => (
-              <Link key={lien.href} href={lien.href} onClick={onFermer} className="block mt-1.5 font-bold underline">
-                {lien.libelle}
-              </Link>
-            ))}
-            {l.date ? <span className="block text-[10px] opacity-60 mt-0.5">{horodatage(l.date)}</span> : null}
+        <div
+          ref={defilRef}
+          onScroll={(e) => {
+            if (e.currentTarget.scrollTop > 4) setADefile(true);
+          }}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pb-3 pt-1 space-y-2"
+          style={{ WebkitMaskImage: masqueFondu, maskImage: masqueFondu }}
+          aria-live="polite"
+        >
+          <div className="mr-auto max-w-[88%] rounded-2xl rounded-tl-md px-4 py-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm">
+            {ACCUEIL}
           </div>
-        ))}
-        {dictee.etat === "ecoute" ? <p className="text-center text-xs text-blue-700 font-bold">Je vous écoute… parlez maintenant.</p> : null}
-        {dictee.etat === "confirmer" ? (
-          <div className="ml-auto max-w-[90%] rounded-2xl border-2 border-blue-300 bg-blue-50 p-3 text-sm text-gray-900">
-            <p className="text-xs font-bold text-blue-700 mb-1">J'ai compris :</p>
-            <p className="font-semibold">« {dictee.texte} »</p>
-            <div className="flex gap-2 mt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const t = dictee.texte;
-                  setDictee({ etat: "repos", echecs: 0, texte: "" });
-                  envoyer(t);
-                }}
-                className="flex-1 rounded-full bg-blue-600 text-white font-bold py-2"
-              >
-                Confirmer
+
+          <div className="flex flex-col items-start gap-2" aria-label="Questions fréquentes">
+            {QUESTIONS_PRINCIPALES.map((q) => (
+              <button key={q.id} type="button" disabled={occupe} onClick={() => envoyer(q.libelle)} className={pilule}>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" aria-hidden="true"></span>
+                {q.libelle}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTexte(dictee.texte);
-                  setDictee({ etat: "repos", echecs: 0, texte: "" });
-                }}
-                className="flex-1 rounded-full bg-white border border-blue-300 text-blue-700 font-bold py-2"
-              >
-                Corriger
+            ))}
+            {plusDeQuestions
+              ? QUESTIONS_AUTRES.map((q) => (
+                  <button key={q.id} type="button" disabled={occupe} onClick={() => envoyer(q.libelle)} className={pilule}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" aria-hidden="true"></span>
+                    {q.libelle}
+                  </button>
+                ))
+              : null}
+            <button
+              type="button"
+              onClick={() => setPlusDeQuestions((v) => !v)}
+              aria-expanded={plusDeQuestions}
+              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-extrabold text-blue-700 dark:text-blue-300 hover:underline"
+            >
+              {plusDeQuestions ? "Moins de questions" : "Plus de questions"}
+              <i className={`fa-solid ${plusDeQuestions ? "fa-chevron-up" : "fa-chevron-down"} text-[10px]`} aria-hidden="true"></i>
+            </button>
+          </div>
+
+          {fil.map((l) => (
+            <div key={l.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${bulle(l)}`}>
+              {l.qui === "equipe" ? <span className="block text-[10px] font-extrabold uppercase tracking-wide mb-0.5">Équipe Facilité</span> : null}
+              {l.texte}
+              {(l.liens || []).map((lien) => (
+                <Link key={lien.href} href={lien.href} onClick={onFermer} className="block mt-1.5 font-bold underline">
+                  {lien.libelle}
+                </Link>
+              ))}
+              {l.date ? <span className="block text-[10px] opacity-60 mt-0.5">{horodatage(l.date)}</span> : null}
+            </div>
+          ))}
+          {dictee.etat === "ecoute" ? <p className="text-center text-xs text-blue-700 font-bold">Je vous écoute… parlez maintenant.</p> : null}
+          {dictee.etat === "confirmer" ? (
+            <div className="ml-auto max-w-[90%] rounded-2xl border-2 border-blue-300 bg-blue-50 p-3 text-sm text-gray-900">
+              <p className="text-xs font-bold text-blue-700 mb-1">J'ai compris :</p>
+              <p className="font-semibold">« {dictee.texte} »</p>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = dictee.texte;
+                    setDictee({ etat: "repos", echecs: 0, texte: "" });
+                    envoyer(t);
+                  }}
+                  className="flex-1 rounded-full bg-blue-600 text-white font-bold py-2"
+                >
+                  Confirmer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTexte(dictee.texte);
+                    setDictee({ etat: "repos", echecs: 0, texte: "" });
+                  }}
+                  className="flex-1 rounded-full bg-white border border-blue-300 text-blue-700 font-bold py-2"
+                >
+                  Corriger
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {alternatives ? (
+            <div className="flex flex-wrap gap-2 justify-center">
+              <button type="button" onClick={demarrerEnregistrement} className="text-xs font-bold px-3 py-2 rounded-full bg-emerald-600 text-white">
+                Laisser un message vocal
               </button>
             </div>
-          </div>
-        ) : null}
-        {alternatives ? (
-          <div className="flex flex-wrap gap-2 justify-center">
-            <button type="button" onClick={demarrerEnregistrement} className="text-xs font-bold px-3 py-2 rounded-full bg-emerald-600 text-white">
-              Laisser un message vocal
-            </button>
-          </div>
-        ) : null}
-        {erreur ? <p role="alert" className="text-center text-xs font-semibold text-red-600">{erreur}</p> : null}
-        <div ref={finRef} />
+          ) : null}
+          {erreur ? <p role="alert" className="text-center text-xs font-semibold text-red-600">{erreur}</p> : null}
+        </div>
       </div>
 
-      {enregistre > 0 ? (
-        <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-3 bg-red-50">
-          <span className="w-3 h-3 rounded-full bg-red-600 animate-pulse" aria-hidden="true"></span>
-          <p className="flex-1 text-sm font-bold text-red-700">Enregistrement… {enregistre} s / {VOCAL_SECONDES_MAX} s</p>
-          <button type="button" onClick={() => arreterEnregistrement(true)} className="text-xs font-bold px-3 py-2 rounded-full bg-white border border-gray-300">
-            Annuler
-          </button>
-          <button type="button" onClick={() => arreterEnregistrement(false)} className="text-xs font-bold px-3 py-2 rounded-full bg-red-600 text-white">
-            Envoyer
-          </button>
-        </div>
-      ) : (
-        <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800">
-          {mode === "ia" ? (
-            <button type="button" onClick={parlerALEquipe} disabled={occupe} className="mb-2 w-full text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-full py-2 disabled:opacity-50">
-              Parler à l'équipe
+      <div className="shrink-0 px-3 pt-2 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+        {enregistre > 0 ? (
+          <div className="flex items-center gap-3 rounded-2xl bg-red-50 px-3 py-2">
+            <span className="w-3 h-3 rounded-full bg-red-600 animate-pulse" aria-hidden="true"></span>
+            <p className="flex-1 text-sm font-bold text-red-700">Enregistrement… {enregistre} s / {VOCAL_SECONDES_MAX} s</p>
+            <button type="button" onClick={() => arreterEnregistrement(true)} className="text-xs font-bold px-3 py-2 rounded-full bg-white border border-gray-300">
+              Annuler
             </button>
-          ) : (
-            <button type="button" onClick={demarrerEnregistrement} disabled={occupe} className="mb-2 w-full text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-full py-2 disabled:opacity-50">
-              Laisser un message vocal à l'équipe
+            <button type="button" onClick={() => arreterEnregistrement(false)} className="text-xs font-bold px-3 py-2 rounded-full bg-red-600 text-white">
+              Envoyer
             </button>
-          )}
+          </div>
+        ) : (
           <form
             onSubmit={(e) => {
               e.preventDefault();
               envoyer();
             }}
-            className="flex items-end gap-2"
+            className="relative flex items-end gap-1.5 rounded-3xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 pl-4 pr-1.5 py-1.5 shadow-sm focus-within:ring-2 focus-within:ring-blue-300"
           >
             <label htmlFor="aide-saisie" className="sr-only">
               Votre message
@@ -409,24 +510,55 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
               }}
               rows={1}
               maxLength={LONGUEUR_MAX}
-              placeholder="Écrivez votre message…"
-              className="flex-1 resize-none rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm max-h-28"
+              placeholder="Écrivez à l'assistant…"
+              className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none py-2 text-sm text-gray-900 dark:text-gray-100 max-h-28"
             />
             <button
               type="button"
-              onClick={dicter}
+              onClick={() => setMenuMicro((m) => !m)}
               disabled={occupe || dictee.etat !== "repos"}
-              aria-label="Dicter mon message"
-              className="w-10 h-10 shrink-0 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center justify-center disabled:opacity-50"
+              aria-label="Micro : dicter mon message ou laisser un message vocal"
+              aria-haspopup="menu"
+              aria-expanded={menuMicro}
+              className="w-10 h-10 shrink-0 rounded-full text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-gray-800 flex items-center justify-center disabled:opacity-50"
             >
               <i className="fa-solid fa-microphone" aria-hidden="true"></i>
             </button>
             <button type="submit" disabled={occupe || !texte.trim()} aria-label="Envoyer" className="w-10 h-10 shrink-0 rounded-full bg-blue-600 text-white flex items-center justify-center disabled:opacity-40">
               <i className="fa-solid fa-paper-plane" aria-hidden="true"></i>
             </button>
+            {menuMicro ? (
+              <div role="menu" className="absolute right-1 bottom-full mb-2 w-64 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl p-1.5 z-10">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuMicro(false);
+                    dicter();
+                  }}
+                  className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold text-left text-gray-800 dark:text-gray-100 hover:bg-blue-50 dark:hover:bg-gray-800"
+                >
+                  <i className="fa-solid fa-microphone-lines text-blue-600 w-4" aria-hidden="true"></i>
+                  Dicter mon message
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuMicro(false);
+                    demarrerEnregistrement();
+                  }}
+                  className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-bold text-left text-gray-800 dark:text-gray-100 hover:bg-emerald-50 dark:hover:bg-gray-800"
+                >
+                  <i className="fa-solid fa-circle-dot text-emerald-600 w-4" aria-hidden="true"></i>
+                  Message vocal à l&apos;équipe
+                </button>
+              </div>
+            ) : null}
           </form>
-        </div>
-      )}
+        )}
+        <p className="mt-1.5 text-center text-[11px] leading-tight text-gray-400 dark:text-gray-500">{MENTION_ASSISTANT}</p>
+      </div>
     </div>
   );
 }
