@@ -47,7 +47,7 @@ async function filtrerRoutesDesactivees(routes) {
     const supabase = getSupabasePublicClient();
     const { data, error } = await supabase.from("feature_flags").select("id, path, enabled, roles");
     if (error || !data) return routes;
-    const IGNORES = new Set(["feat_matching_ia_postuler", "feat_diagnostic_cv", "feat_card_pret_candidature", "feat_voice_assistant"]);
+    const IGNORES = new Set(["feat_matching_ia_postuler", "feat_diagnostic_cv", "feat_card_pret_candidature", "feat_voice_assistant", "feat_aide_unifiee"]);
     return routes.filter((route) => {
       const bloque = data.some(
         (f) =>

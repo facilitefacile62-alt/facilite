@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 const FeatureDisabledModal = dynamic(() => import("@/components/FeatureDisabledModal"), { ssr: false });
 const ScrollToTop = dynamic(() => import("@/components/ScrollToTop"), { ssr: false });
 const VoiceAssistant = dynamic(() => import("@/components/VoiceAssistant"), { ssr: false });
+const AideUnifiee = dynamic(() => import("@/components/aide/AideUnifiee"), { ssr: false });
 const BoutonFlottantFacilite = dynamic(() => import("@/components/BoutonFlottantFacilite"), { ssr: false });
 const PhoneVerificationBanner = dynamic(() => import("@/components/PhoneVerificationBanner"), { ssr: false });
 
@@ -15,6 +16,7 @@ export default function GlobalModals() {
       <ScrollToTop />
       <VoiceAssistant />
       <BoutonFlottantFacilite />
+      <AideUnifiee />
       <PhoneVerificationBanner />
     </>
   );

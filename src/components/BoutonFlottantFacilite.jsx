@@ -8,12 +8,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 
 const MASQUE_SUR = ["/admin", "/login", "/register", "/forgot-password", "/auth", "/verifiez-votre-email", "/bienvenue"];
 
 export default function BoutonFlottantFacilite() {
   const pathname = usePathname() || "";
   const [ouvert, setOuvert] = useState(false);
+  const { session, isAdmin, isRecruiter } = useAuth();
+  const [arbre, setArbre] = useState(DEFAULT_FEATURE_TREE);
+  useEffect(() => subscribeFeatureFlagsTree(setArbre), []);
+  // Quand le panneau « Aide » (orbe) est ouvert au public, il remplace l'ancien Assistant vocal : sa pilule est masquée.
+  const role = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
+  const aideUnifieeActive = Boolean(session) && isFeatureAllowed(arbre, "feat_aide_unifiee", role);
 
   useEffect(() => {
     if (!ouvert) return undefined;
@@ -34,6 +42,7 @@ export default function BoutonFlottantFacilite() {
           <Link href="/ecrire-email" onClick={() => setOuvert(false)} className={action}>
             Écrire un e-mail <span className={`${puce} bg-blue-600`}><i className="fa-solid fa-envelope"></i></span>
           </Link>
+          {aideUnifieeActive ? null : (
           <button
             type="button"
             onClick={() => {
@@ -44,6 +53,7 @@ export default function BoutonFlottantFacilite() {
           >
             Assistant vocal <span className={`${puce} bg-[#085041]`}><i className="fa-solid fa-microphone-lines"></i></span>
           </button>
+          )}
           <Link href="/candidat/extracteur" onClick={() => setOuvert(false)} className={action}>
             Extracteur <span className={`${puce} bg-amber-500`}><i className="fa-solid fa-wand-magic-sparkles"></i></span>
           </Link>

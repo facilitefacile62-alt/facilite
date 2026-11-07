@@ -77,6 +77,8 @@ export default function VoiceAssistant() {
   const isDashboard = pathname?.startsWith('/admin');
   const userRole = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
   const isAllowed = isFeatureAllowed(featureFlagsTree, "feat_voice_assistant", userRole);
+  // Remplacé par le panneau « Aide » (feat_aide_unifiee) : masqué, pas supprimé. Le code reste prêt à être rouvert.
+  const aideUnifieeActive = Boolean(session) && isFeatureAllowed(featureFlagsTree, "feat_aide_unifiee", userRole);
 
   // L'orbe flottant propre à l'assistant a été remplacé par le bouton flottant
   // commun (BoutonFlottantFacilite : Extracteur, Assistant vocal, Écrire un
@@ -115,7 +117,7 @@ export default function VoiceAssistant() {
   // HomeClient, ServiceClient) la laissent visible et grisée. L'orbe reste
   // donc à sa place, grisé, et explique au clic pourquoi il ne répond pas —
   // même dispositif que handleGuardedClick dans Header.jsx.
-  if (!isAllowed) {
+  if (!isAllowed || aideUnifieeActive) {
     return null;
   }
 

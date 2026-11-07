@@ -344,6 +344,18 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Widget et bouton d'Assistant Vocal IA flottant sur le site",
       },
       {
+        id: "feat_aide_unifiee",
+        name: "Aide unifiée (support + assistant IA)",
+        path: null,
+        icon: "🛟",
+        // Coupé par défaut (migration 20261107120000, non appliquée tant que le « go » n'est pas donné) : un seul
+        // bouton « Aide » (orbe) ouvre le panneau questions fréquentes + assistant + équipe. Quand il est actif,
+        // l'ancien Assistant vocal (feat_voice_assistant) est masqué.
+        enabled: false,
+        roles: { user: true, recruiter: true, visitor: false },
+        description: "Bouton « Aide » (orbe) : questions fréquentes, assistant, messages vocaux et passage à l'équipe",
+      },
+      {
         id: "feat_marketplace_ia",
         name: "Marketplace — Fonctions IA (photo, optimisation)",
         path: null,

@@ -38,6 +38,26 @@ export default function AdminSupportPage() {
 
   const chatBottomRef = useRef(null);
 
+  // Aide unifiée : historique de l'assistant (lu par une fonction réservée aux admins) et messages vocaux.
+  const [historiqueIA, setHistoriqueIA] = useState([]);
+  const [vocauxParMessage, setVocauxParMessage] = useState({}); // id du message -> id du vocal
+  const [vocalOuvert, setVocalOuvert] = useState({}); // id du message -> { url } | { erreur }
+
+  const ecouterVocal = async (messageId) => {
+    const vocalId = vocauxParMessage[messageId];
+    if (!vocalId || !adminSession) return;
+    setVocalOuvert((v) => ({ ...v, [messageId]: { chargement: true } }));
+    try {
+      const res = await fetch(`/api/aide/vocal-url?id=${encodeURIComponent(vocalId)}`, {
+        headers: { Authorization: `Bearer ${adminSession.access_token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      setVocalOuvert((v) => ({ ...v, [messageId]: res.ok ? { url: json.url } : { erreur: json?.error || "Indisponible." } }));
+    } catch {
+      setVocalOuvert((v) => ({ ...v, [messageId]: { erreur: "Indisponible." } }));
+    }
+  };
+
   const [toast, setToast] = useState("");
   const triggerToast = (msg) => {
     setToast(msg);
@@ -151,10 +171,16 @@ export default function AdminSupportPage() {
     setSelectedUserId(userId);
     setLoadingThread(true);
     setThreadMessages([]);
+    setHistoriqueIA([]);
+    setVocauxParMessage({});
+    setVocalOuvert({});
+
+    // Ce que la personne a déjà dit à l'assistant : l'équipe n'a pas à le lui redemander.
+    supabase.rpc("aide_historique_admin", { p_user_id: userId }).then(({ data: h }) => setHistoriqueIA(Array.isArray(h) ? h : []));
 
     const { data, error } = await supabase
       .from("messages")
-      .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id")
+      .select("id, sender_id, receiver_id, content, is_read, is_pinned, created_at, type_discussion, job_offer_id, file_name")
       .eq("type_discussion", "SUPPORT")
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order("created_at", { ascending: true });
@@ -167,6 +193,9 @@ export default function AdminSupportPage() {
       return;
     }
 
+    setVocauxParMessage(
+      Object.fromEntries((data || []).filter((r) => typeof r.file_name === "string" && r.file_name.startsWith("aide-vocal:")).map((r) => [r.id, r.file_name.slice("aide-vocal:".length)]))
+    );
     setThreadMessages((data || []).map((row) => formatMessageRow(row, adminSession.user.id)));
   };
 
@@ -449,6 +478,21 @@ export default function AdminSupportPage() {
                   )}
                 </div>
 
+                {historiqueIA.length > 0 ? (
+                  <details className="bg-blue-50 border-b border-blue-100 px-4 py-2">
+                    <summary className="text-[11px] font-extrabold text-blue-800 cursor-pointer">
+                      Historique avec l&apos;assistant ({historiqueIA.length} messages) — ce que la personne a déjà dit
+                    </summary>
+                    <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                      {historiqueIA.map((h, i) => (
+                        <li key={i} className="text-[11px] text-gray-700">
+                          <span className="font-extrabold">{h.role === "user" ? "Personne" : "Assistant"} :</span> {h.content}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {loadingThread ? (
                     <div className="flex justify-center py-8">
@@ -467,6 +511,19 @@ export default function AdminSupportPage() {
                           }`}
                         >
                           <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                          {vocauxParMessage[msg.id] ? (
+                            vocalOuvert[msg.id]?.url ? (
+                              <audio controls src={vocalOuvert[msg.id].url} className="mt-2 w-full h-8" />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => ecouterVocal(msg.id)}
+                                className="mt-2 px-3 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-extrabold cursor-pointer"
+                              >
+                                {vocalOuvert[msg.id]?.chargement ? "…" : vocalOuvert[msg.id]?.erreur || "Écouter le vocal"}
+                              </button>
+                            )
+                          ) : null}
                           <span className="block text-right text-[9px] opacity-70 font-bold mt-1">{msg.time}</span>
                         </div>
                       </div>
