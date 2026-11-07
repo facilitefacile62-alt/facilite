@@ -8,20 +8,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
+import useAideAcces from "@/components/aide/useAideAcces";
+import PuceOrbe from "@/components/aide/AideOrbe";
 
 const MASQUE_SUR = ["/admin", "/login", "/register", "/forgot-password", "/auth", "/verifiez-votre-email", "/bienvenue"];
 
 export default function BoutonFlottantFacilite() {
   const pathname = usePathname() || "";
   const [ouvert, setOuvert] = useState(false);
-  const { session, isAdmin, isRecruiter } = useAuth();
-  const [arbre, setArbre] = useState(DEFAULT_FEATURE_TREE);
-  useEffect(() => subscribeFeatureFlagsTree(setArbre), []);
-  // Quand le panneau « Aide » (orbe) est ouvert au public, il remplace l'ancien Assistant vocal : sa pilule est masquée.
-  const role = !session ? "visitor" : isAdmin ? "admin" : isRecruiter ? "recruiter" : "user";
-  const aideUnifieeActive = Boolean(session) && isFeatureAllowed(arbre, "feat_aide_unifiee", role);
+  // Quand l'aide est ouverte à cette personne, sa pastille « Aide » (avec l'orbe) est dans ce menu et remplace l'ancien Assistant vocal (masqué).
+  const { autorise: aideUnifieeActive } = useAideAcces();
 
   useEffect(() => {
     if (!ouvert) return undefined;
@@ -57,6 +53,20 @@ export default function BoutonFlottantFacilite() {
           <Link href="/candidat/extracteur" onClick={() => setOuvert(false)} className={action}>
             Extracteur <span className={`${puce} bg-amber-500`}><i className="fa-solid fa-wand-magic-sparkles"></i></span>
           </Link>
+          {aideUnifieeActive ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOuvert(false);
+                window.dispatchEvent(new Event("facilite:aide"));
+              }}
+              aria-label="Ouvrir l'aide"
+              aria-haspopup="dialog"
+              className={action}
+            >
+              Aide <PuceOrbe />
+            </button>
+          ) : null}
         </>
       ) : null}
       <button

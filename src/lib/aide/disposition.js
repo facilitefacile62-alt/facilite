@@ -5,6 +5,15 @@ import { QUESTIONS_FREQUENTES, IDS_PRINCIPAUX } from "./preparees.js";
 /** Tailles de l'orbe du panneau, en pixels : grand tant qu'il n'y a que l'accueil, petit ensuite. */
 export const TAILLE_ORBE = Object.freeze({ grand: 104, petit: 48 });
 
+/** Marge au-dessus et au-dessous de l'orbe dans sa bande (le halo y est rogné : rien ne déborde sur les messages). */
+export const MARGE_BANDE = Object.freeze({ grand: 20, petit: 12 });
+
+/** Hauteur de la bande de l'orbe, en pixels : la taille de l'orbe plus sa marge haut et bas. */
+export function hauteurBande(taille) {
+  const cle = taille === "petit" ? "petit" : "grand";
+  return TAILLE_ORBE[cle] + 2 * MARGE_BANDE[cle];
+}
+
 export const MENTION_ASSISTANT = "L'assistant peut faire des erreurs. Vérifiez les informations importantes.";
 
 /**

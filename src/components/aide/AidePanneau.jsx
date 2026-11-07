@@ -6,8 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { sendMessage, resolveSupportConversation, touchConversation } from "@/lib/messages";
 import { evaluerDictee } from "@/lib/aide/parole";
 import { isFeatureAllowed } from "@/lib/featureFlags";
-import { MENTION_ASSISTANT, libelleEtat, separerQuestions, tailleOrbe } from "@/lib/aide/disposition";
+import { MENTION_ASSISTANT, hauteurBande, libelleEtat, separerQuestions, tailleOrbe } from "@/lib/aide/disposition";
 import { OrbeGrande, useMouvement } from "./AideOrbe";
+import TexteMessage from "./TexteMessage";
 
 // Panneau « Aide » : UNE seule conversation. L'historique de l'assistant (assistant_messages) et le fil
 // du support humain (messages SUPPORT) sont fusionnés par date ; passer à l'équipe ne change pas d'écran.
@@ -53,6 +54,7 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
   const [plusDeQuestions, setPlusDeQuestions] = useState(false);
   const [menuMicro, setMenuMicro] = useState(false);
   const [aDefile, setADefile] = useState(false);
+  const [fondu, setFondu] = useState(false); // le petit fondu sous la bande n'apparaît que lorsque du texte passe réellement sous le bord
   const [ecran, setEcran] = useState(lireEcran);
   const animer = useMouvement();
   const rec = useRef(null);
@@ -326,7 +328,6 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
     ? { top: ecran.haut, height: ecran.hauteur ?? undefined, paddingTop: "env(safe-area-inset-top)", paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }
     : undefined;
   const iconeEnTete = "w-9 h-9 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800";
-  const masqueFondu = "linear-gradient(to bottom, transparent 0, #000 22px)";
 
   return (
     <div
@@ -377,21 +378,35 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
         </button>
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col bg-gradient-to-b from-blue-50/80 to-white dark:from-gray-900 dark:to-gray-900">
-        {/* L'orbe reste FIXE en haut de la zone : il ne défile pas, il rétrécit en douceur. */}
-        <div className="shrink-0 flex justify-center" style={{ paddingTop: petiteOrbe ? 10 : 18, paddingBottom: petiteOrbe ? 10 : 14, transition: animer ? "padding .35s ease" : "none" }}>
+      <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-gray-900">
+        {/* BANDE de l'orbe : fond plein (celui du panneau), hauteur adaptée à la taille de l'orbe, halo rogné à l'intérieur.
+            Elle ne défile pas et rien ne passe derrière elle : la zone de messages commence juste en dessous. */}
+        <div
+          data-bande-orbe
+          className="relative z-10 shrink-0 flex items-center justify-center overflow-hidden bg-white dark:bg-gray-900"
+          style={{ height: hauteurBande(petiteOrbe ? "petit" : "grand"), transition: animer ? "height .35s ease" : "none" }}
+        >
           <OrbeGrande petit={petiteOrbe} animer={animer} />
         </div>
 
-        <div
-          ref={defilRef}
-          onScroll={(e) => {
-            if (e.currentTarget.scrollTop > 4) setADefile(true);
-          }}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pb-3 pt-1 space-y-2"
-          style={{ WebkitMaskImage: masqueFondu, maskImage: masqueFondu }}
-          aria-live="polite"
-        >
+        {/* Zone des messages : seuls eux défilent. Le petit fondu est SOUS la bande (jamais sur le premier message au repos). */}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div
+            aria-hidden="true"
+            data-fondu-bande
+            className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-5 bg-gradient-to-b from-white to-transparent dark:from-gray-900"
+            style={{ opacity: fondu ? 1 : 0, transition: animer ? "opacity .2s ease" : "none" }}
+          />
+          <div
+            ref={defilRef}
+            onScroll={(e) => {
+              const haut = e.currentTarget.scrollTop;
+              setFondu(haut > 4);
+              if (haut > 4) setADefile(true);
+            }}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pb-3 pt-3 space-y-2 bg-gradient-to-b from-white to-blue-50/60 dark:from-gray-900 dark:to-gray-900"
+            aria-live="polite"
+          >
           <div className="mr-auto max-w-[88%] rounded-2xl rounded-tl-md px-4 py-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 shadow-sm">
             {ACCUEIL}
           </div>
@@ -423,9 +438,9 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
           </div>
 
           {fil.map((l) => (
-            <div key={l.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${bulle(l)}`}>
+            <div key={l.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm break-words ${bulle(l)}`}>
               {l.qui === "equipe" ? <span className="block text-[10px] font-extrabold uppercase tracking-wide mb-0.5">Équipe Facilité</span> : null}
-              {l.texte}
+              <TexteMessage texte={l.texte} />
               {(l.liens || []).map((lien) => (
                 <Link key={lien.href} href={lien.href} onClick={onFermer} className="block mt-1.5 font-bold underline">
                   {lien.libelle}
@@ -472,6 +487,7 @@ export default function AidePanneau({ session, onFermer, arbre, role }) {
             </div>
           ) : null}
           {erreur ? <p role="alert" className="text-center text-xs font-semibold text-red-600">{erreur}</p> : null}
+          </div>
         </div>
       </div>
 

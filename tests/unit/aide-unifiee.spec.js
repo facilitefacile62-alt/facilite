@@ -475,9 +475,10 @@ test.describe("Structure du livrable (migration non appliquée, interrupteur cou
   });
   test("l'orbe est léger et accessible : étiquette, animation coupée si mouvement réduit ou appareil modeste", () => {
     const orbe = lire("src/components/aide/AideOrbe.jsx");
-    expect(orbe).toContain("aria-label");
     expect(orbe).toContain("prefers-reduced-motion");
     expect(orbe).toContain("deviceMemory");
+    expect(orbe).toContain('aria-hidden="true"'); // décoratif : l'étiquette « Ouvrir l'aide » est sur la pastille du menu « + »
+    expect(lire("src/components/BoutonFlottantFacilite.jsx")).toContain('aria-label="Ouvrir l\'aide"');
     expect(orbe).not.toMatch(/from "(three|lottie|framer-motion|gsap)/);
   });
   test("paiements, PIN, hook SMS et ORANGE_TEST_PRIX_USER_IDS non touchés par ce chantier", () => {
@@ -584,12 +585,12 @@ test.describe("Corrections de relecture (migration, vocal, accès restreint)", (
     expect(await aideOuverte(fauxAdmin({ erreurFlag: true }), AUTRE, { env: {} })).toBe(false);
     expect(await aideOuverte(fauxAdmin({ flag: { enabled: true, roles: { user: true, recruiter: false, visitor: false } } }), AUTRE, { env: {} })).toBe(true);
   });
-  test("la route d'accès ne renvoie qu'un booléen et le panneau la consulte", () => {
+  test("la route d'accès ne renvoie qu'un booléen et le hook partagé la consulte", () => {
     const route = lire("src/app/api/aide/acces/route.js");
     expect(route).toContain("requireUser");
     expect(route).toContain("{ ouvert }");
     expect(route).not.toContain("idsAutorises");
-    expect(lire("src/components/aide/AideUnifiee.jsx")).toContain("/api/aide/acces");
+    expect(lire("src/components/aide/useAideAcces.js")).toContain("/api/aide/acces");
   });
 });
 
@@ -647,16 +648,38 @@ test.describe("Disposition du panneau (apparence seulement)", () => {
     expect(panneau.slice(panneau.indexOf("</header>"))).not.toContain("onClick={parlerALEquipe}");
     expect(panneau).not.toContain("Parler à l'équipe");
   });
-  test("l'orbe est DANS le panneau, fixe au-dessus de la zone qui défile (qui a un fondu en haut), et ne défile pas avec les messages", () => {
+  test("l'orbe est dans une BANDE à fond plein, avant la zone des messages ; rien ne passe derrière ; fondu seulement sous la bande", () => {
+    const iBande = panneau.indexOf("data-bande-orbe");
     const iOrbe = panneau.indexOf("<OrbeGrande");
     const iDefile = panneau.indexOf("ref={defilRef}");
-    expect(iOrbe).toBeGreaterThan(panneau.indexOf("</header>"));
+    expect(iBande).toBeGreaterThan(panneau.indexOf("</header>"));
+    expect(iOrbe).toBeGreaterThan(iBande);
     expect(iOrbe).toBeLessThan(iDefile);
     expect(panneau.slice(iDefile)).not.toContain("<OrbeGrande");
-    expect(panneau).toContain("maskImage: masqueFondu");
-    expect(panneau).toContain("shrink-0 flex justify-center"); // conteneur de l'orbe : ne se comprime pas, ne défile pas
+    const bande = panneau.slice(iBande - 80, iOrbe);
+    expect(bande).toContain("bg-white dark:bg-gray-900"); // fond plein, celui du panneau
+    expect(bande).toContain("overflow-hidden"); // le halo est rogné dans la bande
+    expect(bande).toContain("shrink-0");
+    expect(bande).toContain("hauteurBande(petiteOrbe");
+    // plus de masque qui estompait le premier message au repos ; le fondu est un habillage sous la bande, visible seulement une fois défilé
+    expect(panneau).not.toContain("maskImage");
+    expect(panneau).toContain("data-fondu-bande");
+    expect(panneau).toContain("opacity: fondu ? 1 : 0");
+    expect(panneau).toContain("setFondu(haut > 4)");
     expect(panneau).toContain("flex-1 min-h-0 overflow-y-auto"); // seuls les messages défilent
     expect(panneau).toMatch(/setADefile\(true\)/);
+  });
+  test("la hauteur de la bande suit la taille de l'orbe (taille + marge haut et bas), et le halo tient dans la marge", () => {
+    const { hauteurBande, MARGE_BANDE, TAILLE_ORBE } = require("../../src/lib/aide/disposition.js");
+    expect(hauteurBande("grand")).toBe(TAILLE_ORBE.grand + 2 * MARGE_BANDE.grand);
+    expect(hauteurBande("petit")).toBe(TAILLE_ORBE.petit + 2 * MARGE_BANDE.petit);
+    expect(hauteurBande("petit")).toBeLessThan(hauteurBande("grand"));
+    expect(hauteurBande("inconnu")).toBe(hauteurBande("grand"));
+    // halo (inset -18 %) : il déborde de 18 % de la taille, moins que la marge de la bande
+    const orbe = lire("src/components/aide/AideOrbe.jsx");
+    expect(orbe).toContain('inset: "-18%"');
+    expect(TAILLE_ORBE.grand * 0.18).toBeLessThanOrEqual(MARGE_BANDE.grand);
+    expect(TAILLE_ORBE.petit * 0.18).toBeLessThanOrEqual(MARGE_BANDE.petit);
   });
   test("pied : champ arrondi « Écrivez à l'assistant… », micro (dicter ou vocal), envoi rond, mention grise", () => {
     expect(panneau).toContain('placeholder="Écrivez à l\'assistant…"');
@@ -677,12 +700,21 @@ test.describe("Disposition du panneau (apparence seulement)", () => {
     expect(panneau).toContain("sm:right-4 sm:bottom-4");
     expect(panneau).toContain("sm:rounded-3xl");
   });
-  test("petit bouton flottant : 48 px, miniature de l'orbe, étiquette « Ouvrir l'aide », à gauche du « + », caché quand le panneau est ouvert", () => {
-    expect(orbe).toContain('aria-label="Ouvrir l\'aide"');
-    expect(orbe).toMatch(/className="relative w-12 h-12 rounded-full/);
+  test("l'orbe est DANS le menu « + » : pastille « Aide » avec la miniature de l'orbe, plus de bouton flottant à part", () => {
+    const menu = lire("src/components/BoutonFlottantFacilite.jsx");
+    expect(menu).toContain("useAideAcces()");
+    expect(menu).toContain('window.dispatchEvent(new Event("facilite:aide"))');
+    expect(menu).toContain('aria-label="Ouvrir l\'aide"');
+    expect(menu).toMatch(/Aide <PuceOrbe \/>/);
+    // la pastille « Aide » est la dernière du menu, au plus près du bouton « + », et ne s'affiche que si l'aide est ouverte
+    expect(menu.indexOf("Extracteur")).toBeLessThan(menu.indexOf("Aide <PuceOrbe"));
+    expect(menu).toContain("aideUnifieeActive ? (");
     const conteneur = lire("src/components/aide/AideUnifiee.jsx");
-    expect(conteneur).toContain("right-[5.75rem]");
-    expect(conteneur).toContain("ouvert ? null");
+    expect(conteneur).toContain('addEventListener("facilite:aide"');
+    expect(conteneur).not.toContain("<AideOrbe");
+    expect(conteneur).not.toContain("fixed bottom-");
+    // même décision d'accès pour la pastille et le panneau
+    expect(conteneur).toContain("useAideAcces()");
   });
   test("animations : respiration et transitions coupées si mouvement réduit ou appareil modeste, jamais de bibliothèque lourde", () => {
     expect(orbe).toContain("prefers-reduced-motion");
@@ -690,12 +722,64 @@ test.describe("Disposition du panneau (apparence seulement)", () => {
     expect(orbe).toContain("hardwareConcurrency");
     expect(orbe).toContain('animer ? "aide-halo--anime" : ""');
     expect(orbe).toContain('animer ? "aide-orbe-taille--anime" : ""');
-    expect(panneau).toContain('transition: animer ? "padding .35s ease" : "none"');
+    expect(panneau).toContain('transition: animer ? "height .35s ease" : "none"');
     expect(orbe).not.toMatch(/from "(three|lottie|framer-motion|gsap)/);
   });
   test("la logique n'a pas bougé : mêmes appels (messages, vocal, équipe, dictée, liens filtrés)", () => {
     for (const trace of ['fetch("/api/aide/message"', 'fetch("/api/aide/vocal"', 'rpc("demander_un_humain"', "evaluerDictee(", "isFeatureAllowed(arbre, l.href, role)", "json.repliSansLien", "resolveSupportConversation(userId)", "aide-vocal:"]) {
       expect(panneau, trace).toContain(trace);
     }
+  });
+});
+
+test.describe("Texte des bulles : sauts de ligne et listes, sans HTML brut", () => {
+  const { decouperTexte, normaliserSauts } = require("../../src/lib/aide/texteMessage.js");
+  const TARIFS = "Voici les tarifs :\n- CV : 1500 FCFA\n- Lettre : 1000 FCFA\n• Pack : 2000 FCFA\nMerci de votre confiance.";
+
+  test("une liste de tarifs écrite en lignes devient un paragraphe, une vraie liste, puis un paragraphe", () => {
+    expect(decouperTexte(TARIFS)).toEqual([
+      { type: "p", lignes: ["Voici les tarifs :"] },
+      { type: "ul", items: ["CV : 1500 FCFA", "Lettre : 1000 FCFA", "Pack : 2000 FCFA"] },
+      { type: "p", lignes: ["Merci de votre confiance."] },
+    ]);
+  });
+  test("les sauts de ligne simples sont gardés dans un paragraphe, une ligne vide sépare deux blocs", () => {
+    expect(decouperTexte("Ligne 1\nLigne 2\n\nAutre bloc")).toEqual([
+      { type: "p", lignes: ["Ligne 1", "Ligne 2"] },
+      { type: "p", lignes: ["Autre bloc"] },
+    ]);
+    expect(decouperTexte("A\r\nB")).toEqual([{ type: "p", lignes: ["A", "B"] }]);
+  });
+  test("les puces « - », « • », « – » et « * » sont reconnues ; un trait d'union dans une phrase ne l'est pas", () => {
+    expect(decouperTexte("- a\n• b\n– c\n* d")).toEqual([{ type: "ul", items: ["a", "b", "c", "d"] }]);
+    expect(decouperTexte("e-mail - voir page")).toEqual([{ type: "p", lignes: ["e-mail - voir page"] }]);
+    expect(decouperTexte("-sans espace")).toEqual([{ type: "p", lignes: ["-sans espace"] }]);
+    expect(decouperTexte("• A • B • C")).toEqual([{ type: "ul", items: ["A", "B", "C"] }]);
+  });
+  test("un « \\n » écrit en toutes lettres (texte sans vrai saut de ligne) est converti ; un vrai saut de ligne n'est jamais touché", () => {
+    expect(normaliserSauts("a\\nb")).toBe("a\nb");
+    expect(normaliserSauts("a\nb\\nc")).toBe("a\nb\\nc");
+    expect(decouperTexte("")).toEqual([]);
+    expect(decouperTexte(null)).toEqual([]);
+  });
+  test("le HTML du texte reste du texte : aucune balise interprétée, aucun dangerouslySetInnerHTML", () => {
+    const blocs = decouperTexte("<img src=x onerror=alert(1)>\n- <b>gras</b>\n- <script>alert(2)</script>");
+    expect(blocs[0].lignes[0]).toBe("<img src=x onerror=alert(1)>");
+    expect(blocs[1].items).toEqual(["<b>gras</b>", "<script>alert(2)</script>"]);
+    const composant = lire("src/components/aide/TexteMessage.jsx");
+    expect(composant).not.toContain("dangerouslySetInnerHTML");
+    expect(composant).not.toContain("innerHTML");
+    expect(lire("src/lib/aide/texteMessage.js")).not.toMatch(/innerHTML|DOMParser|replace\(\/</);
+  });
+  test("toutes les bulles (assistant, historique, équipe, moi) passent par TexteMessage ; la réponse de l'équipe peut avoir plusieurs lignes", () => {
+    const panneau = lire("src/components/aide/AidePanneau.jsx");
+    expect(panneau).toContain("<TexteMessage texte={l.texte} />");
+    expect(panneau).not.toContain("{l.texte}\n"); // plus de texte brut collé dans la bulle
+    expect(panneau).not.toMatch(/rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap/);
+    const admin = lire("src/app/admin/support/page.js");
+    expect(admin).toContain("<textarea");
+    expect(admin).toContain("Maj+Entrée : nouvelle ligne");
+    expect(admin).toMatch(/e\.key === "Enter" && !e\.shiftKey/);
+    expect(admin).toContain("whitespace-pre-wrap"); // l'administrateur voit aussi les sauts de ligne
   });
 });

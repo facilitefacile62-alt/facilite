@@ -533,12 +533,19 @@ export default function AdminSupportPage() {
                 </div>
 
                 <form onSubmit={handleSendReply} className="bg-white p-4 border-t border-gray-200 flex items-center space-x-2.5">
-                  <input
-                    type="text"
+                  <textarea
+                    rows={1}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Répondre à l'utilisateur..."
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all"
+                    onKeyDown={(e) => {
+                      // Entrée envoie ; Maj+Entrée passe à la ligne (listes, tarifs écrits en lignes).
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendReply(e);
+                      }
+                    }}
+                    placeholder="Répondre à l'utilisateur... (Maj+Entrée : nouvelle ligne)"
+                    className="flex-1 resize-none max-h-32 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-gray-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all"
                   />
                   <button
                     type="submit"

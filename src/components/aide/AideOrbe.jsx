@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 // Orbe bleu lumineux de l'aide : CSS pur (dégradés radiaux), aucune bibliothèque, aucune image lourde.
 //  - <OrbeGrande /> vit DANS le panneau, au-dessus de la discussion, avec un halo doux et une respiration légère ;
-//  - le défaut (export par défaut) est le PETIT bouton rond flottant qui ouvre le panneau (miniature de l'orbe).
+//  - le défaut (export par défaut) est la MINIATURE de l'orbe, icône ronde de la pastille « Aide » du menu « + ».
 // La respiration et les transitions sont coupées si la personne demande moins de mouvement ou si l'appareil est
 // modeste (peu de mémoire / peu de cœurs) : l'orbe reste alors fixe, tout aussi lumineux.
 function appareilModeste() {
@@ -54,29 +54,22 @@ export function OrbeGrande({ petit = false, taille, animer = false }) {
         className={`relative shrink-0 ${animer ? "aide-orbe-taille--anime" : ""}`}
         style={{ width: t, height: t }}
       >
-        <span className={`aide-halo absolute rounded-full pointer-events-none ${animer ? "aide-halo--anime" : ""}`} style={{ inset: "-32%" }} />
+        <span className={`aide-halo absolute rounded-full pointer-events-none ${animer ? "aide-halo--anime" : ""}`} style={{ inset: "-18%" }} />
         <span className="aide-bille absolute inset-0 rounded-full border border-white/50" />
       </div>
     </>
   );
 }
 
-/** Petit bouton rond (48 px) qui ouvre le panneau : miniature de l'orbe, étiquette d'accessibilité « Ouvrir l'aide ». */
-export default function AideOrbe({ onClick }) {
+/** Miniature de l'orbe : icône ronde (32 px) de la pastille « Aide » du menu « + », comme les icônes d'« Écrire un e-mail » et d'« Extracteur ». */
+export default function PuceOrbe() {
   return (
     <>
       <StylesOrbe />
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label="Ouvrir l'aide"
-        aria-haspopup="dialog"
-        className="relative w-12 h-12 rounded-full cursor-pointer flex items-center justify-center focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300"
-      >
-        <span className="aide-halo absolute rounded-full pointer-events-none" style={{ inset: "-24%" }} aria-hidden="true" />
-        <span className="aide-bille absolute inset-0 rounded-full border border-white/60 shadow-md" aria-hidden="true" />
-        <span className="sr-only">Aide</span>
-      </button>
+      <span className="relative w-8 h-8 rounded-full shrink-0 inline-block" aria-hidden="true">
+        <span className="aide-halo absolute rounded-full pointer-events-none" style={{ inset: "-22%" }} />
+        <span className="aide-bille absolute inset-0 rounded-full border border-white/60 shadow-md" />
+      </span>
     </>
   );
 }
