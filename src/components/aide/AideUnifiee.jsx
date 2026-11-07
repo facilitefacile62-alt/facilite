@@ -81,7 +81,7 @@ export default function AideUnifiee() {
       <div className="fixed bottom-32 right-[5.75rem] sm:right-[7.5rem] z-[998]">
         <AideOrbe ouvert={ouvert} onClick={() => setOuvert((o) => !o)} />
       </div>
-      {ouvert ? <AidePanneau session={session} onFermer={() => setOuvert(false)} /> : null}
+      {ouvert ? <AidePanneau session={session} onFermer={() => setOuvert(false)} arbre={arbre} role={role} /> : null}
     </>
   );
 }

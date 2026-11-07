@@ -76,7 +76,8 @@ export async function POST(req) {
     mode,
     source: resultat.source,
     reponse: resultat.reponse,
-    lien: resultat.lien || null,
+    liens: resultat.liens || [],
+    repliSansLien: resultat.repliSansLien || null,
     proposerEquipe: resultat.proposerEquipe === true,
     passerEquipe: resultat.passerEquipe === true,
   });

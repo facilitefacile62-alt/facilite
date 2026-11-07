@@ -10,6 +10,10 @@ const { contientDonneePersonnelle, cleMemoire, peutMemoriser } = require("../../
 const { trouverReponsePreparee, demandeUnHumain, QUESTIONS_FREQUENTES } = require("../../src/lib/aide/preparees.js");
 const { evaluerDictee, MESSAGE_REPETER } = require("../../src/lib/aide/parole.js");
 const { traiterMessage, SYSTEME_AIDE } = require("../../src/lib/aide/orchestrateur.js");
+// featureFlags.js crée un client Supabase à l'import : des valeurs factices suffisent (aucun appel réseau n'est fait ici).
+process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://exemple.invalid";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "cle-factice-de-test";
+const { isFeatureAllowed } = require("../../src/lib/featureFlags.js");
 const { resoudreMode, choisirFournisseur } = require("../../src/lib/aide/fournisseurs/index.js");
 const { creerFournisseurClaude } = require("../../src/lib/aide/fournisseurs/claude.js");
 const { creerFournisseurFaux } = require("../../src/lib/aide/fournisseurs/faux.js");
@@ -150,11 +154,63 @@ test.describe("Sécurité des messages", () => {
 
 test.describe("Réponses préparées (gratuites)", () => {
   test("chaque bouton de question fréquente a sa réponse et sa page", () => {
-    expect(QUESTIONS_FREQUENTES.length).toBeGreaterThanOrEqual(6);
+    expect(QUESTIONS_FREQUENTES).toHaveLength(8);
     for (const q of QUESTIONS_FREQUENTES) {
       expect(trouverReponsePreparee(q.libelle)?.id).toBe(q.id);
-      expect(q.lien.href).toMatch(/^\//);
+      expect(q.liens.length).toBeGreaterThan(0);
     }
+  });
+  test("chaque lien mène à une page qui existe, jamais à /faq ni à une recherche", () => {
+    const dossierApp = path.join(__dirname, "../../src/app");
+    const vus = [];
+    for (const q of QUESTIONS_FREQUENTES) {
+      for (const lien of q.liens) {
+        vus.push(lien.href);
+        expect(lien.href, q.id).toMatch(/^\/[a-z0-9\-/]+$/); // chemin nu : ni ?, ni #, ni espace
+        expect(lien.href, q.id).not.toMatch(/^\/faq/);
+        expect(lien.libelle.length, q.id).toBeGreaterThan(3);
+        const page = ["page.js", "page.jsx", "page.tsx"].map((f) => path.join(dossierApp, lien.href, f)).find((f) => fs.existsSync(f));
+        expect(page, `${q.id} -> ${lien.href} : aucune page dans src/app`).toBeTruthy();
+      }
+    }
+    expect(new Set(vus).size).toBe(vus.length); // aucun lien en double
+  });
+  test("chaque lien est cohérent avec sa question (la page attendue, pas une autre)", () => {
+    const attendu = {
+      postuler: ["/offres"],
+      creer_cv: ["/creer-cv", "/importer-cv"],
+      mot_de_passe: ["/forgot-password"],
+      extracteur: ["/candidat/extracteur"],
+      messages: ["/messagerie"],
+      compte: ["/informations-compte", "/suppression-compte"],
+      vendre: ["/marketplace"],
+      tarifs: ["/service"],
+    };
+    for (const q of QUESTIONS_FREQUENTES) expect(q.liens.map((l) => l.href), q.id).toEqual(attendu[q.id]);
+  });
+  test("une page fermée par un interrupteur n'est pas proposée : réponse de repli sans lien (tarifs)", () => {
+    const tarifs = QUESTIONS_FREQUENTES.find((q) => q.id === "tarifs");
+    expect(tarifs.repliSansLien).toMatch(/Parler à l'équipe/);
+    expect(tarifs.repliSansLien).not.toMatch(/\d/); // aucun prix inventé
+    const arbre = [{ id: "b", children: [{ id: "feat_service_tarifs", path: "/service", enabled: false, roles: { user: true, recruiter: true, visitor: true } }] }];
+    expect(isFeatureAllowed(arbre, "/service", "user")).toBe(false);
+    expect(isFeatureAllowed(arbre, "/service", "admin")).toBe(true);
+    expect(isFeatureAllowed(arbre, "/offres", "user")).toBe(true); // chemin hors interrupteurs : ouvert
+    const panneau = lire("src/components/aide/AidePanneau.jsx");
+    expect(panneau).toContain("isFeatureAllowed(arbre, l.href, role)");
+    expect(panneau).toContain("json.repliSansLien");
+  });
+  test("l'API renvoie les liens de la réponse préparée (jamais d'adresse construite avec le texte de l'utilisateur)", async () => {
+    for (const q of QUESTIONS_FREQUENTES) {
+      const { r } = await demander(q.libelle);
+      expect(r.source).toBe("preparee");
+      expect(r.liens).toEqual(q.liens);
+    }
+    const route = lire("src/app/api/aide/message/route.js");
+    expect(route).toContain("liens: resultat.liens");
+    // aucune navigation fabriquée avec le message : ni router.push ni window.location dans le panneau
+    const panneau = lire("src/components/aide/AidePanneau.jsx");
+    expect(panneau).not.toMatch(/router\.push|window\.location|\/faq/);
   });
   test("mots-clés et intentions", () => {
     expect(trouverReponsePreparee("j'ai oublié mon mot de passe")?.id).toBe("mot_de_passe");
@@ -162,7 +218,13 @@ test.describe("Réponses préparées (gratuites)", () => {
     expect(trouverReponsePreparee("quelle est la capitale de la France")).toBeNull();
   });
   test("les réponses ne donnent ni prix ni délai chiffré inventé", () => {
-    for (const q of QUESTIONS_FREQUENTES) expect(q.reponse).not.toMatch(/\d+\s*(fcfa|xof|€|\$|jours?|heures?)/i);
+    for (const q of QUESTIONS_FREQUENTES) {
+      if (q.id === "compte") continue; // seul chiffre autorisé : « 30 jours », recopié de la page /suppression-compte (vérifié ci-dessous)
+      expect(q.reponse).not.toMatch(/\d+\s*(fcfa|xof|€|\$|jours?|heures?)/i);
+    }
+    const compte = QUESTIONS_FREQUENTES.find((q) => q.id === "compte");
+    expect(compte.reponse.match(/\d+\s*jours/g)).toEqual(["30 jours"]);
+    expect(lire("src/app/suppression-compte/page.js")).toContain("30 jours");
   });
   test("la FAQ de l'administration est utilisée quand les mots correspondent", () => {
     const faqBase = [{ question: "Où trouver la facture de mon abonnement premium", reponse: "Dans Mon activité." }];

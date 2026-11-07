@@ -3,15 +3,20 @@
 // Les réponses ne promettent aucun délai ni aucun prix : elles orientent vers la bonne page.
 import { normaliserQuestion } from "./texte.js";
 
-/** Boutons affichés en haut du panneau. `lien` : page à proposer avec la réponse. */
+/**
+ * Boutons affichés en haut du panneau. `liens` : pages à proposer avec la réponse. CHAQUE lien doit être une page
+ * qui existe (src/app/<chemin>/page.js) et qui répond vraiment à la question : jamais /faq, jamais une recherche.
+ * `repliSansLien` : réponse donnée à la place quand la page visée est fermée par un interrupteur du site
+ * (un lien vers « fonctionnalité indisponible » ne répondrait à rien). Vérifié par tests/unit/aide-unifiee.spec.js.
+ */
 export const QUESTIONS_FREQUENTES = [
   {
     id: "postuler",
     libelle: "Comment postuler à une offre ?",
     mots: ["postuler", "candidature", "candidater", "envoyer cv", "offre emploi"],
     reponse:
-      "Ouvrez une offre depuis la page Offres, puis touchez « Postuler ». Vous pouvez choisir un CV déjà enregistré ou en ajouter un (PDF ou Word, 10 Mo maximum) et écrire un court message.",
-    lien: { href: "/offres", libelle: "Voir les offres" },
+      "Ouvrez une offre depuis la page Offres, puis touchez « Postuler via Facilité ». Vous pouvez choisir un CV déjà enregistré ou en ajouter un (PDF ou Word, 10 Mo maximum) et écrire un court message.",
+    liens: [{ href: "/offres", libelle: "Voir les offres" }],
   },
   {
     id: "creer_cv",
@@ -19,7 +24,10 @@ export const QUESTIONS_FREQUENTES = [
     mots: ["creer cv", "faire cv", "importer cv", "mon cv", "modele cv", "redaction cv"],
     reponse:
       "Pour créer votre CV, ouvrez « Créer mon CV ». Si vous en avez déjà un, utilisez « Importer mon CV » : Facilité lit le document et remplit vos informations, que vous pouvez corriger ensuite.",
-    lien: { href: "/creer-cv", libelle: "Créer mon CV" },
+    liens: [
+      { href: "/creer-cv", libelle: "Créer mon CV" },
+      { href: "/importer-cv", libelle: "Importer mon CV" },
+    ],
   },
   {
     id: "mot_de_passe",
@@ -27,7 +35,7 @@ export const QUESTIONS_FREQUENTES = [
     mots: ["mot de passe", "mdp", "password", "reinitialiser", "connexion impossible", "me connecter"],
     reponse:
       "Sur la page de connexion, touchez « Mot de passe oublié » et suivez les étapes : un lien de réinitialisation vous est envoyé. Pensez à regarder aussi vos courriers indésirables.",
-    lien: { href: "/forgot-password", libelle: "Réinitialiser mon mot de passe" },
+    liens: [{ href: "/forgot-password", libelle: "Réinitialiser mon mot de passe" }],
   },
   {
     id: "extracteur",
@@ -35,37 +43,42 @@ export const QUESTIONS_FREQUENTES = [
     mots: ["extracteur", "extraire", "scanner document", "1 click", "1-click"],
     reponse:
       "L'Extracteur lit un document (photo ou PDF) et en tire les informations utiles, sans que vous ayez à tout retaper. Vérifiez toujours le résultat avant de l'utiliser.",
-    lien: { href: "/candidat/extracteur", libelle: "Ouvrir l'Extracteur" },
+    liens: [{ href: "/candidat/extracteur", libelle: "Ouvrir l'Extracteur" }],
   },
   {
     id: "messages",
     libelle: "Où voir mes messages ?",
     mots: ["messages", "messagerie", "conversation", "discussion", "ou sont mes messages"],
     reponse: "Tous vos messages sont dans la Messagerie : discussions avec les recruteurs, les vendeurs et l'équipe Facilité.",
-    lien: { href: "/messagerie", libelle: "Ouvrir la Messagerie" },
+    liens: [{ href: "/messagerie", libelle: "Ouvrir la Messagerie" }],
   },
   {
     id: "compte",
     libelle: "Modifier ou supprimer mon compte",
     mots: ["modifier compte", "supprimer compte", "supprimer mon compte", "changer email", "changer numero", "informations compte"],
     reponse:
-      "Vos informations (nom, e-mail, téléphone) se modifient dans « Informations du compte ». La suppression du compte se demande depuis votre profil ; elle n'est définitive qu'après un délai, et vous pouvez l'annuler en vous reconnectant avant.",
-    lien: { href: "/informations-compte", libelle: "Informations du compte" },
+      "Vos informations (nom, e-mail, téléphone) se modifient dans « Informations du compte ». Pour supprimer votre compte, suivez la procédure expliquée sur la page de suppression : l'effacement n'est définitif qu'après un délai de 30 jours, et vous pouvez l'annuler en vous reconnectant avant.",
+    liens: [
+      { href: "/informations-compte", libelle: "Informations du compte" },
+      { href: "/suppression-compte", libelle: "Supprimer mon compte" },
+    ],
   },
   {
     id: "vendre",
     libelle: "Vendre ou acheter sur Locaux",
     mots: ["vendre", "marketplace", "locaux", "boutique", "article", "acheter", "annonce"],
     reponse:
-      "Locaux est la place de marché de Facilité : vous pouvez y publier un article avec photos et prix, ou discuter avec un vendeur depuis sa fiche. Pour vendre, créez d'abord votre boutique.",
-    lien: { href: "/marketplace", libelle: "Ouvrir Locaux" },
+      "Locaux est la place de marché de Facilité : vous pouvez y parcourir les articles et discuter avec un vendeur depuis sa fiche. Pour vendre, ouvrez d'abord votre boutique avec « Ma boutique », dans le menu de votre profil.",
+    liens: [{ href: "/marketplace", libelle: "Ouvrir Locaux" }],
   },
   {
     id: "tarifs",
     libelle: "Quels sont les tarifs ?",
     mots: ["tarif", "prix", "combien", "payer", "paiement", "abonnement", "gratuit"],
     reponse: "Les tarifs à jour des services sont affichés sur la page Services. Je ne veux pas vous donner un prix approximatif : le montant exact y figure toujours.",
-    lien: { href: "/service", libelle: "Voir les tarifs" },
+    liens: [{ href: "/service", libelle: "Voir les tarifs" }],
+    repliSansLien:
+      "La page des tarifs n'est pas ouverte pour le moment, et je ne veux pas vous donner un prix approximatif. Touchez « Parler à l'équipe » : un conseiller vous donnera le tarif exact.",
   },
 ];
 

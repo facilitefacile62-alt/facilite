@@ -57,7 +57,7 @@ export async function traiterMessage({ userId, texte, dernierEchange = [], regla
 
   // (a) réponse préparée
   const preparee = trouverReponsePreparee(message, deps.faqBase || []);
-  if (preparee) return sortie("preparee", preparee.reponse, { lien: preparee.lien });
+  if (preparee) return sortie("preparee", preparee.reponse, { liens: preparee.liens || [], repliSansLien: preparee.repliSansLien || null });
 
   // Tentative d'injection évidente : pas d'appel payant.
   if (detecterInjection(message)) return sortie("refus", MSG_INJECTION, { proposerEquipe: true });

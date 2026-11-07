@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { sendMessage, resolveSupportConversation, touchConversation } from "@/lib/messages";
 import { QUESTIONS_FREQUENTES } from "@/lib/aide/preparees";
 import { evaluerDictee } from "@/lib/aide/parole";
+import { isFeatureAllowed } from "@/lib/featureFlags";
 
 // Panneau « Aide » : UNE seule conversation. L'historique de l'assistant (assistant_messages) et le fil
 // du support humain (messages SUPPORT) sont fusionnés par date ; passer à l'équipe ne change pas d'écran.
@@ -21,7 +22,7 @@ function horodatage(iso) {
   }
 }
 
-export default function AidePanneau({ session, onFermer }) {
+export default function AidePanneau({ session, onFermer, arbre, role }) {
   const userId = session.user.id;
   const token = session.access_token;
   const [fil, setFil] = useState([]); // { id, qui: 'moi'|'assistant'|'equipe'|'systeme', texte, lien?, date }
@@ -125,7 +126,14 @@ export default function AidePanneau({ session, onFermer }) {
         await envoyerALEquipe(message);
         return;
       }
-      if (json.reponse) ajouter({ qui: "assistant", texte: json.reponse, lien: json.lien || null, proposerEquipe: json.proposerEquipe });
+      if (json.reponse) {
+        // Un lien n'est proposé que si la page est ouverte à cette personne (interrupteurs du site) : sinon elle
+        // atterrirait sur « fonctionnalité indisponible ». Dans ce cas on donne la réponse de repli, sans lien.
+        const demandes = Array.isArray(json.liens) ? json.liens : [];
+        const ouverts = demandes.filter((l) => isFeatureAllowed(arbre, l.href, role));
+        const sansPage = demandes.length > 0 && ouverts.length === 0 && json.repliSansLien;
+        ajouter({ qui: "assistant", texte: sansPage ? json.repliSansLien : json.reponse, liens: sansPage ? [] : ouverts, proposerEquipe: json.proposerEquipe });
+      }
       if (json.passerEquipe) setMode(json.mode || "attente_humain");
     } catch (e) {
       setErreur(e?.message === "envoi" ? "Votre message n'a pas pu être transmis à l'équipe. Réessayez." : e?.message || "Une erreur est survenue. Réessayez.");
@@ -308,11 +316,11 @@ export default function AidePanneau({ session, onFermer }) {
           <div key={l.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${bulle(l)}`}>
             {l.qui === "equipe" ? <span className="block text-[10px] font-extrabold uppercase tracking-wide mb-0.5">Équipe Facilité</span> : null}
             {l.texte}
-            {l.lien ? (
-              <Link href={l.lien.href} onClick={onFermer} className="block mt-1.5 font-bold underline">
-                {l.lien.libelle}
+            {(l.liens || []).map((lien) => (
+              <Link key={lien.href} href={lien.href} onClick={onFermer} className="block mt-1.5 font-bold underline">
+                {lien.libelle}
               </Link>
-            ) : null}
+            ))}
             {l.date ? <span className="block text-[10px] opacity-60 mt-0.5">{horodatage(l.date)}</span> : null}
           </div>
         ))}
