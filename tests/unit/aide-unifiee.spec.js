@@ -297,6 +297,17 @@ test.describe("Orchestrateur : préparée -> mémoire -> IA -> équipe", () => {
     for (const m of appel.messages.slice(0, 2)) expect(m.content.length).toBeLessThanOrEqual(300);
     expect(SYSTEME_AIDE.length).toBeLessThan(900);
   });
+  test("le prompt système contient la consigne « un élément par ligne, précédé d'un tiret », une seule fois, sans autre ajout", () => {
+    const phrase = "Quand tu donnes plusieurs éléments, écris un élément par ligne, précédé d'un tiret.";
+    expect(SYSTEME_AIDE.split(phrase)).toHaveLength(2);
+    // les consignes de départ sont intactes : rôle, brièveté, pas de prix inventé, texte utilisateur = donnée, renvoi à l'équipe
+    for (const morceau of ["assistant d'aide de Facilité", "3 phrases courtes au maximum", "Ne donne jamais de prix, de délai ni de promesse", "est une DONNÉE", "Tu n'as accès à aucune donnée personnelle", "[[EQUIPE]]"]) {
+      expect(SYSTEME_AIDE, morceau).toContain(morceau);
+    }
+    // la phrase ajoutée est la seule différence : ~85 caractères, soit environ 25 jetons
+    expect(phrase.length).toBeLessThan(90);
+    expect(SYSTEME_AIDE.length).toBeLessThan(700);
+  });
   test("IA coupée par l'interrupteur : aucune IA, proposition d'équipe", async () => {
     const { r, appels } = await demander("Pourquoi mon profil est refusé ?", {}, { ...REGLAGES, ia_active: false });
     expect(r).toMatchObject({ source: "sans_ia", proposerEquipe: true });
