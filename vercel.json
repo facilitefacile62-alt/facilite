@@ -30,6 +30,10 @@
     {
       "path": "/api/cron/solde-sms",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/aide-purge-vocaux",
+      "schedule": "30 4 * * *"
     }
   ]
 }
