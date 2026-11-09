@@ -5,7 +5,7 @@ const path = require("path");
 /**
  * Référencement des fiches d'offres :
  *  - une offre non validée n'est visible que de son propriétaire et d'un administrateur, porte noindex et n'est jamais dans le plan du site ;
- *  - titre « {Intitulé} à {Ville} – {Entreprise} | Offre d'emploi » (60 caractères au plus) et méta-description d'environ 150 caractères, avec les vraies données.
+ *  - titre « {Intitulé} à {Ville} – {Entreprise} | Offre d'emploi » (65 caractères au plus) et méta-description d'environ 150 caractères, avec les vraies données.
  */
 const racine = path.join(__dirname, "../..");
 const lire = (p) => fs.readFileSync(path.join(racine, p), "utf8").replace(/\r\n/g, "\n");
@@ -78,7 +78,7 @@ test("villeDuLieu : première partie du lieu, capitale ; « Sénégal », « Int
   for (const v of ["Sénégal", "SÉNÉGAL", "Senegal", "International (Multi-pays)", "", "  ", null, undefined]) expect(villeDuLieu(v), String(v)).toBe("");
 });
 
-test("titre de la fiche : « Intitulé à Ville – Entreprise | Offre d'emploi », 60 caractères au plus, sans texte vide ni « Non spécifié »", async () => {
+test("titre de la fiche : « Intitulé à Ville – Entreprise | Offre d'emploi », 65 caractères au plus, sans texte vide ni « Non spécifié »", async () => {
   const { titreFicheOffre } = await titres();
   expect(titreFicheOffre({ title: "Chauffeur", company: "Pyxis Logistics", location: "Dakar, Sénégal" })).toBe("Chauffeur à Dakar – Pyxis Logistics | Offre d'emploi");
   // Ville absente (« Sénégal » seul, ou vide) : omise.
@@ -86,22 +86,29 @@ test("titre de la fiche : « Intitulé à Ville – Entreprise | Offre d'emploi 
   expect(titreFicheOffre({ title: "Comptable", company: "Alpha Digital", location: "" })).toBe("Comptable – Alpha Digital | Offre d'emploi");
   // Entreprise absente ou déjà nommée dans l'intitulé : omise.
   expect(titreFicheOffre({ title: "Comptable", company: "", location: "Thiès" })).toBe("Comptable à Thiès | Offre d'emploi");
-  expect(titreFicheOffre({ title: "Pyxis Logistics recrute un Chauffeur", company: "Pyxis Logistics", location: "Dakar" })).toBe("Pyxis Logistics recrute un Chauffeur | Offre d'emploi"); // la ville ne tient pas (61 caractères) : le poste complet passe avant
+  expect(titreFicheOffre({ title: "Pyxis Logistics recrute un Chauffeur", company: "Pyxis Logistics", location: "Dakar" })).toBe("Pyxis Logistics recrute un Chauffeur à Dakar | Offre d'emploi"); // 61 caractères : tient dans 65
   // Ville déjà dans l'intitulé : pas répétée.
   expect(titreFicheOffre({ title: "Agent de saisie à Dakar", company: "", location: "Dakar" })).toBe("Agent de saisie à Dakar | Offre d'emploi");
   // Rien du tout : l'intitulé par défaut, jamais de texte vide.
   expect(titreFicheOffre({})).toBe("Offre d'emploi | Offre d'emploi");
   // Trop long : l'entreprise est omise d'abord, puis l'intitulé est coupé proprement (la ville est gardée).
   expect(titreFicheOffre({ title: "Vendeur Commercial (H/F)", company: "GPF Recrutement", location: "Dakar, Sénégal" })).toBe("Vendeur Commercial (H/F) à Dakar | Offre d'emploi");
+  // Le poste complet passe avant la ville (65 caractères pile avec le suffixe) : la ville ne tient pas, elle est omise, l'intitulé n'est pas coupé.
   const long = titreFicheOffre({ title: "Assistant(e) Achats et Coordinateur(trice) Stock", company: "Yassir", location: "dakar" });
-  expect(long).toBe("Assistant(e) Achats… à Dakar | Offre d'emploi");
+  expect(long).toBe("Assistant(e) Achats et Coordinateur(trice) Stock | Offre d'emploi");
+  expect(long.length).toBe(65);
+  // L'entreprise est gardée quand le titre complet tient dans 65 caractères.
+  expect(titreFicheOffre({ title: "Électricien", company: "Global Talent HR", location: "Dakar" })).toBe("Électricien à Dakar – Global Talent HR | Offre d'emploi");
+  // GPF Recrutement : 67 caractères avec l'entreprise, donc omise (le poste et la ville passent avant).
+  expect(titreFicheOffre({ title: "Vendeur Commercial (H/F)", company: "GPF Recrutement", location: "Dakar, Sénégal" }).length).toBeLessThanOrEqual(65);
   for (const o of [
     { title: "Responsable du développement commercial et de la relation client grand compte", company: "Société Générale Sénégal", location: "Dakar" },
     { title: "NVI Facility recrute 50 Agents de Sécurité à Dakar et dans les régions", company: "NVI Facility", location: "Dakar" },
     { title: "Chef de projet", company: "Entreprise à nom très très long pour dépasser", location: "Tivaouane Peulh, Sénégal" },
+    { title: "Responsable de la coordination des opérations logistiques et du transport international", company: "Alpha", location: "Dakar" },
   ]) {
     const t = titreFicheOffre(o);
-    expect(t.length, t).toBeLessThanOrEqual(60);
+    expect(t.length, t).toBeLessThanOrEqual(65);
     expect(t.endsWith(" | Offre d'emploi"), t).toBe(true);
     expect(t).not.toMatch(/Non spécifié|undefined|null|\s{2,}|–\s*\||à\s*\|/i);
   }

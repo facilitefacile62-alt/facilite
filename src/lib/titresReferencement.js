@@ -43,9 +43,9 @@ export function descriptionOffre(offre, max = LONGUEUR_DESCRIPTION) {
 }
 
 // ---------- Fiche d'une offre (/offres/<id>) ----------
-// Titre : « {Intitulé} à {Ville} – {Entreprise} | Offre d'emploi », 60 caractères au plus. Ce titre est publié tel quel (title.absolute) : le modèle « %s | Facilite »
+// Titre : « {Intitulé} à {Ville} – {Entreprise} | Offre d'emploi », 65 caractères au plus. Ce titre est publié tel quel (title.absolute) : le modèle « %s | Facilite »
 // du site n'est pas ajouté. Ce qui manque est OMIS (ville, entreprise), jamais remplacé par un texte vide ni par « Non spécifié ».
-export const LONGUEUR_TITRE_FICHE = 60;
+export const LONGUEUR_TITRE_FICHE = 65;
 const SUFFIXE_TITRE_FICHE = " | Offre d'emploi";
 
 function entrepriseDejaNommee(intitule, entreprise) {
