@@ -18,16 +18,32 @@ const referencement = () => import("../../src/lib/offreReferencement.js");
 
 // ---------- 1. Offres de secours ----------
 
-test("production : aucune offre de secours (404), quel que soit l'identifiant ; développement et test : elles restent disponibles", async () => {
-  const { trouverOffreSecours, offresSecoursActives, OFFRES_SECOURS } = await secours();
-  expect(offresSecoursActives("production")).toBe(false);
-  expect(offresSecoursActives("development")).toBe(true);
-  expect(offresSecoursActives("test")).toBe(true);
-  for (const id of ["1", "2", "3", "4", "5", "6", "7", "100", "101", "102", "9b125270-1234-4567-89ab-cdef25272026", "9B125270-1234-4567-89AB-CDEF25272026"]) {
+const EXEMPLES = ["1", "2", "3", "4", "5", "7", "100"];
+
+test("production : seules les offres d'EXEMPLE répondent 404 ; toute autre offre codée en dur reste servie (aucune offre réelle ou récente masquée)", async () => {
+  const { trouverOffreSecours, estOffreExemple, OFFRES_SECOURS, IDS_EXEMPLES } = await secours();
+  expect([...IDS_EXEMPLES]).toEqual(EXEMPLES);
+  for (const id of EXEMPLES) {
+    expect(estOffreExemple(id), id).toBe(true);
     expect(trouverOffreSecours(id, "production"), `${id} en production`).toBeNull();
     expect(trouverOffreSecours(id, "development"), `${id} en développement`).not.toBeNull();
+    expect(trouverOffreSecours(id, "test"), `${id} en test`).not.toBeNull();
   }
-  expect(Object.keys(OFFRES_SECOURS).length).toBeGreaterThan(20);
+  const autres = Object.keys(OFFRES_SECOURS).filter((id) => !EXEMPLES.includes(id));
+  expect(autres.length).toBe(Object.keys(OFFRES_SECOURS).length - EXEMPLES.length);
+  expect(autres).toEqual(expect.arrayContaining(["9b125270-1234-4567-89ab-cdef25272026", "6", "101", "102", "77177373-1111-4444-8888-000000000001"]));
+  for (const id of autres) {
+    for (const env of ["production", "development", "test"]) {
+      const o = trouverOffreSecours(id, env);
+      expect(o, `${id} (${env})`).not.toBeNull();
+      expect(o.title, id).toBe(OFFRES_SECOURS[id].title);
+      expect(o.deadline, id).toBe(OFFRES_SECOURS[id].deadline); // état réel : la date limite d'origine, jamais modifiée
+    }
+  }
+  // Insensible à la casse pour les UUID.
+  expect(trouverOffreSecours("9B125270-1234-4567-89AB-CDEF25272026", "production")).not.toBeNull();
+  expect(trouverOffreSecours("inconnu", "production")).toBeNull();
+  expect(trouverOffreSecours("", "production")).toBeNull();
 });
 
 test("aucune offre de secours ne porte « recruteur vérifié » : trouverOffreSecours force recruiterVerified à false, et le code n'écrit plus true", async () => {
@@ -43,13 +59,40 @@ test("aucune offre de secours ne porte « recruteur vérifié » : trouverOffreS
   expect(lire("src/lib/offresSecours.js")).not.toMatch(/recruiterVerified:\s*true/);
 });
 
-test("plan du site : l'offre de secours n'est plus annoncée en production ; sa date limite reste celle de la liste de secours", () => {
+test("plan du site : inchangé par rapport à avant (l'offre de secours reste soumise à sa seule date limite)", () => {
   const s = lire("src/app/sitemap.js");
-  expect(s).toContain("offresSecoursActives() && !knownOfferIds.has(OFFRE_SECOURS.id)");
+  expect(s).not.toContain("offresSecours");
+  expect(s).toContain("if (!knownOfferIds.has(OFFRE_SECOURS.id) && !offreHorsReferencement({ deadline: OFFRE_SECOURS.deadline })) {");
   const [, id, limite] = /OFFRE_SECOURS = \{ id: "([^"]+)", deadline: "([^"]+)" \}/.exec(s);
   const bloc = lire("src/lib/offresSecours.js");
   const debut = bloc.slice(bloc.indexOf(`"${id}": {`));
   expect(/deadline: "([^"]+)"/.exec(debut)[1]).toBe(limite);
+});
+
+test("changement de la règle « +60 jours » : aucune offre visible n'est retirée de la liste ni du plan du site ; seule la déclaration validThrough change", async () => {
+  const ref = await referencement();
+  const maintenant = Date.parse("2026-11-09T12:00:00.000Z");
+  const jour = (n) => new Date(maintenant + n * 86400000).toISOString();
+  const offres = [
+    { id: "a", created_at: jour(-3), is_active: true, status: "approved" }, // récente, sans date limite
+    { id: "b", created_at: jour(-30), is_active: true, status: "approved" }, // 30 jours, sans date limite
+    { id: "c", created_at: jour(-59), is_active: true, status: "approved" }, // 59 jours, sans date limite
+    { id: "d", created_at: jour(-3), deadline: new Date(maintenant + 5 * 86400000).toISOString().slice(0, 10), is_active: true, status: "approved" },
+  ];
+  for (const o of offres) {
+    expect(ref.offreHorsReferencement(o, maintenant), `${o.id} reste dans le plan du site`).toBe(false);
+    expect(ref.offreCloturee(o), `${o.id} reste affichée comme ouverte`).toBe(false);
+  }
+  // La règle de sortie du référencement garde sa fin « publication + 60 jours » : une offre de 61 jours sans date limite en sort, comme avant.
+  expect(ref.offreHorsReferencement({ id: "e", created_at: jour(-61), is_active: true, status: "approved" }, maintenant)).toBe(true);
+  // Seul validThrough (déclaré à Google) n'est plus inventé.
+  for (const o of offres.slice(0, 3)) expect(ref.validThroughIso(o)).toBeUndefined();
+  expect(ref.validThroughIso(offres[3])).toBeDefined();
+  // Les fonctions qui décident de la visibilité n'ont pas été modifiées par cette étape.
+  const src = lire("src/lib/offreReferencement.js");
+  expect(src).toContain("export function offreHorsReferencement(offre, maintenant = Date.now()) {");
+  expect(src).toContain("return fin ? fin.getTime() < maintenant : false;");
+  expect(lire("src/app/sitemap.js")).toContain("if (offreHorsReferencement(offer)) continue;");
 });
 
 // ---------- 2. Contact externe ----------

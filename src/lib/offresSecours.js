@@ -1,10 +1,15 @@
-// Offres statiques de secours : EXEMPLES de développement et de test, jamais servies en production.
+// Offres statiques de secours codées en dur, servies par la fiche /offres/[id].
 //
-// Elles ont longtemps été renvoyées par la fiche /offres/[id] pour les identifiants « 1 » à « 7 », « 100 », « 101 »,
-// « 102 » et plusieurs UUID, en portant toutes « recruteur vérifié » alors qu'aucune vérification n'existait : une
-// fiche d'exemple (Orange, Senelec, Wave…) s'affichait donc en production comme une offre réelle, vérifiée et
-// « clôturée ». Elles restent ici pour le développement et les tests ; en production la fiche répond 404, et aucune
-// ne porte jamais « vérifié » sans vérification réelle (trouverOffreSecours renvoie toujours recruiterVerified: false).
+// Deux familles, traitées différemment :
+//  - les offres d'EXEMPLE (ids « 1 » à « 5 », « 7 » et « 100 » : Orange, Facilité développeur, Senelec, Wave, Bred, CPI, C2K) : jamais servies en production
+//    (la fiche répond 404), conservées pour le développement et les tests ;
+//  - toutes les autres (UUID et ids « 6 », « 101 », « 102 ») : offres qui semblent réelles ou récentes. Elles restent VISIBLES en production avec leur état réel
+//    (clôturée quand la date limite est passée), mais JAMAIS avec le badge « recruteur vérifié » : aucune vérification n'a existé pour elles.
+// Dans le doute, une offre n'est pas classée « exemple ». Aucune offre n'est supprimée ni masquée par ce fichier, hors les exemples ci-dessus en production.
+
+/** Identifiants des offres d'exemple (404 en production). */
+export const IDS_EXEMPLES = Object.freeze(["1", "2", "3", "4", "5", "7", "100"]);
+
 export const OFFRES_SECOURS = {
   "09200c93-6593-4d9c-b6da-9b7680e4d8f0": {
     id: "09200c93-6593-4d9c-b6da-9b7680e4d8f0",
@@ -954,16 +959,19 @@ Envoyez dès maintenant votre CV à l'adresse suivante :
   }
 };
 
-/** Les offres de secours ne servent qu'en développement et en test : jamais quand NODE_ENV vaut « production » (build, Vercel, aperçus compris). */
-export function offresSecoursActives(env = process.env.NODE_ENV) {
-  return env !== "production";
+/** Cette offre de secours est-elle un exemple (à ne jamais servir en production) ? */
+export function estOffreExemple(id) {
+  return IDS_EXEMPLES.includes(String(id ?? "").trim());
 }
 
-/** Offre de secours par identifiant (insensible à la casse), ou null. Toujours recruiterVerified: false. */
+/**
+ * Offre de secours par identifiant (insensible à la casse), ou null. Toujours recruiterVerified: false.
+ * En production, seuls les exemples sont écartés (null → 404) ; les offres qui semblent réelles restent servies.
+ */
 export function trouverOffreSecours(id, env = process.env.NODE_ENV) {
-  if (!offresSecoursActives(env)) return null;
   const cle = String(id ?? "").trim();
   if (!cle) return null;
+  if (env === "production" && estOffreExemple(cle)) return null;
   const trouvee = OFFRES_SECOURS[cle] || Object.values(OFFRES_SECOURS).find((o) => String(o.id).toLowerCase() === cle.toLowerCase());
   return trouvee ? { ...trouvee, recruiterVerified: false } : null;
 }
