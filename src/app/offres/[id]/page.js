@@ -7,7 +7,9 @@ import { SELECT_FICHE_OFFRE, retirerChampsInternes } from "@/lib/colonnesOffres"
 import { adresseImage } from "@/lib/imagesPubliques";
 import { adresseJobPosting, offreCloturee, offreHorsReferencement, validThroughIso } from "@/lib/offreReferencement";
 import { choisirOffresSimilaires } from "@/lib/offresSimilaires";
-import { descriptionOffre, titreOffre } from "@/lib/titresReferencement";
+import { descriptionFicheOffre, titreFicheOffre } from "@/lib/titresReferencement";
+import { offreValidee, peutVoirOffreNonValidee } from "@/lib/visibiliteOffre";
+import { getUserFromCookies } from "@/lib/apiAuth";
 import { trouverOffreSecours } from "@/lib/offresSecours";
 import { candidatureDansFacilite } from "@/lib/contactExterne";
 import { nettoyerOffreAffichee } from "@/lib/nettoyerTexteOffre";
@@ -32,6 +34,24 @@ class OffreIndisponibleError extends Error {
 // PostgREST renvoie PGRST116 quand .single() ne trouve aucune ligne : c'est le
 // seul cas « l'offre n'existe pas ». Toute autre erreur est une panne.
 const CODE_AUCUNE_LIGNE = "PGRST116";
+
+// Visiteur connecté (cookie de session vérifié auprès de Supabase) et son rôle. Appelé SEULEMENT pour une offre non validée : le cas courant ne paie rien.
+// Toute erreur : visiteur inconnu, donc pas d'accès (on refuse en cas de doute).
+async function lireVisiteur(supabase) {
+  try {
+    const user = await getUserFromCookies();
+    if (!user?.id) return null;
+    let estAdmin = false;
+    try {
+      // Rôle lu dans user_roles (modèle RBAC), comme les routes d'administration (voir /api/admin/publish-offer) : la colonne profiles.role est obsolète.
+      const { data: ligneRole } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
+      estAdmin = ligneRole?.role === "admin";
+    } catch {}
+    return { userId: user.id, estAdmin };
+  } catch {
+    return null;
+  }
+}
 
 async function fetchOffer(id) {
   if (!id) return null;
@@ -70,6 +90,11 @@ async function fetchOffer(id) {
 
       if (!error && data) {
         const { recruiter_id: recruteurId, ...donneesPubliques } = data;
+        // Offre non validée (en attente, refusée, brouillon) : visible de son propriétaire et d'un administrateur seulement ; 404 pour les autres.
+        if (!offreValidee(data)) {
+          const visiteur = await lireVisiteur(supabase);
+          if (!peutVoirOffreNonValidee({ recruteurId, visiteur })) return null;
+        }
         let recruiterVerified = false;
         if (recruteurId) {
           try {
@@ -204,8 +229,9 @@ export async function generateMetadata({ params }) {
   }
 
   // Le modèle de titre du site (layout.js) ajoute la marque : le titre d'ici ne la contient pas, et tient en 49 caractères (60 avec la marque).
-  const title = titreOffre(offer);
-  const description = descriptionOffre(offer);
+  // Titre « {Intitulé} à {Ville} – {Entreprise} | Offre d'emploi » (60 caractères au plus) et description d'environ 150 caractères, publiés tels quels.
+  const title = titreFicheOffre(offer);
+  const description = descriptionFicheOffre(offer);
   const url = `${SITE_URL}/offres/${offer.id}`;
   // Aperçu de partage (WhatsApp, Facebook, Google) : l'image est servie par le Worker Cloudflare (cache d'un an) quand l'interrupteur est ouvert, sinon par
   // Supabase comme avant. Réécriture pour l'affichage seulement : rien n'est enregistré.
@@ -218,7 +244,7 @@ export async function generateMetadata({ params }) {
   );
 
   return {
-    title,
+    title: { absolute: title },
     description,
     // Offre clôturée ou arrivée au bout de sa validité : la page reste ouverte aux visiteurs (liens partagés, onglet « Offres expirées »)
     // mais ne doit plus être indexée.
@@ -234,7 +260,7 @@ export async function generateMetadata({ params }) {
     ],
     alternates: { canonical: url },
     openGraph: {
-      title: `${title} | Facilite`,
+      title,
       description,
       url,
       type: "article",
@@ -244,7 +270,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | Facilite`,
+      title,
       description,
       images: [imageUrl],
     },

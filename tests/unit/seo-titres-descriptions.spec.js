@@ -41,13 +41,13 @@ test("description d'offre : sans émoji ni symbole, commence par une lettre ou u
   expect(descriptionOffre({ title: "Comptable", description: "🧾 Court." })).toContain("Court. Offre d'emploi Comptable");
 });
 
-test("fiche offre : titre et description viennent de ces générateurs, plus de marque dans le titre, titres d'erreur sans marque", () => {
+test("fiche offre : titre et description viennent des générateurs de fiche (« … | Offre d'emploi », publié tel quel), titres d'erreur sans marque", () => {
   const p = lire("src/app/offres/[id]/page.js");
-  expect(p).toContain("const title = titreOffre(offer);");
-  expect(p).toContain("const description = descriptionOffre(offer);");
+  expect(p).toContain("const title = titreFicheOffre(offer);");
+  expect(p).toContain("const description = descriptionFicheOffre(offer);");
   expect(p).not.toContain("| Offre d'emploi Facilit");
-  expect(p).toContain('return { title: "Offre d\'emploi introuvable" };');
-  expect(p).toContain("title: `${title} | Facilite`,");
+  expect(p).toContain("return { title: \"Offre d'emploi introuvable\" };");
+  expect(p).toContain("title: { absolute: title },");
 });
 
 test("pages /offres, /etablissements, /autour, /recherche et Marketplace : titre et description propres, sans marque dans le titre", () => {

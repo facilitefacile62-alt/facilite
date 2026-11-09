@@ -61,3 +61,17 @@ export function adresseJobPosting(lieu) {
     addressCountry: "SN",
   };
 }
+
+/**
+ * Ville d'une offre d'après son champ « lieu » (texte libre), pour les titres et descriptions : premier élément avant une virgule, une barre oblique, « & » ou
+ * une parenthèse, sans « et ses environs », première lettre en capitale. « Sénégal » seul, « International » ou un lieu vide ne sont pas des villes : "".
+ */
+export function villeDuLieu(lieu) {
+  const premier = String(lieu ?? "")
+    .split(/[,/&(]/)[0]
+    .replace(/\s+et\s+(?:ses\s+)?environs?.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!premier || /^(?:s[ée]n[ée]gal|international|multi-?pays)$/i.test(premier)) return "";
+  return premier.charAt(0).toUpperCase() + premier.slice(1);
+}
