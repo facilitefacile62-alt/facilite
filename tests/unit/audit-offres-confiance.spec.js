@@ -266,8 +266,8 @@ test("le nettoyage est branché partout : fiche (serveur et affichage), et chaqu
   const page = lire("src/app/offres/[id]/page.js");
   expect(page.match(/nettoyerOffreAffichee\(/g).length).toBeGreaterThanOrEqual(2);
   const client = lire("src/app/offres/[id]/OffreDetailClient.js");
-  expect(client).toContain("retirerMarquesCopie(offer.title)");
-  expect(client).toContain('retirerMarquesCopie(offer.description || "")');
+  expect(client).toContain("nettoyerPourAffichage(offer.title)");
+  expect(client).toContain('nettoyerPourAffichage(offer.description || "")');
   const recruteur = lire("src/app/recruteur/page.js");
   expect(recruteur.match(/description: retirerMarquesCopie\(/g)).toHaveLength(2);
   expect(recruteur.match(/title: retirerMarquesCopie\(/g)).toHaveLength(2);
@@ -277,4 +277,124 @@ test("le nettoyage est branché partout : fiche (serveur et affichage), et chaqu
   const route = lire("src/app/api/admin/publish-offer/route.js");
   expect(route).toContain("title: retirerMarquesCopie(body.title),");
   expect(route).toContain("description: retirerMarquesCopie(body.description),");
+});
+
+// ---------- 5. Nettoyage à l'affichage, partout ----------
+
+test("« ! » collé devant la marque : « ![cite: 13] », « ![cite_start] » et variantes disparaissent ; un « ! » qui termine un mot reste", async () => {
+  const { retirerMarquesCopie, nettoyerPourAffichage } = await nettoyage();
+  const cas = [
+    ["Envoyez votre candidature. ![cite: 13]", "Envoyez votre candidature."],
+    ["Envoyez votre candidature ![cite: 13] Merci", "Envoyez votre candidature Merci"],
+    ["![cite_start]Chef de chantier", "Chef de chantier"],
+    ["Fin du texte ![cite_end]", "Fin du texte"],
+    ["Mission A ![cite: 1, 2] puis B", "Mission A puis B"],
+    ["ligne 1\n![cite: 5] ligne 2", "ligne 1\nligne 2"],
+    ["Texte ![cite]", "Texte"],
+    ["Texte ![CITE: 7].", "Texte."],
+    ["Texte ![4†source] suite", "Texte suite"],
+    ["Venez nombreux![cite: 3]", "Venez nombreux!"],
+    ["Bravo ! [cite: 3]", "Bravo !"],
+    ["![cite: 13] ![cite: 14]", ""],
+  ];
+  for (const [entree, sortie] of cas) {
+    expect(retirerMarquesCopie(entree), entree).toBe(sortie);
+    expect(nettoyerPourAffichage(entree), entree).toBe(sortie);
+  }
+});
+
+test("préfixes de gabarit au tout début : « Titre du poste ou de l'offre : », « Titre de l'offre : » et variantes ; rien d'autre ne change", async () => {
+  const { nettoyerPourAffichage, retirerMarquesCopie } = await nettoyage();
+  const cas = [
+    ["Titre du poste ou de l'offre : Chargé de clientèle", "Chargé de clientèle"],
+    ["Titre du poste ou de l’offre : Chargé de clientèle", "Chargé de clientèle"],
+    ["Titre de l'offre : Comptable", "Comptable"],
+    ["Titre du poste : Comptable", "Comptable"],
+    ["titre de l'annonce :Comptable", "Comptable"],
+    ["Intitulé du poste : Comptable", "Comptable"],
+    ["Intitulé de l'offre: Comptable", "Comptable"],
+    ["Titre : Comptable", "Comptable"],
+    ["  Titre du poste ou de l'offre : Comptable [cite: 2]", "Comptable"],
+    ["Titre du poste : Comptable\nTitre du poste : seconde ligne", "Comptable\nTitre du poste : seconde ligne"],
+  ];
+  for (const [entree, sortie] of cas) expect(nettoyerPourAffichage(entree), entree).toBe(sortie);
+  // Pas en tête, ou autre mot : inchangé.
+  for (const t of ["Le titre du poste : Comptable", "Titres professionnels : Bac+2", "Titrisation : métier", "Intitulés de poste", "Offre : Comptable", "Chef de chantier", "Bonjour !", ""]) {
+    expect(nettoyerPourAffichage(t), t).toBe(t);
+  }
+  // La publication n'enlève QUE les marques de copie, pas les préfixes (réservés à l'affichage).
+  expect(retirerMarquesCopie("Titre du poste : Comptable [cite: 2]")).toBe("Titre du poste : Comptable");
+  expect(nettoyerPourAffichage(null)).toBeNull();
+  expect(nettoyerPourAffichage(undefined)).toBeUndefined();
+});
+
+test("nettoyerOffresAffichees et nettoyerCarteOffre : même nombre d'offres, même ordre, seuls les textes changent ; l'original n'est pas modifié", async () => {
+  const { nettoyerOffresAffichees, nettoyerCarteOffre } = await nettoyage();
+  const offres = [
+    { id: "1", title: "Titre du poste ou de l'offre : A [cite: 1]", description: "Texte ![cite: 13]", contact_email: "a@b.sn" },
+    { id: "2", title: "B", description: null },
+    { id: "3", title: "C", description: "Propre" },
+  ];
+  const copie = JSON.parse(JSON.stringify(offres));
+  const net = nettoyerOffresAffichees(offres);
+  expect(net.map((o) => o.id)).toEqual(["1", "2", "3"]);
+  expect(net[0]).toEqual({ id: "1", title: "A", description: "Texte", contact_email: "a@b.sn" });
+  expect(net[1].description).toBeNull();
+  expect(net[2]).toEqual(offres[2]);
+  expect(offres).toEqual(copie);
+  expect(nettoyerOffresAffichees(undefined)).toBeUndefined();
+  expect(nettoyerCarteOffre({ id: "x", titleFR: "T ![cite: 3]", titleEN: "T ![cite: 3]", descFR: "Titre de l'offre : D", descEN: "D", tags: ["Dakar"] })).toEqual({
+    id: "x", titleFR: "T", titleEN: "T", descFR: "D", descEN: "D", tags: ["Dakar"],
+  });
+});
+
+test("liste des endroits où le texte d'une offre est affiché : tous passent par la fonction commune, aucune copie de l'expression n'existe ailleurs", () => {
+  const endroits = {
+    "src/app/page.js": ["nettoyerPourAffichage(offer.title)", "nettoyerPourAffichage(offer.description)"], // fil d'accueil, rendu serveur
+    "src/app/HomeClient.jsx": ["nettoyerPourAffichage(offer.title)", "nettoyerPourAffichage(offer.description)", "parsed.map(nettoyerCarteOffre)"], // cartes, recommandées, « Autour de moi » (mode autour), cache navigateur
+    "src/app/offres/OffresClient.jsx": ["nettoyerOffresAffichees("], // liste /offres (3 chargements)
+    "src/app/recherche/page.js": ["nettoyerOffresAffichees(jobData"], // résultats de recherche
+    "src/components/Header.jsx": ["nettoyerPourAffichage(off.title)", "nettoyerPourAffichage(o.title)"], // suggestions de recherche, notifications
+    "src/app/candidat/page.js": ["nettoyerOffresAffichees(merged)", "nettoyerPourAffichage(c.job_title)"], // offres recommandées du tableau de bord, candidatures
+    "src/app/candidat/candidatures/page.js": ["nettoyerPourAffichage(c.job_title)"],
+    "src/app/candidat/extracteur/page.js": ["setPosterOffer(nettoyerOffreAffichee(data))"],
+    "src/app/recruteurs/[id]/RecruiterShowcaseClient.jsx": ["nettoyerOffresAffichees(offersData"], // vitrine recruteur + fenêtre de candidature
+    "src/app/offres/[id]/OffresSimilaires.js": ["nettoyerPourAffichage(o.title)"],
+    "src/app/offres/[id]/OffreDetailClient.js": ["nettoyerPourAffichage(offer.title)", 'nettoyerPourAffichage(offer.description || "")'],
+    "src/app/offres/[id]/page.js": ["nettoyerOffreAffichee("], // fiche, JobPosting, métadonnées
+    "src/components/SocialShareButtons.jsx": ["nettoyerPourAffichage(offer?.title || offer?.titleFR)"], // partage, aide à la candidature
+    "src/lib/titresReferencement.js": ["nettoyerPourAffichage(offre?.title)", "nettoyerPourAffichage(offre?.description)"], // balises title, description, og, twitter
+    "src/lib/offresOuvertes.js": ["nettoyerPourAffichage(String(o.title).trim())"], // liens d'offres ouvertes dans le HTML de /offres
+    "src/lib/offresParVille.js": ["nettoyerPourAffichage(l.title)"], // pastilles de la carte « Autour de moi »
+  };
+  for (const [fichier, attendus] of Object.entries(endroits)) {
+    const code = lire(fichier);
+    expect(code, fichier).toContain("nettoyerTexteOffre");
+    for (const a of attendus) expect(code, `${fichier} : ${a}`).toContain(a);
+    // Aucune copie de l'expression des marques ni du préfixe en dehors de la bibliothèque.
+    expect(code, fichier).not.toMatch(/cite\(\?:_start|oaicite|PREFIXE_GABARIT/);
+  }
+  // Un seul endroit définit les expressions.
+  const lib = lire("src/lib/nettoyerTexteOffre.js");
+  expect(lib).toContain("PREFIXE_GABARIT");
+  expect(lib.match(/export function /g)).toHaveLength(5);
+});
+
+test("métadonnées (titre, description, og, twitter) : titreOffre et descriptionOffre nettoient les marques et le préfixe de gabarit", async () => {
+  const { titreOffre, descriptionOffre } = await import("../../src/lib/titresReferencement.js");
+  const offre = {
+    title: "Titre du poste ou de l'offre : Chargé de clientèle ![cite: 13]",
+    company: "Foundever",
+    description: "Titre de l'offre : Nous recrutons des conseillers clients pour un centre d'appels à Dakar, avec formation payée ![cite: 4] et primes mensuelles.",
+    location: "Dakar",
+  };
+  expect(titreOffre(offre)).toBe("Chargé de clientèle – Foundever");
+  const d = descriptionOffre(offre);
+  expect(d).not.toMatch(/cite|Titre de l/i);
+  expect(d.startsWith("Nous recrutons")).toBe(true);
+});
+
+test("aucune écriture en base ni masquage : la bibliothèque n'écrit rien (le test de longueur plus haut garantit qu'aucune offre n'est retirée)", () => {
+  const lib = lire("src/lib/nettoyerTexteOffre.js");
+  expect(lib).not.toMatch(/supabase|\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });

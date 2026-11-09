@@ -33,6 +33,7 @@ const AutourCentre = dynamic(() => import("@/app/autour/AutourCentre"), { ssr: f
 const TemplatePreviewModal = dynamic(() => import("@/components/TemplatePreviewModal"), { ssr: false });
 const StoryViewer = dynamic(() => import("@/components/StoryViewer"), { ssr: false });
 import { TexteAvecLiens } from "@/lib/liens";
+import { nettoyerPourAffichage, nettoyerCarteOffre } from "@/lib/nettoyerTexteOffre";
 import { useCandidateMatchScores } from "@/lib/useCandidateMatchScores";
 import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 
@@ -374,8 +375,8 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
           const nonExpired = data.filter((offer) => !isOfferExpired(offer));
           const formatted = nonExpired.map((offer) => ({
             id: offer.id,
-            titleFR: offer.title || "Offre d'emploi",
-            titleEN: offer.title || "Job offer",
+            titleFR: nettoyerPourAffichage(offer.title) || "Offre d'emploi",
+            titleEN: nettoyerPourAffichage(offer.title) || "Job offer",
             company: offer.company || "Entreprise confidentielle",
             logo: offer.image_url || null,
             logoColor: "bg-gray-500",
@@ -384,8 +385,8 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
             timeFR: new Date(offer.created_at).toLocaleDateString("fr-FR"),
             timeEN: new Date(offer.created_at).toLocaleDateString("en-US"),
             contract: offer.contract_type || "Non spécifié",
-            descFR: offer.description || "",
-            descEN: offer.description || "",
+            descFR: nettoyerPourAffichage(offer.description) || "",
+            descEN: nettoyerPourAffichage(offer.description) || "",
             tags: [offer.location, offer.contract_type].filter(Boolean),
             image: offer.image_url || null,
             image_url: offer.image_url || null,
@@ -425,7 +426,8 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
       if (cached && dynamicJobs.length === 0) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setDynamicJobs(parsed);
+          // Le cache du navigateur peut garder des textes enregistrés avant le nettoyage : on les nettoie aussi.
+          setDynamicJobs(parsed.map(nettoyerCarteOffre));
           setJobsLoading(false);
         }
       }

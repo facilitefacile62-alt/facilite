@@ -16,7 +16,9 @@ const MARQUES = [
   String.raw`:?contentReference\[oaicite:\d+\](?:\{index=\d+\})?`,
   String.raw`\[oaicite:\d+\]`,
 ];
-const MARQUE = `(?:${MARQUES.join("|")})`;
+// Un « ! » collé devant la marque (« ![cite: 13] », syntaxe d'image Markdown laissée par la copie) en fait partie, sauf s'il termine un mot : « Venez nombreux![cite: 3] »
+// garde son point d'exclamation.
+const MARQUE = String.raw`(?:(?<![^\s])!)?(?:${MARQUES.join("|")})`;
 const CONTIENT_MARQUE = new RegExp(MARQUE, "i");
 // Marque(s) en début de ligne : on retire aussi l'espace qui les suit.
 const DEBUT_DE_LIGNE = new RegExp(`(^|\\n)[ \\t]*(?:${MARQUE}[ \\t]*)+`, "gi");
@@ -35,8 +37,37 @@ export function retirerMarquesCopie(texte) {
   });
 }
 
-/** Copie de l'offre dont le titre et la description sont nettoyés (les autres champs ne sont pas touchés). */
+// Préfixes de gabarit laissés en tête d'un titre ou d'une description (« Titre du poste ou de l'offre : Chargé de clientèle »). Seulement tout au début du texte.
+const PREFIXE_GABARIT = new RegExp(
+  String.raw`^[ \t]*(?:titre|intitul[ée])(?:[ \t]+(?:du[ \t]+poste|de[ \t]+poste|de[ \t]+l['’](?:offre|annonce|emploi)))?(?:[ \t]+ou[ \t]+(?:de[ \t]+l['’](?:offre|annonce|emploi)|du[ \t]+poste))?[ \t]*:[ \t]*`,
+  "i"
+);
+
+/** Texte d'une offre prêt à l'AFFICHAGE : marques de copie retirées, puis préfixe de gabarit en tête retiré. Un texte sans l'un ni l'autre est renvoyé identique. */
+export function nettoyerPourAffichage(texte) {
+  if (typeof texte !== "string") return texte;
+  return retirerMarquesCopie(texte).replace(PREFIXE_GABARIT, "");
+}
+
+/** Copie de l'offre dont le titre et la description sont nettoyés pour l'affichage (les autres champs et l'original ne sont pas touchés). */
 export function nettoyerOffreAffichee(offre) {
   if (!offre || typeof offre !== "object") return offre;
-  return { ...offre, title: retirerMarquesCopie(offre.title), description: retirerMarquesCopie(offre.description) };
+  return { ...offre, title: nettoyerPourAffichage(offre.title), description: nettoyerPourAffichage(offre.description) };
+}
+
+/** Liste d'offres nettoyée pour l'affichage (même longueur, même ordre : aucune offre n'est retirée). */
+export function nettoyerOffresAffichees(offres) {
+  return Array.isArray(offres) ? offres.map(nettoyerOffreAffichee) : offres;
+}
+
+/** Carte d'offre déjà mise en forme pour l'accueil (titleFR, titleEN, descFR, descEN) : textes nettoyés pour l'affichage, autres champs intacts. */
+export function nettoyerCarteOffre(carte) {
+  if (!carte || typeof carte !== "object") return carte;
+  return {
+    ...carte,
+    titleFR: nettoyerPourAffichage(carte.titleFR),
+    titleEN: nettoyerPourAffichage(carte.titleEN),
+    descFR: nettoyerPourAffichage(carte.descFR),
+    descEN: nettoyerPourAffichage(carte.descEN),
+  };
 }

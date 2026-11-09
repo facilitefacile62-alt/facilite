@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { chargerNiveauxEtudes, comparerNiveaux } from "@/lib/niveauxEtudes";
@@ -96,7 +97,7 @@ export default function RecruiterShowcasePage() {
         }
 
         setRecruiterProfile(recruiterData || null);
-        setOffers(offersData || []);
+        setOffers(nettoyerOffresAffichees(offersData || []));
 
         const { data: verified } = await supabase.rpc("has_badge", {
           check_user_id: recruiterId,

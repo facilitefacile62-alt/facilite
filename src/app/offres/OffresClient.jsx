@@ -17,6 +17,7 @@ import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
 import { adresseImage } from "@/lib/imagesPubliques";
 // Import manquant depuis l'ajout des bascules de fonctionnalités sur cette
 // page : les trois symboles étaient utilisés sans jamais être importés, et
@@ -223,7 +224,7 @@ function OffresContent({ listingType } = {}) {
         // (isOfferExpired la couvre déjà, critère 2) — l'exclure ici
         // l'empêchait d'y apparaître, même une fois toutes les offres
         // chargées.
-        const nouvelles = (data || []).filter((o) => (o.status || "").toLowerCase() !== "draft");
+        const nouvelles = nettoyerOffresAffichees((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
         setOffers((prev) => {
           // Dédoublonnage : une offre publiée entre deux pages décale la
           // fenêtre et pourrait renvoyer une ligne déjà affichée.
@@ -250,7 +251,7 @@ function OffresContent({ listingType } = {}) {
     try {
       const { data, count, error } = await requeteOffres(0, Math.max((totalOffres || 1000) - 1, TAILLE_PAGE - 1));
       if (!error) {
-        setOffers((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
+        setOffers(nettoyerOffresAffichees((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft")));
         if (typeof count === "number") setTotalOffres(count);
         setToutCharge(true);
       }
@@ -277,7 +278,7 @@ function OffresContent({ listingType } = {}) {
         if (error) {
           console.error("Erreur chargement des offres:", error);
         } else {
-          const activeOffers = (data || []).filter((o) => (o.status || "").toLowerCase() !== "draft");
+          const activeOffers = nettoyerOffresAffichees((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
           setOffers(activeOffers);
           setTotalOffres(typeof count === "number" ? count : null);
           setToutCharge(typeof count === "number" ? activeOffers.length >= count : true);

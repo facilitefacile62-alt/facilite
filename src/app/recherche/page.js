@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
+import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import ApplyModal from "@/components/ApplyModal";
 
@@ -190,7 +191,7 @@ function RechercheContent() {
           .order("created_at", { ascending: false });
 
         if (jobData) {
-          matchedOffers = jobData.filter((o) => o.is_active !== false);
+          matchedOffers = nettoyerOffresAffichees(jobData.filter((o) => o.is_active !== false));
         }
       } catch (err) {
         console.error("Erreur recherche offres Supabase:", err);

@@ -13,7 +13,7 @@ import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { contactExterneNonVerifie, MESSAGE_CONTACT_EXTERNE } from "@/lib/contactExterne";
-import { retirerMarquesCopie } from "@/lib/nettoyerTexteOffre";
+import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -562,7 +562,7 @@ export default function OffreDetailClient({ initialOffer }) {
                   )}
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{retirerMarquesCopie(offer.title)}</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{nettoyerPourAffichage(offer.title)}</h1>
                 
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <p className="text-base font-bold text-gray-600">{offer.company}</p>
@@ -702,7 +702,7 @@ export default function OffreDetailClient({ initialOffer }) {
                   
                   <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed font-normal break-words overflow-hidden max-w-full">
                     {(() => {
-                      const fullText = retirerMarquesCopie(offer.description || "");
+                      const fullText = nettoyerPourAffichage(offer.description || "");
                       const shouldTruncate = fullText.length > 400;
                       const displayText = shouldTruncate && !isDescriptionExpanded
                         ? fullText.substring(0, 400) + "..."
