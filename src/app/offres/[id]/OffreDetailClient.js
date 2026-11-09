@@ -14,6 +14,8 @@ import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { contactExterneNonVerifie, MESSAGE_CONTACT_EXTERNE } from "@/lib/contactExterne";
 import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
+import SignalerOffre from "@/components/SignalerOffre";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -532,7 +534,7 @@ export default function OffreDetailClient({ initialOffer }) {
                 <div className="flex justify-between items-start gap-4 mb-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-blue-100 text-blue-700">
-                      {offer.contract_type}
+                      {libelleContrat(offer.contract_type)}
                     </span>
                     {offer.min_education_level && offer.min_education_level !== "Aucun" && (
                       <span className="px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-purple-100 text-purple-700">
@@ -692,6 +694,9 @@ export default function OffreDetailClient({ initialOffer }) {
                   onToast={(msg) => setToast(msg)}
                   className="my-6"
                 />
+
+                {/* Signalement : comptes connectés (un visiteur est renvoyé vers la connexion) ; pas pour le propriétaire ni l'administrateur de l'offre. */}
+                {!canManage && <SignalerOffre offreId={offer.id} />}
 
                 {/* Description de l'offre (Lisibilité 100% nette sans dégradé masquant) */}
                 <div className="my-6 bg-gray-50/70 dark:bg-gray-800/40 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700">

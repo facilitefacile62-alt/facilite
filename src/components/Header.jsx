@@ -3,6 +3,7 @@
 import { useIaAutorisee, MESSAGE_IA_EN_PAUSE } from "@/lib/useIaAutorisee";
 import { motPourFiltre } from "@/lib/texte";
 import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -966,7 +967,7 @@ export default function Header() {
                 id: `sb_off_${off.id}`,
                 title: nettoyerPourAffichage(off.title) || "Offre d'emploi",
                 type: "Offre d'emploi",
-                subtitle: `${off.company || "Recruteur confidentiel"} • 📍 ${off.location || "Sénégal"} (${off.contract_type || "CDI"})`,
+                subtitle: `${off.company || "Recruteur confidentiel"} • 📍 ${off.location || "Sénégal"} (${libelleContrat(off.contract_type)})`,
                 targetUrl: `/offres/${off.id}`,
                 icon: "fa-briefcase",
                 badgeColor: "blue",

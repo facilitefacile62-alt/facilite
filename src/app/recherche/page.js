@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import ApplyModal from "@/components/ApplyModal";
 
@@ -448,7 +449,7 @@ function RechercheContent() {
                     >
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                          {offer.contract_type || "CDI"}
+                          {libelleContrat(offer.contract_type)}
                         </span>
                       </div>
 

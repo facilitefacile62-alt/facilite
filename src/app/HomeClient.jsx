@@ -34,6 +34,7 @@ const TemplatePreviewModal = dynamic(() => import("@/components/TemplatePreviewM
 const StoryViewer = dynamic(() => import("@/components/StoryViewer"), { ssr: false });
 import { TexteAvecLiens } from "@/lib/liens";
 import { nettoyerPourAffichage, nettoyerCarteOffre } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import { useCandidateMatchScores } from "@/lib/useCandidateMatchScores";
 import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 
@@ -384,7 +385,7 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
             location: offer.location || "Non spécifié",
             timeFR: new Date(offer.created_at).toLocaleDateString("fr-FR"),
             timeEN: new Date(offer.created_at).toLocaleDateString("en-US"),
-            contract: offer.contract_type || "Non spécifié",
+            contract: libelleContrat(offer.contract_type),
             descFR: nettoyerPourAffichage(offer.description) || "",
             descEN: nettoyerPourAffichage(offer.description) || "",
             tags: [offer.location, offer.contract_type].filter(Boolean),
@@ -1767,8 +1768,8 @@ export default function Home({ initialOffers = [], mode = "accueil" }) {
                         <span aria-hidden="true">·</span>
                         <span>
                           {job.positions_count && job.positions_count > 1
-                            ? `${job.positions_count} postes (${job.contract})`
-                            : job.contract}
+                            ? `${job.positions_count} postes (${libelleContrat(job.contract)})`
+                            : libelleContrat(job.contract)}
                         </span>
                         {job.deadline && (
                           <>

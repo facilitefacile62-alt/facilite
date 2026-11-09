@@ -6,8 +6,10 @@
  * indiquant exactement d'où vient l'utilisateur (page, offre, service, etc.).
  */
 
-export const FACILITE_WHATSAPP_NUMBER = "221771400832";
-export const FACILITE_WHATSAPP_DISPLAY = "+221 77 140 08 32";
+import { FACILITE_WHATSAPP_NUMBER, FACILITE_WHATSAPP_DISPLAY } from "./contactFacilite.js";
+
+// Numéro défini une seule fois dans contactFacilite.js (réexporté ici pour les imports existants).
+export { FACILITE_WHATSAPP_NUMBER, FACILITE_WHATSAPP_DISPLAY };
 
 /**
  * Construit l'URL WhatsApp avec le message de contexte pré-rempli.

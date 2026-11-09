@@ -23,6 +23,8 @@ const PUBLIC_ROUTES = [
   // /login.
   "/verifiez-votre-email",
   "/faq",
+  // Page « Contact » : coordonnées publiques de l'équipe, lisibles sans compte.
+  "/contact",
   // Échange du code OAuth (voir src/app/auth/callback/route.js) : atteint
   // AVANT qu'un cookie de session existe, par construction — doit rester
   // public pour ne pas se bloquer lui-même.

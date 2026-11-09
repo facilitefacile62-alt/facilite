@@ -18,6 +18,7 @@ import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/spons
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import { adresseImage } from "@/lib/imagesPubliques";
 // Import manquant depuis l'ajout des bascules de fonctionnalités sur cette
 // page : les trois symboles étaient utilisés sans jamais être importés, et
@@ -867,7 +868,7 @@ function OffresContent({ listingType } = {}) {
                     <p className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap min-h-[18px]">
                       <span>{offer.location || "Sénégal"}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{offer.contract_type || "CDI"}</span>
+                      <span>{libelleContrat(offer.contract_type)}</span>
                       {offer.deadline && (
                         <>
                           <span aria-hidden="true">·</span>

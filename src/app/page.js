@@ -3,6 +3,7 @@ import { getSupabasePublicClient } from "@/lib/supabase";
 import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import HomeClient from "./HomeClient";
 
 export const metadata = canonicalMetadata("/");
@@ -32,7 +33,7 @@ async function getInitialOffers() {
       location: offer.location || "Non spécifié",
       timeFR: new Date(offer.created_at).toLocaleDateString("fr-FR"),
       timeEN: new Date(offer.created_at).toLocaleDateString("en-US"),
-      contract: offer.contract_type || "Non spécifié",
+      contract: libelleContrat(offer.contract_type),
       descFR: nettoyerPourAffichage(offer.description) || "",
       descEN: nettoyerPourAffichage(offer.description) || "",
       tags: [offer.location, offer.contract_type].filter(Boolean),

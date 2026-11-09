@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { resolveOfferAction, extractOfferContactMethods } from "@/lib/offerContact";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import LecteurAudioOffre from "@/components/LecteurAudioOffre";
 
 function effectiveLinkForHelp(offer, externalLink) {
@@ -45,7 +46,7 @@ export default function SocialShareButtons({
   const title = nettoyerPourAffichage(offer?.title || offer?.titleFR) || "Offre d'emploi";
   const company = offer?.company || "Facilite";
   const location = offer?.location || "Sénégal";
-  const contract = offer?.contract || offer?.contract_type || "CDI";
+  const contract = libelleContrat(offer?.contract || offer?.contract_type);
 
   const strOfferId = offerId ? String(offerId) : "";
   const hash = strOfferId ? strOfferId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) : 42;
