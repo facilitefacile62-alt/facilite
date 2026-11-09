@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { safeJsonLdString } from "@/lib/jsonLd";
-import { FACILITE_EMAIL_CONTACT, FACILITE_WHATSAPP_DISPLAY, FACILITE_WHATSAPP_NUMBER } from "@/lib/contactFacilite";
+import { FACILITE_EDITEUR, FACILITE_EMAIL_CONTACT, FACILITE_WHATSAPP_DISPLAY, FACILITE_WHATSAPP_NUMBER, editeurRenseigne } from "@/lib/contactFacilite";
 
 // Page « Contact » : comment joindre l'équipe, avec les seules coordonnées déjà publiées sur le site (WhatsApp d'assistance de la FAQ, adresse e-mail des
-// pages légales, messagerie, FAQ). Les informations de l'éditeur qui ne figurent nulle part dans le code (raison sociale, numéro d'enregistrement, adresse
-// postale) sont laissées « à compléter » et clairement marquées : elles ne doivent JAMAIS être inventées.
+// pages légales, messagerie, FAQ). Le bloc « Éditeur du site » (raison sociale, numéro d'enregistrement, adresse) n'apparaît que si les trois valeurs sont
+// renseignées dans src/lib/contactFacilite.js ; tant qu'elles sont vides, il est absent de la page. Ces informations ne doivent JAMAIS être inventées.
 const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith("http") ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 const URL_PAGE = `${SITE_URL}/contact`;
@@ -34,17 +34,6 @@ const fildariane = {
 
 const CARTE = "rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5";
 const LIEN = "font-semibold text-emerald-700 dark:text-emerald-400 underline underline-offset-2";
-
-function AComplete({ children }) {
-  return (
-    <span
-      data-a-completer
-      className="inline-block rounded-md border border-amber-400 bg-amber-50 px-2 py-0.5 text-sm font-bold text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-200"
-    >
-      [À COMPLÉTER : {children}]
-    </span>
-  );
-}
 
 export default function ContactPage() {
   return (
@@ -107,23 +96,25 @@ export default function ContactPage() {
           </p>
         </section>
 
-        <section aria-labelledby="editeur" className="mt-10">
-          <h2 id="editeur" className="text-xl font-extrabold text-gray-900 dark:text-gray-100">Éditeur du site</h2>
-          <dl className="mt-3 space-y-3 text-base text-gray-800 dark:text-gray-200">
-            <div>
-              <dt className="text-sm font-bold text-gray-600 dark:text-gray-400">Nom ou raison sociale</dt>
-              <dd><AComplete>nom de l&apos;éditeur</AComplete></dd>
-            </div>
-            <div>
-              <dt className="text-sm font-bold text-gray-600 dark:text-gray-400">Numéro d&apos;enregistrement</dt>
-              <dd><AComplete>numéro d&apos;enregistrement de l&apos;entreprise</AComplete></dd>
-            </div>
-            <div>
-              <dt className="text-sm font-bold text-gray-600 dark:text-gray-400">Adresse</dt>
-              <dd><AComplete>adresse postale</AComplete></dd>
-            </div>
-          </dl>
-        </section>
+        {editeurRenseigne() && (
+          <section aria-labelledby="editeur" className="mt-10">
+            <h2 id="editeur" className="text-xl font-extrabold text-gray-900 dark:text-gray-100">Éditeur du site</h2>
+            <dl className="mt-3 space-y-3 text-base text-gray-800 dark:text-gray-200">
+              <div>
+                <dt className="text-sm font-bold text-gray-600 dark:text-gray-400">Nom ou raison sociale</dt>
+                <dd>{FACILITE_EDITEUR.raisonSociale}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-bold text-gray-600 dark:text-gray-400">Numéro d&apos;enregistrement</dt>
+                <dd>{FACILITE_EDITEUR.numeroEnregistrement}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-bold text-gray-600 dark:text-gray-400">Adresse</dt>
+                <dd>{FACILITE_EDITEUR.adresse}</dd>
+              </div>
+            </dl>
+          </section>
+        )}
 
         <p className="mt-10 text-sm text-gray-700 dark:text-gray-300">
           Voir aussi : <Link href="/conditions" className={LIEN}>conditions d&apos;utilisation</Link> et{" "}

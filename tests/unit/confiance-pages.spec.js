@@ -117,7 +117,7 @@ test("bouton « Signaler cette offre » : visiteur renvoyé vers la connexion pu
 
 // ---------- 2. Contact ----------
 
-test("page Contact : seulement des coordonnées déjà publiées (WhatsApp d'assistance, e-mail des pages légales), jamais inventées ; trois informations « à compléter » marquées", async () => {
+test("page Contact : seulement des coordonnées déjà publiées (WhatsApp d'assistance, e-mail des pages légales), jamais inventées ; aucun encadré « à compléter » n'est affiché", async () => {
   const { FACILITE_WHATSAPP_NUMBER, FACILITE_WHATSAPP_DISPLAY, FACILITE_EMAIL_CONTACT } = await coord();
   // Mêmes valeurs que celles déjà publiées ailleurs sur le site.
   expect(lire("src/app/faq/page.js")).toContain(FACILITE_WHATSAPP_DISPLAY);
@@ -131,15 +131,33 @@ test("page Contact : seulement des coordonnées déjà publiées (WhatsApp d'ass
   // Aucun numéro ni adresse écrits en dur dans la page : tout vient de la bibliothèque.
   expect(page).not.toMatch(/\+?\d[\d ]{8,}\d/);
   expect(page).not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
-  // Trois informations de l'éditeur laissées « à compléter », visiblement marquées.
-  expect(page.match(/<AComplete>/g)).toHaveLength(3);
-  expect(page).toContain("[À COMPLÉTER : {children}]");
-  expect(page).toContain("data-a-completer");
+  // Plus aucun encadré « à compléter » dans la page publique.
+  expect(page).not.toMatch(/COMPLÉTER|AComplete|data-a-completer/i);
   for (const lien of ["/messagerie", "/faq", "/aide-candidature", "/conseils/anti-arnaque", "/conditions", "/confidentialite"]) expect(page).toContain(`"${lien}"`);
   // Le numéro WhatsApp réexporté par whatsappHelp.js reste le même.
   const w = lire("src/lib/whatsappHelp.js");
   expect(w).toContain('from "./contactFacilite.js"');
   expect(w).not.toContain('"221771400832"');
+});
+
+test("bloc « Éditeur du site » : absent tant que la raison sociale, le numéro d'enregistrement et l'adresse ne sont pas TOUS renseignés ; aucune valeur inventée", async () => {
+  const { FACILITE_EDITEUR, editeurRenseigne } = await coord();
+  // Configuration actuelle : trois valeurs vides → le bloc n'est pas affiché.
+  expect(FACILITE_EDITEUR).toEqual({ raisonSociale: "", numeroEnregistrement: "", adresse: "" });
+  expect(editeurRenseigne()).toBe(false);
+  // Une ou deux valeurs ne suffisent pas ; des espaces non plus ; les trois ensemble, oui.
+  const plein = { raisonSociale: "Exemple SARL", numeroEnregistrement: "XX-000-0000", adresse: "1 rue Exemple, Ville" };
+  expect(editeurRenseigne(plein)).toBe(true);
+  for (const cle of Object.keys(plein)) expect(editeurRenseigne({ ...plein, [cle]: "" }), cle).toBe(false);
+  expect(editeurRenseigne({ ...plein, adresse: "   " })).toBe(false);
+  expect(editeurRenseigne({ raisonSociale: "A", numeroEnregistrement: "B" })).toBe(false);
+  expect(editeurRenseigne(null)).toBe(false);
+  expect(editeurRenseigne({ raisonSociale: 1, numeroEnregistrement: 2, adresse: 3 })).toBe(false);
+  // La page n'affiche le bloc que si editeurRenseigne() est vrai, et lit les valeurs dans le fichier de configuration (rien en dur dans la page).
+  const page = lire("src/app/contact/page.js");
+  expect(page).toContain("{editeurRenseigne() && (");
+  for (const cle of ["raisonSociale", "numeroEnregistrement", "adresse"]) expect(page).toContain(`{FACILITE_EDITEUR.${cle}}`);
+  expect(page.indexOf("{editeurRenseigne() && (")).toBeLessThan(page.indexOf(">Éditeur du site</h2>"));
 });
 
 // ---------- 1. Conseils anti-arnaque ----------
