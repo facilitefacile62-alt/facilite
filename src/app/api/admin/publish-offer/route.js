@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { problemesReferencement } from "@/lib/validationOffreReferencement";
+import { retirerMarquesCopie } from "@/lib/nettoyerTexteOffre";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,9 @@ export async function POST(req) {
     }
     const payload = {
       ...body,
+      // Résidus de copie (« [cite: 13] »…) retirés avant l'enregistrement.
+      title: retirerMarquesCopie(body.title),
+      description: retirerMarquesCopie(body.description),
       status: "approved",
       is_active: true,
       archived_at: null,

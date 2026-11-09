@@ -2,6 +2,8 @@ import { canonicalMetadata } from "@/lib/staticPageMetadata";
 import { getSupabasePublicClient } from "@/lib/supabase";
 import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import HomeClient from "./HomeClient";
 
 export const metadata = canonicalMetadata("/");
@@ -22,8 +24,8 @@ async function getInitialOffers() {
     const nonExpired = data.filter((offer) => !isOfferExpired(offer));
     return nonExpired.map((offer) => ({
       id: offer.id,
-      titleFR: offer.title || "Offre d'emploi",
-      titleEN: offer.title || "Job offer",
+      titleFR: nettoyerPourAffichage(offer.title) || "Offre d'emploi",
+      titleEN: nettoyerPourAffichage(offer.title) || "Job offer",
       company: offer.company || "Entreprise confidentielle",
       logo: offer.image_url || null,
       logoColor: "bg-gray-500",
@@ -31,9 +33,9 @@ async function getInitialOffers() {
       location: offer.location || "Non spécifié",
       timeFR: new Date(offer.created_at).toLocaleDateString("fr-FR"),
       timeEN: new Date(offer.created_at).toLocaleDateString("en-US"),
-      contract: offer.contract_type || "Non spécifié",
-      descFR: offer.description || "",
-      descEN: offer.description || "",
+      contract: libelleContrat(offer.contract_type),
+      descFR: nettoyerPourAffichage(offer.description) || "",
+      descEN: nettoyerPourAffichage(offer.description) || "",
       tags: [offer.location, offer.contract_type].filter(Boolean),
       image: offer.image_url || null,
       image_url: offer.image_url || null,

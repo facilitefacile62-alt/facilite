@@ -7,6 +7,7 @@ import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import UnreadBadge from "@/components/UnreadBadge";
 import StatusBadge from "@/components/StatusBadge";
+import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
 export default function CandidaturesPage() {
@@ -215,7 +216,7 @@ export default function CandidaturesPage() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="font-extrabold text-gray-900 truncate">{c.job_title}</p>
+                        <p className="font-extrabold text-gray-900 truncate">{nettoyerPourAffichage(c.job_title)}</p>
                         <p className="text-xs text-gray-500 truncate">{c.company}</p>
                         <p className="text-[11px] text-gray-400 mt-0.5">
                           Postulé le {new Date(c.created_at).toLocaleDateString("fr-FR")}

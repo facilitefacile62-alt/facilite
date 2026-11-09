@@ -4,6 +4,7 @@
 // CONFIDENTIALITÉ : on ne lit et on n'affiche que l'identifiant, l'intitulé, l'entreprise et le lieu. Jamais l'identifiant du recruteur, un numéro, un e-mail ni un
 // autre contact (voir COLONNES_LIENS_OFFRES : la requête ne les lit pas).
 import { offreHorsReferencement } from "./offreReferencement.js";
+import { nettoyerPourAffichage } from "./nettoyerTexteOffre.js";
 
 export const COLONNES_LIENS_OFFRES = ["id", "title", "company", "location", "deadline", "created_at", "status", "is_active"];
 export const SELECT_LIENS_OFFRES = COLONNES_LIENS_OFFRES.join(",");
@@ -25,5 +26,5 @@ export function offresOuvertes(lignes, maintenant = Date.now(), limite = LIMITE_
         !offreHorsReferencement(o, maintenant)
     )
     .slice(0, limite)
-    .map((o) => ({ id: o.id, title: String(o.title).trim(), company: String(o.company || "").trim(), location: String(o.location || "").trim() }));
+    .map((o) => ({ id: o.id, title: nettoyerPourAffichage(String(o.title).trim()), company: String(o.company || "").trim(), location: String(o.location || "").trim() }));
 }

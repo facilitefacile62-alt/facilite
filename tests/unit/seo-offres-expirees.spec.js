@@ -15,12 +15,13 @@ const NOW = Date.now();
 const jour = (n) => new Date(NOW + n * J).toISOString().slice(0, 10);
 const iso = (n) => new Date(NOW + n * J).toISOString();
 
-test("date de fin : la date limite (toute la journée), sinon publication + 60 jours, FIXE d'une visite à l'autre", async () => {
+test("date de fin : la date limite (toute la journée), sinon publication + 60 jours pour décider du référencement (FIXE d'une visite à l'autre) ; validThrough, lui, n'est déclaré qu'avec une vraie date limite", async () => {
   const { dateFinValidite, validThroughIso } = await ref();
   expect(validThroughIso({ deadline: "2026-11-05" })).toBe("2026-11-05T23:59:59.999Z");
   const sans = { created_at: "2026-09-01T10:00:00.000Z" };
-  expect(validThroughIso(sans)).toBe(new Date(Date.parse("2026-09-01T10:00:00.000Z") + 60 * J).toISOString());
-  expect(validThroughIso(sans)).toBe(validThroughIso(sans));
+  expect(dateFinValidite(sans).toISOString()).toBe(new Date(Date.parse("2026-09-01T10:00:00.000Z") + 60 * J).toISOString());
+  expect(dateFinValidite(sans).getTime()).toBe(dateFinValidite(sans).getTime());
+  expect(validThroughIso(sans)).toBeUndefined();
   expect(dateFinValidite({})).toBeNull();
   expect(validThroughIso({})).toBeUndefined();
 });
@@ -76,7 +77,7 @@ test("plan du site : plus d'offre clôturée, pages fixes à date stable, offre 
   expect(s).toContain("lastModified: DATE_PAGES_FIXES,");
   expect(s).not.toMatch(/lastModified: now,\n\s+changeFrequency: route/);
   const secours = /OFFRE_SECOURS = \{ id: "([^"]+)", deadline: "([^"]+)" \}/.exec(s);
-  const fiche = lire("src/app/offres/[id]/page.js");
+  const fiche = lire("src/lib/offresSecours.js");
   const bloc = fiche.slice(fiche.indexOf(`"${secours[1]}": {`));
   expect(/deadline: "([^"]+)"/.exec(bloc)[1]).toBe(secours[2]);
 });

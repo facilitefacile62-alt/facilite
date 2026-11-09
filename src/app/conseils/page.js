@@ -58,6 +58,9 @@ export default function ConseilsIndex() {
           </Link>
         </p>
         <p className="mt-4 text-sm text-gray-700 dark:text-gray-300">
+          Pour chercher en sécurité, lisez aussi nos <Link href="/conseils/anti-arnaque" className="font-semibold text-emerald-700 dark:text-emerald-400 underline underline-offset-2">conseils anti-arnaque</Link>.
+        </p>
+        <p className="mt-4 text-sm text-gray-700 dark:text-gray-300">
           Vous cherchez déjà un poste ? Parcourez <Link href="/offres" className="font-semibold text-emerald-700 dark:text-emerald-400 underline underline-offset-2">les offres d&apos;emploi</Link>.
         </p>
       </main>

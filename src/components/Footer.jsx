@@ -53,6 +53,14 @@ export default function Footer() {
         <Link href="/conditions" className="hover:text-emerald-600 dark:hover:text-[#10E688] transition">
           Conditions d&apos;utilisation
         </Link>
+        <span className="hidden sm:inline">·</span>
+        <Link href="/conseils/anti-arnaque" className="hover:text-emerald-600 dark:hover:text-[#10E688] transition">
+          Conseils anti-arnaque
+        </Link>
+        <span className="hidden sm:inline">·</span>
+        <Link href="/contact" className="hover:text-emerald-600 dark:hover:text-[#10E688] transition">
+          Contact
+        </Link>
       </div>
       {/* Conseils : l'index puis les cinq guides (pied de page seulement, la navigation principale ne change pas). */}
       <nav aria-label="Conseils" className="max-w-6xl mx-auto mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-bold text-gray-500 dark:text-gray-400">

@@ -12,6 +12,10 @@ import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import { contactExterneNonVerifie, MESSAGE_CONTACT_EXTERNE } from "@/lib/contactExterne";
+import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
+import SignalerOffre from "@/components/SignalerOffre";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -530,7 +534,7 @@ export default function OffreDetailClient({ initialOffer }) {
                 <div className="flex justify-between items-start gap-4 mb-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-blue-100 text-blue-700">
-                      {offer.contract_type}
+                      {libelleContrat(offer.contract_type)}
                     </span>
                     {offer.min_education_level && offer.min_education_level !== "Aucun" && (
                       <span className="px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-purple-100 text-purple-700">
@@ -560,7 +564,7 @@ export default function OffreDetailClient({ initialOffer }) {
                   )}
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{offer.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{nettoyerPourAffichage(offer.title)}</h1>
                 
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <p className="text-base font-bold text-gray-600">{offer.company}</p>
@@ -597,6 +601,18 @@ export default function OffreDetailClient({ initialOffer }) {
                     </div>
                   )}
                 </div>
+
+                {/* Prudence neutre pour un contact externe (e-mail personnel, WhatsApp, lien raccourci, formulaire externe) : jamais pour un recruteur vérifié. */}
+                {contactExterneNonVerifie(offer).externe && (
+                  <div
+                    role="note"
+                    data-testid="avertissement-contact-externe"
+                    className="mb-6 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 flex items-start gap-3"
+                  >
+                    <i className="fa-solid fa-shield-halved mt-0.5 text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
+                    <p className="text-xs font-semibold leading-relaxed">{MESSAGE_CONTACT_EXTERNE}</p>
+                  </div>
+                )}
 
                 {/* Toast Notification */}
                 {toast && (
@@ -679,6 +695,9 @@ export default function OffreDetailClient({ initialOffer }) {
                   className="my-6"
                 />
 
+                {/* Signalement : comptes connectés (un visiteur est renvoyé vers la connexion) ; pas pour le propriétaire ni l'administrateur de l'offre. */}
+                {!canManage && <SignalerOffre offreId={offer.id} />}
+
                 {/* Description de l'offre (Lisibilité 100% nette sans dégradé masquant) */}
                 <div className="my-6 bg-gray-50/70 dark:bg-gray-800/40 p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700">
                   <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -688,7 +707,7 @@ export default function OffreDetailClient({ initialOffer }) {
                   
                   <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed font-normal break-words overflow-hidden max-w-full">
                     {(() => {
-                      const fullText = offer.description || "";
+                      const fullText = nettoyerPourAffichage(offer.description || "");
                       const shouldTruncate = fullText.length > 400;
                       const displayText = shouldTruncate && !isDescriptionExpanded
                         ? fullText.substring(0, 400) + "..."

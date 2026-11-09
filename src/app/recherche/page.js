@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { SELECT_LISTE_OFFRES } from "@/lib/colonnesOffres";
+import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import ApplyModal from "@/components/ApplyModal";
 
@@ -190,7 +192,7 @@ function RechercheContent() {
           .order("created_at", { ascending: false });
 
         if (jobData) {
-          matchedOffers = jobData.filter((o) => o.is_active !== false);
+          matchedOffers = nettoyerOffresAffichees(jobData.filter((o) => o.is_active !== false));
         }
       } catch (err) {
         console.error("Erreur recherche offres Supabase:", err);
@@ -447,7 +449,7 @@ function RechercheContent() {
                     >
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                          {offer.contract_type || "CDI"}
+                          {libelleContrat(offer.contract_type)}
                         </span>
                       </div>
 

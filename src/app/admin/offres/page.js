@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { problemesReferencement, contratPrecise } from "@/lib/validationOffreReferencement";
+import { retirerMarquesCopie } from "@/lib/nettoyerTexteOffre";
 import { televerserImagePubliee } from "@/lib/imagePubliee";
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
@@ -508,13 +509,13 @@ export default function AdminOffresPage() {
       }
 
       const payload = {
-        title: (currentOfferData.title || "Opportunité de recrutement").trim(),
+        title: retirerMarquesCopie((currentOfferData.title || "Opportunité de recrutement").trim()),
         company: (currentOfferData.company || "Entreprise").trim(),
         location: (currentOfferData.location || "Sénégal").trim(),
         contract_type: contratPrecise(currentOfferData.contract_type),
         salary_range: currentOfferData.salary_range || null,
         min_education_level: currentOfferData.min_education_level || "Aucun",
-        description: currentOfferData.description || "",
+        description: retirerMarquesCopie(currentOfferData.description || ""),
         image_url: finalImageUrl || null,
         audio_url: finalAudioUrl || null,
         deadline: currentOfferData.deadline || null,
@@ -628,13 +629,13 @@ export default function AdminOffresPage() {
       const formEmail = (offerForm.contact_email || offerForm.application_email || "").trim();
 
       const payload = {
-        title: offerForm.title.trim(),
+        title: retirerMarquesCopie(offerForm.title.trim()),
         company: offerForm.company.trim(),
         location: offerForm.location.trim() || "Sénégal",
         contract_type: contratPrecise(offerForm.contract_type),
         salary_range: offerForm.salary_range || null,
         min_education_level: offerForm.min_education_level || "Aucun",
-        description: offerForm.description || "",
+        description: retirerMarquesCopie(offerForm.description || ""),
         image_url: finalImageUrl || null,
         audio_url: finalAudioUrl || null,
         deadline: offerForm.deadline || null,

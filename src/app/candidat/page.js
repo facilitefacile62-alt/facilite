@@ -10,6 +10,7 @@ import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import { respondToAccessRequest } from "@/lib/documentAccess";
 import { playNotificationSound } from "@/lib/notificationSound";
 import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
+import { nettoyerOffresAffichees, nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 
 export default function CandidatDashboardPage() {
   const [userSession, setUserSession] = useState(null);
@@ -115,7 +116,7 @@ export default function CandidatDashboardPage() {
           .map((o) => ({ ...o, similarity: similarityById.get(o.id) || 0 }))
           .sort((a, b) => b.similarity - a.similarity);
 
-        setRecommendedOffers(merged);
+        setRecommendedOffers(nettoyerOffresAffichees(merged));
       } catch (err) {
         console.error("Exception recommandations candidat:", err);
       } finally {
@@ -449,7 +450,7 @@ export default function CandidatDashboardPage() {
                     return (
                       <tr key={c.id} className="hover:bg-emerald-50/20 transition">
                         <td className="py-4 px-6">
-                          <span className="font-bold text-gray-900 block">{c.job_title}</span>
+                          <span className="font-bold text-gray-900 block">{nettoyerPourAffichage(c.job_title)}</span>
                           <span className="text-xs text-emerald-700 font-semibold">{c.company}</span>
                         </td>
                         <td className="py-4 px-6">

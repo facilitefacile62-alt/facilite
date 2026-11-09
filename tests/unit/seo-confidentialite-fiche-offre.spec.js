@@ -32,9 +32,8 @@ test("page de la fiche : colonnes explicites (plus de select *), recruiter_id lu
   expect(p).not.toContain('.select("*")');
   expect(p).toContain("`${SELECT_FICHE_OFFRE}, recruiter_id`");
   expect(p).toContain("const { recruiter_id: recruteurId, ...donneesPubliques } = data;");
-  expect(p).toContain("return { ...retirerChampsInternes(donneesPubliques), recruiterVerified };");
-  expect(p).toContain("retirerChampsInternes(FALLBACK_STATIC_OFFERS[strId])");
-  expect(p).toContain("retirerChampsInternes(found)");
+  expect(p).toContain("return nettoyerOffreAffichee({ ...retirerChampsInternes(donneesPubliques), recruiterVerified });");
+  expect(p).toContain("nettoyerOffreAffichee({ ...retirerChampsInternes(secours), recruiterVerified: false })");
   expect(p).not.toMatch(/return \{ \.\.\.data,/);
 });
 

@@ -9,6 +9,7 @@
 // Même logique que l'application (mobile/src/lib/offresParVille.ts) : les deux
 // listes de villes doivent rester identiques.
 import { supabase } from "@/lib/supabase";
+import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 
 export const VILLES = [
   { nom: "Dakar", lat: 14.7167, lng: -17.4677, alias: ["dakar", "mermoz", "plateau", "almadies", "medina", "médina", "ouakam", "yoff", "ngor", "sacre-coeur", "sacré-coeur", "hann", "parcelles", "liberté", "point e", "fann", "keur gorgui", "foire", "sicap"] },
@@ -75,7 +76,7 @@ export function regrouperParVille(lignes) {
       continue;
     }
     const g = parVille.get(v.nom) || { ville: v.nom, lat: v.lat, lng: v.lng, offres: [], entreprises: 0 };
-    g.offres.push({ id: l.id, titre: l.title || "Offre", entreprise: l.company || "Entreprise" });
+    g.offres.push({ id: l.id, titre: nettoyerPourAffichage(l.title) || "Offre", entreprise: l.company || "Entreprise" });
     parVille.set(v.nom, g);
   }
   const groupes = [...parVille.values()].map((g) => ({

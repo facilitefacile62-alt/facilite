@@ -31,6 +31,8 @@ const STATIC_ROUTES = [
   { path: "/conseils", changeFrequency: "monthly", priority: 0.7 },
   ...PAGES_CONSEILS.map((p) => ({ path: `/conseils/${p.slug}`, changeFrequency: "monthly", priority: 0.7 })),
   { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/contact", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/conseils/anti-arnaque", changeFrequency: "monthly", priority: 0.6 },
   // Exigée par Google Play et devant rester atteignable sans compte : elle
   // doit donc aussi être annoncée aux moteurs comme les autres pages légales.
   { path: "/suppression-compte", changeFrequency: "yearly", priority: 0.4 },

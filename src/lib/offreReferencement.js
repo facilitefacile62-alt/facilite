@@ -21,10 +21,15 @@ export function dateFinValidite(offre) {
   return null;
 }
 
-/** Valeur ISO pour JobPosting.validThrough, ou undefined si l'offre n'a aucune date exploitable (le champ est alors omis). */
+/**
+ * Valeur ISO pour JobPosting.validThrough : la DATE LIMITE de l'offre, et rien d'autre. Sans date limite (ou date illisible) le champ est omis : la fin « publication +
+ * 60 jours » de dateFinValidite sert à décider si une offre sort du référencement, mais n'est pas une date que l'employeur a annoncée, donc on ne la déclare pas à Google.
+ */
 export function validThroughIso(offre) {
-  const d = dateFinValidite(offre);
-  return d ? d.toISOString() : undefined;
+  const limite = offre?.deadline;
+  if (!limite) return undefined;
+  const d = new Date(typeof limite === "string" && DATE_SEULE.test(limite.trim()) ? `${limite.trim()}T23:59:59.999Z` : limite);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 /** Offre clôturée : statut de clôture, désactivée, ou date limite dépassée (la définition déjà utilisée par la liste et le bouton Postuler). */
@@ -55,4 +60,18 @@ export function adresseJobPosting(lieu) {
     ...(premier && !estLePays ? { addressLocality: premier } : {}),
     addressCountry: "SN",
   };
+}
+
+/**
+ * Ville d'une offre d'après son champ « lieu » (texte libre), pour les titres et descriptions : premier élément avant une virgule, une barre oblique, « & » ou
+ * une parenthèse, sans « et ses environs », première lettre en capitale. « Sénégal » seul, « International » ou un lieu vide ne sont pas des villes : "".
+ */
+export function villeDuLieu(lieu) {
+  const premier = String(lieu ?? "")
+    .split(/[,/&(]/)[0]
+    .replace(/\s+et\s+(?:ses\s+)?environs?.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!premier || /^(?:s[ée]n[ée]gal|international|multi-?pays)$/i.test(premier)) return "";
+  return premier.charAt(0).toUpperCase() + premier.slice(1);
 }

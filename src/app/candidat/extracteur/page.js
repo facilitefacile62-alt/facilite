@@ -8,6 +8,7 @@ import { supabase, handleGlobalSignOut } from "@/lib/supabase";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import AuthRequiredModal from "@/components/AuthRequiredModal";
+import { nettoyerOffreAffichee } from "@/lib/nettoyerTexteOffre";
 
 // Filet de sécurité : si le serveur renvoie malgré tout une erreur brute
 // (JSON stringifié d'un SDK, objet imbriqué...) plutôt qu'une phrase lisible,
@@ -256,7 +257,7 @@ function ExtracteurContent() {
           return;
         }
 
-        setPosterOffer(data);
+        setPosterOffer(nettoyerOffreAffichee(data));
       } catch (err) {
         console.error("Erreur chargement de l'offre:", err);
         setPosterError("Impossible de charger cette offre pour le moment.");

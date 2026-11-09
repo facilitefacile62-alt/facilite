@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 
 // Bloc rendu côté serveur sous une offre clôturée : le visiteur (et le moteur de recherche) trouve tout de suite des offres encore ouvertes.
 export default function OffresSimilaires({ offres }) {
@@ -15,7 +16,7 @@ export default function OffresSimilaires({ offres }) {
               href={`/offres/${o.id}`}
               className="block h-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 hover:border-emerald-500 transition-colors"
             >
-              <span className="block text-sm font-bold text-gray-900 dark:text-gray-100">{o.title}</span>
+              <span className="block text-sm font-bold text-gray-900 dark:text-gray-100">{nettoyerPourAffichage(o.title)}</span>
               <span className="block text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {[o.company, o.location].filter(Boolean).join(" · ")}
               </span>

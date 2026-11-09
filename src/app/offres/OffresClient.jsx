@@ -17,6 +17,8 @@ import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { interleaveSponsoredOffers, isOfferActivelySponsored } from "@/lib/sponsoredFeed";
 import { LISTING_TYPE_LABELS, LISTING_TYPE_HERO } from "@/lib/listingTypes";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import { nettoyerOffresAffichees } from "@/lib/nettoyerTexteOffre";
+import { libelleContrat } from "@/lib/contratOffre";
 import { adresseImage } from "@/lib/imagesPubliques";
 // Import manquant depuis l'ajout des bascules de fonctionnalités sur cette
 // page : les trois symboles étaient utilisés sans jamais être importés, et
@@ -223,7 +225,7 @@ function OffresContent({ listingType } = {}) {
         // (isOfferExpired la couvre déjà, critère 2) — l'exclure ici
         // l'empêchait d'y apparaître, même une fois toutes les offres
         // chargées.
-        const nouvelles = (data || []).filter((o) => (o.status || "").toLowerCase() !== "draft");
+        const nouvelles = nettoyerOffresAffichees((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
         setOffers((prev) => {
           // Dédoublonnage : une offre publiée entre deux pages décale la
           // fenêtre et pourrait renvoyer une ligne déjà affichée.
@@ -250,7 +252,7 @@ function OffresContent({ listingType } = {}) {
     try {
       const { data, count, error } = await requeteOffres(0, Math.max((totalOffres || 1000) - 1, TAILLE_PAGE - 1));
       if (!error) {
-        setOffers((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
+        setOffers(nettoyerOffresAffichees((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft")));
         if (typeof count === "number") setTotalOffres(count);
         setToutCharge(true);
       }
@@ -277,7 +279,7 @@ function OffresContent({ listingType } = {}) {
         if (error) {
           console.error("Erreur chargement des offres:", error);
         } else {
-          const activeOffers = (data || []).filter((o) => (o.status || "").toLowerCase() !== "draft");
+          const activeOffers = nettoyerOffresAffichees((data || []).filter((o) => (o.status || "").toLowerCase() !== "draft"));
           setOffers(activeOffers);
           setTotalOffres(typeof count === "number" ? count : null);
           setToutCharge(typeof count === "number" ? activeOffers.length >= count : true);
@@ -866,7 +868,7 @@ function OffresContent({ listingType } = {}) {
                     <p className="text-[11px] text-gray-500 font-medium mt-1.5 flex items-center gap-1.5 flex-wrap min-h-[18px]">
                       <span>{offer.location || "Sénégal"}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{offer.contract_type || "CDI"}</span>
+                      <span>{libelleContrat(offer.contract_type)}</span>
                       {offer.deadline && (
                         <>
                           <span aria-hidden="true">·</span>
