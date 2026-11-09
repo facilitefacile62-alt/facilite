@@ -1,5 +1,6 @@
 import { getSupabasePublicClient } from "@/lib/supabase";
 import { offreHorsReferencement } from "@/lib/offreReferencement";
+import { offresSecoursActives } from "@/lib/offresSecours";
 import { chargerProduitsEligibles } from "@/lib/produitsServeur";
 import { PAGES_CONSEILS } from "@/lib/conseils";
 
@@ -125,7 +126,7 @@ export default async function sitemap() {
   }
 
   // Offre statique de secours (Concours Enseignants, définie dans offres/[id]/page.js) : annoncée seulement tant que sa date limite n'est pas dépassée.
-  if (!knownOfferIds.has(OFFRE_SECOURS.id) && !offreHorsReferencement({ deadline: OFFRE_SECOURS.deadline })) {
+  if (offresSecoursActives() && !knownOfferIds.has(OFFRE_SECOURS.id) && !offreHorsReferencement({ deadline: OFFRE_SECOURS.deadline })) {
     entries.push({
       url: `${SITE_URL}/offres/${OFFRE_SECOURS.id}`,
       lastModified: now,

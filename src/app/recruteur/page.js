@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { problemesReferencement, contratPrecise } from "@/lib/validationOffreReferencement";
+import { retirerMarquesCopie } from "@/lib/nettoyerTexteOffre";
 import SelecteurAudioOffre, { televerserAudioOffre } from "@/components/SelecteurAudioOffre";
 import { useState, useEffect, useRef } from "react";
 import { messagePublication } from "@/lib/messagePublication";
@@ -991,13 +992,13 @@ export default function RecruteurDashboardPage() {
       }
 
       const payload = {
-        title: (currentOfferData.title || "Opportunité de recrutement").trim(),
+        title: retirerMarquesCopie((currentOfferData.title || "Opportunité de recrutement").trim()),
         company: (currentOfferData.company || recruiterProfileForm.company_name || "Entreprise").trim(),
         location: (currentOfferData.location || "Sénégal").trim(),
         contract_type: contratPrecise(currentOfferData.contract_type),
         salary_range: currentOfferData.salary_range || null,
         min_education_level: currentOfferData.min_education_level || "Aucun",
-        description: currentOfferData.description || "",
+        description: retirerMarquesCopie(currentOfferData.description || ""),
         image_url: finalImageUrl || null,
         audio_url: finalAudioUrl || null,
         deadline: currentOfferData.deadline || null,
@@ -1077,13 +1078,13 @@ export default function RecruteurDashboardPage() {
       }
 
       const payload = {
-        title: (offerForm.title || "Opportunité de recrutement").trim(),
+        title: retirerMarquesCopie((offerForm.title || "Opportunité de recrutement").trim()),
         company: (offerForm.company || recruiterProfileForm.company_name || "Entreprise").trim(),
         location: (offerForm.location || "Sénégal").trim(),
         contract_type: contratPrecise(offerForm.contract_type),
         salary_range: offerForm.salary_range || null,
         min_education_level: offerForm.min_education_level || "Aucun",
-        description: offerForm.description || "",
+        description: retirerMarquesCopie(offerForm.description || ""),
         image_url: finalImageUrl || null,
         audio_url: finalAudioUrl || null,
         deadline: offerForm.deadline || null,

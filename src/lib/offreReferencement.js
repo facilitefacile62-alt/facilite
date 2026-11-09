@@ -21,10 +21,15 @@ export function dateFinValidite(offre) {
   return null;
 }
 
-/** Valeur ISO pour JobPosting.validThrough, ou undefined si l'offre n'a aucune date exploitable (le champ est alors omis). */
+/**
+ * Valeur ISO pour JobPosting.validThrough : la DATE LIMITE de l'offre, et rien d'autre. Sans date limite (ou date illisible) le champ est omis : la fin « publication +
+ * 60 jours » de dateFinValidite sert à décider si une offre sort du référencement, mais n'est pas une date que l'employeur a annoncée, donc on ne la déclare pas à Google.
+ */
 export function validThroughIso(offre) {
-  const d = dateFinValidite(offre);
-  return d ? d.toISOString() : undefined;
+  const limite = offre?.deadline;
+  if (!limite) return undefined;
+  const d = new Date(typeof limite === "string" && DATE_SEULE.test(limite.trim()) ? `${limite.trim()}T23:59:59.999Z` : limite);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 /** Offre clôturée : statut de clôture, désactivée, ou date limite dépassée (la définition déjà utilisée par la liste et le bouton Postuler). */

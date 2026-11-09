@@ -12,6 +12,8 @@ import SocialShareButtons from "@/components/SocialShareButtons";
 import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { isOfferExpired } from "@/lib/offerExpiration";
+import { contactExterneNonVerifie, MESSAGE_CONTACT_EXTERNE } from "@/lib/contactExterne";
+import { retirerMarquesCopie } from "@/lib/nettoyerTexteOffre";
 
 export default function OffreDetailClient({ initialOffer }) {
   const router = useRouter();
@@ -560,7 +562,7 @@ export default function OffreDetailClient({ initialOffer }) {
                   )}
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{offer.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">{retirerMarquesCopie(offer.title)}</h1>
                 
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <p className="text-base font-bold text-gray-600">{offer.company}</p>
@@ -597,6 +599,18 @@ export default function OffreDetailClient({ initialOffer }) {
                     </div>
                   )}
                 </div>
+
+                {/* Prudence neutre pour un contact externe (e-mail personnel, WhatsApp, lien raccourci, formulaire externe) : jamais pour un recruteur vérifié. */}
+                {contactExterneNonVerifie(offer).externe && (
+                  <div
+                    role="note"
+                    data-testid="avertissement-contact-externe"
+                    className="mb-6 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 flex items-start gap-3"
+                  >
+                    <i className="fa-solid fa-shield-halved mt-0.5 text-amber-600 dark:text-amber-400" aria-hidden="true"></i>
+                    <p className="text-xs font-semibold leading-relaxed">{MESSAGE_CONTACT_EXTERNE}</p>
+                  </div>
+                )}
 
                 {/* Toast Notification */}
                 {toast && (
@@ -688,7 +702,7 @@ export default function OffreDetailClient({ initialOffer }) {
                   
                   <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed font-normal break-words overflow-hidden max-w-full">
                     {(() => {
-                      const fullText = offer.description || "";
+                      const fullText = retirerMarquesCopie(offer.description || "");
                       const shouldTruncate = fullText.length > 400;
                       const displayText = shouldTruncate && !isDescriptionExpanded
                         ? fullText.substring(0, 400) + "..."
