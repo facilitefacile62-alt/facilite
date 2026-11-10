@@ -736,8 +736,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     guidageActif = true;
     cadreGuidage(true);
     carte.dragging.disable();
-    // Guidage : jamais de vue de toute la région (zoom 13 au moins) ; on peut dézoomer pour voir le trajet, la carte ne re-zoome pas toute seule.
-    carte.setMinZoom(13);
+    // Guidage : on peut dézoomer à volonté (jusqu'à la vue du pays), comme sur Google Maps ; la carte ne re-zoome pas toute seule.
+    carte.setMinZoom(5);
     // Zoom continu, qui suit les doigts comme Google Maps (sans paliers entiers) ; rétabli à l'arrêt du guidage.
     carte.options.zoomSnap = 0;
     carte.options.zoomDelta = 0.5;
