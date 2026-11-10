@@ -18,7 +18,6 @@ import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
-import { lienDemarrer } from "@/lib/itineraire";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
@@ -349,7 +348,7 @@ export default function GlobeExplorateurBoutiques({
           L.circleMarker(destination, { radius: 10, color: "#ffffff", weight: 3, fillColor: "#10b981", fillOpacity: 1 }).addTo(carte)
         );
         // Le cadrage automatique ne vaut que pour un itinéraire demandé par la page (« M'y rendre ») ; depuis le bouton d'une bulle, la carte ne bouge pas.
-        if (itineraireCibleProp) carte.fitBounds(trace.getBounds(), { padding: [60, 60] });
+        if (itineraireCibleProp || itineraireCible.cadrer) carte.fitBounds(trace.getBounds(), { padding: [60, 60] });
       } catch {
         if (!annule) setTrajetInfo({ texte: "Position indisponible : autorise la localisation." });
       }
@@ -1814,7 +1813,7 @@ export default function GlobeExplorateurBoutiques({
                           </div>
                         </div>
                         <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:66px; border:none; border-radius:999px; background:#0f766e; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">Itinéraire</button>
-                        ${lienDemarrer({ latitude: b.lat, longitude: b.lng }) ? `<a data-demarrer="${echapperHtml(String(b.id))}" href="${lienDemarrer({ latitude: b.lat, longitude: b.lng })}" target="_blank" rel="noopener noreferrer" style="display:block; box-sizing:border-box; margin-top:3px; width:66px; border-radius:999px; background:#ccfbf1; color:#0f766e; padding:5px 0; font-size:10px; font-weight:800; text-align:center; text-decoration:none;">Démarrer</a>` : ""}
+                        <button type="button" data-demarrer="${echapperHtml(String(b.id))}" style="display:block; margin-top:3px; width:66px; border:none; border-radius:999px; background:#ccfbf1; color:#0f766e; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">Démarrer</button>
                         </div>
                       `;
                     })
@@ -2015,17 +2014,17 @@ export default function GlobeExplorateurBoutiques({
             bande.addEventListener("scroll", majAnneau, { passive: true });
             setTimeout(majAnneau, 40);
           }
-          el.querySelectorAll("[data-demarrer]").forEach((lien) => {
-            lien.onclick = (e) => e.stopPropagation();
-          });
-          el.querySelectorAll("[data-itineraire]").forEach((btn) => {
-            btn.onclick = (e) => {
-              e.stopPropagation();
-              const cible = boutiquesAffichees.find((x) => String(x.id) === btn.getAttribute("data-itineraire"));
-              if (cible) {
-                setItineraireLocal({ id: cible.id, nom: cible.nom, lat: Number(cible.lat), lng: Number(cible.lng) });
-              }
-            };
+          // « Itinéraire » et « Démarrer » restent sur la carte du site : le trajet est tracé depuis la position de la personne et la carte se cadre dessus.
+          ["data-itineraire", "data-demarrer"].forEach((attribut) => {
+            el.querySelectorAll(`[${attribut}]`).forEach((btn) => {
+              btn.onclick = (e) => {
+                e.stopPropagation();
+                const cible = boutiquesAffichees.find((x) => String(x.id) === btn.getAttribute(attribut));
+                if (cible) {
+                  setItineraireLocal({ id: cible.id, nom: cible.nom, lat: Number(cible.lat), lng: Number(cible.lng), cadrer: true });
+                }
+              };
+            });
           });
 
           el.querySelectorAll("[data-article-id]").forEach((card) => {

@@ -63,14 +63,14 @@ test("la page affiche Itinéraire et Démarrer pour chaque établissement (liens
   expect(fs.readFileSync(path.join(__dirname, "../../src/lib/itineraire.js"), "utf8")).not.toMatch(/fetch\(|supabase|localStorage/);
 });
 
-test("la carte des boutiques : « Démarrer » à côté d'« Itinéraire » dans la bulle et dans la carte du bas (liens externes sûrs)", () => {
+test("la carte des boutiques : Itinéraire et Démarrer restent sur la carte du site (trajet tracé, carte cadrée), sans ouvrir Google Maps", () => {
   const g = lire("src/components/GlobeExplorateurBoutiques.jsx");
-  expect(g).toContain('import { lienDemarrer } from "@/lib/itineraire";');
-  expect(g).toContain("data-demarrer=");
-  expect(g).toContain('target="_blank" rel="noopener noreferrer"');
-  expect(g).toContain("data-itineraire="); // l'itinéraire dans le site reste
-  const c = lire("src/components/CarteBoutiqueChoisie.jsx");
-  expect(c).toContain("lienDemarrer({ latitude: boutique.lat, longitude: boutique.lng })");
-  expect(c).toContain('data-testid="lien-demarrer"');
-  expect(c).toContain("Itinéraire");
+  expect(g).toContain('["data-itineraire", "data-demarrer"]');
+  expect(g).toContain("cadrer: true");
+  expect(g).toContain("itineraireCibleProp || itineraireCible.cadrer");
+  const i = g.indexOf('data-itineraire="${');
+  const bulle = g.slice(i, i + 1200);
+  expect(bulle).toContain("data-demarrer=");
+  expect(bulle).not.toContain("google.com/maps");
+  expect(g).not.toContain("lienDemarrer");
 });
