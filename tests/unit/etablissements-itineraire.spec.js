@@ -203,7 +203,7 @@ test("guidage façon Google : « Puis » le virage suivant, instruction sans dis
 test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du véhicule orientée dans le sens de la marche", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("navigation?: boolean");
-  expect(c).toContain("color: '#22D3EE', weight: 8");
+  expect(c).toContain("color: '#22D3EE', weight: 4");
   expect(c).toContain("window.majVehicule = function");
   expect(c).toContain("rotate(' + (capDeg || 0) + 'deg)");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
@@ -258,4 +258,11 @@ test("guidage : plus de ronds de boutiques ni de recadrage sur les boutiques —
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("marqueurs={guidage ? [] : marqueurs}");
   expect(a).toContain("ajuster={!guidage && !selection");
+});
+
+test("guidage : traits et flèche compensent l'agrandissement x2 de la carte (rendu 8/13 px, flèche 52 px au lieu de 16/26 et 88 px)", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("weight: 6.5");
+  expect(c).toContain("iconSize: [26, 26], iconAnchor: [13, 13]");
+  expect(c).toContain("scale(2)");
 });

@@ -687,9 +687,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     if (trace) { carte.removeLayer(trace); trace = null; }
     if (!t || !t.points || t.points.length < 2) return;
     if (t.navigation) {
-      // Guidage : trait cyan épais bordé de blanc, comme Google Maps ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
-      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 13, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
-      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 8, opacity: 1, dashArray: t.approximatif ? '2 12' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
+      // Guidage : trait cyan bordé de blanc, comme Google Maps (la carte est agrandie x2 pendant le guidage : largeurs divisées par 2 pour un rendu de 8 et 13 px) ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
+      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 6.5, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
+      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 4, opacity: 1, dashArray: t.approximatif ? '1 6' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
       trace = L.layerGroup([bord, trait]).addTo(carte);
       return;
     }
@@ -751,9 +751,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   window.majVehicule = function (lat, lng, capDeg) {
     if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
     if (lat === null || lat === undefined) return;
-    var html = '<div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
-      + '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
-    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [44, 44], iconAnchor: [22, 22] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
+    var html = '<div style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
+      + '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
+    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
