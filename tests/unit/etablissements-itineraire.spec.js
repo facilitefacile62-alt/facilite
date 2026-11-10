@@ -74,3 +74,14 @@ test("la carte des boutiques : Itinéraire et Démarrer restent sur la carte du 
   expect(bulle).not.toContain("google.com/maps");
   expect(g).not.toContain("lienDemarrer");
 });
+
+test("application mobile : « Démarrer » à côté d'« Itinéraire » dans le carrousel de la carte, trajet tracé dans l'application (jamais Google Maps)", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain('data-act="demarrer:');
+  expect(c).toContain('data-act="itineraire:');
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("id.startsWith('itineraire:') || id.startsWith('demarrer:')");
+  expect(a).toContain("calculerItineraire(position, arrivee)");
+  expect(a).toContain("carte?.centrer(position.latitude, position.longitude, 17)");
+  expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
+});

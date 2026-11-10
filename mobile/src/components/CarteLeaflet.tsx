@@ -128,6 +128,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .popup-carrousel .pb-photo { width: 80px; height: 96px; }
   .popup-carrousel .pb-titre { font-size: 10.5px; }
   .popup-carrousel .pb-it { display: block; margin-top: 4px; padding: 6px 0; border-radius: 10px; background: #10B981; color: #fff; text-align: center; font: 800 11px system-ui, sans-serif; cursor: pointer; }
+  .popup-carrousel .pb-it { border-radius: 999px; background: #0F766E; }
+  .popup-carrousel .pb-it.pb-dem { margin-top: 3px; background: #CCFBF1; color: #0F766E; }
   .popup-carrousel .pb-fenetre-ic { width: 140px; margin: 0 auto 4px; overflow: hidden; height: 30px; position: relative; }
   .popup-carrousel .pb-piste-ic { position: relative; height: 30px; }
   .popup-carrousel .pb-ic { position: absolute; top: 1px; left: 0; width: 26px; height: 26px; border-radius: 9999px; overflow: hidden; background: #fff; border: 2px solid #E2E8F0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; padding: 0; }
@@ -549,7 +551,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       return '<div class="pb-art" data-bde="' + esc(x.b) + '"><div data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
         + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:34px">' + esc(a.icone || '') + '</div>')
         + '<span class="pb-prix">' + esc(a.prix) + '</span></div><div class="pb-titre">' + esc(a.titre) + '</div></div>'
-        + '<div class="pb-it" data-act="itineraire:' + esc(x.b) + '">↱ Itinéraire</div></div>';
+        + '<div class="pb-it" data-act="itineraire:' + esc(x.b) + '">Itinéraire</div>'
+        + '<div class="pb-it pb-dem" data-act="demarrer:' + esc(x.b) + '">Démarrer</div></div>';
     }).join('');
     var icones = multi ? '<div class="pb-fenetre-ic"><div class="pb-piste-ic">' + membres.map(function (m) {
       var a = m.avatar || {};

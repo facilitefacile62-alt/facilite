@@ -275,8 +275,9 @@ export default function AutourDeMoiScreen() {
         router.push(`/marketplace/boutique/${id.slice(9)}` as Href);
         return;
       }
-      if (id.startsWith('itineraire:')) {
-        const b = boutiques?.find((x) => x.id === id.slice(11));
+      if (id.startsWith('itineraire:') || id.startsWith('demarrer:')) {
+        const demarrer = id.startsWith('demarrer:');
+        const b = boutiques?.find((x) => x.id === id.slice(demarrer ? 9 : 11));
         if (!b) return;
         if (!position) {
           activer();
@@ -285,8 +286,9 @@ export default function AutourDeMoiScreen() {
         const arrivee = { latitude: b.latitude, longitude: b.longitude };
         setTrajet(ligneDroite(position, arrivee));
         calculerItineraire(position, arrivee).then(setTrajet);
-        // La carte se recentre sur la boutique visée (zoom 16 au moins) ; le trajet reste tracé.
-        carte?.centrer(b.latitude, b.longitude, 16);
+        // « Itinéraire » : la carte se recentre sur la boutique visée (zoom 16 au moins) ; « Démarrer » : sur la personne, pour partir. Le trajet reste tracé dans l'application (jamais Google Maps).
+        if (demarrer) carte?.centrer(position.latitude, position.longitude, 17);
+        else carte?.centrer(b.latitude, b.longitude, 16);
         return;
       }
       if (id === 'itineraire') {
