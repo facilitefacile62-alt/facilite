@@ -250,7 +250,7 @@ test("guidage : la carte se déplace au doigt (corrigé de la rotation), arrête
   expect(c).toContain("carte.dragging.enable()");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("if (id === 'carte-deplacee') {");
-  expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude, 18)");
+  expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);"); // garde le zoom de la personne
   expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer/);
 });
 
@@ -269,7 +269,7 @@ test("guidage : traits et flèche compensent l'agrandissement x2 de la carte (re
 
 test("guidage : le zoom ne peut pas descendre sous le niveau de la rue (pas de vue de toute la région)", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
-  expect(c).toContain("carte.setMinZoom(16)");
+  expect(c).toContain("carte.setMinZoom(13)");
   expect(c).toContain("carte.setMinZoom(0)"); // levé à l'arrêt du guidage
   expect(c).toContain("if (carte.getZoom() < 17) carte.setZoom(17");
 });
@@ -315,4 +315,10 @@ test("alternatives (application) : libellés de différence et échange du traje
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("envoyer('alternative:' + i)");
   expect(lire("mobile/src/app/marketplace/autour.tsx")).toContain("id.startsWith('alternative:')");
+});
+
+test("guidage : dézoomer reste possible — le suivi GPS ne re-zoome plus la carte (seul « Recentrer » remet le zoom 18)", () => {
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);");
+  expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer\(p\.latitude, p\.longitude, 18\)/);
 });

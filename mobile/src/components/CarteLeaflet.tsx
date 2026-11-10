@@ -719,8 +719,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.getElementById('carte');
     if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; carte.dragging.enable(); carte.setMinZoom(0); return; }
     carte.dragging.disable();
-    // Guidage : jamais de vue de toute la région — la carte reste au niveau de la rue (zoom 16 au moins), même après un pincement.
-    carte.setMinZoom(16);
+    // Guidage : jamais de vue de toute la région (zoom 13 au moins) ; on peut dézoomer pour voir le trajet, la carte ne re-zoome pas toute seule.
+    carte.setMinZoom(13);
     if (carte.getZoom() < 17) carte.setZoom(17, { animate: false });
     if (remiseAZero) decalageDoigts = 0;
     var delta = ((capDeg + decalageDoigts - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet

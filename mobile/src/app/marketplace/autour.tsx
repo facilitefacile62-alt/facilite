@@ -412,7 +412,8 @@ export default function AutourDeMoiScreen() {
   }, [guidage, trajet, positionLive, position, virages]);
   useEffect(() => {
     if (!guidage || !positionLive) return;
-    if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude, 18);
+    // Le suivi garde le zoom choisi par la personne (sinon chaque relevé GPS re-zoomait la carte) ; seul « Recentrer » remet le zoom 18.
+    if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);
     // La flèche s'oriente dans le sens du déplacement (cap entre deux positions éloignées d'au moins 3 m).
     const prec = dernierePosition.current;
     if (prec && distanceM([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]) >= 3) {
