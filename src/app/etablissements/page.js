@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import CarteEtablissements from "@/components/CarteEtablissements";
 import { etablissementsProches, TYPES_ACTIVITE } from "@/lib/activiteData";
 import { positionActuelle } from "@/lib/marketplaceData";
+import { lienDemarrer, lienItineraire } from "@/lib/itineraire";
 
 // Pas "candidate" : cet écran ne montre que des lieux à statut publiable.
 const FILTRES = TYPES_ACTIVITE.filter((t) => t.id !== "candidate");
@@ -225,6 +226,33 @@ export default function EtablissementsPage() {
                     <p className="text-[11px] text-gray-400 mt-0.5">
                       {e.maj_le ? `Mis à jour ${quand(e.maj_le)}` : "Jamais mis à jour"}
                     </p>
+                    {/* Itinéraire / Démarrer : Google Maps, depuis la position actuelle (les coordonnées de l'établissement ; rien n'est enregistré). */}
+                    {lienItineraire(e, position) && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href={lienItineraire(e, position)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-testid="lien-itineraire"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-800 transition"
+                          aria-label={`Itinéraire vers ${e.nom}`}
+                        >
+                          <i className="fa-solid fa-diamond-turn-right text-[11px]" aria-hidden="true"></i>
+                          Itinéraire
+                        </a>
+                        <a
+                          href={lienDemarrer(e, position)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-testid="lien-demarrer"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 px-3.5 py-1.5 text-xs font-bold text-emerald-900 dark:text-emerald-200 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition"
+                          aria-label={`Démarrer le guidage vers ${e.nom}`}
+                        >
+                          <i className="fa-solid fa-location-arrow text-[11px]" aria-hidden="true"></i>
+                          Démarrer
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   {e.telephone && (
