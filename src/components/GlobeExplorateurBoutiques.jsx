@@ -18,6 +18,7 @@ import { useFonctionAutorisee } from "@/lib/useFonctionAutorisee";
 import { dataUriAvatarBoutique, svgAvatarBoutique } from "@/lib/avatarBoutique";
 import { centrerDansDefileur } from "@/lib/dockDefilement";
 import { calculerDecalagesDissociation, DIAMETRE_AVATAR_PX } from "@/lib/dissociationMarqueurs";
+import { lienDemarrer } from "@/lib/itineraire";
 import { brancherDensiteNoms, htmlEpingle, typeEpingle } from "@/lib/epingleCarte";
 import { STATIONS_BRT, STATIONS_TER, COULEUR_BRT, COULEUR_TER } from "@/lib/transportSenegal";
 
@@ -1812,7 +1813,8 @@ export default function GlobeExplorateurBoutiques({
                             ${prixTxt ? `<div style="font-size:9.5px; font-weight:900; color:#34d399; margin-top:2px;">${Number(prixTxt).toLocaleString("fr-FR")} F</div>` : ""}
                           </div>
                         </div>
-                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:66px; border:none; border-radius:10px; background:#10b981; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">↱ Itinéraire</button>
+                        <button type="button" data-itineraire="${echapperHtml(String(b.id))}" style="margin-top:4px; width:66px; border:none; border-radius:999px; background:#0f766e; color:#ffffff; padding:5px 0; font-size:10px; font-weight:800; cursor:pointer;">Itinéraire</button>
+                        ${lienDemarrer({ latitude: b.lat, longitude: b.lng }) ? `<a data-demarrer="${echapperHtml(String(b.id))}" href="${lienDemarrer({ latitude: b.lat, longitude: b.lng })}" target="_blank" rel="noopener noreferrer" style="display:block; box-sizing:border-box; margin-top:3px; width:66px; border-radius:999px; background:#ccfbf1; color:#0f766e; padding:5px 0; font-size:10px; font-weight:800; text-align:center; text-decoration:none;">Démarrer</a>` : ""}
                         </div>
                       `;
                     })
@@ -2013,6 +2015,9 @@ export default function GlobeExplorateurBoutiques({
             bande.addEventListener("scroll", majAnneau, { passive: true });
             setTimeout(majAnneau, 40);
           }
+          el.querySelectorAll("[data-demarrer]").forEach((lien) => {
+            lien.onclick = (e) => e.stopPropagation();
+          });
           el.querySelectorAll("[data-itineraire]").forEach((btn) => {
             btn.onclick = (e) => {
               e.stopPropagation();

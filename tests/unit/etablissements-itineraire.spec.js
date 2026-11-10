@@ -62,3 +62,15 @@ test("la page affiche Itinéraire et Démarrer pour chaque établissement (liens
   // Aucun appel réseau ni enregistrement ajouté pour l'itinéraire.
   expect(fs.readFileSync(path.join(__dirname, "../../src/lib/itineraire.js"), "utf8")).not.toMatch(/fetch\(|supabase|localStorage/);
 });
+
+test("la carte des boutiques : « Démarrer » à côté d'« Itinéraire » dans la bulle et dans la carte du bas (liens externes sûrs)", () => {
+  const g = lire("src/components/GlobeExplorateurBoutiques.jsx");
+  expect(g).toContain('import { lienDemarrer } from "@/lib/itineraire";');
+  expect(g).toContain("data-demarrer=");
+  expect(g).toContain('target="_blank" rel="noopener noreferrer"');
+  expect(g).toContain("data-itineraire="); // l'itinéraire dans le site reste
+  const c = lire("src/components/CarteBoutiqueChoisie.jsx");
+  expect(c).toContain("lienDemarrer({ latitude: boutique.lat, longitude: boutique.lng })");
+  expect(c).toContain('data-testid="lien-demarrer"');
+  expect(c).toContain("Itinéraire");
+});
