@@ -322,3 +322,9 @@ test("guidage : dézoomer reste possible — le suivi GPS ne re-zoome plus la ca
   expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);");
   expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer\(p\.latitude, p\.longitude, 18\)/);
 });
+
+test("guidage : zoom continu qui suit les doigts (sans paliers entiers), rétabli à l'arrêt", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("carte.options.zoomSnap = 0;");
+  expect(c).toContain("carte.options.zoomSnap = 1; carte.options.zoomDelta = 1;");
+});
