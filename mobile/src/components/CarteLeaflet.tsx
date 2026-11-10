@@ -700,24 +700,43 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   // Guidage : la carte pivote pour que la direction de la marche soit toujours vers le haut de l'écran (comme Google Maps).
   // Le conteneur est agrandi (x2) et décalé vers le bas : la personne est dans le tiers bas de l'écran, on voit la route devant elle. pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
   var rotation = 0;
-  window.pivoter = function (capDeg) {
+  var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
+  window.pivoter = function (capDeg, remiseAZero) {
     var el = document.getElementById('carte');
-    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; return; }
-    var delta = ((capDeg - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; return; }
+    if (remiseAZero) decalageDoigts = 0;
+    var delta = ((capDeg + decalageDoigts - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
     rotation += delta;
     el.style.transformOrigin = '50% 50%';
     el.style.transition = 'transform .7s linear';
     el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
   };
+  // Rotation à deux doigts (comme Google Maps) : tourner deux doigts fait tourner la carte ; le cap du guidage la remet dans le sens de la marche au prochain « Recentrer ».
+  (function () {
+    var angle0 = null;
+    function angleDoigts(t) { return Math.atan2(t[1].clientY - t[0].clientY, t[1].clientX - t[0].clientX) * 180 / Math.PI; }
+    var cadre = document.getElementById('carte');
+    cadre.addEventListener('touchstart', function (e) { angle0 = e.touches.length === 2 ? angleDoigts(e.touches) : null; }, { passive: true });
+    cadre.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 2 || angle0 === null || rotation === 0 && !document.getElementById('carte').style.transform) return;
+      var a1 = angleDoigts(e.touches);
+      var d = ((a1 - angle0 + 540) % 360) - 180;
+      angle0 = a1;
+      decalageDoigts -= d;
+      rotation -= d;
+      var el = document.getElementById('carte');
+      el.style.transition = '';
+      el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
+    }, { passive: true });
+    cadre.addEventListener('touchend', function () { angle0 = null; }, { passive: true });
+  })();
   var vehicule = null;
   window.majVehicule = function (lat, lng, capDeg) {
     if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
     if (lat === null || lat === undefined) return;
-    var html = '<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg);filter:drop-shadow(0 3px 5px rgba(0,0,0,.55))">'
-      + '<svg width="34" height="52" viewBox="0 0 34 52"><rect x="3" y="2" width="28" height="48" rx="12" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>'
-      + '<rect x="7" y="12" width="20" height="9" rx="3" fill="#475569"/><rect x="8" y="31" width="18" height="10" rx="3" fill="#64748B"/>'
-      + '<rect x="6" y="3" width="6" height="3" rx="1.5" fill="#FDE68A"/><rect x="22" y="3" width="6" height="3" rx="1.5" fill="#FDE68A"/></svg></div>';
-    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [56, 56], iconAnchor: [28, 28] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
+    var html = '<div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
+      + '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
+    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [44, 44], iconAnchor: [22, 22] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
@@ -735,7 +754,7 @@ export type CommandesCarte = {
   /** Place (ou retire, avec null) la flèche du véhicule pendant le guidage ; cap en degrés (0 = nord). */
   vehicule: (lat: number | null, lng?: number, cap?: number) => void;
   /** Fait pivoter la carte pour que le cap (degrés, 0 = nord) pointe vers le haut ; null : carte droite. */
-  pivoter: (cap: number | null) => void;
+  pivoter: (cap: number | null, remiseAZero?: boolean) => void;
 };
 
 export default function CarteLeaflet({
@@ -845,7 +864,7 @@ export default function CarteLeaflet({
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
       memoriserVue: () => executer('window.memoriserVue && window.memoriserVue()'),
       restaurerVue: () => executer('window.restaurerVue && window.restaurerVue()'),
-      pivoter: (cap) => executer(cap === null ? 'window.pivoter && window.pivoter(null)' : `window.pivoter && window.pivoter(${cap})`),
+      pivoter: (cap, remiseAZero) => executer(cap === null ? 'window.pivoter && window.pivoter(null)' : `window.pivoter && window.pivoter(${cap}, ${remiseAZero ? 'true' : 'false'})`),
       vehicule: (lat, lng, cap) => executer(lat === null ? 'window.majVehicule && window.majVehicule(null)' : `window.majVehicule && window.majVehicule(${lat}, ${lng}, ${cap ?? 0})`),
     });
   }, [commandes, executer]);

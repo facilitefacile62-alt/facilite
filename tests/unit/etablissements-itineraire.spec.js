@@ -216,10 +216,10 @@ test("guidage : la carte pivote selon le cap (direction de la marche vers le hau
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("window.pivoter = function");
   expect(c).toContain("rotate(' + (-rotation) + 'deg) scale(2)");
-  expect(c).toContain("((capDeg - rotation + 540) % 360) - 180"); // plus court chemin, pas de tour complet
+  expect(c).toContain("((capDeg + decalageDoigts - rotation + 540) % 360) - 180"); // plus court chemin, pas de tour complet
   expect(c).toContain("overflow: hidden");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
-  expect(a).toContain("carte?.pivoter(nordHaut ? 0 : capVehicule.current)");
+  expect(a).toContain("carte?.pivoter(nordHaut ? 0 : capVehicule.current);");
   expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0)"); // flèche droite : c'est la carte qui tourne
   expect(a).toContain("carte?.pivoter(null)"); // carte droite à l'arrêt
   expect(a).toContain("Location.Accuracy.High");
@@ -227,13 +227,17 @@ test("guidage : la carte pivote selon le cap (direction de la marche vers le hau
   expect(a).toContain("p.coords.heading");
 });
 
-test("guidage : rendu Google — voiture vue de dessus, personne dans le tiers bas de l'écran, boussole (nord en haut / sens de la marche)", () => {
+test("guidage : flèche de navigation (plus de voiture), rotation à deux doigts, bulles des boutiques retirées pendant le guidage", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).not.toContain('viewBox="0 0 34 52"'); // la voiture est retirée
+  expect(c).toContain('d="M12 2 L20 21 L12 17 L4 21 Z"'); // flèche
   expect(c).toContain("translateY(' + Math.round(window.innerHeight * 0.2)");
-  expect(c).toContain('viewBox="0 0 34 52"'); // voiture
+  expect(c).toContain("angleDoigts(e.touches)"); // rotation à deux doigts
+  expect(c).toContain("decalageDoigts -= d");
   const n = lire("mobile/src/components/GuidageNavigation.tsx");
   expect(n).toContain("Mettre le nord en haut");
-  expect(n).toContain("onBoussole");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("onBoussole={() => setNordHaut((v) => !v)}");
+  expect(a).toMatch(/carrouselAvantGuidage\.current = carrousel;\s+setCarrousel\(false\)/);
+  expect(a).toContain("carte?.pivoter(nordHaut ? 0 : capVehicule.current, true)"); // Recentrer annule la rotation à la main
 });

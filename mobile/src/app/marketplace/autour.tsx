@@ -471,6 +471,17 @@ export default function AutourDeMoiScreen() {
 
   // Touche « Carrousel » : la bulle de toutes les boutiques affichées reste ouverte (regroupées à 100 m et fusionnées si elles se touchent, dans la carte).
   const [carrousel, setCarrousel] = useState(true); // Carrousel activé par défaut : les bulles des boutiques sont visibles dès l'entrée dans la carte
+  // Pendant le guidage, les bulles des boutiques (carrousel) sont retirées de la carte ; elles reviennent à l'arrêt.
+  const carrouselAvantGuidage = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (guidage && carrouselAvantGuidage.current === null) {
+      carrouselAvantGuidage.current = carrousel;
+      setCarrousel(false);
+    } else if (!guidage && carrouselAvantGuidage.current !== null) {
+      setCarrousel(carrouselAvantGuidage.current);
+      carrouselAvantGuidage.current = null;
+    }
+  }, [guidage, carrousel]);
   const [articlesToutes, setArticlesToutes] = useState<Record<string, ArticleMarketplace[]>>({});
   useEffect(() => {
     if (!carrousel) return;
@@ -661,6 +672,7 @@ export default function AutourDeMoiScreen() {
           onRecentrer={() => {
             const p = positionLive ?? position;
             if (p) carte?.centrer(p.latitude, p.longitude, 18);
+            carte?.pivoter(nordHaut ? 0 : capVehicule.current, true); // annule la rotation faite à la main
           }}
         />
       ) : null}
