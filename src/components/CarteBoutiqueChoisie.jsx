@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { lienDemarrer } from "@/lib/itineraire";
 
 // Carte du bas affichée sur la carte quand une boutique est sélectionnée (façon Google Maps) : son nom, son quartier et quatre
 // boutons — Itinéraire, Appeler, WhatsApp, Partager. Aucun HTML brut : tout est rendu par React (échappement automatique, la
@@ -21,6 +22,8 @@ export default function CarteBoutiqueChoisie({ boutique, onFermer }) {
   const lieu = [boutique.quartier, boutique.ville].filter(Boolean).join(", ") || "Sénégal";
   const lienCarte = `https://www.google.com/maps/search/?api=1&query=${boutique.lat},${boutique.lng}`;
   const lienItineraire = `https://www.google.com/maps/dir/?api=1&destination=${boutique.lat},${boutique.lng}`;
+
+  const lienGuidage = lienDemarrer({ latitude: boutique.lat, longitude: boutique.lng });
 
   const partager = async () => {
     const donnees = { title: boutique.nom || "Boutique Facilité", text: `${boutique.nom || "Boutique"} — ${lieu} (Facilité Locaux)`, url: lienCarte };
@@ -65,6 +68,12 @@ export default function CarteBoutiqueChoisie({ boutique, onFermer }) {
           <i className="fa-solid fa-diamond-turn-right text-base"></i>
           Itinéraire
         </a>
+        {lienGuidage && (
+          <a href={lienGuidage} target="_blank" rel="noopener noreferrer" data-testid="lien-demarrer" className={`${bouton} bg-teal-100 hover:bg-teal-200 text-teal-800`}>
+            <i className="fa-solid fa-location-arrow text-base"></i>
+            Démarrer
+          </a>
+        )}
         {telephone ? (
           <a href={`tel:${telephone}`} className={`${bouton} bg-gray-800 hover:bg-gray-700 text-white`}>
             <i className="fa-solid fa-phone text-base"></i>
