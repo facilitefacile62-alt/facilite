@@ -95,3 +95,48 @@ test("application : la croix de la bulle ramène la carte à la vue d'avant le z
   expect(a).toMatch(/carte\?\.memoriserVue\(\);\n\s+setSelection\(id\);/);
   expect(a).toMatch(/if \(id === 'fermer'\) \{\n\s+setSelection\(null\);\n\s+carte\?\.restaurerVue\(\)/);
 });
+
+// ── Guidage « Démarrer » (application) : direction à prendre, comme Google Maps ──
+test("guidage : virage à droite détecté, consigne avec distance, tout droit sinon, arrivée, écart au tracé", async () => {
+  const g = await import("../../mobile/src/lib/guidage.ts");
+  const lat0 = 14.7, lng0 = -17.4;
+  const dLat = (m) => m / 111320;
+  const dLng = (m) => m / (111320 * Math.cos((lat0 * Math.PI) / 180));
+  // 200 m vers le nord, puis 200 m vers l'est : un virage à DROITE à 200 m.
+  const pts = [];
+  for (let m = 0; m <= 200; m += 25) pts.push([lat0 + dLat(m), lng0]);
+  for (let m = 25; m <= 200; m += 25) pts.push([lat0 + dLat(200), lng0 + dLng(m)]);
+  const virages = g.extraireVirages(pts);
+  expect(virages.length).toBe(1);
+  expect(virages[0].type).toBe("droite");
+  expect(Math.round(virages[0].distanceM / 10) * 10).toBe(200);
+
+  const depart = g.etatGuidage(pts, { latitude: lat0, longitude: lng0 });
+  expect(depart.consigne).toBe("Dans 200 m, tournez à droite");
+  expect(Math.round(depart.restantM / 10) * 10).toBe(400);
+  const proche = g.etatGuidage(pts, { latitude: lat0 + dLat(180), longitude: lng0 });
+  expect(proche.consigne).toBe("Tournez à droite");
+  const apres = g.etatGuidage(pts, { latitude: lat0 + dLat(200), longitude: lng0 + dLng(80) });
+  expect(apres.prochain).toBeNull();
+  expect(apres.consigne).toMatch(/^Continuez tout droit · arrivée dans 1[12]0 m$/);
+  const fin = g.etatGuidage(pts, { latitude: lat0 + dLat(200), longitude: lng0 + dLng(195) });
+  expect(fin.arrive).toBe(true);
+  expect(fin.consigne).toBe("Vous êtes arrivé");
+  const loin = g.etatGuidage(pts, { latitude: lat0 + dLat(100), longitude: lng0 + dLng(150) });
+  expect(loin.horsTrace).toBe(true);
+  expect(g.etatGuidage([[1, 1]], { latitude: 1, longitude: 1 })).toBeNull();
+});
+
+test("guidage : virage à gauche et ligne droite sans virage", async () => {
+  const g = await import("../../mobile/src/lib/guidage.ts");
+  const dLat = (m) => m / 111320;
+  const dLng = (m) => m / (111320 * Math.cos((14.7 * Math.PI) / 180));
+  const gauche = [];
+  for (let m = 0; m <= 100; m += 25) gauche.push([14.7 + dLat(m), -17.4]);
+  for (let m = 25; m <= 100; m += 25) gauche.push([14.7 + dLat(100), -17.4 - dLng(m)]);
+  expect(g.extraireVirages(gauche)[0].type).toBe("gauche");
+  const droit = [0, 50, 100, 150, 200].map((m) => [14.7 + dLat(m), -17.4]);
+  expect(g.extraireVirages(droit)).toEqual([]);
+  expect(g.etatGuidage(droit, { latitude: 14.7, longitude: -17.4 }).consigne).toMatch(/^Continuez tout droit · arrivée dans 200 m$/);
+  expect(g.distanceLisible(1460)).toBe("1,5 km");
+});
