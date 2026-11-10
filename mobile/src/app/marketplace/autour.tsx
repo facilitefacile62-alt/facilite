@@ -16,7 +16,7 @@ import { SvgXml } from 'react-native-svg';
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
 import GuidageNavigation from '@/components/GuidageNavigation';
-import { etatGuidage, extraireVirages, type EtatGuidage, type PointTrace } from '@/lib/guidage';
+import { cap, distanceM, etatGuidage, extraireVirages, type EtatGuidage, type PointTrace } from '@/lib/guidage';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -234,6 +234,8 @@ export default function AutourDeMoiScreen() {
   const [positionLive, setPositionLive] = useState<Position | null>(null);
   const dernierRecalcul = useRef(0);
   const [vitesseKmh, setVitesseKmh] = useState(0);
+  const capVehicule = useRef(0);
+  const dernierePosition = useRef<Position | null>(null);
   const [routeFermee, setRouteFermee] = useState<string | null>(null);
   const routeActive = Boolean(routeParam && boutiqueParam && routeFermee !== boutiqueParam);
   const trajetCalcule = useRef<string | null>(null);
@@ -386,6 +388,13 @@ export default function AutourDeMoiScreen() {
   useEffect(() => {
     if (!guidage || !positionLive) return;
     carte?.centrer(positionLive.latitude, positionLive.longitude, 18);
+    // La flèche s'oriente dans le sens du déplacement (cap entre deux positions éloignées d'au moins 3 m).
+    const prec = dernierePosition.current;
+    if (prec && distanceM([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]) >= 3) {
+      capVehicule.current = cap([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]);
+      dernierePosition.current = positionLive;
+    } else if (!prec) dernierePosition.current = positionLive;
+    carte?.vehicule(positionLive.latitude, positionLive.longitude, capVehicule.current);
     if (consigne?.horsTrace && Date.now() - dernierRecalcul.current > 15000) {
       dernierRecalcul.current = Date.now();
       calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
@@ -400,6 +409,8 @@ export default function AutourDeMoiScreen() {
     return Math.max(1, Math.round((consigne.restantM / 1000 / kmh) * 60));
   }, [consigne, trajet]);
   const arreterGuidage = () => {
+    carte?.vehicule(null);
+    dernierePosition.current = null;
     setGuidage(null);
     setTrajet(null);
     carte?.restaurerVue();
@@ -495,7 +506,7 @@ export default function AutourDeMoiScreen() {
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={carrousel ? null : popup}
         popups={popups}
-        trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif } : null}
+        trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif, navigation: guidage != null } : null}
         onMarqueur={surMarqueur}
         commandes={setCarte}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}

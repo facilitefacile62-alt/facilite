@@ -73,7 +73,7 @@ export type PopupBoutique = {
 };
 
 /** Trajet tracé sur la carte (ex. « M'y rendre ») ; `approximatif` = ligne droite en pointillés. */
-export type TrajetCarte = { points: [number, number][]; approximatif?: boolean };
+export type TrajetCarte = { points: [number, number][]; approximatif?: boolean; /** Guidage en cours : trait épais cyan et la carte n'est pas recadrée sur le trajet. */ navigation?: boolean };
 
 export type CentreCarte = { lat: number; lng: number };
 
@@ -685,8 +685,24 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   window.majTrajet = function (t) {
     if (trace) { carte.removeLayer(trace); trace = null; }
     if (!t || !t.points || t.points.length < 2) return;
+    if (t.navigation) {
+      // Guidage : trait cyan épais bordé de blanc, comme Google Maps ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
+      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 13, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
+      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 8, opacity: 1, dashArray: t.approximatif ? '2 12' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
+      trace = L.layerGroup([bord, trait]).addTo(carte);
+      return;
+    }
     trace = L.polyline(t.points, { color: '#38BDF8', weight: 5, opacity: .95, dashArray: t.approximatif ? '9 9' : null, lineCap: 'round', interactive: false }).addTo(carte);
     carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, MARGE_H + 30], paddingBottomRight: [40, MARGE_B + 30], maxZoom: 17, animate: false });
+  };
+  // Véhicule du guidage : flèche orientée dans le sens de la marche (cap en degrés, 0 = nord), comme la voiture de Google Maps.
+  var vehicule = null;
+  window.majVehicule = function (lat, lng, capDeg) {
+    if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
+    if (lat === null || lat === undefined) return;
+    var html = '<div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
+      + '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
+    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [44, 44], iconAnchor: [22, 22] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
@@ -701,6 +717,8 @@ export type CommandesCarte = {
   memoriserVue: () => void;
   /** Ramène la carte à la vue retenue (dézoom à la fermeture) ; sans effet s'il n'y en a pas. */
   restaurerVue: () => void;
+  /** Place (ou retire, avec null) la flèche du véhicule pendant le guidage ; cap en degrés (0 = nord). */
+  vehicule: (lat: number | null, lng?: number, cap?: number) => void;
 };
 
 export default function CarteLeaflet({
@@ -810,6 +828,7 @@ export default function CarteLeaflet({
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
       memoriserVue: () => executer('window.memoriserVue && window.memoriserVue()'),
       restaurerVue: () => executer('window.restaurerVue && window.restaurerVue()'),
+      vehicule: (lat, lng, cap) => executer(lat === null ? 'window.majVehicule && window.majVehicule(null)' : `window.majVehicule && window.majVehicule(${lat}, ${lng}, ${cap ?? 0})`),
     });
   }, [commandes, executer]);
 

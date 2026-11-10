@@ -199,3 +199,15 @@ test("guidage façon Google : « Puis » le virage suivant, instruction sans dis
   expect(a).toContain("p.coords.speed"); // vitesse réelle du GPS
   expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
 });
+
+test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du véhicule orientée dans le sens de la marche", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("navigation?: boolean");
+  expect(c).toContain("color: '#22D3EE', weight: 8");
+  expect(c).toContain("window.majVehicule = function");
+  expect(c).toContain("rotate(' + (capDeg || 0) + 'deg)");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("navigation: guidage != null");
+  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, capVehicule.current)");
+  expect(a).toContain("carte?.vehicule(null)"); // la flèche disparaît à l'arrêt
+});
