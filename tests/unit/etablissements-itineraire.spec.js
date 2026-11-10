@@ -203,7 +203,7 @@ test("guidage façon Google : « Puis » le virage suivant, instruction sans dis
 test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du véhicule orientée dans le sens de la marche", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("navigation?: boolean");
-  expect(c).toContain("color: '#22D3EE', weight: 4");
+  expect(c).toContain("color: '#22D3EE', weight: 8");
   expect(c).toContain("window.majVehicule = function");
   expect(c).toContain("rotate(' + (capDeg || 0) + 'deg)");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
@@ -215,7 +215,7 @@ test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du
 test("guidage : la carte pivote selon le cap (direction de la marche vers le haut) et le suivi GPS a un relevé de secours", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("window.pivoter = function");
-  expect(c).toContain("rotate(' + (-rotation) + 'deg) scale(2)");
+  expect(c).toContain("rotate(' + (-rotation) + 'deg)");
   expect(c).toContain("((capDeg + decalageDoigts - rotation + 540) % 360) - 180"); // plus court chemin, pas de tour complet
   expect(c).toContain("overflow: hidden");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
@@ -262,9 +262,9 @@ test("guidage : plus de ronds de boutiques ni de recadrage sur les boutiques —
 
 test("guidage : traits et flèche compensent l'agrandissement x2 de la carte (rendu 8/13 px, flèche 52 px au lieu de 16/26 et 88 px)", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
-  expect(c).toContain("weight: 6.5");
-  expect(c).toContain("iconSize: [26, 26], iconAnchor: [13, 13]");
-  expect(c).toContain("scale(2)");
+  expect(c).toContain("weight: 13");
+  expect(c).toContain("iconSize: [52, 52], iconAnchor: [26, 26]");
+  expect(c).toContain("function cadreGuidage(actif)"); // cadre 3x : couvre tout l'écran à tout cap
 });
 
 test("guidage : le zoom ne peut pas descendre sous le niveau de la rue (pas de vue de toute la région)", () => {
@@ -327,4 +327,12 @@ test("guidage : zoom continu qui suit les doigts (sans paliers entiers), rétabl
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("carte.options.zoomSnap = 0;");
   expect(c).toContain("carte.options.zoomSnap = 1; carte.options.zoomDelta = 1;");
+});
+
+test("guidage : cadre de carte 3 fois plus grand (plus de bande vide ni de trajet coupé), zoom conservé entre deux relevés GPS, étiquettes droites", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("el.style.width = actif ? '300%' : '';");
+  expect(c).toContain("if (!guidageActif) {"); // les réglages du guidage ne se reposent pas à chaque relevé (c'était le re-zoom)
+  expect(c).toContain("rotate(var(--rot,0deg))");
+  expect(c).not.toContain("scale(2)");
 });

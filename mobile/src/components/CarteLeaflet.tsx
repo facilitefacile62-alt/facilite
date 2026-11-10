@@ -691,9 +691,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     if (t.alternatives && t.alternatives.length) {
       var couches = [];
       t.alternatives.forEach(function (alt, i) {
-        var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 3.5 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
+        var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 7 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
         var milieu = alt.points[Math.floor(alt.points.length / 2)];
-        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="transform:translate(-50%,-100%);background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + (t.navigation ? 7 : 13) + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
+        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + 13 + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
         trait.on('click', function () { envoyer('alternative:' + i); });
         bulle.on('click', function () { envoyer('alternative:' + i); });
         couches.push(trait, bulle);
@@ -701,9 +701,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       alternativesCouche = L.layerGroup(couches).addTo(carte);
     }
     if (t.navigation) {
-      // Guidage : trait cyan bordé de blanc, comme Google Maps (la carte est agrandie x2 pendant le guidage : largeurs divisées par 2 pour un rendu de 8 et 13 px) ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
-      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 6.5, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
-      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 4, opacity: 1, dashArray: t.approximatif ? '1 6' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
+      // Guidage : trait cyan bordé de blanc, comme Google Maps ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
+      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 13, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
+      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 8, opacity: 1, dashArray: t.approximatif ? '2 12' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
       trace = L.layerGroup([bord, trait]).addTo(carte);
       return;
     }
@@ -712,12 +712,29 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   };
   // Véhicule du guidage : flèche orientée dans le sens de la marche (cap en degrés, 0 = nord), comme la voiture de Google Maps.
   // Guidage : la carte pivote pour que la direction de la marche soit toujours vers le haut de l'écran (comme Google Maps).
-  // Le conteneur est agrandi (x2) et décalé vers le bas : la personne est dans le tiers bas de l'écran, on voit la route devant elle. pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
+  // Le cadre est 3 fois plus grand que l'écran et décalé vers le bas : la personne est dans le tiers bas de l'écran, on voit la route devant elle. pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
   var rotation = 0;
+  // Cadre de la carte 3 fois plus grand que l'écran (centré) pendant le guidage : une fois tourné à n'importe quel cap, il couvre toujours tout l'écran
+  // (sinon des bandes vides apparaissent et la route y est coupée).
+  function cadreGuidage(actif) {
+    var el = document.getElementById('carte');
+    var c = carte.getCenter(), z = carte.getZoom();
+    el.style.position = actif ? 'absolute' : '';
+    el.style.width = actif ? '300%' : '';
+    el.style.height = actif ? '300%' : '';
+    el.style.left = actif ? '-100%' : '';
+    el.style.top = actif ? '-100%' : '';
+    carte.invalidateSize({ animate: false });
+    carte.setView(c, z, { animate: false });
+  }
+  var guidageActif = false; // les réglages du guidage (zoom minimal, zoom continu) ne se posent qu'une fois, pas à chaque relevé GPS
   var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
   window.pivoter = function (capDeg, remiseAZero) {
     var el = document.getElementById('carte');
-    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; carte.dragging.enable(); carte.setMinZoom(0); carte.options.zoomSnap = 1; carte.options.zoomDelta = 1; return; }
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; if (guidageActif) cadreGuidage(false); guidageActif = false; carte.dragging.enable(); carte.setMinZoom(0); carte.options.zoomSnap = 1; carte.options.zoomDelta = 1; return; }
+    if (!guidageActif) {
+    guidageActif = true;
+    cadreGuidage(true);
     carte.dragging.disable();
     // Guidage : jamais de vue de toute la région (zoom 13 au moins) ; on peut dézoomer pour voir le trajet, la carte ne re-zoome pas toute seule.
     carte.setMinZoom(13);
@@ -725,12 +742,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     carte.options.zoomSnap = 0;
     carte.options.zoomDelta = 0.5;
     if (carte.getZoom() < 17) carte.setZoom(17, { animate: false });
+    }
     if (remiseAZero) decalageDoigts = 0;
     var delta = ((capDeg + decalageDoigts - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
     rotation += delta;
+    el.style.setProperty('--rot', rotation + 'deg'); // les étiquettes (bulles « Même durée ») se contre-tournent pour rester droites
     el.style.transformOrigin = '50% 50%';
     el.style.transition = 'transform .7s linear';
-    el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
+    el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg)';
   };
   // Rotation à deux doigts (comme Google Maps) : tourner deux doigts fait tourner la carte ; le cap du guidage la remet dans le sens de la marche au prochain « Recentrer ».
   (function () {
@@ -743,14 +762,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       doigt0 = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
       signale = false;
     }, { passive: true });
-    // Un doigt : la carte suit le doigt. L'écart est ramené dans le repère (tourné et agrandi x2) du conteneur, puis la carte cesse de suivre la personne
+    // Un doigt : la carte suit le doigt. L'écart est ramené dans le repère (tourné) du conteneur, puis la carte cesse de suivre la personne
     // (l'application est prévenue) jusqu'à « Recentrer ».
     cadre.addEventListener('touchmove', function (e) {
       if (e.touches.length !== 1 || !doigt0 || !cadre.style.transform) return;
       var dx = e.touches[0].clientX - doigt0.x, dy = e.touches[0].clientY - doigt0.y;
       doigt0 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       var th = (-rotation) * Math.PI / 180;
-      var lx = (dx * Math.cos(th) + dy * Math.sin(th)) / 2, ly = (-dx * Math.sin(th) + dy * Math.cos(th)) / 2;
+      var lx = dx * Math.cos(th) + dy * Math.sin(th), ly = -dx * Math.sin(th) + dy * Math.cos(th);
       carte.panBy([-lx, -ly], { animate: false });
       if (!signale) { signale = true; envoyer('carte-deplacee'); }
     }, { passive: true });
@@ -761,9 +780,10 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       angle0 = a1;
       decalageDoigts -= d;
       rotation -= d;
+      document.getElementById('carte').style.setProperty('--rot', rotation + 'deg');
       var el = document.getElementById('carte');
       el.style.transition = '';
-      el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
+      el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg)';
     }, { passive: true });
     cadre.addEventListener('touchend', function () { angle0 = null; }, { passive: true });
   })();
@@ -771,9 +791,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   window.majVehicule = function (lat, lng, capDeg) {
     if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
     if (lat === null || lat === undefined) return;
-    var html = '<div style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
-      + '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
-    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
+    var html = '<div style="width:52px;height:52px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
+      + '<svg width="32" height="32" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
+    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [52, 52], iconAnchor: [26, 26] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
