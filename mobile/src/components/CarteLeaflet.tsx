@@ -95,6 +95,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <link rel="stylesheet" href="${LEAFLET_CSS}" />
 <style>
+  html, body { overflow: hidden; }
   html, body, #carte { margin: 0; padding: 0; height: 100%; width: 100%; background: ${sombre ? '#1b2330' : '#e8e4da'}; }
   .leaflet-control-attribution { font-size: 9px; opacity: .7; }
   ${sombre ? '.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }' : ''}
@@ -696,6 +697,18 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, MARGE_H + 30], paddingBottomRight: [40, MARGE_B + 30], maxZoom: 17, animate: false });
   };
   // Véhicule du guidage : flèche orientée dans le sens de la marche (cap en degrés, 0 = nord), comme la voiture de Google Maps.
+  // Guidage : la carte pivote pour que la direction de la marche soit toujours vers le haut de l'écran (comme Google Maps).
+  // Le conteneur est agrandi (x1,8) pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
+  var rotation = 0;
+  window.pivoter = function (capDeg) {
+    var el = document.getElementById('carte');
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; return; }
+    var delta = ((capDeg - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
+    rotation += delta;
+    el.style.transformOrigin = '50% 50%';
+    el.style.transition = 'transform .7s linear';
+    el.style.transform = 'rotate(' + (-rotation) + 'deg) scale(1.8)';
+  };
   var vehicule = null;
   window.majVehicule = function (lat, lng, capDeg) {
     if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
@@ -719,6 +732,8 @@ export type CommandesCarte = {
   restaurerVue: () => void;
   /** Place (ou retire, avec null) la flèche du véhicule pendant le guidage ; cap en degrés (0 = nord). */
   vehicule: (lat: number | null, lng?: number, cap?: number) => void;
+  /** Fait pivoter la carte pour que le cap (degrés, 0 = nord) pointe vers le haut ; null : carte droite. */
+  pivoter: (cap: number | null) => void;
 };
 
 export default function CarteLeaflet({
@@ -828,6 +843,7 @@ export default function CarteLeaflet({
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
       memoriserVue: () => executer('window.memoriserVue && window.memoriserVue()'),
       restaurerVue: () => executer('window.restaurerVue && window.restaurerVue()'),
+      pivoter: (cap) => executer(cap === null ? 'window.pivoter && window.pivoter(null)' : `window.pivoter && window.pivoter(${cap})`),
       vehicule: (lat, lng, cap) => executer(lat === null ? 'window.majVehicule && window.majVehicule(null)' : `window.majVehicule && window.majVehicule(${lat}, ${lng}, ${cap ?? 0})`),
     });
   }, [commandes, executer]);

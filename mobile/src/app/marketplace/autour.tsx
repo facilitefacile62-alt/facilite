@@ -235,6 +235,8 @@ export default function AutourDeMoiScreen() {
   const dernierRecalcul = useRef(0);
   const [vitesseKmh, setVitesseKmh] = useState(0);
   const capVehicule = useRef(0);
+  const capGps = useRef<number | null>(null);
+  const dernierReleve = useRef(0);
   const dernierePosition = useRef<Position | null>(null);
   const [routeFermee, setRouteFermee] = useState<string | null>(null);
   const routeActive = Boolean(routeParam && boutiqueParam && routeFermee !== boutiqueParam);
@@ -363,20 +365,28 @@ export default function AutourDeMoiScreen() {
     }
     let abonnement: Location.LocationSubscription | null = null;
     let annule = false;
-    Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 4, timeInterval: 2000 },
-      (p) => {
-        setPositionLive({ latitude: p.coords.latitude, longitude: p.coords.longitude });
-        setVitesseKmh(Math.max(0, Math.round((p.coords.speed ?? 0) * 3.6)));
-      }
-    )
+    const recevoir = (p: Location.LocationObject) => {
+      if (annule) return;
+      dernierReleve.current = Date.now();
+      setPositionLive({ latitude: p.coords.latitude, longitude: p.coords.longitude });
+      setVitesseKmh(Math.max(0, Math.round((p.coords.speed ?? 0) * 3.6)));
+      // Cap du GPS quand on avance vraiment (> 1 m/s) ; sinon on garde le dernier cap connu.
+      if (typeof p.coords.heading === 'number' && p.coords.heading >= 0 && (p.coords.speed ?? 0) > 1) capGps.current = p.coords.heading;
+    };
+    Location.watchPositionAsync({ accuracy: Location.Accuracy.High, distanceInterval: 1, timeInterval: 1000 }, recevoir)
       .then((s) => {
         if (annule) s.remove();
         else abonnement = s;
       })
       .catch(() => {});
+    // Relevé de secours : si le suivi continu ne donne rien pendant 4 s (GPS lent, intérieur), on demande la position toutes les 3 s.
+    const secours = setInterval(() => {
+      if (Date.now() - dernierReleve.current < 4000) return;
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).then(recevoir).catch(() => {});
+    }, 3000);
     return () => {
       annule = true;
+      clearInterval(secours);
       abonnement?.remove();
     };
   }, [guidage]);
@@ -394,7 +404,10 @@ export default function AutourDeMoiScreen() {
       capVehicule.current = cap([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]);
       dernierePosition.current = positionLive;
     } else if (!prec) dernierePosition.current = positionLive;
-    carte?.vehicule(positionLive.latitude, positionLive.longitude, capVehicule.current);
+    if (capGps.current !== null) capVehicule.current = capGps.current;
+    // La carte pivote : la direction de la marche est toujours vers le haut ; la flèche reste donc droite.
+    carte?.pivoter(capVehicule.current);
+    carte?.vehicule(positionLive.latitude, positionLive.longitude, 0);
     if (consigne?.horsTrace && Date.now() - dernierRecalcul.current > 15000) {
       dernierRecalcul.current = Date.now();
       calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
@@ -410,6 +423,8 @@ export default function AutourDeMoiScreen() {
   }, [consigne, trajet]);
   const arreterGuidage = () => {
     carte?.vehicule(null);
+    carte?.pivoter(null);
+    capGps.current = null;
     dernierePosition.current = null;
     setGuidage(null);
     setTrajet(null);
