@@ -241,3 +241,15 @@ test("guidage : flèche de navigation (plus de voiture), rotation à deux doigts
   expect(a).toMatch(/carrouselAvantGuidage\.current = carrousel;\s+setCarrousel\(false\)/);
   expect(a).toContain("carte?.pivoter(nordHaut ? 0 : capVehicule.current, true)"); // Recentrer annule la rotation à la main
 });
+
+test("guidage : la carte se déplace au doigt (corrigé de la rotation), arrête de suivre la personne, et « Recentrer » la reprend", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("carte.panBy([-lx, -ly], { animate: false })");
+  expect(c).toContain("envoyer('carte-deplacee')");
+  expect(c).toContain("carte.dragging.disable()");
+  expect(c).toContain("carte.dragging.enable()");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("if (id === 'carte-deplacee') {");
+  expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude, 18)");
+  expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer/);
+});

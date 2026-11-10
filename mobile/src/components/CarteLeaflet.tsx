@@ -703,7 +703,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
   window.pivoter = function (capDeg, remiseAZero) {
     var el = document.getElementById('carte');
-    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; return; }
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; carte.dragging.enable(); return; }
+    carte.dragging.disable();
     if (remiseAZero) decalageDoigts = 0;
     var delta = ((capDeg + decalageDoigts - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
     rotation += delta;
@@ -716,7 +717,23 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var angle0 = null;
     function angleDoigts(t) { return Math.atan2(t[1].clientY - t[0].clientY, t[1].clientX - t[0].clientX) * 180 / Math.PI; }
     var cadre = document.getElementById('carte');
-    cadre.addEventListener('touchstart', function (e) { angle0 = e.touches.length === 2 ? angleDoigts(e.touches) : null; }, { passive: true });
+    var doigt0 = null, signale = false;
+    cadre.addEventListener('touchstart', function (e) {
+      angle0 = e.touches.length === 2 ? angleDoigts(e.touches) : null;
+      doigt0 = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+      signale = false;
+    }, { passive: true });
+    // Un doigt : la carte suit le doigt. L'écart est ramené dans le repère (tourné et agrandi x2) du conteneur, puis la carte cesse de suivre la personne
+    // (l'application est prévenue) jusqu'à « Recentrer ».
+    cadre.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 1 || !doigt0 || !cadre.style.transform) return;
+      var dx = e.touches[0].clientX - doigt0.x, dy = e.touches[0].clientY - doigt0.y;
+      doigt0 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      var th = (-rotation) * Math.PI / 180;
+      var lx = (dx * Math.cos(th) + dy * Math.sin(th)) / 2, ly = (-dx * Math.sin(th) + dy * Math.cos(th)) / 2;
+      carte.panBy([-lx, -ly], { animate: false });
+      if (!signale) { signale = true; envoyer('carte-deplacee'); }
+    }, { passive: true });
     cadre.addEventListener('touchmove', function (e) {
       if (e.touches.length !== 2 || angle0 === null || rotation === 0 && !document.getElementById('carte').style.transform) return;
       var a1 = angleDoigts(e.touches);

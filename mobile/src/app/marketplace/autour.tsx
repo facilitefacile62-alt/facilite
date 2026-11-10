@@ -237,6 +237,11 @@ export default function AutourDeMoiScreen() {
   const capVehicule = useRef(0);
   const capGps = useRef<number | null>(null);
   const [nordHaut, setNordHaut] = useState(false);
+  // La carte suit la personne tant qu'elle n'est pas déplacée à la main ; « Recentrer » la remet à sa suite.
+  const [suivi, setSuivi] = useState(true);
+  useEffect(() => {
+    setSuivi(true);
+  }, [guidage]);
   const dernierReleve = useRef(0);
   const dernierePosition = useRef<Position | null>(null);
   const [routeFermee, setRouteFermee] = useState<string | null>(null);
@@ -277,6 +282,10 @@ export default function AutourDeMoiScreen() {
   // seulement pour des boutiques situées exactement au même endroit).
   const surMarqueur = useCallback(
     (id: string) => {
+      if (id === 'carte-deplacee') {
+        setSuivi(false);
+        return;
+      }
       if (id === 'fermer') {
         setSelection(null);
         carte?.restaurerVue(); // la croix ramène la carte où elle était avant le zoom
@@ -398,7 +407,7 @@ export default function AutourDeMoiScreen() {
   }, [guidage, trajet, positionLive, position, virages]);
   useEffect(() => {
     if (!guidage || !positionLive) return;
-    carte?.centrer(positionLive.latitude, positionLive.longitude, 18);
+    if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude, 18);
     // La flèche s'oriente dans le sens du déplacement (cap entre deux positions éloignées d'au moins 3 m).
     const prec = dernierePosition.current;
     if (prec && distanceM([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]) >= 3) {
@@ -414,7 +423,7 @@ export default function AutourDeMoiScreen() {
       dernierRecalcul.current = Date.now();
       calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
     }
-  }, [guidage, positionLive, consigne?.horsTrace, carte, nordHaut]);
+  }, [guidage, positionLive, consigne?.horsTrace, carte, nordHaut, suivi]);
   // Durée restante : la durée du trajet au prorata de la distance restante (à défaut, 5 km/h à pied, 30 km/h en voiture).
   const minutesRestantes = useMemo(() => {
     if (!consigne || !trajet) return null;
@@ -671,6 +680,7 @@ export default function AutourDeMoiScreen() {
           onArreter={arreterGuidage}
           onRecentrer={() => {
             const p = positionLive ?? position;
+            setSuivi(true);
             if (p) carte?.centrer(p.latitude, p.longitude, 18);
             carte?.pivoter(nordHaut ? 0 : capVehicule.current, true); // annule la rotation faite à la main
           }}
