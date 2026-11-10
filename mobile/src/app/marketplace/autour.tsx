@@ -14,7 +14,7 @@ import { chargerArticles, distanceLisible, prixLisible, type ArticleMarketplace,
 import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
 import { SvgXml } from 'react-native-svg';
 import { useFonctionnalite } from '@/lib/featureFlags';
-import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
+import { calculerItineraire, echangerAlternative, libelleDifference, ligneDroite, type Itineraire } from '@/lib/itineraire';
 import GuidageNavigation from '@/components/GuidageNavigation';
 import { cap, distanceM, etatGuidage, extraireVirages, type EtatGuidage, type PointTrace } from '@/lib/guidage';
 import { useLocalisation } from '@/lib/useLocalisation';
@@ -282,6 +282,11 @@ export default function AutourDeMoiScreen() {
   // seulement pour des boutiques situées exactement au même endroit).
   const surMarqueur = useCallback(
     (id: string) => {
+      if (id.startsWith('alternative:')) {
+        // Un appui sur un trajet alternatif (« raccourci ») en fait le trajet principal.
+        setTrajet((t) => (t ? echangerAlternative(t, Number(id.slice(12))) : t));
+        return;
+      }
       if (id === 'carte-deplacee') {
         setSuivi(false);
         return;
@@ -544,7 +549,16 @@ export default function AutourDeMoiScreen() {
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={carrousel ? null : popup}
         popups={popups}
-        trajet={trajet ? { points: trajet.points, approximatif: trajet.approximatif, navigation: guidage != null } : null}
+        trajet={
+          trajet
+            ? {
+                points: trajet.points,
+                approximatif: trajet.approximatif,
+                navigation: guidage != null,
+                alternatives: (trajet.alternatives ?? []).map((x) => ({ points: x.points, libelle: libelleDifference(trajet.dureeMin, x.dureeMin) })),
+              }
+            : null
+        }
         onMarqueur={surMarqueur}
         commandes={setCarte}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}

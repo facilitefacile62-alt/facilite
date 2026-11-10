@@ -73,7 +73,7 @@ export type PopupBoutique = {
 };
 
 /** Trajet tracé sur la carte (ex. « M'y rendre ») ; `approximatif` = ligne droite en pointillés. */
-export type TrajetCarte = { points: [number, number][]; approximatif?: boolean; /** Guidage en cours : trait épais cyan et la carte n'est pas recadrée sur le trajet. */ navigation?: boolean };
+export type TrajetCarte = { points: [number, number][]; approximatif?: boolean; /** Autres trajets, en clair, avec leur différence de durée ; un appui en fait le trajet principal. */ alternatives?: { points: [number, number][]; libelle: string }[]; /** Guidage en cours : trait épais cyan et la carte n'est pas recadrée sur le trajet. */ navigation?: boolean };
 
 export type CentreCarte = { lat: number; lng: number };
 
@@ -683,9 +683,23 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   };
   carte.on('zoomend', function () { if (donneesPopups) fusionnerPopups(); });
   var trace = null;
+  var alternativesCouche = null;
   window.majTrajet = function (t) {
     if (trace) { carte.removeLayer(trace); trace = null; }
+    if (alternativesCouche) { carte.removeLayer(alternativesCouche); alternativesCouche = null; }
     if (!t || !t.points || t.points.length < 2) return;
+    if (t.alternatives && t.alternatives.length) {
+      var couches = [];
+      t.alternatives.forEach(function (alt, i) {
+        var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 3.5 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
+        var milieu = alt.points[Math.floor(alt.points.length / 2)];
+        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="transform:translate(-50%,-100%);background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + (t.navigation ? 7 : 13) + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
+        trait.on('click', function () { envoyer('alternative:' + i); });
+        bulle.on('click', function () { envoyer('alternative:' + i); });
+        couches.push(trait, bulle);
+      });
+      alternativesCouche = L.layerGroup(couches).addTo(carte);
+    }
     if (t.navigation) {
       // Guidage : trait cyan bordé de blanc, comme Google Maps (la carte est agrandie x2 pendant le guidage : largeurs divisées par 2 pour un rendu de 8 et 13 px) ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
       var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 6.5, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });

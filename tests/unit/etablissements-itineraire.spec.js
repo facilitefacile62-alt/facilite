@@ -273,3 +273,46 @@ test("guidage : le zoom ne peut pas descendre sous le niveau de la rue (pas de v
   expect(c).toContain("carte.setMinZoom(0)"); // levé à l'arrêt du guidage
   expect(c).toContain("if (carte.getZoom() < 17) carte.setZoom(17");
 });
+
+// ── Trajets alternatifs (« raccourcis ») ──
+test("alternatives : demande à OpenRouteService (seulement si voulues) et lecture du trajet principal + 2 alternatives", async () => {
+  const { corpsItineraire, extraireTrajets } = await import("../../src/lib/itineraireAlternatives.js");
+  const d = { lat: 14.75, lng: -17.39 }, a = { lat: 14.76, lng: -17.4 };
+  expect(corpsItineraire(d, a, false)).toEqual({ coordinates: [[-17.39, 14.75], [-17.4, 14.76]] }); // sans alternatives : demande inchangée
+  expect(corpsItineraire(d, a, true).alternative_routes).toEqual({ target_count: 3, share_factor: 0.6, weight_factor: 1.4 });
+  const f = (km, s, coords) => ({ geometry: { coordinates: coords }, properties: { summary: { distance: km * 1000, duration: s } } });
+  const donnees = { features: [f(5, 600, [[-17.4, 14.7], [-17.39, 14.71]]), f(5.4, 660, [[-17.4, 14.7], [-17.38, 14.72]]), f(6, 720, [[-17.4, 14.7], [-17.37, 14.73]]), f(7, 800, [[-17.4, 14.7], [-17.36, 14.74]])] };
+  const t = extraireTrajets(donnees);
+  expect(t.principal).toEqual({ points: [[14.7, -17.4], [14.71, -17.39]], distance_km: 5, duree_min: 10 });
+  expect(t.alternatives.length).toBe(2); // au plus 2
+  expect(t.alternatives[0].duree_min).toBe(11);
+  expect(extraireTrajets({ features: [] })).toBeNull();
+  expect(extraireTrajets({ features: [{ geometry: { coordinates: [[1, 1]] } }] })).toBeNull();
+  expect(extraireTrajets({ features: [f(1, 60, [[-17.4, 14.7], [-17.39, 14.71]])] }).alternatives).toEqual([]);
+});
+
+test("alternatives : la route du site ne renvoie les alternatives que sur demande et retente sans elles si le fournisseur refuse", () => {
+  const r = lire("src/app/api/marketplace/itineraire/route.js");
+  expect(r).toContain("corps?.alternatives === true");
+  expect(r).toContain("if (!reponse.ok && veutAlternatives) reponse = await demander(false)");
+  expect(r).toContain("...(veutAlternatives ? { alternatives: trajets.alternatives } : {})");
+  expect(r).toContain("points: principal.points"); // réponse inchangée pour les autres appelants
+});
+
+test("alternatives (application) : libellés de différence et échange du trajet choisi", async () => {
+  const m = await import("../../mobile/src/lib/alternatives.ts");
+  expect(m.libelleDifference(10, 10)).toBe("Même durée");
+  expect(m.libelleDifference(10, 12)).toBe("2 min plus long");
+  expect(m.libelleDifference(10, 8)).toBe("2 min plus court");
+  expect(m.libelleDifference(null, 8)).toBe("Autre trajet");
+  const principal = { points: [[1, 1], [2, 2]], distanceKm: 5, dureeMin: 10, approximatif: false, profil: "voiture", alternatives: [{ points: [[1, 1], [3, 3]], distanceKm: 6, dureeMin: 11 }, { points: [[1, 1], [4, 4]], distanceKm: 7, dureeMin: 12 }] };
+  const e = m.echangerAlternative(principal, 0);
+  expect(e.points).toEqual([[1, 1], [3, 3]]);
+  expect(e.dureeMin).toBe(11);
+  expect(e.alternatives[0].dureeMin).toBe(10); // l'ancien principal devient une alternative
+  expect(e.alternatives[1].dureeMin).toBe(12);
+  expect(m.echangerAlternative(principal, 9)).toBe(principal); // index inconnu : rien ne change
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("envoyer('alternative:' + i)");
+  expect(lire("mobile/src/app/marketplace/autour.tsx")).toContain("id.startsWith('alternative:')");
+});
