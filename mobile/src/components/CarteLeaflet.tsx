@@ -684,16 +684,18 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   carte.on('zoomend', function () { if (donneesPopups) fusionnerPopups(); });
   var trace = null;
   var alternativesCouche = null;
+  var epingleDestination = null;
   window.majTrajet = function (t) {
     if (trace) { carte.removeLayer(trace); trace = null; }
     if (alternativesCouche) { carte.removeLayer(alternativesCouche); alternativesCouche = null; }
+    if (epingleDestination) { carte.removeLayer(epingleDestination); epingleDestination = null; }
     if (!t || !t.points || t.points.length < 2) return;
     if (t.alternatives && t.alternatives.length) {
       var couches = [];
       t.alternatives.forEach(function (alt, i) {
-        var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 7 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
+        var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 4 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
         var milieu = alt.points[Math.floor(alt.points.length / 2)];
-        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + 13 + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
+        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="display:inline-block;transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + 13 + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
         trait.on('click', function () { envoyer('alternative:' + i); });
         bulle.on('click', function () { envoyer('alternative:' + i); });
         couches.push(trait, bulle);
@@ -701,9 +703,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       alternativesCouche = L.layerGroup(couches).addTo(carte);
     }
     if (t.navigation) {
+      // Repère rouge de la destination (comme Google Maps) : au bout du trajet ; il reste droit quand la carte tourne.
+      var fin = t.points[t.points.length - 1];
+      var pin = '<div style="transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">'
+        + '<svg width="34" height="46" viewBox="0 0 24 32"><path d="M12 1C6 1 1.5 5.4 1.5 11c0 7.5 10.5 20 10.5 20s10.5-12.5 10.5-20C22.5 5.4 18 1 12 1z" fill="#EA4335" stroke="#B31412" stroke-width="1"/><circle cx="12" cy="11" r="4.2" fill="#7F1D1D"/></svg></div>';
+      epingleDestination = L.marker(fin, { icon: L.divIcon({ className: '', html: pin, iconSize: [0, 0] }), interactive: false, zIndexOffset: 1500 }).addTo(carte);
       // Guidage : trait cyan bordé de blanc, comme Google Maps ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
-      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 13, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
-      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 8, opacity: 1, dashArray: t.approximatif ? '2 12' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
+      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 8.5, opacity: .85, lineCap: 'round', lineJoin: 'round', interactive: false });
+      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 5.5, opacity: 1, dashArray: t.approximatif ? '1 9' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
       trace = L.layerGroup([bord, trait]).addTo(carte);
       return;
     }

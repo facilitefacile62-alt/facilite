@@ -203,7 +203,7 @@ test("guidage façon Google : « Puis » le virage suivant, instruction sans dis
 test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du véhicule orientée dans le sens de la marche", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("navigation?: boolean");
-  expect(c).toContain("color: '#22D3EE', weight: 8");
+  expect(c).toContain("color: '#22D3EE', weight: 5.5");
   expect(c).toContain("window.majVehicule = function");
   expect(c).toContain("rotate(' + (capDeg || 0) + 'deg)");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
@@ -262,7 +262,7 @@ test("guidage : plus de ronds de boutiques ni de recadrage sur les boutiques —
 
 test("guidage : traits et flèche compensent l'agrandissement x2 de la carte (rendu 8/13 px, flèche 52 px au lieu de 16/26 et 88 px)", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
-  expect(c).toContain("weight: 13");
+  expect(c).toContain("weight: 8.5");
   expect(c).toContain("iconSize: [52, 52], iconAnchor: [26, 26]");
   expect(c).toContain("function cadreGuidage(actif)"); // cadre 3x : couvre tout l'écran à tout cap
 });
@@ -335,4 +335,12 @@ test("guidage : cadre de carte 3 fois plus grand (plus de bande vide ni de traje
   expect(c).toContain("if (!guidageActif) {"); // les réglages du guidage ne se reposent pas à chaque relevé (c'était le re-zoom)
   expect(c).toContain("rotate(var(--rot,0deg))");
   expect(c).not.toContain("scale(2)");
+});
+
+test("guidage : repère rouge de la destination au bout du trajet (comme Google Maps), droit malgré la rotation, retiré avec le trajet", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("var epingleDestination = null;");
+  expect(c).toContain("fill=\"#EA4335\"");
+  expect(c).toContain("var fin = t.points[t.points.length - 1];");
+  expect(c).toContain("if (epingleDestination) { carte.removeLayer(epingleDestination); epingleDestination = null; }");
 });
