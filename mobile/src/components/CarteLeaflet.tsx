@@ -698,7 +698,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   };
   // Véhicule du guidage : flèche orientée dans le sens de la marche (cap en degrés, 0 = nord), comme la voiture de Google Maps.
   // Guidage : la carte pivote pour que la direction de la marche soit toujours vers le haut de l'écran (comme Google Maps).
-  // Le conteneur est agrandi (x1,8) pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
+  // Le conteneur est agrandi (x2) et décalé vers le bas : la personne est dans le tiers bas de l'écran, on voit la route devant elle. pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
   var rotation = 0;
   window.pivoter = function (capDeg) {
     var el = document.getElementById('carte');
@@ -707,15 +707,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     rotation += delta;
     el.style.transformOrigin = '50% 50%';
     el.style.transition = 'transform .7s linear';
-    el.style.transform = 'rotate(' + (-rotation) + 'deg) scale(1.8)';
+    el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
   };
   var vehicule = null;
   window.majVehicule = function (lat, lng, capDeg) {
     if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
     if (lat === null || lat === undefined) return;
-    var html = '<div style="width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
-      + '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
-    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [44, 44], iconAnchor: [22, 22] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
+    var html = '<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg);filter:drop-shadow(0 3px 5px rgba(0,0,0,.55))">'
+      + '<svg width="34" height="52" viewBox="0 0 34 52"><rect x="3" y="2" width="28" height="48" rx="12" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>'
+      + '<rect x="7" y="12" width="20" height="9" rx="3" fill="#475569"/><rect x="8" y="31" width="18" height="10" rx="3" fill="#64748B"/>'
+      + '<rect x="6" y="3" width="6" height="3" rx="1.5" fill="#FDE68A"/><rect x="22" y="3" width="6" height="3" rx="1.5" fill="#FDE68A"/></svg></div>';
+    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [56, 56], iconAnchor: [28, 28] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');

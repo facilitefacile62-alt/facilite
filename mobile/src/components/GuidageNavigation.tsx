@@ -40,9 +40,12 @@ type Props = {
   vitesseKmh: number;
   onArreter: () => void;
   onRecentrer: () => void;
+  /** Carte orientée nord en haut (true) ou dans le sens de la marche (false), comme la boussole de Google Maps. */
+  nordHaut: boolean;
+  onBoussole: () => void;
 };
 
-export default function GuidageNavigation({ etat, destination, minutes, vitesseKmh, onArreter, onRecentrer }: Props) {
+export default function GuidageNavigation({ etat, destination, minutes, vitesseKmh, onArreter, onRecentrer, nordHaut, onBoussole }: Props) {
   const insets = useSafeAreaInsets();
   const prochain = etat?.prochain ?? null;
   const type: TypeVirage | 'tout-droit' = prochain && prochain.distanceM < 400 ? prochain.type : 'tout-droit';
@@ -88,6 +91,13 @@ export default function GuidageNavigation({ etat, destination, minutes, vitesseK
           </View>
         ) : null}
       </View>
+
+      <Pressable
+        onPress={onBoussole}
+        accessibilityLabel={nordHaut ? 'Orienter la carte dans le sens de la marche' : 'Mettre le nord en haut'}
+        style={{ position: 'absolute', right: 14, top: '42%', width: 52, height: 52, borderRadius: 26, backgroundColor: '#0B0F14', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+        <Ionicons name="compass" size={28} color={nordHaut ? '#fff' : '#F87171'} />
+      </Pressable>
 
       <View pointerEvents="box-none" style={{ position: 'absolute', left: 10, right: 10, bottom: 12, gap: 10 }}>
         <View pointerEvents="box-none" style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>

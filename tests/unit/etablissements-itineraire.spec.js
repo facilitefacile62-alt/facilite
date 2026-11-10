@@ -208,21 +208,32 @@ test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du
   expect(c).toContain("rotate(' + (capDeg || 0) + 'deg)");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("navigation: guidage != null");
-  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, 0)");
+  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0)");
   expect(a).toContain("carte?.vehicule(null)"); // la flèche disparaît à l'arrêt
 });
 
 test("guidage : la carte pivote selon le cap (direction de la marche vers le haut) et le suivi GPS a un relevé de secours", () => {
   const c = lire("mobile/src/components/CarteLeaflet.tsx");
   expect(c).toContain("window.pivoter = function");
-  expect(c).toContain("rotate(' + (-rotation) + 'deg) scale(1.8)");
+  expect(c).toContain("rotate(' + (-rotation) + 'deg) scale(2)");
   expect(c).toContain("((capDeg - rotation + 540) % 360) - 180"); // plus court chemin, pas de tour complet
   expect(c).toContain("overflow: hidden");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
-  expect(a).toContain("carte?.pivoter(capVehicule.current)");
-  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, 0)"); // flèche droite : c'est la carte qui tourne
+  expect(a).toContain("carte?.pivoter(nordHaut ? 0 : capVehicule.current)");
+  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0)"); // flèche droite : c'est la carte qui tourne
   expect(a).toContain("carte?.pivoter(null)"); // carte droite à l'arrêt
   expect(a).toContain("Location.Accuracy.High");
   expect(a).toContain("getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })"); // secours si le suivi continu est muet
   expect(a).toContain("p.coords.heading");
+});
+
+test("guidage : rendu Google — voiture vue de dessus, personne dans le tiers bas de l'écran, boussole (nord en haut / sens de la marche)", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("translateY(' + Math.round(window.innerHeight * 0.2)");
+  expect(c).toContain('viewBox="0 0 34 52"'); // voiture
+  const n = lire("mobile/src/components/GuidageNavigation.tsx");
+  expect(n).toContain("Mettre le nord en haut");
+  expect(n).toContain("onBoussole");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("onBoussole={() => setNordHaut((v) => !v)}");
 });
