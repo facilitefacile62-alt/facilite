@@ -703,8 +703,11 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
   window.pivoter = function (capDeg, remiseAZero) {
     var el = document.getElementById('carte');
-    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; carte.dragging.enable(); return; }
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; carte.dragging.enable(); carte.setMinZoom(0); return; }
     carte.dragging.disable();
+    // Guidage : jamais de vue de toute la région — la carte reste au niveau de la rue (zoom 16 au moins), même après un pincement.
+    carte.setMinZoom(16);
+    if (carte.getZoom() < 17) carte.setZoom(17, { animate: false });
     if (remiseAZero) decalageDoigts = 0;
     var delta = ((capDeg + decalageDoigts - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
     rotation += delta;

@@ -266,3 +266,10 @@ test("guidage : traits et flèche compensent l'agrandissement x2 de la carte (re
   expect(c).toContain("iconSize: [26, 26], iconAnchor: [13, 13]");
   expect(c).toContain("scale(2)");
 });
+
+test("guidage : le zoom ne peut pas descendre sous le niveau de la rue (pas de vue de toute la région)", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("carte.setMinZoom(16)");
+  expect(c).toContain("carte.setMinZoom(0)"); // levé à l'arrêt du guidage
+  expect(c).toContain("if (carte.getZoom() < 17) carte.setZoom(17");
+});
