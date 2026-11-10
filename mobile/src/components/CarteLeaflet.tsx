@@ -488,6 +488,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     carte.setView([lat, lng], z || carte.getZoom(), { animate: false });
     if (decalage) carte.panBy([0, Math.round(carte.getSize().y * decalage)], { animate: false });
   };
+  // Vue d'avant le zoom sur une boutique : la croix « ✕ » y ramène la carte (dézoom), comme sur Google Maps.
+  var vueAvant = null;
+  window.memoriserVue = function () {
+    if (!vueAvant) vueAvant = { c: carte.getCenter(), z: carte.getZoom() };
+  };
+  window.restaurerVue = function () {
+    if (!vueAvant) return;
+    carte.setView(vueAvant.c, vueAvant.z, { animate: true });
+    vueAvant = null;
+  };
   window.majPopup = function (d) {
     if (popupCourant) { carte.closePopup(popupCourant); popupCourant = null; }
     popupDonnees = d || null;
@@ -683,6 +693,10 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 export type CommandesCarte = {
   centrer: (lat: number, lng: number, zoom?: number, decalage?: number) => void;
   zoomer: (delta: number) => void;
+  /** Retient la vue actuelle avant un zoom sur une boutique (sans effet si une vue est déjà retenue). */
+  memoriserVue: () => void;
+  /** Ramène la carte à la vue retenue (dézoom à la fermeture) ; sans effet s'il n'y en a pas. */
+  restaurerVue: () => void;
 };
 
 export default function CarteLeaflet({
@@ -790,6 +804,8 @@ export default function CarteLeaflet({
     commandes?.({
       centrer: (lat, lng, z, decalage) => executer(`window.centrer && window.centrer(${lat}, ${lng}, ${z ?? 'null'}, ${decalage ?? 'null'})`),
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
+      memoriserVue: () => executer('window.memoriserVue && window.memoriserVue()'),
+      restaurerVue: () => executer('window.restaurerVue && window.restaurerVue()'),
     });
   }, [commandes, executer]);
 

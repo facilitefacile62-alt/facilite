@@ -204,6 +204,7 @@ export default function AutourDeMoiScreen() {
   const choisirBoutique = useCallback(
     (id: string, zoom = 15) => {
       if (id === 'moi') return;
+      carte?.memoriserVue();
       setSelection(id);
       const b = boutiques?.find((x) => x.id === id);
       // Remonte la boutique à l'écran : l'aperçu de ses articles occupe le bas et la cacherait.
@@ -265,10 +266,12 @@ export default function AutourDeMoiScreen() {
     (id: string) => {
       if (id === 'fermer') {
         setSelection(null);
+        carte?.restaurerVue(); // la croix ramène la carte où elle était avant le zoom
         return;
       }
       if (id === 'fermer-carrousel') {
         setCarrousel(false);
+        carte?.restaurerVue();
         return;
       }
       if (id.startsWith('boutique:')) {
@@ -286,6 +289,7 @@ export default function AutourDeMoiScreen() {
         const arrivee = { latitude: b.latitude, longitude: b.longitude };
         setTrajet(ligneDroite(position, arrivee));
         calculerItineraire(position, arrivee).then(setTrajet);
+        carte?.memoriserVue();
         // « Itinéraire » : la carte se recentre sur la boutique visée (zoom 16 au moins) ; « Démarrer » : sur la personne, pour partir. Le trajet reste tracé dans l'application (jamais Google Maps).
         if (demarrer) carte?.centrer(position.latitude, position.longitude, 17);
         else carte?.centrer(b.latitude, b.longitude, 16);

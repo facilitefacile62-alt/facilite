@@ -85,3 +85,13 @@ test("application mobile : « Démarrer » à côté d'« Itinéraire » dans le
   expect(a).toContain("carte?.centrer(position.latitude, position.longitude, 17)");
   expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
 });
+
+test("application : la croix de la bulle ramène la carte à la vue d'avant le zoom (dézoom)", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("window.memoriserVue = function");
+  expect(c).toContain("window.restaurerVue = function");
+  expect(c).toContain("if (!vueAvant) vueAvant =");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toMatch(/carte\?\.memoriserVue\(\);\n\s+setSelection\(id\);/);
+  expect(a).toMatch(/if \(id === 'fermer'\) \{\n\s+setSelection\(null\);\n\s+carte\?\.restaurerVue\(\)/);
+});
