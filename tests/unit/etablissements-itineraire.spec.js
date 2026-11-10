@@ -140,3 +140,17 @@ test("guidage : virage à gauche et ligne droite sans virage", async () => {
   expect(g.etatGuidage(droit, { latitude: 14.7, longitude: -17.4 }).consigne).toMatch(/^Continuez tout droit · arrivée dans 200 m$/);
   expect(g.distanceLisible(1460)).toBe("1,5 km");
 });
+
+test("application : « Démarrer » dans la bulle d'une boutique lance le guidage dans l'application (suivi GPS, consigne, Arrêter), sans Google Maps", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("pb-action2");
+  expect(c).toContain("action2?:");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("action2: { id: 'demarrer', libelle: 'Démarrer'");
+  expect(a).toContain("if (id === 'demarrer') {");
+  expect(a).toContain("Location.watchPositionAsync(");
+  expect(a).toContain("etatGuidage(trajet.points as PointTrace[]");
+  expect(a).toContain('accessibilityLabel="Arrêter le guidage"');
+  expect(a).toContain("consigne?.horsTrace"); // recalcul si écart
+  expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
+});

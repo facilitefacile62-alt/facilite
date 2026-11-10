@@ -66,6 +66,8 @@ export type PopupBoutique = {
   avatar?: { uri?: string; emoji?: string; bordure?: string };
   /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
   action?: { id: string; libelle: string; icone?: string };
+  /** Second bouton, plus clair, sous le premier (ex. « Démarrer »). */
+  action2?: { id: string; libelle: string; icone?: string };
   /** null = chargement des articles en cours. */
   articles: { id: string; titre: string; prix: string; photo?: string; icone?: string; boutiqueId?: string }[] | null;
 };
@@ -136,6 +138,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .popup-carrousel .pb-ic img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-fleche { position: absolute; top: 40px; width: 28px; height: 28px; border-radius: 9999px; background: #fff; color: #0f172a; font: 900 20px/26px system-ui, sans-serif; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); cursor: pointer; z-index: 5; display: none; }
   .pb-action { display: block; margin: 0 14px 0; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
+  .pb-action2 { margin-top: 6px; background: #CCFBF1; color: #0F766E; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
@@ -512,7 +515,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.createElement('div');
     el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
       + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps
-      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">' + (d.action.icone ? esc(d.action.icone) : '📨') + ' ' + esc(d.action.libelle) + '</div>' : '');
+      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">' + (d.action.icone ? esc(d.action.icone) : '📨') + ' ' + esc(d.action.libelle) + '</div>' : '')
+      + (d.action2 ? '<div class="pb-action pb-action2" data-act="' + esc(d.action2.id) + '">' + (d.action2.icone ? esc(d.action2.icone) + ' ' : '') + esc(d.action2.libelle) + '</div>' : '');
     el.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));

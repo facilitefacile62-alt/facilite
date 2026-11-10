@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ModalTrouverLivreur from '@/components/ModalTrouverLivreur';
@@ -14,6 +15,7 @@ import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
 import { SvgXml } from 'react-native-svg';
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
+import { etatGuidage, extraireVirages, type EtatGuidage, type PointTrace } from '@/lib/guidage';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
 
@@ -226,6 +228,10 @@ export default function AutourDeMoiScreen() {
 
   // Trajet de « M'y rendre » : ligne bleue de ma position à la boutique, avec distance et durée.
   const [trajet, setTrajet] = useState<Itineraire | null>(null);
+  // Guidage « Démarrer » : la carte suit la personne et dit quelle direction prendre (comme Google Maps), sans quitter l'application.
+  const [guidage, setGuidage] = useState<{ nom: string; latitude: number; longitude: number } | null>(null);
+  const [positionLive, setPositionLive] = useState<Position | null>(null);
+  const dernierRecalcul = useRef(0);
   const [routeFermee, setRouteFermee] = useState<string | null>(null);
   const routeActive = Boolean(routeParam && boutiqueParam && routeFermee !== boutiqueParam);
   const trajetCalcule = useRef<string | null>(null);
@@ -290,9 +296,11 @@ export default function AutourDeMoiScreen() {
         setTrajet(ligneDroite(position, arrivee));
         calculerItineraire(position, arrivee).then(setTrajet);
         carte?.memoriserVue();
-        // « Itinéraire » : la carte se recentre sur la boutique visée (zoom 16 au moins) ; « Démarrer » : sur la personne, pour partir. Le trajet reste tracé dans l'application (jamais Google Maps).
-        if (demarrer) carte?.centrer(position.latitude, position.longitude, 17);
-        else carte?.centrer(b.latitude, b.longitude, 16);
+        // « Itinéraire » : la carte se recentre sur la boutique visée (zoom 16 au moins). « Démarrer » : le guidage commence, la carte suit la personne.
+        if (demarrer) {
+          setGuidage({ nom: b.nom, latitude: b.latitude, longitude: b.longitude });
+          carte?.centrer(position.latitude, position.longitude, 18);
+        } else carte?.centrer(b.latitude, b.longitude, 16);
         return;
       }
       if (id === 'itineraire') {
@@ -307,6 +315,22 @@ export default function AutourDeMoiScreen() {
         calculerItineraire(position, arrivee).then(setTrajet);
         // La bulle est fermée : tout le trajet reste visible entre la barre de recherche et le carrousel du bas.
         setSelection(null);
+        return;
+      }
+      if (id === 'demarrer') {
+        const b = boutiques?.find((x) => x.id === selection);
+        if (!b) return;
+        if (!position) {
+          activer();
+          return;
+        }
+        const arrivee = { latitude: b.latitude, longitude: b.longitude };
+        carte?.memoriserVue();
+        setTrajet(ligneDroite(position, arrivee));
+        calculerItineraire(position, arrivee).then(setTrajet);
+        setSelection(null);
+        setGuidage({ nom: b.nom, latitude: b.latitude, longitude: b.longitude });
+        carte?.centrer(position.latitude, position.longitude, 18);
         return;
       }
       if (id === 'boutique') {
@@ -326,6 +350,47 @@ export default function AutourDeMoiScreen() {
     },
     [choisirBoutique, toucherBoutique, router, selection, boutiques, position, activer, carte]
   );
+
+  // Guidage : suit la position réelle (GPS), recentre la carte sur la personne et recalcule le trajet si elle s'en écarte.
+  useEffect(() => {
+    if (!guidage) {
+      setPositionLive(null);
+      return undefined;
+    }
+    let abonnement: Location.LocationSubscription | null = null;
+    let annule = false;
+    Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 4, timeInterval: 2000 },
+      (p) => setPositionLive({ latitude: p.coords.latitude, longitude: p.coords.longitude })
+    )
+      .then((s) => {
+        if (annule) s.remove();
+        else abonnement = s;
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+      abonnement?.remove();
+    };
+  }, [guidage]);
+  const virages = useMemo(() => (trajet ? extraireVirages(trajet.points as PointTrace[]) : []), [trajet]);
+  const consigne: EtatGuidage | null = useMemo(() => {
+    const p = positionLive ?? position;
+    return guidage && trajet && p ? etatGuidage(trajet.points as PointTrace[], p, virages) : null;
+  }, [guidage, trajet, positionLive, position, virages]);
+  useEffect(() => {
+    if (!guidage || !positionLive) return;
+    carte?.centrer(positionLive.latitude, positionLive.longitude, 18);
+    if (consigne?.horsTrace && Date.now() - dernierRecalcul.current > 15000) {
+      dernierRecalcul.current = Date.now();
+      calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
+    }
+  }, [guidage, positionLive, consigne?.horsTrace, carte]);
+  const arreterGuidage = () => {
+    setGuidage(null);
+    setTrajet(null);
+    carte?.restaurerVue();
+  };
 
   // Articles de la boutique sélectionnée, pour l'aperçu fixe.
   const [articlesSel, setArticlesSel] = useState<{ id: string; liste: ArticleMarketplace[] } | null>(null);
@@ -359,6 +424,7 @@ export default function AutourDeMoiScreen() {
           ? articlesSel.liste.map((a) => ({ id: a.id, titre: a.titre, prix: `${prixLisible(a.prixXof)} F`, photo: a.photos[0] }))
           : null,
       action: { id: 'itineraire', libelle: 'Itinéraire', icone: '🧭' },
+      action2: { id: 'demarrer', libelle: 'Démarrer', icone: '▶' },
     };
   }, [boutiqueSel, articlesSel]);
 
@@ -543,6 +609,24 @@ export default function AutourDeMoiScreen() {
 
       {/* Bas : onglets Boutiques / Articles, puis le carrousel */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
+        {/* Guidage « Démarrer » : la direction à prendre, la distance restante, et « Arrêter » */}
+        {guidage ? (
+          <View className="rounded-2xl bg-[#0F766E]" style={{ padding: 14, gap: 6 }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name={consigne?.arrive ? 'flag' : 'navigate'} size={26} color="#fff" />
+              <Text className="flex-1 text-[16px] font-extrabold text-white">{consigne?.consigne ?? 'Recherche de votre position…'}</Text>
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-[12px] font-bold text-[#CCFBF1]" numberOfLines={1} style={{ flex: 1 }}>
+                Vers {guidage.nom}
+                {trajet?.dureeMin != null ? ` · ${trajet.dureeMin} min` : ''}
+              </Text>
+              <Pressable onPress={arreterGuidage} accessibilityLabel="Arrêter le guidage" hitSlop={8} className="rounded-full bg-white" style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
+                <Text className="text-[12px] font-extrabold text-[#0F766E]">Arrêter</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         {/* Trajet « M'y rendre » : distance et durée réelles (ligne droite signalée comme approximative) */}
         {trajet ? (
           <View className="self-center flex-row items-center gap-2 rounded-full bg-white" style={{ paddingLeft: 14, paddingRight: 6, paddingVertical: 6 }}>
