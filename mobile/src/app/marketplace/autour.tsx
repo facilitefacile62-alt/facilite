@@ -533,13 +533,14 @@ export default function AutourDeMoiScreen() {
       <CarteLeaflet
         centre={centre}
         zoom={13}
-        marqueurs={marqueurs}
+        // Pendant le guidage : plus de ronds de boutiques sur la carte (la flèche suffit) et aucun recadrage sur les boutiques — la carte reste au niveau de la rue.
+        marqueurs={guidage ? [] : marqueurs}
         sombre={(sombre || guidage != null) && !satellite}
         satellite={satellite}
         regions
         margeHaut={insets.top + 125}
         margeBas={265}
-        ajuster={!selection && !routeActive && cleListe !== cleAjustee}
+        ajuster={!guidage && !selection && !routeActive && cleListe !== cleAjustee}
         focus={selection ?? (routeActive ? boutiqueParam ?? null : null)}
         popup={carrousel ? null : popup}
         popups={popups}

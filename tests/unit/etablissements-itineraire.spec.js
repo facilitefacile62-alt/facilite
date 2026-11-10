@@ -253,3 +253,9 @@ test("guidage : la carte se déplace au doigt (corrigé de la rotation), arrête
   expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude, 18)");
   expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer/);
 });
+
+test("guidage : plus de ronds de boutiques ni de recadrage sur les boutiques — la carte reste au niveau de la rue", () => {
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("marqueurs={guidage ? [] : marqueurs}");
+  expect(a).toContain("ajuster={!guidage && !selection");
+});
