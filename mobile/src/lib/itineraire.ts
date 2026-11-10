@@ -1,5 +1,9 @@
 import { SITE_URL, type Position } from '@/lib/marketplace';
 import { supabase } from '@/lib/supabase';
+import { echangerAlternative, libelleDifference, type Alternative } from '@/lib/alternatives';
+
+export { echangerAlternative, libelleDifference };
+export type { Alternative };
 
 // « M'y rendre » : itinéraire routier calculé par la même route du site que sur le web
 // (/api/marketplace/itineraire, OpenRouteService). Si le calcul n'est pas possible (hors connexion,
@@ -11,6 +15,8 @@ export type Itineraire = {
   dureeMin: number | null;
   approximatif: boolean;
   profil: 'pieton' | 'voiture';
+  /** Autres trajets possibles (« raccourcis »), au plus 2, comme Google Maps. */
+  alternatives?: Alternative[];
 };
 
 function distanceVolOiseauKm(a: Position, b: Position): number {
@@ -52,12 +58,22 @@ export async function calculerItineraire(depart: Position, arrivee: Position): P
         depart: { lat: depart.latitude, lng: depart.longitude },
         arrivee: { lat: arrivee.latitude, lng: arrivee.longitude },
         profil,
+        alternatives: true,
       }),
     });
     if (!reponse.ok) return repli;
-    const corps = (await reponse.json()) as { points?: [number, number][]; distance_km?: number; duree_min?: number };
+    const corps = (await reponse.json()) as {
+      points?: [number, number][];
+      distance_km?: number;
+      duree_min?: number;
+      alternatives?: { points?: [number, number][]; distance_km?: number; duree_min?: number }[];
+    };
     if (!corps.points || corps.points.length < 2) return repli;
-    return { points: corps.points, distanceKm: corps.distance_km ?? repli.distanceKm, dureeMin: corps.duree_min ?? null, approximatif: false, profil };
+    const alternatives: Alternative[] = (corps.alternatives ?? [])
+      .filter((x) => Array.isArray(x.points) && x.points.length >= 2)
+      .slice(0, 2)
+      .map((x) => ({ points: x.points as [number, number][], distanceKm: x.distance_km ?? 0, dureeMin: x.duree_min ?? null }));
+    return { points: corps.points, distanceKm: corps.distance_km ?? repli.distanceKm, dureeMin: corps.duree_min ?? null, approximatif: false, profil, alternatives };
   } catch {
     return repli;
   }

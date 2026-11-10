@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
+import { corpsItineraire, extraireTrajets } from "@/lib/itineraireAlternatives";
 
 export const runtime = "nodejs";
 
@@ -45,40 +46,39 @@ export async function POST(req) {
       return NextResponse.json({ error: "Itinéraire indisponible pour le moment." }, { status: 503 });
     }
 
-    const reponse = await fetch(`${ORS_URL}/${PROFILS[profil]}/geojson`, {
-      method: "POST",
-      headers: {
-        Authorization: cle,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        coordinates: [
-          [Number(depart.lng), Number(depart.lat)],
-          [Number(arrivee.lng), Number(arrivee.lat)],
-        ],
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
+    // Les alternatives (« raccourcis ») sont facultatives (`alternatives: true`) : sans elles, la réponse reste celle d'avant. Si le fournisseur
+    // refuse la demande avec alternatives (trajet trop long, par exemple), on redemande le trajet seul.
+    const veutAlternatives = corps?.alternatives === true;
+    const demander = (avecAlternatives) =>
+      fetch(`${ORS_URL}/${PROFILS[profil]}/geojson`, {
+        method: "POST",
+        headers: {
+          Authorization: cle,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(corpsItineraire(depart, arrivee, avecAlternatives)),
+        signal: AbortSignal.timeout(8000),
+      });
+
+    let reponse = await demander(veutAlternatives);
+    if (!reponse.ok && veutAlternatives) reponse = await demander(false);
 
     if (!reponse.ok) {
       return NextResponse.json({ error: "Itinéraire indisponible pour le moment." }, { status: 502 });
     }
 
-    const donnees = await reponse.json();
-    const trajet = donnees?.features?.[0];
-    if (!trajet) {
+    const trajets = extraireTrajets(await reponse.json());
+    if (!trajets) {
       return NextResponse.json({ error: "Aucun itinéraire trouvé." }, { status: 404 });
     }
-
-    // GeoJSON donne [lng, lat] ; Leaflet attend [lat, lng].
-    const points = trajet.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-    const resume = trajet.properties?.summary || {};
+    const { principal } = trajets;
 
     return NextResponse.json({
-      distance_km: Math.round((resume.distance || 0) / 10) / 100,
-      duree_min: Math.round((resume.duration || 0) / 60),
+      distance_km: principal.distance_km,
+      duree_min: principal.duree_min,
       profil,
-      points,
+      points: principal.points,
+      ...(veutAlternatives ? { alternatives: trajets.alternatives } : {}),
     });
   } catch {
     return NextResponse.json({ error: "Itinéraire indisponible pour le moment." }, { status: 500 });

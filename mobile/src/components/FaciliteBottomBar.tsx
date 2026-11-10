@@ -90,6 +90,7 @@ export default function FaciliteBottomBar() {
               <View>
                 <Ionicons name={estActif ? e.iconeActive : e.icone} size={22} color={couleur} />
                 {e.id === 'messages' ? <PastilleCompteur valeur={compteurs.messages} /> : null}
+                {e.id === 'profil' ? <PastilleCompteur valeur={compteurs.candidatures} /> : null}
               </View>
               <Text className="text-[10.5px] font-bold mt-0.5" style={{ color: couleur }}>
                 {t(e.libelle)}

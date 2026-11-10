@@ -66,12 +66,14 @@ export type PopupBoutique = {
   avatar?: { uri?: string; emoji?: string; bordure?: string };
   /** Bouton vert sous la liste (ex. « Itinéraire »), renvoyé à l'application par son identifiant. */
   action?: { id: string; libelle: string; icone?: string };
+  /** Second bouton, plus clair, sous le premier (ex. « Démarrer »). */
+  action2?: { id: string; libelle: string; icone?: string };
   /** null = chargement des articles en cours. */
   articles: { id: string; titre: string; prix: string; photo?: string; icone?: string; boutiqueId?: string }[] | null;
 };
 
 /** Trajet tracé sur la carte (ex. « M'y rendre ») ; `approximatif` = ligne droite en pointillés. */
-export type TrajetCarte = { points: [number, number][]; approximatif?: boolean };
+export type TrajetCarte = { points: [number, number][]; approximatif?: boolean; /** Autres trajets, en clair, avec leur différence de durée ; un appui en fait le trajet principal. */ alternatives?: { points: [number, number][]; libelle: string }[]; /** Guidage en cours : trait épais cyan et la carte n'est pas recadrée sur le trajet. */ navigation?: boolean };
 
 export type CentreCarte = { lat: number; lng: number };
 
@@ -93,6 +95,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <link rel="stylesheet" href="${LEAFLET_CSS}" />
 <style>
+  html, body { overflow: hidden; }
   html, body, #carte { margin: 0; padding: 0; height: 100%; width: 100%; background: ${sombre ? '#1b2330' : '#e8e4da'}; }
   .leaflet-control-attribution { font-size: 9px; opacity: .7; }
   ${sombre ? '.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }' : ''}
@@ -128,12 +131,15 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .popup-carrousel .pb-photo { width: 80px; height: 96px; }
   .popup-carrousel .pb-titre { font-size: 10.5px; }
   .popup-carrousel .pb-it { display: block; margin-top: 4px; padding: 6px 0; border-radius: 10px; background: #10B981; color: #fff; text-align: center; font: 800 11px system-ui, sans-serif; cursor: pointer; }
+  .popup-carrousel .pb-it { border-radius: 999px; background: #0F766E; }
+  .popup-carrousel .pb-it.pb-dem { margin-top: 3px; background: #CCFBF1; color: #0F766E; }
   .popup-carrousel .pb-fenetre-ic { width: 140px; margin: 0 auto 4px; overflow: hidden; height: 30px; position: relative; }
   .popup-carrousel .pb-piste-ic { position: relative; height: 30px; }
   .popup-carrousel .pb-ic { position: absolute; top: 1px; left: 0; width: 26px; height: 26px; border-radius: 9999px; overflow: hidden; background: #fff; border: 2px solid #E2E8F0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; padding: 0; }
   .popup-carrousel .pb-ic img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-fleche { position: absolute; top: 40px; width: 28px; height: 28px; border-radius: 9999px; background: #fff; color: #0f172a; font: 900 20px/26px system-ui, sans-serif; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); cursor: pointer; z-index: 5; display: none; }
   .pb-action { display: block; margin: 0 14px 0; padding: 10px 0; border-radius: 14px; background: #10B981; color: #fff; text-align: center; font: 800 13px system-ui, sans-serif; cursor: pointer; }
+  .pb-action2 { margin-top: 6px; background: #CCFBF1; color: #0F766E; }
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
@@ -486,6 +492,16 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     carte.setView([lat, lng], z || carte.getZoom(), { animate: false });
     if (decalage) carte.panBy([0, Math.round(carte.getSize().y * decalage)], { animate: false });
   };
+  // Vue d'avant le zoom sur une boutique : la croix « ✕ » y ramène la carte (dézoom), comme sur Google Maps.
+  var vueAvant = null;
+  window.memoriserVue = function () {
+    if (!vueAvant) vueAvant = { c: carte.getCenter(), z: carte.getZoom() };
+  };
+  window.restaurerVue = function () {
+    if (!vueAvant) return;
+    carte.setView(vueAvant.c, vueAvant.z, { animate: true });
+    vueAvant = null;
+  };
   window.majPopup = function (d) {
     if (popupCourant) { carte.closePopup(popupCourant); popupCourant = null; }
     popupDonnees = d || null;
@@ -500,7 +516,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var el = document.createElement('div');
     el.innerHTML = '<div class="pb-tete"><div><div class="pb-nom" data-act="boutique">' + esc(d.titre) + '</div>'
       + (d.sous ? '<div class="pb-lieu">📍 ' + esc(d.sous) + '</div>' : '') + '</div><div class="pb-x" data-act="fermer">✕</div></div>' + corps
-      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">' + (d.action.icone ? esc(d.action.icone) : '📨') + ' ' + esc(d.action.libelle) + '</div>' : '');
+      + (d.action ? '<div class="pb-action" data-act="' + esc(d.action.id) + '">' + (d.action.icone ? esc(d.action.icone) : '📨') + ' ' + esc(d.action.libelle) + '</div>' : '')
+      + (d.action2 ? '<div class="pb-action pb-action2" data-act="' + esc(d.action2.id) + '">' + (d.action2.icone ? esc(d.action2.icone) + ' ' : '') + esc(d.action2.libelle) + '</div>' : '');
     el.addEventListener('click', function (e) {
       var t = e.target.closest ? e.target.closest('[data-act]') : null;
       if (t) envoyer(t.getAttribute('data-act'));
@@ -549,7 +566,8 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       return '<div class="pb-art" data-bde="' + esc(x.b) + '"><div data-act="article:' + esc(a.id) + '"><div class="pb-photo">'
         + (a.photo ? '<img src="' + esc(a.photo) + '" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:34px">' + esc(a.icone || '') + '</div>')
         + '<span class="pb-prix">' + esc(a.prix) + '</span></div><div class="pb-titre">' + esc(a.titre) + '</div></div>'
-        + '<div class="pb-it" data-act="itineraire:' + esc(x.b) + '">↱ Itinéraire</div></div>';
+        + '<div class="pb-it" data-act="itineraire:' + esc(x.b) + '">Itinéraire</div>'
+        + '<div class="pb-it pb-dem" data-act="demarrer:' + esc(x.b) + '">Démarrer</div></div>';
     }).join('');
     var icones = multi ? '<div class="pb-fenetre-ic"><div class="pb-piste-ic">' + membres.map(function (m) {
       var a = m.avatar || {};
@@ -665,11 +683,94 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   };
   carte.on('zoomend', function () { if (donneesPopups) fusionnerPopups(); });
   var trace = null;
+  var alternativesCouche = null;
   window.majTrajet = function (t) {
     if (trace) { carte.removeLayer(trace); trace = null; }
+    if (alternativesCouche) { carte.removeLayer(alternativesCouche); alternativesCouche = null; }
     if (!t || !t.points || t.points.length < 2) return;
+    if (t.alternatives && t.alternatives.length) {
+      var couches = [];
+      t.alternatives.forEach(function (alt, i) {
+        var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 3.5 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
+        var milieu = alt.points[Math.floor(alt.points.length / 2)];
+        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="transform:translate(-50%,-100%);background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + (t.navigation ? 7 : 13) + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
+        trait.on('click', function () { envoyer('alternative:' + i); });
+        bulle.on('click', function () { envoyer('alternative:' + i); });
+        couches.push(trait, bulle);
+      });
+      alternativesCouche = L.layerGroup(couches).addTo(carte);
+    }
+    if (t.navigation) {
+      // Guidage : trait cyan bordé de blanc, comme Google Maps (la carte est agrandie x2 pendant le guidage : largeurs divisées par 2 pour un rendu de 8 et 13 px) ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
+      var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 6.5, opacity: .9, lineCap: 'round', lineJoin: 'round', interactive: false });
+      var trait = L.polyline(t.points, { color: '#22D3EE', weight: 4, opacity: 1, dashArray: t.approximatif ? '1 6' : null, lineCap: 'round', lineJoin: 'round', interactive: false });
+      trace = L.layerGroup([bord, trait]).addTo(carte);
+      return;
+    }
     trace = L.polyline(t.points, { color: '#38BDF8', weight: 5, opacity: .95, dashArray: t.approximatif ? '9 9' : null, lineCap: 'round', interactive: false }).addTo(carte);
     carte.fitBounds(trace.getBounds(), { paddingTopLeft: [40, MARGE_H + 30], paddingBottomRight: [40, MARGE_B + 30], maxZoom: 17, animate: false });
+  };
+  // Véhicule du guidage : flèche orientée dans le sens de la marche (cap en degrés, 0 = nord), comme la voiture de Google Maps.
+  // Guidage : la carte pivote pour que la direction de la marche soit toujours vers le haut de l'écran (comme Google Maps).
+  // Le conteneur est agrandi (x2) et décalé vers le bas : la personne est dans le tiers bas de l'écran, on voit la route devant elle. pour que les coins du cadre rotatif restent couverts. cap = null : retour à la carte droite.
+  var rotation = 0;
+  var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
+  window.pivoter = function (capDeg, remiseAZero) {
+    var el = document.getElementById('carte');
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; carte.dragging.enable(); carte.setMinZoom(0); return; }
+    carte.dragging.disable();
+    // Guidage : jamais de vue de toute la région — la carte reste au niveau de la rue (zoom 16 au moins), même après un pincement.
+    carte.setMinZoom(16);
+    if (carte.getZoom() < 17) carte.setZoom(17, { animate: false });
+    if (remiseAZero) decalageDoigts = 0;
+    var delta = ((capDeg + decalageDoigts - rotation + 540) % 360) - 180; // plus court chemin : 350° -> 10° ne fait pas un tour complet
+    rotation += delta;
+    el.style.transformOrigin = '50% 50%';
+    el.style.transition = 'transform .7s linear';
+    el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
+  };
+  // Rotation à deux doigts (comme Google Maps) : tourner deux doigts fait tourner la carte ; le cap du guidage la remet dans le sens de la marche au prochain « Recentrer ».
+  (function () {
+    var angle0 = null;
+    function angleDoigts(t) { return Math.atan2(t[1].clientY - t[0].clientY, t[1].clientX - t[0].clientX) * 180 / Math.PI; }
+    var cadre = document.getElementById('carte');
+    var doigt0 = null, signale = false;
+    cadre.addEventListener('touchstart', function (e) {
+      angle0 = e.touches.length === 2 ? angleDoigts(e.touches) : null;
+      doigt0 = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+      signale = false;
+    }, { passive: true });
+    // Un doigt : la carte suit le doigt. L'écart est ramené dans le repère (tourné et agrandi x2) du conteneur, puis la carte cesse de suivre la personne
+    // (l'application est prévenue) jusqu'à « Recentrer ».
+    cadre.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 1 || !doigt0 || !cadre.style.transform) return;
+      var dx = e.touches[0].clientX - doigt0.x, dy = e.touches[0].clientY - doigt0.y;
+      doigt0 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      var th = (-rotation) * Math.PI / 180;
+      var lx = (dx * Math.cos(th) + dy * Math.sin(th)) / 2, ly = (-dx * Math.sin(th) + dy * Math.cos(th)) / 2;
+      carte.panBy([-lx, -ly], { animate: false });
+      if (!signale) { signale = true; envoyer('carte-deplacee'); }
+    }, { passive: true });
+    cadre.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 2 || angle0 === null || rotation === 0 && !document.getElementById('carte').style.transform) return;
+      var a1 = angleDoigts(e.touches);
+      var d = ((a1 - angle0 + 540) % 360) - 180;
+      angle0 = a1;
+      decalageDoigts -= d;
+      rotation -= d;
+      var el = document.getElementById('carte');
+      el.style.transition = '';
+      el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg) scale(2)';
+    }, { passive: true });
+    cadre.addEventListener('touchend', function () { angle0 = null; }, { passive: true });
+  })();
+  var vehicule = null;
+  window.majVehicule = function (lat, lng, capDeg) {
+    if (vehicule) { carte.removeLayer(vehicule); vehicule = null; }
+    if (lat === null || lat === undefined) return;
+    var html = '<div style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;transform:rotate(' + (capDeg || 0) + 'deg)">'
+      + '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 L20 21 L12 17 L4 21 Z" fill="#2563EB" stroke="#1E3A8A" stroke-width="1.2" stroke-linejoin="round"/></svg></div>';
+    vehicule = L.marker([lat, lng], { icon: L.divIcon({ className: '', html: html, iconSize: [26, 26], iconAnchor: [13, 13] }), interactive: false, zIndexOffset: 2000 }).addTo(carte);
   };
   window.zoom = function (delta) { carte.setZoom(carte.getZoom() + delta); };
   window.parent && window.parent !== window && window.parent.postMessage({ pret: true }, '*');
@@ -680,6 +781,14 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 export type CommandesCarte = {
   centrer: (lat: number, lng: number, zoom?: number, decalage?: number) => void;
   zoomer: (delta: number) => void;
+  /** Retient la vue actuelle avant un zoom sur une boutique (sans effet si une vue est déjà retenue). */
+  memoriserVue: () => void;
+  /** Ramène la carte à la vue retenue (dézoom à la fermeture) ; sans effet s'il n'y en a pas. */
+  restaurerVue: () => void;
+  /** Place (ou retire, avec null) la flèche du véhicule pendant le guidage ; cap en degrés (0 = nord). */
+  vehicule: (lat: number | null, lng?: number, cap?: number) => void;
+  /** Fait pivoter la carte pour que le cap (degrés, 0 = nord) pointe vers le haut ; null : carte droite. */
+  pivoter: (cap: number | null, remiseAZero?: boolean) => void;
 };
 
 export default function CarteLeaflet({
@@ -787,6 +896,10 @@ export default function CarteLeaflet({
     commandes?.({
       centrer: (lat, lng, z, decalage) => executer(`window.centrer && window.centrer(${lat}, ${lng}, ${z ?? 'null'}, ${decalage ?? 'null'})`),
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
+      memoriserVue: () => executer('window.memoriserVue && window.memoriserVue()'),
+      restaurerVue: () => executer('window.restaurerVue && window.restaurerVue()'),
+      pivoter: (cap, remiseAZero) => executer(cap === null ? 'window.pivoter && window.pivoter(null)' : `window.pivoter && window.pivoter(${cap}, ${remiseAZero ? 'true' : 'false'})`),
+      vehicule: (lat, lng, cap) => executer(lat === null ? 'window.majVehicule && window.majVehicule(null)' : `window.majVehicule && window.majVehicule(${lat}, ${lng}, ${cap ?? 0})`),
     });
   }, [commandes, executer]);
 
