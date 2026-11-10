@@ -19,6 +19,10 @@ export type EtatGuidage = {
   arrive: boolean;
   /** Prochain virage (null : tout droit jusqu'à l'arrivée). */
   prochain: { type: TypeVirage; distanceM: number } | null;
+  /** Le virage d'après, s'il est proche (moins de 300 m du prochain) : « Puis ↰ ». */
+  ensuite: TypeVirage | null;
+  /** Direction à prendre, sans distance (« Tournez à droite », « Continuez tout droit »). */
+  instruction: string;
   /** Phrase prête à afficher. */
   consigne: string;
 };
@@ -129,11 +133,15 @@ export function etatGuidage(points: PointTrace[], position: { latitude: number; 
   const arrive = restantM < 25;
   const horsTrace = ecart > 50;
   const prochain = suivant ? { type: suivant.type, distanceM: Math.max(0, suivant.distanceM - along) } : null;
+  const apres = suivant ? liste.find((v) => v.distanceM > suivant.distanceM + 5) : undefined;
+  const ensuite = apres && suivant && apres.distanceM - suivant.distanceM < 300 ? apres.type : null;
+  const majuscule = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+  const instruction = arrive ? 'Vous êtes arrivé' : horsTrace ? 'Nouveau calcul du trajet…' : prochain ? majuscule(PHRASE[prochain.type]) : 'Continuez tout droit';
   let consigne: string;
   if (arrive) consigne = 'Vous êtes arrivé';
   else if (horsTrace) consigne = 'Vous vous êtes écarté du trajet : nouveau calcul…';
   else if (prochain && prochain.distanceM < 30) consigne = PHRASE[prochain.type].charAt(0).toUpperCase() + PHRASE[prochain.type].slice(1);
   else if (prochain) consigne = `Dans ${distanceLisible(prochain.distanceM)}, ${PHRASE[prochain.type]}`;
   else consigne = `Continuez tout droit · arrivée dans ${distanceLisible(restantM)}`;
-  return { restantM, ecartM: ecart, horsTrace, arrive, prochain, consigne };
+  return { restantM, ecartM: ecart, horsTrace, arrive, prochain, ensuite, instruction, consigne };
 }

@@ -150,7 +150,7 @@ test("application : « Démarrer » dans la bulle d'une boutique lance le guidag
   expect(a).toContain("if (id === 'demarrer') {");
   expect(a).toContain("Location.watchPositionAsync(");
   expect(a).toContain("etatGuidage(trajet.points as PointTrace[]");
-  expect(a).toContain('accessibilityLabel="Arrêter le guidage"');
+  expect(lire("mobile/src/components/GuidageNavigation.tsx")).toContain('accessibilityLabel="Arrêter le guidage"');
   expect(a).toContain("consigne?.horsTrace"); // recalcul si écart
   expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
 });
@@ -172,4 +172,30 @@ test("application : pastille sur Profil = nombre de dossiers (candidatures) reç
     expect(libellePastille(0)).toBeNull();
     expect(libellePastille(12)).toBe("9+");
   }
+});
+
+test("guidage façon Google : « Puis » le virage suivant, instruction sans distance, heure d'arrivée", async () => {
+  const g = await import("../../mobile/src/lib/guidage.ts");
+  const dLat = (m) => m / 111320;
+  const dLng = (m) => m / (111320 * Math.cos((14.7 * Math.PI) / 180));
+  // nord 100 m, est 100 m, nord 100 m : deux virages (droite puis gauche) à 100 m d'écart.
+  const pts = [];
+  for (let m = 0; m <= 100; m += 25) pts.push([14.7 + dLat(m), -17.4]);
+  for (let m = 25; m <= 100; m += 25) pts.push([14.7 + dLat(100), -17.4 + dLng(m)]);
+  for (let m = 25; m <= 100; m += 25) pts.push([14.7 + dLat(100 + m), -17.4 + dLng(100)]);
+  const e = g.etatGuidage(pts, { latitude: 14.7, longitude: -17.4 });
+  expect(e.prochain.type).toBe("droite");
+  expect(e.ensuite).toBe("gauche");
+  expect(e.instruction).toBe("Tournez à droite");
+  const fin = g.etatGuidage(pts, { latitude: 14.7 + dLat(200), longitude: -17.4 + dLng(100) });
+  expect(fin.ensuite).toBeNull();
+  expect(g.etatGuidage(pts, { latitude: 14.7 + dLat(150), longitude: -17.4 + dLng(100) }).instruction).toBe("Continuez tout droit");
+  const c = lire("mobile/src/components/GuidageNavigation.tsx");
+  for (const t of ["Puis", "Recentrer", "km/h", "Arrêter le guidage", "heureArrivee(minutes)"]) expect(c).toContain(t);
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("<GuidageNavigation");
+  expect(a).toContain("(sombre || guidage != null)"); // carte sombre pendant le guidage, comme Google la nuit
+  expect(a).toContain("display: guidage ? 'none' : 'flex'"); // la recherche et le carrousel s'effacent
+  expect(a).toContain("p.coords.speed"); // vitesse réelle du GPS
+  expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
 });

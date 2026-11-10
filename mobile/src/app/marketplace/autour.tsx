@@ -15,6 +15,7 @@ import { dataUriAvatarBoutique, svgAvatarBoutique } from '@/lib/avatarBoutique';
 import { SvgXml } from 'react-native-svg';
 import { useFonctionnalite } from '@/lib/featureFlags';
 import { calculerItineraire, ligneDroite, type Itineraire } from '@/lib/itineraire';
+import GuidageNavigation from '@/components/GuidageNavigation';
 import { etatGuidage, extraireVirages, type EtatGuidage, type PointTrace } from '@/lib/guidage';
 import { useLocalisation } from '@/lib/useLocalisation';
 import { useMarketplaceArticles } from '@/lib/useMarketplaceArticles';
@@ -232,6 +233,7 @@ export default function AutourDeMoiScreen() {
   const [guidage, setGuidage] = useState<{ nom: string; latitude: number; longitude: number } | null>(null);
   const [positionLive, setPositionLive] = useState<Position | null>(null);
   const dernierRecalcul = useRef(0);
+  const [vitesseKmh, setVitesseKmh] = useState(0);
   const [routeFermee, setRouteFermee] = useState<string | null>(null);
   const routeActive = Boolean(routeParam && boutiqueParam && routeFermee !== boutiqueParam);
   const trajetCalcule = useRef<string | null>(null);
@@ -361,7 +363,10 @@ export default function AutourDeMoiScreen() {
     let annule = false;
     Location.watchPositionAsync(
       { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 4, timeInterval: 2000 },
-      (p) => setPositionLive({ latitude: p.coords.latitude, longitude: p.coords.longitude })
+      (p) => {
+        setPositionLive({ latitude: p.coords.latitude, longitude: p.coords.longitude });
+        setVitesseKmh(Math.max(0, Math.round((p.coords.speed ?? 0) * 3.6)));
+      }
     )
       .then((s) => {
         if (annule) s.remove();
@@ -386,6 +391,14 @@ export default function AutourDeMoiScreen() {
       calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
     }
   }, [guidage, positionLive, consigne?.horsTrace, carte]);
+  // Durée restante : la durée du trajet au prorata de la distance restante (à défaut, 5 km/h à pied, 30 km/h en voiture).
+  const minutesRestantes = useMemo(() => {
+    if (!consigne || !trajet) return null;
+    const totalM = Math.max(1, trajet.distanceKm * 1000);
+    if (trajet.dureeMin != null) return Math.max(1, Math.round((trajet.dureeMin * consigne.restantM) / totalM));
+    const kmh = trajet.profil === 'pieton' ? 5 : 30;
+    return Math.max(1, Math.round((consigne.restantM / 1000 / kmh) * 60));
+  }, [consigne, trajet]);
   const arreterGuidage = () => {
     setGuidage(null);
     setTrajet(null);
@@ -473,7 +486,7 @@ export default function AutourDeMoiScreen() {
         centre={centre}
         zoom={13}
         marqueurs={marqueurs}
-        sombre={sombre && !satellite}
+        sombre={(sombre || guidage != null) && !satellite}
         satellite={satellite}
         regions
         margeHaut={insets.top + 125}
@@ -489,7 +502,7 @@ export default function AutourDeMoiScreen() {
       />
 
       {/* En-tête : titre, nombre réel de boutiques, fermeture */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14, gap: 10 }}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingHorizontal: 14, gap: 10, display: guidage ? 'none' : 'flex' }}>
         {/* Barre de recherche tout en haut, avec la fermeture à sa droite (le titre « Autour de moi » est retiré : le bouton bleu de recentrage et le filtre suffisent). */}
         <View className="flex-row items-center gap-2.5">
         <View className="flex-1 flex-row items-center gap-2 rounded-[18px] pl-4 pr-1.5" style={{ height: 48, backgroundColor: CREME_RECHERCHE }}>
@@ -588,7 +601,7 @@ export default function AutourDeMoiScreen() {
       </View>
 
       {/* Commandes de carte */}
-      <View style={{ position: 'absolute', right: 14, top: insets.top + 140, gap: 10 }}>
+      <View style={{ position: 'absolute', right: 14, top: insets.top + 140, gap: 10, display: guidage ? 'none' : 'flex' }}>
         {[
           { icone: 'locate' as const, nom: 'Recentrer', action: () => position && carte?.centrer(position.latitude, position.longitude, 15), couleur: BLEU },
           { icone: (sombre ? 'moon' : 'sunny') as 'moon' | 'sunny', nom: sombre ? 'Carte claire' : 'Carte sombre', action: () => { setSatellite(false); setSombre((v) => !v); }, couleur: '#FBBF24' },
@@ -607,26 +620,23 @@ export default function AutourDeMoiScreen() {
         ))}
       </View>
 
+      {/* Guidage « Démarrer » : même interface que Google Maps (bandeau de direction, vitesse, Recentrer, durée et heure d'arrivée) */}
+      {guidage ? (
+        <GuidageNavigation
+          etat={consigne}
+          destination={guidage.nom}
+          minutes={minutesRestantes}
+          vitesseKmh={vitesseKmh}
+          onArreter={arreterGuidage}
+          onRecentrer={() => {
+            const p = positionLive ?? position;
+            if (p) carte?.centrer(p.latitude, p.longitude, 18);
+          }}
+        />
+      ) : null}
+
       {/* Bas : onglets Boutiques / Articles, puis le carrousel */}
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10 }}>
-        {/* Guidage « Démarrer » : la direction à prendre, la distance restante, et « Arrêter » */}
-        {guidage ? (
-          <View className="rounded-2xl bg-[#0F766E]" style={{ padding: 14, gap: 6 }}>
-            <View className="flex-row items-center gap-3">
-              <Ionicons name={consigne?.arrive ? 'flag' : 'navigate'} size={26} color="#fff" />
-              <Text className="flex-1 text-[16px] font-extrabold text-white">{consigne?.consigne ?? 'Recherche de votre position…'}</Text>
-            </View>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[12px] font-bold text-[#CCFBF1]" numberOfLines={1} style={{ flex: 1 }}>
-                Vers {guidage.nom}
-                {trajet?.dureeMin != null ? ` · ${trajet.dureeMin} min` : ''}
-              </Text>
-              <Pressable onPress={arreterGuidage} accessibilityLabel="Arrêter le guidage" hitSlop={8} className="rounded-full bg-white" style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
-                <Text className="text-[12px] font-extrabold text-[#0F766E]">Arrêter</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: 12, gap: 10, display: guidage ? 'none' : 'flex' }}>
         {/* Trajet « M'y rendre » : distance et durée réelles (ligne droite signalée comme approximative) */}
         {trajet ? (
           <View className="self-center flex-row items-center gap-2 rounded-full bg-white" style={{ paddingLeft: 14, paddingRight: 6, paddingVertical: 6 }}>
