@@ -82,7 +82,7 @@ test("application mobile : « Démarrer » à côté d'« Itinéraire » dans le
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("id.startsWith('itineraire:') || id.startsWith('demarrer:')");
   expect(a).toContain("calculerItineraire(position, arrivee)");
-  expect(a).toContain("carte?.centrer(position.latitude, position.longitude, 17)");
+  expect(a).toContain("carte?.centrer(position.latitude, position.longitude, 18)");
   expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
 });
 
