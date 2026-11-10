@@ -2,7 +2,7 @@ import { usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
-import { compterMessagesNonLus, compterNotificationsNonLues } from '@/lib/notifications';
+import { compterCandidaturesNonLues, compterMessagesNonLus, compterNotificationsNonLues } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 
 // Compteurs des pastilles rouges (charte §1.4).
@@ -18,9 +18,9 @@ import { supabase } from '@/lib/supabase';
 //    erreur. On se raccroche donc à `usePathname()`, qui lit le store
 //    d'expo-router et fonctionne partout — changer d'écran rafraîchit.
 
-export type Compteurs = { notifications: number; messages: number };
+export type Compteurs = { notifications: number; messages: number; candidatures: number };
 
-const VIDE: Compteurs = { notifications: 0, messages: 0 };
+const VIDE: Compteurs = { notifications: 0, messages: 0, candidatures: 0 };
 const DUREE_CACHE_MS = 30_000;
 
 let cache: Compteurs = VIDE;
@@ -31,11 +31,12 @@ const abonnes = new Set<(c: Compteurs) => void>();
 async function relire(userId: string, isAdmin: boolean): Promise<Compteurs> {
   // Un compteur indisponible (réseau, session expirée) vaut 0 : une pastille
   // est une information en plus, jamais un motif de faire échouer un écran.
-  const [notifications, messages] = await Promise.all([
+  const [notifications, messages, candidatures] = await Promise.all([
     compterNotificationsNonLues().catch(() => 0),
     compterMessagesNonLus(userId, isAdmin).catch(() => 0),
+    compterCandidaturesNonLues().catch(() => 0),
   ]);
-  return { notifications, messages };
+  return { notifications, messages, candidatures };
 }
 
 function obtenir(userId: string, isAdmin: boolean): Promise<Compteurs> {
@@ -85,6 +86,10 @@ export function useCompteursNonLus(): Compteurs {
     const canal = supabase
       .channel(`compteurs-messages-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` }, () => {
+        invaliderCompteurs();
+        obtenir(userId, isAdmin).then(majSiMonte).catch(() => {});
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () => {
         invaliderCompteurs();
         obtenir(userId, isAdmin).then(majSiMonte).catch(() => {});
       })

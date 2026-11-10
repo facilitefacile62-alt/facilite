@@ -83,6 +83,17 @@ export async function compterNotificationsNonLues(): Promise<number> {
   return count ?? 0;
 }
 
+/** Dossiers de candidature reçus et pas encore consultés (notifications « candidature » non lues) : pastille de l'onglet Profil. */
+export async function compterCandidaturesNonLues(): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('type', 'candidature')
+    .eq('is_read', false);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 export async function marquerNotificationLue(id: string): Promise<void> {
   const { error } = await supabase.rpc('mark_notification_read', { notification_id: id });
   if (error) throw new Error(error.message);

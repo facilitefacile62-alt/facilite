@@ -154,3 +154,22 @@ test("application : « Démarrer » dans la bulle d'une boutique lance le guidag
   expect(a).toContain("consigne?.horsTrace"); // recalcul si écart
   expect(a).not.toMatch(/google\.com\/maps|Linking\.openURL/);
 });
+
+test("application : pastille sur Profil = nombre de dossiers (candidatures) reçus non consultés, mise à jour en direct", async () => {
+  const n = lire("mobile/src/lib/notifications.ts");
+  expect(n).toContain("export async function compterCandidaturesNonLues");
+  expect(n).toMatch(/\.eq\('type', 'candidature'\)\s+\.eq\('is_read', false\)/);
+  const h = lire("mobile/src/lib/useCompteursNonLus.ts");
+  expect(h).toContain("candidatures: number");
+  expect(h).toContain("compterCandidaturesNonLues().catch(() => 0)"); // un échec vaut 0, jamais une erreur d'écran
+  expect(h).toContain("table: 'notifications'");
+  for (const f of ["FaciliteBottomBar", "MarketplaceBottomBar"]) {
+    expect(lire(`mobile/src/components/${f}.tsx`)).toContain("e.id === 'profil' ? <PastilleCompteur valeur={compteurs.candidatures} />");
+  }
+  const { libellePastille } = await import("../../mobile/src/lib/notifications.ts").catch(() => ({ libellePastille: null }));
+  if (libellePastille) {
+    expect(libellePastille(1)).toBe("1");
+    expect(libellePastille(0)).toBeNull();
+    expect(libellePastille(12)).toBe("9+");
+  }
+});
