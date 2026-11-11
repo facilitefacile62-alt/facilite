@@ -695,7 +695,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       t.alternatives.forEach(function (alt, i) {
         var trait = L.polyline(alt.points, { color: '#93C5FD', weight: t.navigation ? 4 : 6, opacity: .9, lineCap: 'round', lineJoin: 'round' });
         var milieu = alt.points[Math.floor(alt.points.length / 2)];
-        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="display:inline-block;transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + 13 + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
+        var bulle = L.marker(milieu, { icon: L.divIcon({ className: '', html: '<div style="display:inline-block;transform:translate(-50%,-100%) rotate(var(--rot,0deg)) scaleY(var(--ey,1));transform-origin:50% 100%;background:#2563EB;color:#fff;border:2px solid #fff;border-radius:12px;padding:4px 9px;font:700 ' + 13 + 'px system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">' + esc(alt.libelle) + '</div>', iconSize: [0, 0] }), zIndexOffset: 900 });
         trait.on('click', function () { envoyer('alternative:' + i); });
         bulle.on('click', function () { envoyer('alternative:' + i); });
         couches.push(trait, bulle);
@@ -706,7 +706,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       // Repère rouge de la destination (comme Google Maps) : au bout du trajet ; il reste droit quand la carte tourne.
       var fin = t.points[t.points.length - 1];
       var dest = t.destination ? [t.destination.lat, t.destination.lng] : fin;
-      var pin = '<div style="position:relative;transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">'
+      var pin = '<div style="position:relative;transform:translate(-50%,-100%) rotate(var(--rot,0deg)) scaleY(var(--ey,1));transform-origin:50% 100%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">'
         + (t.destinationNom ? '<div style="position:absolute;left:30px;top:6px;max-width:150px;color:#fff;font:700 13px system-ui,sans-serif;line-height:1.15;text-shadow:0 0 3px #000,0 0 3px #000,0 0 6px #000;white-space:normal">' + esc(t.destinationNom) + '</div>' : '')
         + '<svg style="display:block" width="34" height="46" viewBox="0 0 24 32"><path d="M12 1C6 1 1.5 5.4 1.5 11c0 7.5 10.5 20 10.5 20s10.5-12.5 10.5-20C22.5 5.4 18 1 12 1z" fill="#EA4335" stroke="#B31412" stroke-width="1"/><circle cx="12" cy="11" r="4.2" fill="#7F1D1D"/></svg></div>';
       var couchesDest = [L.marker(dest, { icon: L.divIcon({ className: '', html: pin, iconSize: [0, 0] }), interactive: false, zIndexOffset: 1500 })];
@@ -736,17 +736,30 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     var c = carte.getCenter(), z = carte.getZoom();
     el.style.position = actif ? 'absolute' : '';
     el.style.width = actif ? '300%' : '';
-    el.style.height = actif ? '300%' : '';
+    el.style.height = actif ? '400%' : '';
     el.style.left = actif ? '-100%' : '';
-    el.style.top = actif ? '-100%' : '';
+    el.style.top = actif ? '-150%' : '';
     carte.invalidateSize({ animate: false });
     carte.setView(c, z, { animate: false });
   }
+  var inclinaison = 0; // degrés d'inclinaison (0 = vue à plat, 55 = vue 3D façon Google Maps)
+  function appliquerTransform(el) {
+    el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px)'
+      + (inclinaison ? ' perspective(1400px) rotateX(' + inclinaison + 'deg)' : '')
+      + ' rotate(' + (-rotation) + 'deg)';
+    // Repère et étiquettes se redressent (comme des panneaux debout) : l'écrasement de l'inclinaison est compensé verticalement.
+    el.style.setProperty('--ey', inclinaison ? String(1 / Math.cos(inclinaison * Math.PI / 180)) : '1');
+  }
+  window.incliner = function (deg) {
+    inclinaison = deg || 0;
+    var el = document.getElementById('carte');
+    if (guidageActif) { el.style.transition = 'transform .6s ease'; appliquerTransform(el); }
+  };
   var guidageActif = false; // les réglages du guidage (zoom minimal, zoom continu) ne se posent qu'une fois, pas à chaque relevé GPS
   var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
   window.pivoter = function (capDeg, remiseAZero) {
     var el = document.getElementById('carte');
-    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; if (guidageActif) cadreGuidage(false); guidageActif = false; carte.dragging.enable(); carte.setMinZoom(0); carte.options.zoomSnap = 1; carte.options.zoomDelta = 1; return; }
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; inclinaison = 0; if (guidageActif) cadreGuidage(false); guidageActif = false; carte.dragging.enable(); carte.setMinZoom(0); carte.options.zoomSnap = 1; carte.options.zoomDelta = 1; return; }
     if (!guidageActif) {
     guidageActif = true;
     cadreGuidage(true);
@@ -764,7 +777,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     el.style.setProperty('--rot', rotation + 'deg'); // les étiquettes (bulles « Même durée ») se contre-tournent pour rester droites
     el.style.transformOrigin = '50% 50%';
     el.style.transition = 'transform .7s linear';
-    el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg)';
+    appliquerTransform(el);
   };
   // Rotation à deux doigts (comme Google Maps) : tourner deux doigts fait tourner la carte ; le cap du guidage la remet dans le sens de la marche au prochain « Recentrer ».
   (function () {
@@ -798,7 +811,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
       document.getElementById('carte').style.setProperty('--rot', rotation + 'deg');
       var el = document.getElementById('carte');
       el.style.transition = '';
-      el.style.transform = 'translateY(' + Math.round(window.innerHeight * 0.2) + 'px) rotate(' + (-rotation) + 'deg)';
+      appliquerTransform(el);
     }, { passive: true });
     cadre.addEventListener('touchend', function () { angle0 = null; }, { passive: true });
   })();
@@ -827,6 +840,8 @@ export type CommandesCarte = {
   vehicule: (lat: number | null, lng?: number, cap?: number) => void;
   /** Fait pivoter la carte pour que le cap (degrés, 0 = nord) pointe vers le haut ; null : carte droite. */
   pivoter: (cap: number | null, remiseAZero?: boolean) => void;
+  /** Inclinaison de la carte en degrés (0 = à plat, 55 = vue 3D) pendant le guidage. */
+  incliner: (degres: number) => void;
 };
 
 export default function CarteLeaflet({
@@ -936,6 +951,7 @@ export default function CarteLeaflet({
       zoomer: (delta) => executer(`window.zoom && window.zoom(${delta})`),
       memoriserVue: () => executer('window.memoriserVue && window.memoriserVue()'),
       restaurerVue: () => executer('window.restaurerVue && window.restaurerVue()'),
+      incliner: (deg) => executer(`window.incliner && window.incliner(${deg})`),
       pivoter: (cap, remiseAZero) => executer(cap === null ? 'window.pivoter && window.pivoter(null)' : `window.pivoter && window.pivoter(${cap}, ${remiseAZero ? 'true' : 'false'})`),
       vehicule: (lat, lng, cap) => executer(lat === null ? 'window.majVehicule && window.majVehicule(null)' : `window.majVehicule && window.majVehicule(${lat}, ${lng}, ${cap ?? 0})`),
     });

@@ -43,9 +43,12 @@ type Props = {
   /** Carte orientée nord en haut (true) ou dans le sens de la marche (false), comme la boussole de Google Maps. */
   nordHaut: boolean;
   onBoussole: () => void;
+  /** Vue 3D (carte inclinée) ou 2D (à plat). */
+  vue3d: boolean;
+  onVue3d: () => void;
 };
 
-export default function GuidageNavigation({ etat, destination, minutes, vitesseKmh, onArreter, onRecentrer, nordHaut, onBoussole }: Props) {
+export default function GuidageNavigation({ etat, destination, minutes, vitesseKmh, onArreter, onRecentrer, nordHaut, onBoussole, vue3d, onVue3d }: Props) {
   const insets = useSafeAreaInsets();
   const prochain = etat?.prochain ?? null;
   const type: TypeVirage | 'tout-droit' = prochain && prochain.distanceM < 400 ? prochain.type : 'tout-droit';
@@ -97,6 +100,13 @@ export default function GuidageNavigation({ etat, destination, minutes, vitesseK
         accessibilityLabel={nordHaut ? 'Orienter la carte dans le sens de la marche' : 'Mettre le nord en haut'}
         style={{ position: 'absolute', right: 14, top: '42%', width: 52, height: 52, borderRadius: 26, backgroundColor: '#0B0F14', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
         <Ionicons name="compass" size={28} color={nordHaut ? '#fff' : '#F87171'} />
+      </Pressable>
+
+      <Pressable
+        onPress={onVue3d}
+        accessibilityLabel={vue3d ? 'Passer en vue 2D' : 'Passer en vue 3D'}
+        style={{ position: 'absolute', right: 14, top: '42%', marginTop: 62, width: 52, height: 52, borderRadius: 26, backgroundColor: '#0B0F14', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+        <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{vue3d ? '2D' : '3D'}</Text>
       </Pressable>
 
       <View pointerEvents="box-none" style={{ position: 'absolute', left: 10, right: 10, bottom: 12, gap: 10 }}>

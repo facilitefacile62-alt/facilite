@@ -357,3 +357,17 @@ test("guidage : repère à l'emplacement réel de la destination, relié au bout
   expect(c).toContain("dashArray: '1 8'");
   expect(lire("mobile/src/app/marketplace/autour.tsx")).toContain("destination: guidage ? { lat: guidage.latitude, lng: guidage.longitude } : undefined,");
 });
+
+test("guidage : vue 3D (carte inclinée, perspective) activée au démarrage, bouton 2D/3D, repère et étiquettes redressés", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("perspective(1400px) rotateX(");
+  expect(c).toContain("window.incliner = function");
+  expect(c).toContain("scaleY(var(--ey,1))"); // repère et bulles restent droits
+  const n = lire("mobile/src/components/GuidageNavigation.tsx");
+  expect(n).toContain("Passer en vue 2D");
+  expect(n).toContain("Passer en vue 3D");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("const [vue3d, setVue3d] = useState(true);");
+  expect(a).toContain("carte?.incliner(vue3d ? 55 : 0);");
+  expect(a).toContain("onVue3d={() => setVue3d((v) => !v)}");
+});

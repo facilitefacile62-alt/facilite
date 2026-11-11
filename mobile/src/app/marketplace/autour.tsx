@@ -237,10 +237,13 @@ export default function AutourDeMoiScreen() {
   const capVehicule = useRef(0);
   const capGps = useRef<number | null>(null);
   const [nordHaut, setNordHaut] = useState(false);
+  // Vue 3D (carte inclinée, comme Google Maps) : activée au démarrage du guidage, basculable en 2D.
+  const [vue3d, setVue3d] = useState(true);
   // La carte suit la personne tant qu'elle n'est pas déplacée à la main ; « Recentrer » la remet à sa suite.
   const [suivi, setSuivi] = useState(true);
   useEffect(() => {
     setSuivi(true);
+    setVue3d(true);
   }, [guidage]);
   const dernierReleve = useRef(0);
   const dernierePosition = useRef<Position | null>(null);
@@ -423,13 +426,14 @@ export default function AutourDeMoiScreen() {
     if (capGps.current !== null) capVehicule.current = capGps.current;
     // La carte pivote : la direction de la marche est toujours vers le haut ; la flèche reste donc droite.
     // Nord en haut (boussole touchée) : la carte reste droite et la voiture tourne ; sinon la carte pivote et la voiture reste droite.
+    carte?.incliner(vue3d ? 55 : 0);
     carte?.pivoter(nordHaut ? 0 : capVehicule.current);
     carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0);
     if (consigne?.horsTrace && Date.now() - dernierRecalcul.current > 15000) {
       dernierRecalcul.current = Date.now();
       calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
     }
-  }, [guidage, positionLive, consigne?.horsTrace, carte, nordHaut, suivi]);
+  }, [guidage, positionLive, consigne?.horsTrace, carte, nordHaut, suivi, vue3d]);
   // Durée restante : la durée du trajet au prorata de la distance restante (à défaut, 5 km/h à pied, 30 km/h en voiture).
   const minutesRestantes = useMemo(() => {
     if (!consigne || !trajet) return null;
@@ -695,6 +699,8 @@ export default function AutourDeMoiScreen() {
           vitesseKmh={vitesseKmh}
           nordHaut={nordHaut}
           onBoussole={() => setNordHaut((v) => !v)}
+          vue3d={vue3d}
+          onVue3d={() => setVue3d((v) => !v)}
           onArreter={arreterGuidage}
           onRecentrer={() => {
             const p = positionLive ?? position;
