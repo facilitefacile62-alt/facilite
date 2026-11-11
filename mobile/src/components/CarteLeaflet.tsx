@@ -73,7 +73,7 @@ export type PopupBoutique = {
 };
 
 /** Trajet tracé sur la carte (ex. « M'y rendre ») ; `approximatif` = ligne droite en pointillés. */
-export type TrajetCarte = { points: [number, number][]; approximatif?: boolean; /** Nom de la destination, écrit à côté du repère rouge (comme Google Maps). */ destinationNom?: string; /** Autres trajets, en clair, avec leur différence de durée ; un appui en fait le trajet principal. */ alternatives?: { points: [number, number][]; libelle: string }[]; /** Guidage en cours : trait épais cyan et la carte n'est pas recadrée sur le trajet. */ navigation?: boolean };
+export type TrajetCarte = { points: [number, number][]; approximatif?: boolean; /** Nom de la destination, écrit à côté du repère rouge (comme Google Maps). */ destinationNom?: string; /** Emplacement réel de la destination : le repère s'y pose, relié au bout de la route par des pointillés. */ destination?: { lat: number; lng: number }; /** Autres trajets, en clair, avec leur différence de durée ; un appui en fait le trajet principal. */ alternatives?: { points: [number, number][]; libelle: string }[]; /** Guidage en cours : trait épais cyan et la carte n'est pas recadrée sur le trajet. */ navigation?: boolean };
 
 export type CentreCarte = { lat: number; lng: number };
 
@@ -705,10 +705,17 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
     if (t.navigation) {
       // Repère rouge de la destination (comme Google Maps) : au bout du trajet ; il reste droit quand la carte tourne.
       var fin = t.points[t.points.length - 1];
+      var dest = t.destination ? [t.destination.lat, t.destination.lng] : fin;
       var pin = '<div style="position:relative;transform:translate(-50%,-100%) rotate(var(--rot,0deg));transform-origin:50% 100%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">'
         + (t.destinationNom ? '<div style="position:absolute;left:30px;top:6px;max-width:150px;color:#fff;font:700 13px system-ui,sans-serif;line-height:1.15;text-shadow:0 0 3px #000,0 0 3px #000,0 0 6px #000;white-space:normal">' + esc(t.destinationNom) + '</div>' : '')
         + '<svg style="display:block" width="34" height="46" viewBox="0 0 24 32"><path d="M12 1C6 1 1.5 5.4 1.5 11c0 7.5 10.5 20 10.5 20s10.5-12.5 10.5-20C22.5 5.4 18 1 12 1z" fill="#EA4335" stroke="#B31412" stroke-width="1"/><circle cx="12" cy="11" r="4.2" fill="#7F1D1D"/></svg></div>';
-      epingleDestination = L.marker(fin, { icon: L.divIcon({ className: '', html: pin, iconSize: [0, 0] }), interactive: false, zIndexOffset: 1500 }).addTo(carte);
+      var couchesDest = [L.marker(dest, { icon: L.divIcon({ className: '', html: pin, iconSize: [0, 0] }), interactive: false, zIndexOffset: 1500 })];
+      // Dernier bout à pied : pointillés blancs du bout de la route jusqu'à la destination, avec un point blanc au bout de la route (comme Google Maps).
+      if (carte.distance(fin, dest) > 8) {
+        couchesDest.push(L.polyline([fin, dest], { color: '#FFFFFF', weight: 3, opacity: .95, dashArray: '1 8', lineCap: 'round', interactive: false }));
+        couchesDest.push(L.circleMarker(fin, { radius: 7, color: '#9CA3AF', weight: 2, fillColor: '#FFFFFF', fillOpacity: 1, interactive: false }));
+      }
+      epingleDestination = L.layerGroup(couchesDest).addTo(carte);
       // Guidage : trait cyan bordé de blanc, comme Google Maps ; la carte suit la personne, elle n'est pas recadrée sur tout le trajet.
       var bord = L.polyline(t.points, { color: '#FFFFFF', weight: 8.5, opacity: .85, lineCap: 'round', lineJoin: 'round', interactive: false });
       var trait = L.polyline(t.points, { color: '#22D3EE', weight: 5.5, opacity: 1, dashArray: t.approximatif ? '1 9' : null, lineCap: 'round', lineJoin: 'round', interactive: false });

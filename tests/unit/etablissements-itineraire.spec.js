@@ -349,3 +349,11 @@ test("guidage : le nom de la destination s'écrit à côté du repère rouge (co
   expect(lire("mobile/src/components/CarteLeaflet.tsx")).toContain("t.destinationNom ?");
   expect(lire("mobile/src/app/marketplace/autour.tsx")).toContain("destinationNom: guidage?.nom,");
 });
+
+test("guidage : repère à l'emplacement réel de la destination, relié au bout de la route par des pointillés et un point blanc (comme Google Maps)", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("var dest = t.destination ? [t.destination.lat, t.destination.lng] : fin;");
+  expect(c).toContain("if (carte.distance(fin, dest) > 8) {");
+  expect(c).toContain("dashArray: '1 8'");
+  expect(lire("mobile/src/app/marketplace/autour.tsx")).toContain("destination: guidage ? { lat: guidage.latitude, lng: guidage.longitude } : undefined,");
+});

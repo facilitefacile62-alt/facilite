@@ -557,6 +557,7 @@ export default function AutourDeMoiScreen() {
                 approximatif: trajet.approximatif,
                 navigation: guidage != null,
                 destinationNom: guidage?.nom,
+                destination: guidage ? { lat: guidage.latitude, lng: guidage.longitude } : undefined,
                 alternatives: (trajet.alternatives ?? []).map((x) => ({ points: x.points, libelle: libelleDifference(trajet.dureeMin, x.dureeMin) })),
               }
             : null
