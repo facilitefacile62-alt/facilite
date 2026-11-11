@@ -344,3 +344,8 @@ test("guidage : repère rouge de la destination au bout du trajet (comme Google 
   expect(c).toContain("var fin = t.points[t.points.length - 1];");
   expect(c).toContain("if (epingleDestination) { carte.removeLayer(epingleDestination); epingleDestination = null; }");
 });
+
+test("guidage : le nom de la destination s'écrit à côté du repère rouge (comme Google Maps)", () => {
+  expect(lire("mobile/src/components/CarteLeaflet.tsx")).toContain("t.destinationNom ?");
+  expect(lire("mobile/src/app/marketplace/autour.tsx")).toContain("destinationNom: guidage?.nom,");
+});
