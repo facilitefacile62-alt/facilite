@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import EnteteCouverture from '@/components/EnteteCouverture';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -149,11 +150,53 @@ export default function BoutiquePubliqueScreen() {
       {entete}
 
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
-        {/* Photo de couverture choisie par le vendeur (visible de tous les visiteurs de la boutique) */}
+        {/* Photo de couverture choisie par le vendeur (visible de tous les visiteurs de la boutique). Avec une couverture : elle se fond dans la page, le nom est
+            à gauche et la photo ronde à droite (façon profil TikTok) ; un appui sur la couverture ouvre la vraie photo. Sans couverture : l'en-tête d'avant. */}
         {boutique.cover_photo ? (
-          <Image source={{ uri: urlPhoto(boutique.cover_photo) ?? undefined }} alt="Couverture de la boutique" style={{ width: '100%', height: 150 }} contentFit="cover" />
-        ) : null}
-
+          <EnteteCouverture
+            couvertureUri={urlPhoto(boutique.cover_photo)}
+            fond={FOND}
+            retour={
+              <Pressable onPress={retour} accessibilityLabel="Retour" className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.85)' }}>
+                <Ionicons name="arrow-back" size={18} color={BLEU} />
+              </Pressable>
+            }>
+            <View className="px-4">
+              <View className="flex-row items-end gap-3">
+                <View className="flex-1 min-w-0">
+                  <View className="flex-row items-center gap-1.5">
+                    <Ionicons name="storefront" size={18} color="#B45309" />
+                    <Text className="text-[26px] font-black text-[#1A1A1A] flex-1" numberOfLines={2}>
+                      {boutique.nom}
+                    </Text>
+                  </View>
+                  <Text className="text-[13px] text-black/50 mt-1" numberOfLines={2}>
+                    {lieuVirgule}
+                  </Text>
+                  {numero ? (
+                    <Pressable
+                      onPress={contacter}
+                      className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5 self-start mt-3"
+                      style={{ borderWidth: 1, borderColor: BORDURE }}>
+                      <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
+                      <Text className="text-[12px] font-bold text-[#1A1A1A]">Contacter</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <View className="w-[96px] h-[96px] rounded-full bg-[#E8E4DA] items-center justify-center overflow-hidden" style={{ borderWidth: 3, borderColor: '#fff' }}>
+                  {logo ? (
+                    <Image source={{ uri: logo }} alt={boutique.nom} style={{ width: 90, height: 90 }} contentFit="cover" />
+                  ) : avatar ? (
+                    <Image source={{ uri: avatar }} alt={boutique.nom} style={{ width: 90, height: 90 }} contentFit="cover" />
+                  ) : (
+                    <Ionicons name="storefront" size={34} color="rgba(0,0,0,0.3)" />
+                  )}
+                </View>
+              </View>
+            </View>
+          </EnteteCouverture>
+        ) : (
+          <>
         {/* Retour */}
         <View className="px-4 pt-3">
           <Pressable onPress={retour} accessibilityLabel="Retour" className="items-center justify-center" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8E4DA' }}>
@@ -197,6 +240,8 @@ export default function BoutiquePubliqueScreen() {
             ) : null}
           </View>
         </View>
+          </>
+        )}
 
         {/* Onglets Article / Service / Établissement — même style que Documents / Fonctionnalités */}
         <View className="flex-row gap-2.5 px-4 mt-4">

@@ -382,3 +382,23 @@ test("carrousel d'« Autour de moi » : articles de toutes les boutiques chargé
   // plus de mise à jour boutique par boutique
   expect(a).not.toContain("setArticlesToutes((prev) => ({ ...prev, [b.id]: liste }))");
 });
+
+test("profils Facilité et Locaux : couverture fondue façon TikTok (nom à gauche, photo ronde à droite) ; un appui ouvre la vraie photo ; sans couverture rien ne change", () => {
+  const c = lire("mobile/src/components/EnteteCouverture.tsx");
+  expect(c).toContain("LinearGradient"); // fondu vers la couleur de la page
+  expect(c).toContain("urlVisionneuseCouverture(uri)"); // appui = vraie photo
+  expect(c).toContain("/document?url=");
+  expect(c).toContain("&image=1");
+  expect(c).toContain("if (!uri) return <>{children}</>;"); // sans couverture : contenu seul
+  const p = lire("mobile/src/app/(tabs)/profil.tsx");
+  expect(p).toContain('<EnteteCouverture couvertureUri={profile?.cover_url} fond="#F2F0EA">');
+  expect(p).toContain("{t('Modifier infos')}"); // le bouton reste
+  expect(p).toContain('accessibilityLabel="Photo de profil"'); // la photo reste modifiable
+  const b = lire("mobile/src/app/marketplace/boutique/[id].tsx");
+  expect(b).toContain("<EnteteCouverture");
+  expect(b).toContain("couvertureUri={urlPhoto(boutique.cover_photo)}");
+  expect(b).toContain("Contacter"); // le bouton reste
+  expect(b).toContain("{/* Retour */}"); // l'en-tête d'avant est conservé pour les boutiques sans couverture
+  const v = lire("mobile/src/app/document.tsx");
+  expect(v).toContain('contentFit="contain"'); // la visionneuse montre la photo entière
+});

@@ -8,6 +8,7 @@ import ApercuDocument from '@/components/ApercuDocument';
 import AvatarProfil from '@/components/AvatarProfil';
 import CatalogueCv from '@/components/CatalogueCv';
 import CatalogueModelesDocuments from '@/components/CatalogueModelesDocuments';
+import EnteteCouverture from '@/components/EnteteCouverture';
 import FaciliteHeader from '@/components/FaciliteHeader';
 import { useImportDocument } from '@/components/FeuilleImportDocument';
 import FeuillePhotoProfil from '@/components/FeuillePhotoProfil';
@@ -162,7 +163,45 @@ export default function ProfilScreen() {
               </Pressable>
             </View>
           ) : null}
-          {/* En-tête de profil : photo + « + », nom de la boutique, Modifier infos */}
+          {/* En-tête de profil : photo + « + », nom de la boutique, Modifier infos. Avec une photo de couverture : couverture fondue en haut, nom à gauche,
+              photo ronde à droite (façon profil TikTok) ; un appui sur la couverture ouvre la vraie photo. Sans couverture : l'en-tête d'avant, inchangé. */}
+          <EnteteCouverture couvertureUri={profile?.cover_url} fond="#F2F0EA">
+            {profile?.cover_url ? (
+              <View className="px-4">
+                <View className="flex-row items-end gap-3">
+                  <View className="flex-1 min-w-0">
+                    <View className="flex-row items-center gap-1.5">
+                      <Ionicons name="storefront" size={18} color="#B45309" />
+                      <Text className="text-[26px] font-black text-[#1A1A1A] flex-1" numberOfLines={2}>
+                        {nomAffiche}
+                      </Text>
+                    </View>
+                    <Text className="text-[13px] text-black/50 mt-1" numberOfLines={2}>
+                      {sousTitre}
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push('/mon-profil/a-propos')}
+                      className="flex-row items-center gap-1.5 bg-white rounded-xl px-3 py-2.5 self-start mt-3"
+                      style={{ borderWidth: 1, borderColor: BORDURE }}>
+                      <Ionicons name="pencil" size={13} color="#1A1A1A" />
+                      <Text className="text-[12px] font-bold text-[#1A1A1A]">{t('Modifier infos')}</Text>
+                    </Pressable>
+                  </View>
+                  <Pressable
+                    onPress={changerPhoto}
+                    accessibilityLabel="Photo de profil"
+                    className="w-[96px] h-[96px] rounded-full bg-[#E8E4DA] items-center justify-center"
+                    style={{ borderWidth: 3, borderColor: '#fff' }}>
+                    <AvatarProfil valeur={profile?.avatar_url} nom={String(profile?.full_name ?? '')} taille={90} fond="#E8E4DA" />
+                    <View
+                      className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full items-center justify-center border-2 border-[#F2F0EA]"
+                      style={{ backgroundColor: VERT }}>
+                      <Ionicons name="add" size={16} color="#fff" />
+                    </View>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
           <View className="px-4 pt-4">
             <View className="flex-row items-center gap-3">
               <Pressable
@@ -198,6 +237,8 @@ export default function ProfilScreen() {
               </Pressable>
             </View>
           </View>
+            )}
+          </EnteteCouverture>
 
           {/* Onglets Documents / Fonctionnalités / Achat de CV (jamais « Publications »). « Achat de CV » est masqué sur iOS (biens numériques,
               règle Apple 3.1.1) : il ne reste alors que les deux premiers, comme avant. Les trois tiennent dans la largeur (marges 8 px, espace
