@@ -96,9 +96,9 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
 <link rel="stylesheet" href="${LEAFLET_CSS}" />
 <style>
   html, body { overflow: hidden; }
-  html, body, #carte { margin: 0; padding: 0; height: 100%; width: 100%; background: ${sombre ? '#1b2330' : '#e8e4da'}; }
+  html, body, #carte { margin: 0; padding: 0; height: 100%; width: 100%; background: var(--fond, ${sombre ? '#1b2330' : '#e8e4da'}); }
   .leaflet-control-attribution { font-size: 9px; opacity: .7; }
-  ${sombre ? '.leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }' : ''}
+  body.sombre .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }
   .etiquette { background: rgba(0,0,0,.72); color: #fff; border: 0; border-radius: 10px; padding: 2px 7px; font: 700 11px system-ui, sans-serif; box-shadow: none; }
   .etiquette:before { display: none; }
   .bulle-regroupement { background: none; border: 0; }
@@ -143,7 +143,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   .pb-vide { padding: 8px 16px 16px; font: 600 12px system-ui, sans-serif; color: rgba(0,0,0,.5); }
   @keyframes pulse { 0% { r: 9; opacity: .5 } 100% { r: 26; opacity: 0 } }
 </style>
-</head><body>
+</head><body class="${sombre ? 'sombre' : ''}">
 <div id="carte"></div>
 <script src="${LEAFLET_JS}"></script>
 <script>
@@ -152,6 +152,7 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   ${satellite
     ? "L.tileLayer('" + TUILES_SATELLITE + "', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }).addTo(carte); L.tileLayer('" + TUILES_NOMS + "', { maxZoom: 19 }).addTo(carte);"
     : "L.tileLayer('" + TUILES + "', { maxZoom: 19, attribution: 'Map &copy; Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(carte);"}
+  var SATELLITE = ${satellite};
   var CLAIR = ${!sombre && !satellite};
   var couche = L.layerGroup().addTo(carte);
   // Limites et noms des 14 régions du Sénégal (OCHA / geoBoundaries) : contour coloré, léger voile, nom au centre.
@@ -191,6 +192,15 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var enCluster = {};   // id -> true quand la boutique fait partie d'une grappe (rond sans pointe)
   var piles = {};   // id de la boutique du dessus -> boutiques empilees avec elle (zoom faible)
   var MARGE_H = ${margeHaut}, MARGE_B = ${margeBas};
+  // Mode sombre et marges se règlent sans recharger la page : recharger la carte faisait clignoter les bulles (plusieurs reconstructions de suite)
+  // et faisait perdre la vue 3D au démarrage du guidage.
+  window.reglerSombre = function (actif) {
+    document.body.classList.toggle('sombre', !!actif);
+    document.documentElement.style.setProperty('--fond', actif ? '#1b2330' : '#e8e4da');
+    CLAIR = !actif && !SATELLITE;
+    if (typeof dessiner === 'function') dessiner();
+  };
+  window.reglerMarges = function (haut, bas) { MARGE_H = haut; MARGE_B = bas; };
   var popupCourant = null;
   var popupDonnees = null;
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -759,11 +769,12 @@ function documentHtml(centre: CentreCarte, zoom: number, sombre: boolean, intera
   var decalageDoigts = 0; // rotation ajoutée à deux doigts ; remise à zéro par « Recentrer » et à l'arrêt du guidage
   window.pivoter = function (capDeg, remiseAZero) {
     var el = document.getElementById('carte');
-    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; inclinaison = 0; if (guidageActif) cadreGuidage(false); guidageActif = false; carte.dragging.enable(); carte.setMinZoom(0); carte.options.zoomSnap = 1; carte.options.zoomDelta = 1; return; }
+    if (capDeg === null || capDeg === undefined) { el.style.transition = ''; el.style.transform = ''; rotation = 0; decalageDoigts = 0; inclinaison = 0; if (guidageActif) cadreGuidage(false); guidageActif = false; carte.options.touchZoom = true; carte.dragging.enable(); carte.setMinZoom(0); carte.options.zoomSnap = 1; carte.options.zoomDelta = 1; return; }
     if (!guidageActif) {
     guidageActif = true;
     cadreGuidage(true);
     carte.dragging.disable();
+    carte.options.touchZoom = 'center'; // le pincement zoome autour du centre (la personne), sans dériver
     // Guidage : on peut dézoomer à volonté (jusqu'à la vue du pays), comme sur Google Maps ; la carte ne re-zoome pas toute seule.
     carte.setMinZoom(5);
     // Zoom continu, qui suit les doigts comme Google Maps (sans paliers entiers) ; rétabli à l'arrêt du guidage.
@@ -902,7 +913,7 @@ export default function CarteLeaflet({
   const html = useMemo(
     () => documentHtml(centre, zoom, sombre, interactive, regrouper, regions, margeHaut, margeBas, satellite),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sombre, interactive, regrouper, regions, margeHaut, margeBas, satellite]
+    [interactive, regrouper, regions, satellite]
   );
 
   const executer = useCallback((script: string) => {
@@ -945,6 +956,14 @@ export default function CarteLeaflet({
     majTrajet();
   }, [majTrajet]);
 
+  // Mode sombre et marges : poussés dans la page déjà ouverte (sans la recharger).
+  const reglages = useCallback(() => {
+    executer(`window.reglerSombre && window.reglerSombre(${sombre ? 'true' : 'false'}); window.reglerMarges && window.reglerMarges(${margeHaut}, ${margeBas})`);
+  }, [executer, sombre, margeHaut, margeBas]);
+  useEffect(() => {
+    reglages();
+  }, [reglages]);
+
   useEffect(() => {
     commandes?.({
       centrer: (lat, lng, z, decalage) => executer(`window.centrer && window.centrer(${lat}, ${lng}, ${z ?? 'null'}, ${decalage ?? 'null'})`),
@@ -963,6 +982,7 @@ export default function CarteLeaflet({
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     const surMessage = (e: MessageEvent) => {
       if (e.data?.pret) {
+        reglages();
         miseAJour();
         majPopup();
         majPopups();
@@ -972,7 +992,7 @@ export default function CarteLeaflet({
     };
     window.addEventListener('message', surMessage);
     return () => window.removeEventListener('message', surMessage);
-  }, [miseAJour, majPopup, majPopups, majTrajet, onMarqueur]);
+  }, [miseAJour, majPopup, majPopups, majTrajet, onMarqueur, reglages]);
 
   const surMessageNatif = (e: WebViewMessageEvent) => {
     if (onMarqueur) onMarqueur(e.nativeEvent.data);
@@ -996,6 +1016,7 @@ export default function CarteLeaflet({
           domStorageEnabled
           onMessage={surMessageNatif}
           onLoadEnd={() => {
+            reglages();
             miseAJour();
             majPopup();
             majPopups();

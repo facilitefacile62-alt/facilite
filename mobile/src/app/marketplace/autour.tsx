@@ -414,26 +414,28 @@ export default function AutourDeMoiScreen() {
     return guidage && trajet && p ? etatGuidage(trajet.points as PointTrace[], p, virages) : null;
   }, [guidage, trajet, positionLive, position, virages]);
   useEffect(() => {
-    if (!guidage || !positionLive) return;
+    // Sans relevé GPS tout de suite (intérieur, démarrage lent), le guidage part de la dernière position connue : la vue 3D et la rotation sont actives dès le départ.
+    const pl = positionLive ?? position;
+    if (!guidage || !pl) return;
     // Le suivi garde le zoom choisi par la personne (sinon chaque relevé GPS re-zoomait la carte) ; seul « Recentrer » remet le zoom 18.
-    if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);
+    if (suivi) carte?.centrer(pl.latitude, pl.longitude);
     // La flèche s'oriente dans le sens du déplacement (cap entre deux positions éloignées d'au moins 3 m).
     const prec = dernierePosition.current;
-    if (prec && distanceM([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]) >= 3) {
-      capVehicule.current = cap([prec.latitude, prec.longitude], [positionLive.latitude, positionLive.longitude]);
-      dernierePosition.current = positionLive;
-    } else if (!prec) dernierePosition.current = positionLive;
+    if (prec && distanceM([prec.latitude, prec.longitude], [pl.latitude, pl.longitude]) >= 3) {
+      capVehicule.current = cap([prec.latitude, prec.longitude], [pl.latitude, pl.longitude]);
+      dernierePosition.current = pl;
+    } else if (!prec) dernierePosition.current = pl;
     if (capGps.current !== null) capVehicule.current = capGps.current;
     // La carte pivote : la direction de la marche est toujours vers le haut ; la flèche reste donc droite.
     // Nord en haut (boussole touchée) : la carte reste droite et la voiture tourne ; sinon la carte pivote et la voiture reste droite.
     carte?.incliner(vue3d ? 55 : 0);
     carte?.pivoter(nordHaut ? 0 : capVehicule.current);
-    carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0);
+    carte?.vehicule(pl.latitude, pl.longitude, nordHaut ? capVehicule.current : 0);
     if (consigne?.horsTrace && Date.now() - dernierRecalcul.current > 15000) {
       dernierRecalcul.current = Date.now();
-      calculerItineraire(positionLive, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
+      calculerItineraire(pl, { latitude: guidage.latitude, longitude: guidage.longitude }).then(setTrajet);
     }
-  }, [guidage, positionLive, consigne?.horsTrace, carte, nordHaut, suivi, vue3d]);
+  }, [guidage, positionLive, position, consigne?.horsTrace, carte, nordHaut, suivi, vue3d]);
   // Durée restante : la durée du trajet au prorata de la distance restante (à défaut, 5 km/h à pied, 30 km/h en voiture).
   const minutesRestantes = useMemo(() => {
     if (!consigne || !trajet) return null;

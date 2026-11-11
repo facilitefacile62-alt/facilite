@@ -208,7 +208,7 @@ test("guidage : trait cyan épais bordé de blanc (sans recadrage) et flèche du
   expect(c).toContain("rotate(' + (capDeg || 0) + 'deg)");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("navigation: guidage != null");
-  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0)");
+  expect(a).toContain("carte?.vehicule(pl.latitude, pl.longitude, nordHaut ? capVehicule.current : 0)");
   expect(a).toContain("carte?.vehicule(null)"); // la flèche disparaît à l'arrêt
 });
 
@@ -220,7 +220,7 @@ test("guidage : la carte pivote selon le cap (direction de la marche vers le hau
   expect(c).toContain("overflow: hidden");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("carte?.pivoter(nordHaut ? 0 : capVehicule.current);");
-  expect(a).toContain("carte?.vehicule(positionLive.latitude, positionLive.longitude, nordHaut ? capVehicule.current : 0)"); // flèche droite : c'est la carte qui tourne
+  expect(a).toContain("carte?.vehicule(pl.latitude, pl.longitude, nordHaut ? capVehicule.current : 0)"); // flèche droite : c'est la carte qui tourne
   expect(a).toContain("carte?.pivoter(null)"); // carte droite à l'arrêt
   expect(a).toContain("Location.Accuracy.High");
   expect(a).toContain("getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })"); // secours si le suivi continu est muet
@@ -250,7 +250,7 @@ test("guidage : la carte se déplace au doigt (corrigé de la rotation), arrête
   expect(c).toContain("carte.dragging.enable()");
   const a = lire("mobile/src/app/marketplace/autour.tsx");
   expect(a).toContain("if (id === 'carte-deplacee') {");
-  expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);"); // garde le zoom de la personne
+  expect(a).toContain("if (suivi) carte?.centrer(pl.latitude, pl.longitude);"); // garde le zoom de la personne
   expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer/);
 });
 
@@ -319,7 +319,7 @@ test("alternatives (application) : libellés de différence et échange du traje
 
 test("guidage : dézoomer reste possible — le suivi GPS ne re-zoome plus la carte (seul « Recentrer » remet le zoom 18)", () => {
   const a = lire("mobile/src/app/marketplace/autour.tsx");
-  expect(a).toContain("if (suivi) carte?.centrer(positionLive.latitude, positionLive.longitude);");
+  expect(a).toContain("if (suivi) carte?.centrer(pl.latitude, pl.longitude);");
   expect(a).toMatch(/setSuivi\(true\);\s+if \(p\) carte\?\.centrer\(p\.latitude, p\.longitude, 18\)/);
 });
 
@@ -401,4 +401,16 @@ test("profils Facilité et Locaux : couverture fondue façon TikTok (nom à gauc
   expect(b).toContain("{/* Retour */}"); // l'en-tête d'avant est conservé pour les boutiques sans couverture
   const v = lire("mobile/src/app/document.tsx");
   expect(v).toContain('contentFit="contain"'); // la visionneuse montre la photo entière
+});
+
+test("carte : la page n'est plus rechargée quand le mode sombre ou les marges changent (fin du clignotement du carrousel, 3D conservée) ; pincement centré", () => {
+  const c = lire("mobile/src/components/CarteLeaflet.tsx");
+  expect(c).toContain("[interactive, regrouper, regions, satellite]"); // plus de sombre / marges dans les dépendances du document
+  expect(c).toContain("window.reglerSombre = function");
+  expect(c).toContain("window.reglerMarges = function");
+  expect(c).toContain("body.sombre .leaflet-tile-pane");
+  expect(c).toContain("carte.options.touchZoom = 'center'"); // pas de dérive du pincement en 3D
+  expect(c).toContain("carte.options.touchZoom = true;");
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("const pl = positionLive ?? position;"); // guidage 3D dès la dernière position connue
 });
