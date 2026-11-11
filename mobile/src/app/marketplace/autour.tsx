@@ -502,17 +502,27 @@ export default function AutourDeMoiScreen() {
     }
   }, [guidage, carrousel]);
   const [articlesToutes, setArticlesToutes] = useState<Record<string, ArticleMarketplace[]>>({});
+  const articlesChargees = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!carrousel) return;
+    // Les articles de TOUTES les boutiques sont chargés ensemble puis posés d'un seul coup : un arrivage par boutique reconstruisait toutes les bulles
+    // à chaque fois (clignotement pendant plusieurs secondes). Les boutiques déjà chargées ne sont pas redemandées.
+    const aCharger = visibles.filter((b) => !articlesChargees.current.has(b.id));
+    if (aCharger.length === 0) return;
     let annule = false;
-    visibles.forEach((b) => {
-      chargerArticles({ boutiqueId: b.id, limite: 20 })
-        .then((liste) => {
-          if (!annule) setArticlesToutes((prev) => ({ ...prev, [b.id]: liste }));
-        })
-        .catch(() => {
-          if (!annule) setArticlesToutes((prev) => ({ ...prev, [b.id]: [] }));
-        });
+    Promise.all(
+      aCharger.map((b) =>
+        Promise.race([
+          chargerArticles({ boutiqueId: b.id, limite: 20 }),
+          new Promise<ArticleMarketplace[]>((resoudre) => setTimeout(() => resoudre([]), 6000)), // une boutique lente ne bloque pas les autres
+        ])
+          .catch(() => [] as ArticleMarketplace[])
+          .then((liste) => [b.id, liste] as const)
+      )
+    ).then((entrees) => {
+      if (annule) return;
+      entrees.forEach(([id]) => articlesChargees.current.add(id));
+      setArticlesToutes((prev) => ({ ...prev, ...Object.fromEntries(entrees) }));
     });
     return () => {
       annule = true;
@@ -520,6 +530,7 @@ export default function AutourDeMoiScreen() {
   }, [carrousel, visibles]);
   const popups = useMemo<PopupBoutique[] | null>(() => {
     if (!carrousel) return null;
+    if (!visibles.every((b) => b.id in articlesToutes)) return null; // articles pas encore tous arrivés : pas de bulles à moitié remplies
     return visibles.map((b) => ({
       cle: b.id,
       lat: b.latitude,

@@ -371,3 +371,14 @@ test("guidage : vue 3D (carte inclinée, perspective) activée au démarrage, bo
   expect(a).toContain("carte?.incliner(vue3d ? 55 : 0);");
   expect(a).toContain("onVue3d={() => setVue3d((v) => !v)}");
 });
+
+test("carrousel d'« Autour de moi » : articles de toutes les boutiques chargés ensemble puis posés d'un coup (plus de clignotement des bulles)", () => {
+  const a = lire("mobile/src/app/marketplace/autour.tsx");
+  expect(a).toContain("const articlesChargees = useRef<Set<string>>(new Set());");
+  expect(a).toContain("Promise.all(");
+  expect(a).toContain("setArticlesToutes((prev) => ({ ...prev, ...Object.fromEntries(entrees) }));");
+  expect(a).toContain("if (!visibles.every((b) => b.id in articlesToutes)) return null;");
+  expect(a).toContain("setTimeout(() => resoudre([]), 6000)"); // une boutique lente ne bloque rien
+  // plus de mise à jour boutique par boutique
+  expect(a).not.toContain("setArticlesToutes((prev) => ({ ...prev, [b.id]: liste }))");
+});
