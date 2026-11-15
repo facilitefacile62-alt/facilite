@@ -9,6 +9,7 @@ import RoleBadge from "@/components/RoleBadge";
 import BadgeDisplay from "@/components/BadgeDisplay";
 import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
+import { manqueAvantLivraison, messageApresLivraison, messageErreurLivraison, titreDepuisNomFichier } from "@/lib/livraisonDocumentLogique";
 import SecurityAlertsWidget, { securityEventStyle } from "@/components/SecurityAlertsWidget";
 import { subscribeFeatureFlagsTree, persistFeatureFlagsOverrides, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import {
@@ -227,6 +228,8 @@ export default function AdminDashboardPage() {
   const [livraisonFichier, setLivraisonFichier] = useState(null);
   const [livraisonTitre, setLivraisonTitre] = useState("");
   const [livraisonEnCours, setLivraisonEnCours] = useState(false);
+  // Résultat de la dernière livraison, affiché DANS le panneau jusqu'à la prochaine action (le petit message en haut disparaissait au bout de 3 secondes et personne ne le voyait).
+  const [livraisonMessage, setLivraisonMessage] = useState(null);
   const [requestingAccess, setRequestingAccess] = useState(false);
   const [viewingDocumentKey, setViewingDocumentKey] = useState(null);
 
@@ -1079,14 +1082,13 @@ export default function AdminDashboardPage() {
    */
   const handleLivrerDocument = async (candidateId) => {
     const titre = livraisonTitre.trim();
-    if (!livraisonFichier) {
-      triggerToast("Choisissez le fichier a livrer.", "fa-triangle-exclamation");
+    const manque = manqueAvantLivraison(livraisonFichier, titre);
+    if (manque) {
+      setLivraisonMessage({ ok: false, texte: manque, pour: candidateId });
+      triggerToast(manque, "fa-triangle-exclamation");
       return;
     }
-    if (titre.length < 3) {
-      triggerToast("Donnez un titre au document — c'est ce que le candidat verra.", "fa-triangle-exclamation");
-      return;
-    }
+    setLivraisonMessage(null);
     setLivraisonEnCours(true);
     try {
       const nomSur = livraisonFichier.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -1105,17 +1107,16 @@ export default function AdminDashboardPage() {
       });
       if (error) throw error;
 
-      triggerToast(
-        data?.statut === "delivered"
-          ? "Document depose. Il apparait des maintenant chez le candidat, qui a ete notifie."
-          : "Espace du candidat plein. Une demande lui a ete envoyee : il choisit quel document remplacer, ou refuse. Rien n'est depose avant sa reponse.",
-        "fa-paper-plane"
-      );
+      const apres = messageApresLivraison(data?.statut, selectedUser?.full_name);
+      setLivraisonMessage({ ...apres, pour: candidateId });
+      triggerToast(apres.texte, "fa-paper-plane");
       setLivraisonFichier(null);
       setLivraisonTitre("");
       if (selectedUser?.id === candidateId) await openUserDetail(selectedUser);
     } catch (err) {
-      triggerToast(`Livraison impossible : ${err.message}`, "fa-triangle-exclamation");
+      const echec = messageErreurLivraison(err);
+      setLivraisonMessage({ ...echec, pour: candidateId });
+      triggerToast(echec.texte, "fa-triangle-exclamation");
     } finally {
       setLivraisonEnCours(false);
     }
@@ -2038,6 +2039,7 @@ export default function AdminDashboardPage() {
               livraisonTitre={livraisonTitre}
               setLivraisonTitre={setLivraisonTitre}
               livraisonEnCours={livraisonEnCours}
+              livraisonMessage={livraisonMessage}
               onLivrer={handleLivrerDocument}
               setAccessReasonDraft={setAccessReasonDraft}
               requestingAccess={requestingAccess}
@@ -2514,6 +2516,7 @@ function UserDetailModal({
   livraisonTitre,
   setLivraisonTitre,
   livraisonEnCours,
+  livraisonMessage,
   onLivrer,
   requestingAccess,
   onRequestAccess,
@@ -2738,7 +2741,11 @@ function UserDetailModal({
                 S&apos;il a déjà 5 documents importés, rien n&apos;est déposé : une demande lui est envoyée pour qu&apos;il
                 choisisse lui-même quel document céder la place.
               </p>
+              <label htmlFor="livraison-titre" className="block text-[10px] font-bold text-gray-500 uppercase">
+                Titre du document (obligatoire)
+              </label>
               <input
+                id="livraison-titre"
                 type="text"
                 value={livraisonTitre}
                 onChange={(e) => setLivraisonTitre(e.target.value)}
@@ -2748,18 +2755,41 @@ function UserDetailModal({
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
-                onChange={(e) => setLivraisonFichier(e.target.files?.[0] || null)}
+                onChange={(e) => {
+                  const fichier = e.target.files?.[0] || null;
+                  setLivraisonFichier(fichier);
+                  // Titre vide : on propose le nom du fichier (modifiable), pour ne pas oublier le titre.
+                  if (fichier && !livraisonTitre.trim()) setLivraisonTitre(titreDepuisNomFichier(fichier.name));
+                }}
                 className="w-full text-[11px] font-medium text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-extrabold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200"
               />
-              <button
-                type="button"
-                onClick={() => onLivrer(user.id)}
-                disabled={livraisonEnCours}
-                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
-              >
-                <i className="fa-solid fa-paper-plane text-xs"></i>
-                <span>{livraisonEnCours ? "Envoi..." : "Livrer le document"}</span>
-              </button>
+              {(() => {
+                const manque = manqueAvantLivraison(livraisonFichier, livraisonTitre);
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onLivrer(user.id)}
+                      disabled={livraisonEnCours || manque !== null}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <i className="fa-solid fa-paper-plane text-xs"></i>
+                      <span>{livraisonEnCours ? "Envoi..." : "Livrer le document"}</span>
+                    </button>
+                    {manque && !livraisonEnCours ? <p className="text-[11px] font-bold text-amber-700">{manque}</p> : null}
+                  </>
+                );
+              })()}
+              {livraisonMessage && livraisonMessage.pour === user.id ? (
+                <p
+                  role="status"
+                  className={`text-[11px] font-bold leading-relaxed px-3 py-2 rounded-xl border ${
+                    livraisonMessage.ok ? "bg-emerald-100 text-emerald-900 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"
+                  }`}
+                >
+                  {livraisonMessage.texte}
+                </p>
+              ) : null}
             </div>
 
             {accessRequests.length > 0 && (
