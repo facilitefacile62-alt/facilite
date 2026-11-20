@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { enqueueWebhookJob } from "@/lib/queueProducers";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 /**
@@ -133,21 +132,27 @@ export async function POST(req) {
     const eventId = confirmed.invoice?.token || invoiceToken;
     const eventType = confirmedStatus === "completed" ? "payment.success" : "payment.updated";
 
-    // 3. Envoi asynchrone dans la file RabbitMQ — payload = données
-    // CONFIRMÉES par PayDunya (jamais le corps du POST reçu).
-    await enqueueWebhookJob({
-      provider: "paydunya",
-      eventType,
-      payload: {
-        ...confirmed,
-        eventId,
-        status: confirmedStatus,
-      },
-      signature,
-    });
+    // 3. AUCUN traitement automatique (décision du 20/11/2026). Ce webhook alimentait une file RabbitMQ dont les workers
+    // (mise à jour de la commande, facture…) n'ont jamais été hébergés : 0 consommateur sur les 4 files (CloudAMQP,
+    // 22/08), aucune ligne dans processed_webhooks, aucune commande payée par PayDunya en base. La file et les workers
+    // ont été retirés (ils restent dans l'historique Git avant ce commit). Le point d'entrée est conservé : il
+    // authentifie, confirme auprès de PayDunya, JOURNALISE et répond 200 pour que la passerelle ne rejoue pas à
+    // l'infini. KPay (processeur par défaut) a son propre webhook, qui ne dépend de rien de ceci.
+    const montant = confirmed.invoice?.total_amount ?? null;
+    console.warn(
+      `[PayDunya Webhook] ${eventType} confirmé par PayDunya — invoice ${eventId}, statut ${confirmedStatus}, montant ${montant}. ` +
+        "AUCUN traitement automatique (les workers PayDunya ne sont pas hébergés) : la commande n'est PAS mise à jour."
+    );
+    if (confirmedStatus === "completed") {
+      // Un paiement réellement encaissé mais non traité doit être rapproché À LA MAIN : alerte critique.
+      captureCriticalPaymentError("[PayDunya Webhook] Paiement CONFIRMÉ reçu mais NON traité (aucun worker) — à rapprocher à la main", {
+        invoiceToken: eventId,
+        montant,
+      });
+    }
 
-    // 4. Réponse 200 immédiate à la passerelle de paiement
-    return NextResponse.json({ received: true, eventId });
+    // 4. Réponse 200 à la passerelle de paiement
+    return NextResponse.json({ received: true, eventId, processed: false });
   } catch (err) {
     console.error("[PayDunya Webhook Route] Erreur réception webhook:", err);
     captureCriticalPaymentError("[PayDunya Webhook Route] Erreur réception webhook", { message: err?.message });

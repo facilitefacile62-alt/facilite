@@ -43,7 +43,7 @@ async function runTest() {
     console.log(`📡 Réponse API (${res.status}):`, data);
 
     if (res.ok && data.received) {
-      console.log("✅ Webhook réceptionné avec succès et enfilé dans RabbitMQ !");
+      console.log("✅ Webhook réceptionné et journalisé (aucun traitement automatique : pas de file ni de worker)");
     } else {
       console.warn("⚠️ Réponse inattendue:", data);
     }

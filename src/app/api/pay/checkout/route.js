@@ -9,14 +9,11 @@ import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
 import { z } from "zod";
 
-// KPay redevient le processeur par défaut (retour arrière du 22/08) : les
-// workers RabbitMQ qui reconcilient les paiements PayDunya (webhooksWorker.js)
-// ne tournent nulle part en production — confirmé en direct via l'API de
-// gestion CloudAMQP, 0 consumer sur les 4 files, à l'instant. Un paiement
-// PayDunya confirmé aujourd'hui resterait en file indéfiniment sans jamais
-// mettre à jour orders/transactions. processor: "paydunya" reste disponible
-// explicitement (code non supprimé, juste plus le choix par défaut) pour
-// reprendre la bascule dès que l'hébergement des workers sera réglé.
+// KPay est le processeur par défaut (retour arrière du 22/08). Les workers RabbitMQ qui
+// reconciliaient les paiements PayDunya n'ont jamais tourné en production et ont été retirés
+// (20/11/2026) : un paiement PayDunya confirmé est désormais journalisé par son webhook avec une
+// alerte critique, mais la commande n'est PAS mise à jour automatiquement. processor: "paydunya"
+// reste disponible explicitement, mais ne doit pas servir tant que ce traitement n'est pas refait.
 const processorSchema = z.enum(["kpay", "paydunya"]).optional().default("kpay");
 
 const PRICE_AUTONOME = 1500;

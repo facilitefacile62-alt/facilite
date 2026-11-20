@@ -9,10 +9,7 @@
     "check:invariants": "node scripts/check-invariants.mjs",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test",
-    "worker": "node src/workers/index.js",
-    "worker:notifications": "node src/workers/notificationsWorker.js",
-    "worker:webhooks": "node src/workers/webhooksWorker.js"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.27",
@@ -32,7 +29,6 @@
     "@supabase/supabase-js": "^2.110.8",
     "@upstash/redis": "^1.38.0",
     "ai": "^7.0.41",
-    "amqplib": "^2.0.1",
     "botid": "^1.5.11",
     "browser-image-compression": "^2.0.2",
     "googleapis": "^174.0.1",
@@ -61,7 +57,6 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
-    "@types/amqplib": "^0.10.8",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.18",
     "eslint": "^9.39.5",
