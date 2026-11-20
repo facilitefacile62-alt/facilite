@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { roleHomePath } from "@/lib/roles";
+import { creerMemoireCourte } from "@/lib/proxyMemoireCourte";
 
 /**
  * Protection des routes en REFUS PAR DÉFAUT.
@@ -170,6 +171,18 @@ function estRoutePublique(pathname) {
   return PUBLIC_ROUTES.some((route) => pathnameMatchesRoute(pathname, route));
 }
 
+// Mémoires courtes (voir src/lib/proxyMemoireCourte.js) : le proxy passe sur chaque page, y compris les
+// préchargements ; relire le rôle et TOUS les interrupteurs en base à chaque passage a fait dépasser le temps
+// de calcul du plan Vercel (18/11/2026). Délai d'effet d'une modification : au plus la durée ci-dessous
+// (interrupteur changé dans /admin : 60 s ; rôle ou suspension d'un compte : 20 s — le verrou réel d'un compte
+// suspendu reste dans PostgreSQL). PROXY_MEMOIRE_DESACTIVEE=1 revient à une lecture à chaque passage.
+const memoireActive = process.env.PROXY_MEMOIRE_DESACTIVEE !== "1";
+const DUREE_INTERRUPTEURS_MS = memoireActive ? 60_000 : 0;
+const DUREE_ROLE_MS = memoireActive ? 20_000 : 0;
+const memoireInterrupteurs = creerMemoireCourte({ dureeMs: DUREE_INTERRUPTEURS_MS, max: 4 });
+const memoireRoles = creerMemoireCourte({ dureeMs: DUREE_ROLE_MS });
+const memoireProfils = creerMemoireCourte({ dureeMs: DUREE_ROLE_MS });
+
 // Helper pour exécuter une promesse avec un temps limite (timeout) en ms
 async function withTimeout(promise, timeoutMs = 1500) {
   let timeoutId;
@@ -232,20 +245,36 @@ export default async function proxy(req) {
   let user = null;
   let supabase = null;
 
-  // 3. Récupération de l'utilisateur avec timeout résilient
-  try {
-    supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      cookies: {
-        getAll: () => req.cookies.getAll(),
-        setAll: (cookiesToSet) =>
-          cookiesToSet.forEach(({ name, value, options }) =>
-            res.cookies.set(name, value, options)
-          ),
-      },
-    });
+  // Client Supabase créé seulement quand on en a besoin : un visiteur sans cookie dont les interrupteurs sont
+  // déjà en mémoire n'en construit aucun.
+  const client = () => {
+    if (!supabase) {
+      supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        cookies: {
+          getAll: () => req.cookies.getAll(),
+          setAll: (cookiesToSet) =>
+            cookiesToSet.forEach(({ name, value, options }) =>
+              res.cookies.set(name, value, options)
+            ),
+        },
+      });
+    }
+    return supabase;
+  };
 
-    const userPromise = supabase.auth.getUser().then((r) => r.data.user);
-    user = await withTimeout(userPromise, 1500);
+  // 3. Récupération de l'utilisateur avec timeout résilient.
+  // getClaims() vérifie la SIGNATURE du jeton en local (clés publiques du projet, ES256, gardées en mémoire)
+  // au lieu d'interroger Supabase Auth à chaque page comme getUser(). Il rafraîchit toujours le jeton expiré
+  // (cookies reposés par setAll). Seule différence : un compte supprimé ou une session révoquée reste reconnu
+  // jusqu'à l'expiration du jeton (1 h au plus) ; le rôle et le statut du compte restent relus (section 4) et
+  // PostgreSQL refuse de toute façon les actions d'un compte supprimé ou suspendu. Visiteur sans cookie :
+  // aucune session à chercher, on n'appelle rien.
+  try {
+    if (hasSupabaseCookie) {
+      const claimsPromise = client().auth.getClaims().then((r) => r.data?.claims ?? null);
+      const claims = await withTimeout(claimsPromise, 1500);
+      user = claims?.sub ? { id: claims.sub } : null;
+    }
   } catch (err) {
     console.warn(
       "[Middleware] Timeout ou échec de récupération Supabase user (accès toléré) :",
@@ -267,14 +296,21 @@ export default async function proxy(req) {
   let userRoleRow = null;
   if (user) {
     try {
-      const rolePromise = supabase
-        .from("user_roles")
-        .select("role, status, suspended_by")
-        .eq("user_id", user.id)
-        .single()
-        .then((r) => r.data);
-
-      userRoleRow = await withTimeout(rolePromise, 1500);
+      // Un compte sans ligne de rôle (data nulle) n'est pas gardé en mémoire : la ligne est créée à l'inscription.
+      userRoleRow = await memoireRoles.lireOuCharger(
+        user.id,
+        () =>
+          withTimeout(
+            client()
+              .from("user_roles")
+              .select("role, status, suspended_by")
+              .eq("user_id", user.id)
+              .single()
+              .then((r) => r.data),
+            1500
+          ),
+        (valeur) => valeur != null
+      );
     } catch (err) {
       console.warn(
         "[Middleware] Timeout ou échec de récupération du rôle Supabase (accès toléré) :",
@@ -292,7 +328,8 @@ export default async function proxy(req) {
     if (userRoleRow?.status === "suspended") {
       if (userRoleRow.suspended_by === null) {
         try {
-          await withTimeout(supabase.rpc("reactivate_own_account_if_self_suspended"), 1500);
+          await withTimeout(client().rpc("reactivate_own_account_if_self_suspended"), 1500);
+          memoireRoles.oublier(user.id); // l'état vient de changer : relire la vraie ligne au prochain passage
         } catch (e) {
           console.error("[Middleware] Échec réactivation auto-désactivation :", e.message);
         }
@@ -300,7 +337,7 @@ export default async function proxy(req) {
       }
 
       try {
-        await withTimeout(supabase.auth.signOut(), 1000);
+        await withTimeout(client().auth.signOut(), 1000);
       } catch (e) {
         console.error("[Middleware] Échec signOut pour compte suspendu :", e.message);
       }
@@ -353,11 +390,21 @@ export default async function proxy(req) {
   const userRoleForFlags = userRoleRow?.role || (user ? "user" : "visitor");
   if (userRoleForFlags !== "admin") {
     try {
-      const flagsPromise = supabase
-        .from("feature_flags")
-        .select("id, path, enabled, roles")
-        .then((r) => r.data || []);
-      const rows = await withTimeout(flagsPromise, 1500);
+      // Une seule lecture partagée par tous les passages pendant DUREE_INTERRUPTEURS_MS (clé séparée visiteur /
+      // connecté : la lecture se fait avec le jeton de la personne, donc avec ses droits). Une lecture en
+      // échec est refusée (jamais gardée) ; elle tombe dans le catch ci-dessous = accès toléré, comme avant.
+      const rows = await memoireInterrupteurs.lireOuCharger(user ? "connecte" : "visiteur", () =>
+        withTimeout(
+          client()
+            .from("feature_flags")
+            .select("id, path, enabled, roles")
+            .then((r) => {
+              if (r.error || !r.data) throw new Error(r.error?.message || "interrupteurs illisibles");
+              return r.data;
+            }),
+          1500
+        )
+      );
       const matches = rows.filter(
         (r) =>
           r.path &&
@@ -379,13 +426,22 @@ export default async function proxy(req) {
         // n'a pas de profil à interroger — reste "visitor" directement.
         let isRecruiter = false;
         if (user && matches.some((m) => m.roles?.user !== m.roles?.recruiter)) {
-          const profilePromise = supabase
-            .from("profiles")
-            .select("badges")
-            .eq("id", user.id)
-            .single()
-            .then((r) => r.data);
-          const profileRow = await withTimeout(profilePromise, 1500).catch(() => null);
+          const profileRow = await memoireProfils
+            .lireOuCharger(
+              user.id,
+              () =>
+                withTimeout(
+                  client()
+                    .from("profiles")
+                    .select("badges")
+                    .eq("id", user.id)
+                    .single()
+                    .then((r) => r.data),
+                  1500
+                ),
+              (valeur) => valeur != null
+            )
+            .catch(() => null);
           isRecruiter = Array.isArray(profileRow?.badges) && profileRow.badges.includes("verified_recruiter");
         }
         const roleKey = !user ? "visitor" : isRecruiter ? "recruiter" : "user";
