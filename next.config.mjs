@@ -77,7 +77,7 @@ const contentSecurityPolicy = [
 const nextConfig = {
   devIndicators: false,
   poweredByHeader: false,
-  serverExternalPackages: ["unpdf", "mammoth", "tesseract.js", "@napi-rs/canvas", "canvas"],
+  serverExternalPackages: ["unpdf", "mammoth", "@napi-rs/canvas", "canvas"],
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     remotePatterns: [
