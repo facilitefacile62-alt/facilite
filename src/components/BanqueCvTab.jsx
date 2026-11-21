@@ -164,7 +164,12 @@ export default function BanqueCvTab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Import impossible.");
 
-      if (data.cv.statut === "erreur") {
+      if (data.cv.statut === "nouveau") {
+        setMessageImport({
+          type: "ok",
+          texte: "CV enregistré, en attente d'analyse : l'analyse IA est en pause, aucun crédit n'a été utilisé. Le fichier reste consultable.",
+        });
+      } else if (data.cv.statut === "erreur") {
         setMessageImport({
           type: "erreur",
           texte: `CV enregistré, mais l'analyse a échoué : ${data.cv.erreur_analyse || "erreur inconnue"}. Le fichier reste consultable.`,
@@ -231,7 +236,9 @@ export default function BanqueCvTab() {
                   message:
                     cv.statut === "erreur"
                       ? cv.erreur_analyse || "Analyse échouée, fichier conservé."
-                      : `${cv.nom_complet || "Sans nom"} — ${LIBELLE_CATEGORIE[cv.categorie] || cv.categorie}`,
+                      : cv.statut === "nouveau"
+                        ? "Enregistré, en attente d'analyse (IA en pause)"
+                        : `${cv.nom_complet || "Sans nom"} — ${LIBELLE_CATEGORIE[cv.categorie] || cv.categorie}`,
                 }
               : e
           )
@@ -262,6 +269,9 @@ export default function BanqueCvTab() {
   const [chargementListe, setChargementListe] = useState(true); // premier chargement / changement de filtre
   const [chargementPageSuivante, setChargementPageSuivante] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState(null);
+  // État de l'interrupteur « Banque de CV — Analyse IA » (Administration → Fonctionnalités). null tant qu'il n'est pas lu :
+  // le bandeau ne s'affiche qu'une fois la réponse du serveur reçue, jamais sur une supposition.
+  const [iaOuverte, setIaOuverte] = useState(null);
   const sentinelleRef = useRef(null);
 
   // Débounce : un appel réseau par pause de frappe, pas un par lettre tapée.
@@ -287,6 +297,7 @@ export default function BanqueCvTab() {
           setListe((prev) => (remplacer ? data.cvs || [] : [...prev, ...(data.cvs || [])]));
           setTotalListe(data.total || 0);
           setPageChargee(page);
+          if (typeof data.iaOuverte === "boolean") setIaOuverte(data.iaOuverte);
         }
       } finally {
         setChargementListe(false);
@@ -374,6 +385,15 @@ export default function BanqueCvTab() {
 
   return (
     <div className="p-4 space-y-6">
+      {iaOuverte === false && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-semibold text-amber-900">
+          <i className="fa-solid fa-circle-pause mr-1.5"></i>
+          L&apos;analyse IA est en pause (crédits à recharger). Les imports sont enregistrés « en attente d&apos;analyse » sans
+          rien dépenser, et « Trouver le candidat idéal » est indisponible. Pour rouvrir : Administration → Fonctionnalités →
+          « Banque de CV — Analyse IA ».
+        </div>
+      )}
+
       {/* --- Recherche --- */}
       <section className="bg-gray-50 rounded-2xl border border-gray-200 p-4">
         <h3 className="text-sm font-black text-gray-900 mb-1">Trouver le candidat idéal</h3>
@@ -538,9 +558,9 @@ export default function BanqueCvTab() {
             className="bg-gray-900 hover:bg-black disabled:opacity-50 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl cursor-pointer"
           >
             {importEnCours ? (
-              <><i className="fa-solid fa-spinner fa-spin mr-1.5"></i>Analyse en cours, quelques secondes…</>
+              <><i className="fa-solid fa-spinner fa-spin mr-1.5"></i>{iaOuverte === false ? "Enregistrement…" : "Analyse en cours, quelques secondes…"}</>
             ) : (
-              <><i className="fa-solid fa-upload mr-1.5"></i>Importer et analyser</>
+              <><i className="fa-solid fa-upload mr-1.5"></i>{iaOuverte === false ? "Importer (sans analyse IA)" : "Importer et analyser"}</>
             )}
           </button>
         </form>
@@ -750,6 +770,11 @@ function CarteCv({ cv, onOuvrir, onSupprimer, suppressionEnCours }) {
             Analyse échouée
           </span>
         )}
+        {cv.statut === "nouveau" && (
+          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-black uppercase shadow-sm">
+            En attente d&apos;analyse
+          </span>
+        )}
 
         <button
           type="button"
@@ -856,6 +881,13 @@ function PanneauDetailCv({ detail, chargement, erreur, libellesNiveaux, onFermer
                 </a>
               )}
             </div>
+
+            {detail.statut === "nouveau" && (
+              <p className="text-[11px] font-bold text-amber-700 mt-4">
+                <i className="fa-solid fa-circle-pause mr-1"></i>
+                En attente d&apos;analyse : l&apos;analyse IA était en pause à l&apos;import. Le fichier reste consultable ci-dessus.
+              </p>
+            )}
 
             {detail.statut === "erreur" && (
               <p className="text-[11px] font-bold text-red-600 mt-4">

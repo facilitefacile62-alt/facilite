@@ -781,8 +781,11 @@ function detectAnySectionHeader(line) {
  * Les images passent par l'OCR (Google Vision, repli automatique sur
  * tesseract.js), les PDF/DOCX par une extraction textuelle native.
  */
-export async function extractTextFromFile(buffer, filename, mimeType) {
+export async function extractTextFromFile(buffer, filename, mimeType, options = {}) {
   const ext = (filename || "").split(".").pop().toLowerCase();
+  // sansOcr : n'appelle jamais l'IA (l'OCR passe par Gemini, payant). Un PDF scanné ou une image renvoie alors "" ;
+  // un PDF avec couche texte et un DOCX se lisent normalement. Défaut inchangé pour tous les autres appelants.
+  const sansOcr = options.sansOcr === true;
 
   if (ext === "pdf" || mimeType === "application/pdf") {
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
@@ -790,6 +793,7 @@ export async function extractTextFromFile(buffer, filename, mimeType) {
 
     // Document scanné/photographié : pas de couche texte, on bascule en OCR page par page.
     if (!text || text.trim().length < MIN_PDF_TEXT_LENGTH) {
+      if (sansOcr) return text || "";
       const ocrText = await ocrPdfPages(pdf, totalPages || 1);
       return ocrText || text || "";
     }
@@ -803,6 +807,7 @@ export async function extractTextFromFile(buffer, filename, mimeType) {
   }
 
   if (["png", "jpg", "jpeg", "webp", "bmp"].includes(ext) || mimeType?.startsWith("image/")) {
+    if (sansOcr) return "";
     return runImageOcr(buffer);
   }
 

@@ -356,6 +356,18 @@ export const DEFAULT_FEATURE_TREE = [
         description: "Recherche par photo (en-tête et carte), « Scanner le produit avec l'IA » et « Optimiser texte SEO » de la Marketplace",
       },
       {
+        id: "feat_banque_cv_ia",
+        name: "Banque de CV — Analyse IA (import, recherche)",
+        path: null,
+        icon: "🗂️",
+        // EN PAUSE (migration 20261120240000) : crédits Gemini épuisés le 30/09/2026. Coupé par défaut, y compris si
+        // Supabase est injoignable, et SANS passe-droit pour l'administrateur (c'est lui qui importe) : fermé, la
+        // Banque de CV ne fait aucun appel IA. Réactivation : Administration → Fonctionnalités.
+        enabled: false,
+        roles: { user: false, recruiter: false, visitor: false },
+        description: "Classement automatique des CV à l'import et recherche du « candidat idéal » (usage payant de l'IA)",
+      },
+      {
         id: "feat_marketplace_commandes",
         name: "Marketplace — Commandes et livraisons",
         path: null,

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
+import { iaBanqueCvOuverte } from "@/lib/banqueCvIA";
 
 export const runtime = "nodejs";
 
@@ -75,7 +76,8 @@ export async function GET(req) {
     apercuUrl: apercu_cv ? urlsApercu[apercu_cv] || null : null,
   }));
 
-  return NextResponse.json({ success: true, cvs, total: count || 0, page });
+  // iaOuverte : l'écran affiche un bandeau « IA en pause » et adapte le bouton d'import (état de l'interrupteur).
+  return NextResponse.json({ success: true, cvs, total: count || 0, page, iaOuverte: await iaBanqueCvOuverte() });
 }
 
 export async function DELETE(req) {

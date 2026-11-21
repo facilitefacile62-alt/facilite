@@ -13,7 +13,14 @@ import { z } from "zod";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
-import { diagnostiquerCandidats, embarquerTexte, checkBanqueCvQuota, BANQUE_CV_DAILY_QUOTA } from "@/lib/banqueCvIA";
+import {
+  diagnostiquerCandidats,
+  embarquerTexte,
+  checkBanqueCvQuota,
+  iaBanqueCvOuverte,
+  BANQUE_CV_DAILY_QUOTA,
+  MESSAGE_IA_BANQUE_CV_EN_PAUSE,
+} from "@/lib/banqueCvIA";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -34,6 +41,12 @@ export async function POST(req) {
   const admin = getSupabaseAdmin();
   if (!(await isCallerAdmin(admin, user.id))) {
     return NextResponse.json({ error: "Action réservée aux administrateurs." }, { status: 403 });
+  }
+
+  // Interrupteur « Banque de CV — Analyse IA » : la recherche utilise l'IA deux fois (embedding du poste, puis
+  // diagnostic). Fermé, refus net AVANT le quota et avant tout appel — aucune dépense, aucun faux résultat.
+  if (!(await iaBanqueCvOuverte())) {
+    return NextResponse.json({ success: false, ia_en_pause: true, error: MESSAGE_IA_BANQUE_CV_EN_PAUSE }, { status: 403 });
   }
 
   if (!(await checkBanqueCvQuota(user.id))) {

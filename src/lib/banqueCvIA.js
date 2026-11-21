@@ -12,6 +12,23 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
+// Interrupteur admin « Banque de CV — Analyse IA » (migration 20261120240000). Fermé : AUCUN appel IA, pour
+// personne, administrateur compris — c'est lui qui importe, un passe-droit ne protégerait aucun crédit.
+// Fermé aussi quand l'interrupteur est introuvable ou que la base ne répond pas (jamais ouvert « par défaut »).
+const FLAG_IA_BANQUE_CV = "feat_banque_cv_ia";
+
+export const MESSAGE_IA_BANQUE_CV_EN_PAUSE =
+  "L'analyse IA de la banque de CV est en pause (crédits IA à recharger). Elle se rouvre dans Administration → Fonctionnalités.";
+
+export async function iaBanqueCvOuverte() {
+  try {
+    const { data } = await getSupabaseAdmin().from("feature_flags").select("enabled").eq("id", FLAG_IA_BANQUE_CV).maybeSingle();
+    return data?.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
 // Plafond dédié, séparé du quota partagé des 6 autres routes IA (40/jour,
 // aiQuota.js) — voir 20260903150000_banque_cv_quota.sql pour le motif
 // complet. Généreux à dessein : « plusieurs dizaines ou centaines » de CV

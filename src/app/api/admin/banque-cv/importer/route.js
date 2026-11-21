@@ -14,7 +14,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isCallerAdmin } from "@/lib/rbac";
 import { extractTextFromFile, genererApercuPdf } from "@/lib/documentParser";
 import { validateUploadedFile } from "@/lib/validation";
-import { categoriserCv, embarquerTexte, checkBanqueCvQuota, BANQUE_CV_DAILY_QUOTA } from "@/lib/banqueCvIA";
+import { categoriserCv, embarquerTexte, checkBanqueCvQuota, iaBanqueCvOuverte, BANQUE_CV_DAILY_QUOTA } from "@/lib/banqueCvIA";
 
 export const runtime = "nodejs";
 // OCR éventuel + catégorisation + embedding dans le même appel : plus long
@@ -49,7 +49,11 @@ export async function POST(req) {
   const { admin, user, error } = await authorizeAdmin(req);
   if (error) return error;
 
-  if (!(await checkBanqueCvQuota(user.id))) {
+  // Interrupteur « Banque de CV — Analyse IA » : lu AVANT tout (quota compris). Fermé, cette route ne fait aucun appel
+  // IA — ni OCR, ni catégorisation, ni embedding — et n'entame pas le quota ; le CV est simplement enregistré.
+  const iaOuverte = await iaBanqueCvOuverte();
+
+  if (iaOuverte && !(await checkBanqueCvQuota(user.id))) {
     return NextResponse.json(
       { error: `Quota d'import quotidien atteint (${BANQUE_CV_DAILY_QUOTA} CV/jour). Réessayez demain.` },
       { status: 429 }
@@ -87,13 +91,19 @@ export async function POST(req) {
   // 1. Texte réel du CV — jamais le nom de fichier, jamais une supposition.
   let texteExtrait;
   try {
-    texteExtrait = (await extractTextFromFile(bufCv, fichierCv.name, fichierCv.type) || "").trim();
+    // sansOcr quand l'IA est fermée : l'OCR d'une photo ou d'un PDF scanné passe par Gemini (payant).
+    texteExtrait = (await extractTextFromFile(bufCv, fichierCv.name, fichierCv.type, { sansOcr: !iaOuverte }) || "").trim();
   } catch (e) {
     return NextResponse.json({ error: `Lecture du CV impossible : ${e.message}` }, { status: 422 });
   }
   if (texteExtrait.length < 50) {
     return NextResponse.json(
-      { error: "Aucun texte exploitable n'a été trouvé dans ce fichier. Vérifiez qu'il s'agit bien d'un CV lisible." },
+      {
+        error: iaOuverte
+          ? "Aucun texte exploitable n'a été trouvé dans ce fichier. Vérifiez qu'il s'agit bien d'un CV lisible."
+          : "Ce fichier est une photo ou un scan : sa lecture passe par l'IA, actuellement en pause (crédits à recharger). Importez-le une fois l'IA rouverte, ou déposez un PDF ou un DOCX avec du texte.",
+        ia_en_pause: !iaOuverte,
+      },
       { status: 422 }
     );
   }
@@ -150,19 +160,22 @@ export async function POST(req) {
   const codesNiveaux = (niveaux || []).map((n) => n.code);
 
   // 4. Catégorisation, ancrée sur le texte réel du CV.
+  // Interrupteur fermé : on s'arrête là — pas d'appel Gemini. Le CV reste en statut « nouveau » (en attente d'analyse).
   let analyse = null;
   let erreurAnalyse = null;
-  try {
-    analyse = await categoriserCv(texteExtrait, codesNiveaux, nomSaisi);
-  } catch (e) {
-    erreurAnalyse = e.message;
+  if (iaOuverte) {
+    try {
+      analyse = await categoriserCv(texteExtrait, codesNiveaux, nomSaisi);
+    } catch (e) {
+      erreurAnalyse = e.message;
+    }
   }
 
   // 5. Embedding — indépendant de l'étape précédente : un CV catégorisé
   // mais sans embedding reste consultable, seule la recherche par
   // proximité ne le trouvera pas avant un nouvel essai.
   let embedding = null;
-  if (analyse) {
+  if (iaOuverte && analyse) {
     try {
       embedding = await embarquerTexte(`${analyse.resume_profil || ""}\n\n${texteExtrait.slice(0, 4000)}`);
     } catch {
@@ -186,7 +199,7 @@ export async function POST(req) {
       fichier_cv: cheminCv,
       fichier_lettre: cheminLettre,
       apercu_cv: cheminApercu,
-      statut: analyse ? "analyse" : "erreur",
+      statut: !iaOuverte ? "nouveau" : analyse ? "analyse" : "erreur",
       erreur_analyse: erreurAnalyse,
     })
     .select("id, nom_complet, categorie, niveau_etude_code, annees_experience, competences, resume_profil, points_forts, statut, erreur_analyse, created_at")
@@ -196,5 +209,5 @@ export async function POST(req) {
     return NextResponse.json({ error: `Enregistrement impossible : ${insertError.message}` }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, cv: inserted });
+  return NextResponse.json({ success: true, cv: inserted, ia_en_pause: !iaOuverte });
 }
