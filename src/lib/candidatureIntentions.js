@@ -14,7 +14,6 @@ export async function enregistrerIntentionCandidature({
   recruiterId = null,
   jobTitle,
   company,
-  recruiterEmail = null,
 }) {
   const { error } = await supabase.from("candidature_intentions").insert({
     user_id: userId,
@@ -23,7 +22,7 @@ export async function enregistrerIntentionCandidature({
     recruiter_id: recruiterId,
     job_title: jobTitle,
     company,
-    recruiter_email: recruiterEmail,
+    // Aucune adresse envoyée par le navigateur : le destinataire est toujours déterminé par le serveur à partir de l'offre.
   });
   // Code 23505 = intention "pending" déjà enregistrée pour cette offre
   // (index unique) : pas une erreur, l'utilisateur a déjà cliqué "Postuler"

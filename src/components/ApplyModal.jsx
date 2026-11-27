@@ -15,7 +15,6 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [destinationEmail, setDestinationEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [resumes, setResumes] = useState([]);
@@ -29,6 +28,8 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
+  // Message du serveur quand aucun e-mail n'est parti (offre sans adresse valide).
+  const [messageSansEnvoi, setMessageSansEnvoi] = useState("");
 
   // Avertissement de correspondance (point 6) — calculé au clic sur
   // "Postuler", jamais bloquant. offerDetails/candidateProfile ne sont
@@ -101,7 +102,6 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
                 jobId: isLegacyOffer ? Number(job.id) : null,
                 jobTitle: (selectedLang === "FR" ? job?.titleFR : job?.titleEN) || job?.title || "Candidature",
                 company: job?.company || "",
-                recruiterEmail: job?.recruiterEmail || job?.contact_email || null,
               });
             } catch (err) {
               console.warn("Intention de candidature non enregistrée :", err.message);
@@ -181,11 +181,10 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     setNewFiles([]);
     setSelectedExistingCvIds([]);
     setSubject(job ? (selectedLang === "FR" ? job.titleFR : job.titleEN) : "");
-    const defaultRecruiterEmail = job?.recruiterEmail || job?.contact_email || job?.email || "";
-    setDestinationEmail(defaultRecruiterEmail || (job?.company ? `${job.company.toLowerCase().replace(/[^a-z0-9]/g, "")}@gmail.com` : "recrutement@ffacilite.com"));
     setCoverLetter("");
     setErrorMsg("");
     setSuccess(false);
+    setMessageSansEnvoi("");
     setMatchWarning(null);
   }, [isOpen, job, selectedLang]);
 
@@ -303,11 +302,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
       formData.append("fullName", fullName.trim());
       formData.append("email", email.trim());
       formData.append("coverLetter", coverLetter.trim());
-      if (destinationEmail && destinationEmail.trim()) {
-        formData.append("recruiterEmail", destinationEmail.trim());
-      } else if (job.recruiterEmail) {
-        formData.append("recruiterEmail", job.recruiterEmail);
-      }
+      // Pas d'adresse envoyée : le serveur prend celle de l'offre (jamais une adresse saisie ou devinée ici).
       if (job.recruiterId) {
         formData.append("recruiterId", job.recruiterId);
       }
@@ -348,9 +343,11 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         throw err;
       }
 
+      const sansEnvoi = result.envoi === "aucune_adresse";
+      setMessageSansEnvoi(sansEnvoi ? result.message || "" : "");
       setSuccess(true);
       if (triggerToast) {
-        triggerToast("Candidature envoyée avec succès !", "fa-paper-plane");
+        triggerToast(sansEnvoi ? "Candidature enregistrée sur Facilité." : "Candidature envoyée avec succès !", "fa-paper-plane");
       }
     } catch (err) {
       console.error("Erreur postuler:", err);
@@ -416,13 +413,19 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               <i className="fa-solid fa-circle-check text-4xl sm:text-5xl"></i>
             </div>
             <div className="space-y-2 px-1">
-              <h4 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Candidature Envoyée !</h4>
+              <h4 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">{messageSansEnvoi ? "Candidature Enregistrée" : "Candidature Envoyée !"}</h4>
+              {messageSansEnvoi ? (
+                <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">{messageSansEnvoi}</p>
+              ) : (
+              <>
               <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">
                 Votre candidature pour <span className="text-gray-900 dark:text-white font-extrabold">{subject || (selectedLang === "FR" ? job.titleFR : job.titleEN)}</span> chez <span className="text-gray-900 dark:text-white font-extrabold">{job.company}</span> a bien été transmise avec toutes vos pièces jointes.
               </p>
               <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium pt-2">
                 Vous recevrez un e-mail de confirmation à l&apos;adresse <strong className="text-gray-700 dark:text-gray-200">{email}</strong>.
               </p>
+              </>
+              )}
             </div>
             <div className="pt-2">
               <button
@@ -484,18 +487,10 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               </div>
             </div>
 
-            {/* E-mail destinataire de l'offre */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-700 block">E-mail du recruteur *</label>
-              <input
-                type="email"
-                required
-                value={destinationEmail}
-                onChange={(e) => setDestinationEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition font-mono"
-                disabled={loading}
-              />
-            </div>
+            {/* Destinataire : déterminé par le serveur à partir de l'offre */}
+            <p className="text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 leading-relaxed">
+              Votre candidature part à l&apos;adresse indiquée par l&apos;offre. Si l&apos;offre n&apos;en a pas, elle est enregistrée sur Facilité et aucun e-mail n&apos;est envoyé.
+            </p>
 
             {/* Objet du message */}
             <div className="space-y-1">
