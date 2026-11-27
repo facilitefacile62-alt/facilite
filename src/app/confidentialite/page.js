@@ -107,7 +107,7 @@ export default function ConfidentialitePage() {
             La protection de vos données personnelles et de votre vie privée est une priorité absolue pour <strong>Facilité</strong> (ffacilite.com). Découvrez nos engagements en matière de transparence, de sécurité et d&apos;utilisation responsable.
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-gray-500 dark:text-gray-400 flex-wrap">
-            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 4 Octobre 2026</span>
+            <span><i className="fa-regular fa-calendar-check mr-1.5 text-emerald-600"></i> Dernière mise à jour : 27 Novembre 2026</span>
             <span>•</span>
             <span><i className="fa-solid fa-building-shield mr-1.5 text-emerald-600"></i> Version 2.8</span>
           </div>
@@ -416,7 +416,10 @@ export default function ConfidentialitePage() {
                   Certains de ces prestataires hébergent leurs serveurs hors du Sénégal, notamment en Europe et aux États-Unis. Vos données peuvent donc y être transférées pour être traitées.
                 </p>
                 <p>
-                  Les recruteurs vérifiés constituent une catégorie distincte : ils accèdent à votre CV uniquement si vous avez rendu votre profil visible aux recruteurs, ou si vous avez postulé à leur offre. Vous gardez la main sur ce réglage depuis votre profil.
+                  Les recruteurs constituent une catégorie distincte. Quand vous postulez à une offre, la personne qui l&apos;a publiée (offre approuvée par Facilité) reçoit votre candidature, le CV et la lettre que vous avez joints. Chaque ouverture de votre CV dans son espace est enregistrée.
+                </p>
+                <p>
+                  Les recruteurs vérifiés peuvent en plus consulter votre profil si vous l&apos;avez rendu visible aux recruteurs. Ce réglage est désactivé par défaut et vous pouvez le retirer à tout moment depuis votre profil.
                 </p>
               </div>
             </section>

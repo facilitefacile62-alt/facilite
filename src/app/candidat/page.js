@@ -11,6 +11,7 @@ import { respondToAccessRequest } from "@/lib/documentAccess";
 import { playNotificationSound } from "@/lib/notificationSound";
 import BadgeMatchingOffre from "@/components/BadgeMatchingOffre";
 import { nettoyerOffresAffichees, nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
+import BadgeStatutCandidature from "@/components/BadgeStatutCandidature";
 
 export default function CandidatDashboardPage() {
   const [userSession, setUserSession] = useState(null);
@@ -198,20 +199,7 @@ export default function CandidatDashboardPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "accepted":
-        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">Retenu 🎉</span>;
-      case "rejected":
-        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-100 text-red-800 border border-red-200">Refusé</span>;
-      case "interview_scheduled":
-        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Entretien programmé 🎥</span>;
-      case "reviewed":
-        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 border border-purple-200">En revue 🔎</span>;
-      default:
-        return <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200">Envoyée ⏳</span>;
-    }
-  };
+  const getStatusBadge = (status) => <BadgeStatutCandidature statut={status} />;
 
   if (loading) {
     return (

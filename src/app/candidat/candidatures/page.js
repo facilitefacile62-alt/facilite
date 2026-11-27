@@ -6,7 +6,7 @@ import Link from "next/link";
 import { supabase, handleGlobalSignOut, getSignedCvUrl } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import UnreadBadge from "@/components/UnreadBadge";
-import StatusBadge from "@/components/StatusBadge";
+import BadgeStatutCandidature from "@/components/BadgeStatutCandidature";
 import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 
@@ -108,12 +108,6 @@ export default function CandidaturesPage() {
       alert("Impossible d'ouvrir le CV.");
     }
   };
-
-  // candidatures.status est un champ libre historique : seules les valeurs
-  // reconnues du workflow recruteur sont affichées telles quelles, toute
-  // autre valeur (legacy ou inattendue) retombe sur "En attente".
-  const KNOWN_STATUSES = ["pending", "reviewed", "interview_scheduled", "accepted", "rejected"];
-  const displayStatus = (status) => (KNOWN_STATUSES.includes(status) ? status : "pending");
 
   if (loading) {
     return (
@@ -225,7 +219,7 @@ export default function CandidaturesPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                      <StatusBadge status={displayStatus(c.status)} />
+                      <BadgeStatutCandidature statut={c.status} />
                       {offer?.recruiter_id && (
                         <Link
                           href={`/recruteurs/${offer.recruiter_id}`}
@@ -238,7 +232,7 @@ export default function CandidaturesPage() {
                         <button
                           onClick={() => handleRevealContact(c)}
                           disabled={revealingId === c.id}
-                          title="Autoriser ce recruteur à voir votre e-mail et télécharger votre CV pour cette candidature"
+                          title="Autoriser ce recruteur à voir votre adresse e-mail pour cette candidature (il voit déjà le CV que vous avez joint)"
                           className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-extrabold rounded-lg transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
                         >
                           {revealingId === c.id ? "..." : "🔓 Autoriser le contact"}

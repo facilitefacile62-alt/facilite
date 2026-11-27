@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireUser, checkRateLimit } from "@/lib/apiAuth";
 import { createInterviewRoom } from "@/lib/dailyco";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -32,28 +33,28 @@ export async function POST(req) {
     }
     const { applicationId } = parseResult.data;
 
-    // Client scellé au jeton de l'appelant : la RLS de candidatures/job_offers
-    // fait déjà tout le travail d'autorisation ("Un recruteur lit les
-    // candidatures de ses offres") — si la ligne n'est pas visible, elle
-    // n'existe pas pour cet utilisateur, point final. Jamais recruiterId
-    // fourni par le client comme le suggérait la spec initiale : n'importe
-    // qui aurait pu prétendre être le recruteur d'une offre qui n'est pas
-    // la sienne.
+    // Autorisation par la base, avec le jeton de l'appelant : la candidature doit être dans SA boîte de réception (offre à lui,
+    // approuvée). Un recruteur n'a aucun droit de lecture direct sur candidatures : lire la table ici répondait toujours 404.
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    const { data: application, error: applicationError } = await supabase
+    const { data: dansMaBoite, error: erreurBoite } = await supabase.rpc("candidature_dans_ma_boite", { p_candidature: applicationId });
+    if (erreurBoite || dansMaBoite !== true) {
+      // 404 générique, jamais 403 : ne pas révéler si l'id existe mais appartient à un autre.
+      return NextResponse.json({ error: "Candidature introuvable." }, { status: 404 });
+    }
+
+    const admin = getSupabaseAdmin();
+    const { data: application, error: applicationError } = await admin
       .from("candidatures")
       .select("id, user_id, job_offer_id, full_name")
       .eq("id", applicationId)
       .single();
 
     if (applicationError || !application) {
-      // 404 générique, jamais 403 : ne pas révéler si l'id existe mais
-      // appartient à un autre recruteur, plutôt que "elle n'existe pas".
       return NextResponse.json({ error: "Candidature introuvable." }, { status: 404 });
     }
 
@@ -64,7 +65,7 @@ export async function POST(req) {
       );
     }
 
-    const { data: jobOffer, error: jobOfferError } = await supabase
+    const { data: jobOffer, error: jobOfferError } = await admin
       .from("job_offers")
       .select("id, recruiter_id, title")
       .eq("id", application.job_offer_id)
@@ -74,8 +75,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "Offre introuvable." }, { status: 404 });
     }
 
-    // Vérification explicite en plus de la RLS : rend l'intention lisible
-    // dans le code, et protège même si la policy venait à changer.
+    // Vérification explicite en plus de celle de la base : seul le propriétaire de l'offre.
     if (jobOffer.recruiter_id !== user.id) {
       return NextResponse.json(
         { error: "Seul le recruteur propriétaire de cette offre peut démarrer un entretien." },
@@ -94,7 +94,8 @@ export async function POST(req) {
 
     const expiresAt = new Date(Date.now() + ROOM_LIFETIME_SECONDS * 1000).toISOString();
 
-    const { data: interview, error: interviewError } = await supabase
+    // Écrit avec la clé de service, après les contrôles ci-dessus (la règle d'insertion relit candidatures, invisible au recruteur).
+    const { data: interview, error: interviewError } = await admin
       .from("interviews")
       .insert({
         application_id: application.id,
@@ -138,11 +139,12 @@ export async function POST(req) {
     // de l'entretien déjà confirmée. N'écrase jamais un statut final
     // (accepted/rejected) : un entretien démarré après une décision ne doit
     // pas revenir en arrière dans le suivi du candidat.
-    const { error: statusError } = await supabase
+    const { error: statusError } = await admin
       .from("candidatures")
       .update({ status: "interview_scheduled" })
       .eq("id", application.id)
-      .in("status", ["pending", "reviewed", "interview_scheduled"]);
+      .eq("user_id", application.user_id)
+      .in("status", ["pending", "viewed", "reviewed", "interview_scheduled"]);
 
     if (statusError) {
       console.error("[Entretiens] Échec de mise à jour du statut de candidature :", statusError.message);

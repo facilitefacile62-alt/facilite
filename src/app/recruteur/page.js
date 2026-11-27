@@ -26,6 +26,8 @@ import { LISTING_TYPE_LABELS, audioAutorise } from "@/lib/listingTypes";
 import { DETAILED_EDUCATION_LEVELS } from "@/lib/eligibility";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import CandidatsPotentielsOffre from "@/components/CandidatsPotentielsOffre";
+import BoiteReception from "@/components/recruteur/BoiteReception";
+import { infoStatut } from "@/lib/statutsCandidature";
 import { competencesReelles } from "@/lib/valeursExemple";
 
 const EMPTY_OFFER = {
@@ -87,28 +89,9 @@ function formatHours(hours) {
   return `${(h / 24).toFixed(1)} j`;
 }
 
-const APPLICATION_STATUSES = [
-  { value: "pending", label: "Envoyée" },
-  { value: "reviewed", label: "Présélection" },
-  { value: "contacted", label: "Contacté" },
-  { value: "interview_scheduled", label: "Entretien programmé" },
-  { value: "accepted", label: "Retenu" },
-  { value: "rejected", label: "Écarté" },
-];
-
-const STATUS_BADGE_COLORS = {
-  pending: "bg-gray-100 text-gray-600",
-  reviewed: "bg-blue-50 text-blue-700",
-  contacted: "bg-indigo-50 text-indigo-700",
-  interview_scheduled: "bg-purple-50 text-purple-700",
-  accepted: "bg-emerald-50 text-emerald-700",
-  rejected: "bg-red-50 text-red-600",
-};
-
 function StatusBadgeMini({ status }) {
-  const label = APPLICATION_STATUSES.find((s) => s.value === status)?.label || status;
-  const colorClass = STATUS_BADGE_COLORS[status] || "bg-gray-100 text-gray-600";
-  return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold whitespace-nowrap ${colorClass}`}>{label}</span>;
+  const info = infoStatut(status);
+  return <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border whitespace-nowrap ${info.classe}`}>{info.recruteur}</span>;
 }
 
 export default function RecruteurDashboardPage() {
@@ -162,8 +145,6 @@ export default function RecruteurDashboardPage() {
 
   // --- Onglet Candidatures reçues ---
   const [applications, setApplications] = useState([]);
-  const [updatingAppId, setUpdatingAppId] = useState(null);
-  const [downloadingCvId, setDownloadingCvId] = useState(null);
   const [startingInterviewId, setStartingInterviewId] = useState(null);
   const [activeInterviewId, setActiveInterviewId] = useState(null);
 
@@ -201,7 +182,6 @@ export default function RecruteurDashboardPage() {
       setStartingInterviewId(null);
     }
   };
-  const [sortByScore, setSortByScore] = useState(false);
 
   // --- Onglet CVthèque ---
   const [candidates, setCandidates] = useState([]);
@@ -1222,38 +1202,7 @@ export default function RecruteurDashboardPage() {
   // dernières (job_offer_id NULL, jamais dans myOfferIds).
   const myApplications = applications;
 
-  const handleApplicationStatusChange = async (applicationId, newStatus) => {
-    const previous = applications;
-    setUpdatingAppId(applicationId);
-    setApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)));
 
-    const { error } = await supabase
-      .from("candidatures")
-      .update({ status: newStatus })
-      .eq("id", applicationId);
-
-    setUpdatingAppId(null);
-
-    if (error) {
-      setApplications(previous);
-      triggerToast("Impossible de mettre à jour le statut.");
-      return;
-    }
-    triggerToast("Statut de la candidature mis à jour.");
-  };
-
-  const handleDownloadApplicationCv = async (application) => {
-    if (!application.cv_url) return;
-    setDownloadingCvId(application.id);
-    const url = await getSignedCvUrl(application.cv_url);
-    setDownloadingCvId(null);
-
-    if (!url) {
-      triggerToast("Impossible de récupérer le CV.");
-      return;
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
 
   // --- Gestion CVthèque ---
   const handleOpenCandidateModal = async (candidate) => {
@@ -2517,141 +2466,7 @@ export default function RecruteurDashboardPage() {
         )}
 
         {activeTab === "candidatures" && (
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-            <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-extrabold text-gray-900">Candidatures reçues ({myApplications.length})</h2>
-                <p className="text-xs text-gray-500 font-medium">Suivi et évaluation de la compatibilité des candidats</p>
-              </div>
-
-              {/* Tri par score */}
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-gray-500">Trier par :</span>
-                <select
-                  value={sortByScore ? "score_desc" : "date_desc"}
-                  onChange={(e) => setSortByScore(e.target.value === "score_desc")}
-                  className="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-extrabold text-gray-700 focus:outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
-                >
-                  <option value="date_desc">📅 Plus récentes</option>
-                  <option value="score_desc">⚡ Meilleur Match CV (Score ⬇)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
-                    <th className="py-4 px-6">Candidat</th>
-                    <th className="py-4 px-6">Poste visé</th>
-                    <th className="py-4 px-6">Score Match CV</th>
-                    <th className="py-4 px-6">Date</th>
-                    <th className="py-4 px-6">CV</th>
-                    <th className="py-4 px-6">Entretien</th>
-                    <th className="py-4 px-6 text-right">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-xs font-medium">
-                  {myApplications.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="py-8 text-center text-gray-400 italic">
-                        Aucune candidature reçue pour le moment.
-                      </td>
-                    </tr>
-                  ) : (
-                    [...myApplications]
-                      .sort((a, b) => (sortByScore ? (b.cv_match_score || 0) - (a.cv_match_score || 0) : 0))
-                      .map((application) => {
-                        const offer = myOffers.find((o) => o.id === application.job_offer_id);
-                        const score = application.cv_match_score;
-                        const hasScore = score !== null && score !== undefined;
-                        const scoreBadgeClass = !hasScore
-                          ? "bg-gray-100 text-gray-500 border-gray-200"
-                          : score >= 75
-                          ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                          : score >= 50
-                          ? "bg-amber-100 text-amber-800 border-amber-200"
-                          : "bg-red-100 text-red-800 border-red-200";
-
-                        return (
-                          <tr key={application.id} className="hover:bg-emerald-50/30 transition">
-                            <td className="py-4 px-6">
-                              <span className="font-bold text-gray-900 block">{application.full_name}</span>
-                              {application.contact_revealed ? (
-                                <span className="text-[10px] text-gray-400">{application.email}</span>
-                              ) : (
-                                <span className="text-[10px] text-amber-600 font-semibold" title="Visible seulement après acceptation du candidat">
-                                  🔒 Coordonnées non révélées
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-4 px-6 text-gray-600">
-                              {offer?.title || application.job_title}
-                              {!application.job_offer_id && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
-                                  Spontanée
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-4 px-6">
-                              <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-extrabold border whitespace-nowrap ${scoreBadgeClass}`}>
-                                <span>⚡ Match</span>
-                                <span>{hasScore ? `${score}%` : "N/A"}</span>
-                              </span>
-                            </td>
-                            <td className="py-4 px-6 text-gray-500">
-                              {new Date(application.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
-                            </td>
-                          <td className="py-4 px-6">
-                            {application.cv_url ? (
-                              <button
-                                onClick={() => handleDownloadApplicationCv(application)}
-                                disabled={downloadingCvId === application.id}
-                                className="text-emerald-600 hover:text-emerald-800 font-extrabold flex items-center gap-1 cursor-pointer disabled:opacity-60"
-                              >
-                                <i className="fa-solid fa-file-pdf"></i>
-                                {downloadingCvId === application.id ? "..." : "Télécharger"}
-                              </button>
-                            ) : application.contact_revealed ? (
-                              <span className="text-gray-400">—</span>
-                            ) : (
-                              <span className="text-gray-300 text-[10px] italic">Non révélé</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-6">
-                            <button
-                              type="button"
-                              onClick={() => handleStartInterview(application)}
-                              disabled={startingInterviewId === application.id}
-                              className="text-blue-600 hover:text-blue-800 font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-60 whitespace-nowrap"
-                              title="Démarrer un entretien vidéo"
-                            >
-                              <i className={`fa-solid ${startingInterviewId === application.id ? "fa-spinner fa-spin" : "fa-video"}`}></i>
-                              {startingInterviewId === application.id ? "Création..." : "Démarrer"}
-                            </button>
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            <select
-                              value={application.status || "pending"}
-                              disabled={updatingAppId === application.id}
-                              onChange={(e) => handleApplicationStatusChange(application.id, e.target.value)}
-                              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-bold focus:outline-none focus:border-emerald-500 cursor-pointer shadow-xs disabled:opacity-50"
-                            >
-                              {APPLICATION_STATUSES.map((s) => (
-                                <option key={s.value} value={s.value}>
-                                  {s.label}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <BoiteReception onEntretien={handleStartInterview} entretienEnCoursId={startingInterviewId} toast={triggerToast} />
         )}
 
         {activeTab === "cvtheque" && (
@@ -3209,9 +3024,9 @@ export default function RecruteurDashboardPage() {
               Accréditation entreprise requise
             </h1>
             <p className="text-sm text-gray-500 font-medium max-w-md mx-auto mb-8">
-              Pour protéger les données de nos candidats, tout l&apos;espace recruteur (offres, candidatures,
-              répertoire CVthèque) nécessite une accréditation d&apos;entreprise vérifiée. Cette démarche ne prend
-              que quelques minutes.
+              Pour protéger les données de nos candidats, la publication et la CVthèque nécessitent une accréditation
+              d&apos;entreprise vérifiée. Les candidatures reçues sur vos offres déjà approuvées restent accessibles
+              ci-dessous.
             </p>
 
             {pendingBadgeRequest?.status === "pending" ? (
@@ -3283,6 +3098,11 @@ export default function RecruteurDashboardPage() {
                 </form>
               </div>
             )}
+          </div>
+        )}
+        {!recruiterVerified && userSession && (
+          <div className="mt-8">
+            <BoiteReception toast={triggerToast} />
           </div>
         )}
       </main>
