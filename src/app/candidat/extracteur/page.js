@@ -9,6 +9,9 @@ import UnreadBadge from "@/components/UnreadBadge";
 import { useUnreadMessagesBadge } from "@/lib/useUnreadMessages";
 import AuthRequiredModal from "@/components/AuthRequiredModal";
 import { nettoyerOffreAffichee } from "@/lib/nettoyerTexteOffre";
+import { destinataireDepuisOffre } from "@/lib/destinataireCandidature";
+import { modeCandidatureOffre } from "@/lib/moyensCandidature";
+import CandidatureDirecte from "@/components/CandidatureDirecte";
 
 // Filet de sécurité : si le serveur renvoie malgré tout une erreur brute
 // (JSON stringifié d'un SDK, objet imbriqué...) plutôt qu'une phrase lisible,
@@ -488,6 +491,8 @@ function ExtracteurContent() {
 
   const handleSendOneClickApplication = async () => {
     if ((!extractedEmail && !posterOffer) || !userSession?.user?.id) return;
+    // Offre de la base sans adresse e-mail d'employeur : rien ne partirait, on ne propose pas l'envoi.
+    if (posterOffer && !destinataireDepuisOffre(posterOffer)) return;
 
     if (attachedDocuments.length === 0) {
       setSendErrorMessage("Veuillez joindre au moins un document (CV ou lettre) avant d'envoyer.");
@@ -985,6 +990,15 @@ function ExtracteurContent() {
                       : `Votre CV et votre demande ont été envoyés à ${extractedEmail}.`}
                   </p>
                 </div>
+              ) : posterOffer && !destinataireDepuisOffre(posterOffer) ? (
+                <div ref={applicationFormRef} className="bg-white border border-gray-200/90 rounded-2xl shadow-md p-4">
+                  <CandidatureDirecte
+                    titre={posterOffer.title}
+                    societe={posterOffer.company}
+                    moyens={modeCandidatureOffre(posterOffer).moyens}
+                    offreId={posterOffer.id}
+                  />
+                </div>
               ) : (extractedEmail || posterOffer) && (activeChannel === "email" || (!extractedWhatsApp && !extractedFormUrl) || posterOffer) ? (
                 <div ref={applicationFormRef} className="bg-white border border-gray-200/90 rounded-2xl shadow-md overflow-hidden animate-fade-in flex flex-col">
                   
@@ -1013,7 +1027,7 @@ function ExtracteurContent() {
                       <span className="text-xs font-semibold text-gray-500 w-7 flex-shrink-0">To</span>
                       <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-950 border border-emerald-200 rounded-md font-mono text-xs font-bold truncate max-w-full">
                         <i className="fa-solid fa-at text-[10px] text-emerald-600"></i>
-                        <span className="truncate">{extractedEmail || posterOffer?.contact_email || "recruteur@entreprise.com"}</span>
+                        <span className="truncate">{posterOffer ? destinataireDepuisOffre(posterOffer) : extractedEmail}</span>
                       </div>
                     </div>
                     <span className="text-[11px] font-medium text-gray-400 select-none flex-shrink-0">

@@ -7,6 +7,9 @@ import { supabase } from "@/lib/supabase";
 import { computeApplicationMatch } from "@/lib/matchScore";
 import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
 import { enregistrerIntentionCandidature } from "@/lib/candidatureIntentions";
+import { modeCandidatureOffre, modeCandidatureHorsBase } from "@/lib/moyensCandidature";
+import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
+import CandidatureDirecte from "@/components/CandidatureDirecte";
 import { competencesReelles } from "@/lib/valeursExemple";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -30,6 +33,8 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   const [success, setSuccess] = useState(false);
   // Message du serveur quand aucun e-mail n'est parti (offre sans adresse valide).
   const [messageSansEnvoi, setMessageSansEnvoi] = useState("");
+  // « interne » : Facilité peut envoyer (adresse d'employeur valide) ; « direct » : il ne le peut pas ; sinon vérification en cours ou en échec.
+  const [modeCandidature, setModeCandidature] = useState({ etat: "chargement", moyens: [] });
 
   // Avertissement de correspondance (point 6) — calculé au clic sur
   // "Postuler", jamais bloquant. offerDetails/candidateProfile ne sont
@@ -76,11 +81,30 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   useEffect(() => {
     if (!isOpen) return;
 
+    // Même règle que le serveur : une offre de la base n'est « interne » que si elle a une adresse e-mail d'employeur valide.
+    async function determinerMode() {
+      if (job?.id != null && !job.isSpontaneous && UUID_RE.test(String(job.id))) {
+        const { data: offre, error } = await supabase
+          .from("job_offers")
+          .select("title, company, application_email, contact_email, application_url, external_link, contact_phone, contact_whatsapp")
+          .eq("id", job.id)
+          .maybeSingle();
+        if (error || !offre) return { etat: "erreur", moyens: [] };
+        return modeCandidatureOffre(offre);
+      }
+      return modeCandidatureHorsBase(SPONTANEOUS_COMPANIES, job);
+    }
+
     async function loadData() {
       try {
+        const mode = await determinerMode();
+        setModeCandidature(mode);
         const { data: { session } } = await supabase.auth.getSession();
         setCurrentUser(session?.user || null);
         setAuthChecked(true);
+
+        // Pas d'envoi possible : ni connexion exigée, ni intention enregistrée (rien ne partirait plus tard non plus).
+        if (mode.etat !== "interne") return;
 
         if (session?.user) {
           // Règle métier : email strictement obligatoire pour candidater.
@@ -172,6 +196,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         }
       } catch (err) {
         console.error("Erreur chargement données ApplyModal:", err);
+        setModeCandidature((m) => (m.etat === "chargement" ? { etat: "erreur", moyens: [] } : m));
         setAuthChecked(true);
       }
     }
@@ -185,6 +210,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     setErrorMsg("");
     setSuccess(false);
     setMessageSansEnvoi("");
+    setModeCandidature({ etat: "chargement", moyens: [] });
     setMatchWarning(null);
   }, [isOpen, job, selectedLang]);
 
@@ -231,6 +257,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (modeCandidature.etat !== "interne") return;
     if (!fullName.trim() || !email.trim() || !subject.trim()) {
       setErrorMsg("Le nom, l'adresse e-mail et l'objet de la candidature sont obligatoires.");
       return;
@@ -378,7 +405,21 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
           <i className="fa-solid fa-xmark text-xl"></i>
         </button>
 
-        {authChecked && !currentUser ? (
+        {modeCandidature.etat === "direct" ? (
+          <CandidatureDirecte
+            titre={(selectedLang === "FR" ? job.titleFR : job.titleEN) || job.title}
+            societe={job.company}
+            moyens={modeCandidature.moyens}
+            offreId={job.id != null && !job.isSpontaneous && UUID_RE.test(String(job.id)) ? job.id : null}
+            onFermer={onClose}
+          />
+        ) : modeCandidature.etat === "erreur" ? (
+          <p className="text-center text-sm font-bold text-gray-700 py-10">
+            Impossible de vérifier l&apos;adresse de cette offre. Aucune candidature n&apos;a été envoyée. Fermez et réessayez.
+          </p>
+        ) : modeCandidature.etat === "chargement" ? (
+          <p className="text-center text-xs font-bold text-gray-500 py-10">Vérification de l&apos;offre…</p>
+        ) : authChecked && !currentUser ? (
           <div className="text-center py-4 space-y-5">
             <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-xs border border-blue-100 dark:border-blue-900">
               <i className="fa-solid fa-user-lock"></i>

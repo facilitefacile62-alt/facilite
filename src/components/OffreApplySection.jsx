@@ -182,7 +182,7 @@ export default function OffreApplySection({ offer }) {
       {!expiree && dejaPostule && (
         <p className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-2.5 mb-3">
           <i className="fa-solid fa-circle-check mr-1"></i>
-          Vous avez déjà postulé à cette offre. Le recruteur a bien reçu votre candidature.
+          Vous avez déjà postulé à cette offre via Facilité.
         </p>
       )}
 
