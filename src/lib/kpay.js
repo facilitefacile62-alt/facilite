@@ -44,17 +44,24 @@ export function normalizeCfaCurrency(currency) {
 
 /**
  * Valeurs de substitution connues (celle du .env.example fourni par
- * l'utilisateur, plus quelques variantes usuelles) — permet de distinguer
- * "pas encore configuré" d'un vrai secret, pour émettre une alerte claire
- * plutôt que de laisser échouer silencieusement chaque vérification de
- * signature sans explication.
+ * l'utilisateur, plus quelques variantes usuelles).
  */
 const PLACEHOLDER_SECRET_VALUES = ["ton_webhook_secret_ici", "your_webhook_secret_here", "changeme", "todo"];
 
-export function isPlaceholderKpaySecret(value) {
-  if (!value) return true;
-  const normalized = value.trim().toLowerCase();
-  return PLACEHOLDER_SECRET_VALUES.includes(normalized) || normalized.length < 16;
+export const KPAY_WEBHOOK_SECRET_LONGUEUR_MIN = 32;
+
+/**
+ * Raison pour laquelle le secret du webhook ne peut pas servir, ou null s'il convient. Un secret faible permet de forger une
+ * notification de paiement : la route la REFUSE (503) au lieu de se contenter d'une alerte. Le message ne contient jamais la valeur.
+ */
+export function problemeSecretWebhookKpay(value) {
+  const secret = typeof value === "string" ? value.trim() : "";
+  if (!secret) return "KPAY_WEBHOOK_SECRET est vide ou absent côté serveur.";
+  if (PLACEHOLDER_SECRET_VALUES.includes(secret.toLowerCase())) return "KPAY_WEBHOOK_SECRET est une valeur d'exemple.";
+  if (secret.length < KPAY_WEBHOOK_SECRET_LONGUEUR_MIN) {
+    return `KPAY_WEBHOOK_SECRET fait moins de ${KPAY_WEBHOOK_SECRET_LONGUEUR_MIN} caractères.`;
+  }
+  return null;
 }
 
 /**

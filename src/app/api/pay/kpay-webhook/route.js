@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { generateAndStoreInvoice } from "@/lib/invoiceGenerator";
 import { sendInvoiceEmail, sendWhatsAppConfirmation } from "@/lib/notifications";
-import { isEquivalentCfaCurrency, isPlaceholderKpaySecret } from "@/lib/kpay";
+import { isEquivalentCfaCurrency, problemeSecretWebhookKpay } from "@/lib/kpay";
 import { labelForCvModel } from "@/lib/cvModels";
 import { captureCriticalPaymentError } from "@/lib/sentryAlert";
 
@@ -361,19 +361,13 @@ export async function POST(req) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
+  // Secret absent, d'exemple ou trop court : la notification est refusée AVANT toute vérification de signature (503, KPay la renverra).
   const secret = process.env.KPAY_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error("[Webhook KPay] KPAY_WEBHOOK_SECRET manquant côté serveur.");
-    return NextResponse.json({ error: "Webhook non configuré." }, { status: 503 });
-  }
-
-  if (isPlaceholderKpaySecret(secret)) {
-    console.error(
-      "[Webhook KPay] ALERTE : KPAY_WEBHOOK_SECRET ressemble à une valeur de substitution, pas à un vrai " +
-        "secret du tableau de bord KPay. Toutes les notifications KPay réelles seront rejetées (signature " +
-        "invalide) tant que la vraie valeur n'aura pas été renseignée."
-    );
-    captureCriticalPaymentError("[Webhook KPay] KPAY_WEBHOOK_SECRET ressemble à un placeholder");
+  const probleme = problemeSecretWebhookKpay(secret);
+  if (probleme) {
+    console.error(`[Webhook KPay] Notification refusée : ${probleme}`);
+    captureCriticalPaymentError(`[Webhook KPay] ${probleme}`);
+    return NextResponse.json({ error: `Webhook KPay désactivé : ${probleme}` }, { status: 503 });
   }
 
   const rawBody = await req.text();
