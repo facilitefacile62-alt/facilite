@@ -58,15 +58,16 @@ async function fetchOffer(id) {
   const strId = String(id).trim();
   let panneBase = false;
 
-  // 1. Offres statiques de secours (exemples) : développement et test SEULEMENT. En production trouverOffreSecours renvoie null (la fiche répond 404 pour
-  //    « 1 » à « 7 », « 100 »…), et aucune ne porte jamais « recruteur vérifié ».
+  // 1. Copies de secours codées en dur (voir src/lib/offresSecours.js), jamais « recruteur vérifié ». Servies telles quelles SEULEMENT si leur identifiant
+  //    n'est pas un UUID, donc sans ligne en base (« 6 », « 101 », « 102 », et les exemples en développement et test).
   const secours = trouverOffreSecours(strId);
-  if (secours) {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(strId);
+  if (secours && !isUuid) {
     return nettoyerOffreAffichee({ ...retirerChampsInternes(secours), recruiterVerified: false });
   }
 
-  // 2. Si c'est un format UUID, interrogation de Supabase
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(strId);
+  // 2. UUID : la base décide TOUJOURS si la fiche existe et qui peut la voir, même quand une copie de secours en fournit le contenu. Sans cela, une offre
+  //    masquée restait lisible à son adresse directe.
   if (isUuid) {
     try {
       let supabase;
@@ -94,6 +95,10 @@ async function fetchOffer(id) {
         if (!offreValidee(data)) {
           const visiteur = await lireVisiteur(supabase);
           if (!peutVoirOffreNonValidee({ recruteurId, visiteur })) return null;
+        }
+        // Offre qui a une copie de secours : le contenu affiché reste celui de la copie, l'état (statut, active ou clôturée) vient de la base.
+        if (secours) {
+          return nettoyerOffreAffichee({ ...retirerChampsInternes(secours), status: data.status, is_active: data.is_active, recruiterVerified: false });
         }
         let recruiterVerified = false;
         if (recruteurId) {

@@ -3,9 +3,14 @@
 // Deux familles, traitées différemment :
 //  - les offres d'EXEMPLE (ids « 1 » à « 5 », « 7 » et « 100 » : Orange, Facilité développeur, Senelec, Wave, Bred, CPI, C2K) : jamais servies en production
 //    (la fiche répond 404), conservées pour le développement et les tests ;
-//  - toutes les autres (UUID et ids « 6 », « 101 », « 102 ») : offres qui semblent réelles ou récentes. Elles restent VISIBLES en production avec leur état réel
-//    (clôturée quand la date limite est passée), mais JAMAIS avec le badge « recruteur vérifié » : aucune vérification n'a existé pour elles.
-// Dans le doute, une offre n'est pas classée « exemple ». Aucune offre n'est supprimée ni masquée par ce fichier, hors les exemples ci-dessus en production.
+//  - toutes les autres (UUID et ids « 6 », « 101 », « 102 ») : offres qui semblent réelles ou récentes, JAMAIS avec le badge « recruteur vérifié » : aucune
+//    vérification n'a existé pour elles.
+//      · UUID : l'offre existe aussi en base. La BASE décide si la fiche est visible et si elle est clôturée ; la copie ne fournit que le contenu. Une offre
+//        retirée par la modération (ou absente de la base) répond donc 404. Attention : une modification du texte ou de l'image faite en base ne se voit
+//        pas sur la fiche tant que la copie existe.
+//      · « 6 », « 101 », « 102 » : aucune ligne en base ; elles restent servies telles quelles (clôturées quand la date limite est passée) et ne peuvent
+//        être retirées qu'ici.
+// Dans le doute, une offre n'est pas classée « exemple ». Aucune offre n'est supprimée par ce fichier, hors les exemples ci-dessus en production.
 
 /** Identifiants des offres d'exemple (404 en production). */
 export const IDS_EXEMPLES = Object.freeze(["1", "2", "3", "4", "5", "7", "100"]);
