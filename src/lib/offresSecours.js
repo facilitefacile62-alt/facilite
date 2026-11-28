@@ -365,41 +365,6 @@ Envoyez votre CV à : rh@ziac.sn
     is_active: true,
     created_at: new Date().toISOString(),
   },
-  "8119367c-e0e0-4279-ba9f-ec1a6063bae0": {
-    id: "8119367c-e0e0-4279-ba9f-ec1a6063bae0",
-    title: "Cadre infirmier(ère) référent(e) senior en prévention et contrôle des infections",
-    company: "Établissement de Santé (Secteur Hospitalier)",
-    location: "Dakar, Sénégal",
-    contract_type: "CDI / Plein temps",
-    salary_range: "Selon profil & grille cadre hospitalier",
-    description: `Un établissement de santé recrute un(e) Cadre infirmier(ère) référent(e) senior chargé(e) de piloter son programme de prévention et de contrôle des infections (PCI).
-
-🎯 PRINCIPALES RESPONSABILITÉS :
-• Prévenir et surveiller les infections associées aux soins (IAS).
-• Superviser les audits, les procédures et les plans d’amélioration.
-• Coordonner la réponse aux épidémies et aux risques infectieux.
-• Collaborer avec le laboratoire de microbiologie.
-• Suivre la résistance aux antimicrobiens et micro-organismes multirésistants.
-• Former et accompagner les équipes de soins.
-• Contribuer aux démarches de qualité, de gestion des risques et d’accréditation.
-
-📌 PROFIL RECHERCHÉ :
-• Diplôme d’infirmier(ère) et autorisation professionnelle valide.
-• Formation ou certification en prévention et contrôle des infections (PCI).
-• Au moins 7 à 10 ans d’expérience clinique.
-• Expérience confirmée en prévention des infections en milieu hospitalier.
-• Solides compétences en leadership, épidémiologie, microbiologie et analyse des données.
-
-🔗 COMMENT POSTULER :
-Déposez votre candidature directement en ligne :
-https://lnkd.in/gv6pvNJq`,
-    image_url: "/cadre_infirmier_infections.jpg",
-    min_education_level: "Diplôme d'infirmier(ère) + Certification PCI",
-    deadline: "2026-09-30",
-    external_link: "https://lnkd.in/gv6pvNJq",
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
   "df1477a7-88df-4817-a130-25b681c32413": {
     id: "df1477a7-88df-4817-a130-25b681c32413",
     title: "SEMI SARL recrute un(e) Chef(fe) de Chantier (BTP & Construction)",
@@ -565,31 +530,6 @@ https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0
     deadline: "2026-09-30",
     contact_email: "DakarHR@state.gov",
     external_link: "https://erajobs.state.gov/dos-era/vacancy/viewVacancyDetail.hms?_ref=vtb5rmp3pt0&returnToSearch=true&jnum=76919&orgId=17",
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  "82dd1b8a-8234-4862-8580-dfe4e47897b0": {
-    id: "82dd1b8a-8234-4862-8580-dfe4e47897b0",
-    title: "Programme de Stages Internationaux - UNICEF 2026",
-    company: "UNICEF",
-    location: "International (Multi-pays)",
-    contract_type: "Stage",
-    salary_range: "Indemnité selon grille UNICEF",
-    description: `L'UNICEF offre à des étudiants et jeunes diplômés du monde entier des opportunités de stage international.
-
-📌 PROFIL & ÉLIGIBILITÉ :
-• Niveau d'études : Bac+1 à Bac+8.
-• Lieux : Divers bureaux internationaux UNICEF.
-• Date limite : Candidatures ouvertes en continu tout au long de l'année.
-
-🔗 CANDIDATURE :
-Retrouvez toutes les informations et postulez sur :
-https://youthmedia.net/opportunites/programme-de-stages-unicef-2026`,
-    image_url: "/unicef_stage_2026.jpg",
-    min_education_level: "Bac+1 à Bac+8",
-    deadline: "2026-12-31",
-    contact_email: "info@youthmedia.net",
-    external_link: "https://youthmedia.net/opportunites/programme-de-stages-unicef-2026",
     is_active: true,
     created_at: new Date().toISOString(),
   },
@@ -919,44 +859,6 @@ Rejoignez une production audiovisuelle d'envergure avec EvenProd !`,
     is_active: true,
     created_at: new Date().toISOString(),
   },
-  "b69b4b86-859f-4cff-a508-b2c21c74e765": {
-    id: "b69b4b86-859f-4cff-a508-b2c21c74e765",
-    title: "Électrotechnicien(ne) / Ingénieur(e) en Automatisme & Génie Électrique",
-    company: "Entreprise Industrielle & Automatisme",
-    location: "Sénégal (Dakar & Régions)",
-    contract_type: "CDI / Plein temps",
-    salary_range: "Selon profil & expérience",
-    description: `🚨 RECRUTEMENT URGENT
-
-Une entreprise recherche activement un(e) Électrotechnicien(ne) en automatisme ou un(e) Ingénieur(e) en génie électrique / automatisme.
-
-🎯 MISSIONS & RESPONSABILITÉS :
-• Conception, programmation et maintenance des systèmes automatisés (API, HMI, automates industriels).
-• Lecture, analyse et réalisation de schémas électriques et opérations de câblage industriel.
-• Diagnostic, dépannage et optimisation des installations électrotechniques.
-• Participation aux mises en service et suivi des performances des équipements.
-• Collaboration avec les équipes techniques et de production.
-
-📌 PROFIL RECHERCHÉ :
-• Formation : Bac+2 (BTS, DUT) à Bac+5 (Master, Diplôme d'Ingénieur) en Électrotechnique, Génie Électrique ou Automatisme Industriel.
-• Maîtrise confirmée des systèmes automatisés (API, HMI, SCADA).
-• Excellente maîtrise des schémas électriques, normes de sécurité et câblage.
-• Rigueur, esprit d'analyse méthodique et esprit d'équipe.
-• Expérience professionnelle bienvenue (débutants motivés ou profils confirmés).
-
-📩 COMMENT POSTULER :
-Envoyez dès maintenant votre CV à l'adresse suivante :
-👉 walykebe@gmail.com
-
-⚡ *Besoin urgent — Merci de partager largement !*`,
-    image_url: "/recrutement_urgent_electrotechnicien_automatisme.jpg",
-    min_education_level: "Bac+2 à Bac+5 (Électrotechnique, Automatisme, Génie Électrique)",
-    deadline: "2026-09-30",
-    contact_email: "walykebe@gmail.com",
-    external_link: "mailto:walykebe@gmail.com?subject=Candidature%20%E2%80%93%20%C3%89lectrotechnicien(ne)%20%2F%20Ing%C3%A9nieur(e)%20Automatisme%20G%C3%A9nie%20%C3%89lectrique",
-    is_active: true,
-    created_at: new Date().toISOString(),
-  }
 };
 
 /** Cette offre de secours est-elle un exemple (à ne jamais servir en production) ? */
