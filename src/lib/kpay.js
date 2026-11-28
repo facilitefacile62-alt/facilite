@@ -48,6 +48,8 @@ export function normalizeCfaCurrency(currency) {
  */
 const PLACEHOLDER_SECRET_VALUES = ["ton_webhook_secret_ici", "your_webhook_secret_here", "changeme", "todo"];
 
+// Longueur minimale du secret du webhook KPay. SEUL endroit à modifier si KPay n'accepte pas un secret aussi long : le refus de la route, son message
+// et les tests suivent cette valeur.
 export const KPAY_WEBHOOK_SECRET_LONGUEUR_MIN = 32;
 
 /**
