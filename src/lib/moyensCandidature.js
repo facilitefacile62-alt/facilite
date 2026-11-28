@@ -52,3 +52,23 @@ export function modeCandidatureHorsBase(annuaire, job) {
   if (propre) moyens.unshift({ type: "email", url: `mailto:${propre}`, libelle: `Écrire à ${propre}` });
   return { etat: "direct", moyens };
 }
+
+/**
+ * Message en TEXTE renvoyé par le serveur quand Facilité ne peut rien transmettre : l'ancienne application mobile l'affiche tel quel.
+ * Il dit que rien n'est parti et comment postuler (site, WhatsApp, numéro ou e-mail indiqués par l'employeur).
+ */
+export function messageSansAdresse(moyens = []) {
+  const enTexte = moyens.map((m) => {
+    if (m.type === "telephone") return `téléphone : ${m.url.replace(/^tel:/, "")}`;
+    if (m.type === "email") return `e-mail : ${m.url.replace(/^mailto:/, "")}`;
+    if (m.type === "whatsapp") {
+      const numero = m.url.match(/(?:wa\.me\/|phone=)\+?(\d{8,15})/i);
+      return `WhatsApp : ${numero ? `+${numero[1]}` : m.url}`;
+    }
+    return `site : ${m.url}`;
+  });
+  const debut = "Facilité ne peut pas transmettre cette candidature : l'offre n'a pas d'adresse e-mail. Rien n'a été envoyé.";
+  return enTexte.length
+    ? `${debut} Postulez directement — ${enTexte.join(" ; ")}. Ne payez jamais pour postuler.`
+    : `${debut} Regardez l'affiche et la description de l'offre.`;
+}

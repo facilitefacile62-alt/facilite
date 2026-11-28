@@ -9,6 +9,7 @@ import { extractAndEmbedResume } from "@/lib/resumeEmbedding";
 import { competencesReelles } from "@/lib/valeursExemple";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { destinataireDepuisOffre, destinataireSpontane } from "@/lib/destinataireCandidature";
+import { messageSansAdresse, modeCandidatureHorsBase, moyensDirects } from "@/lib/moyensCandidature";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 
 export const runtime = "nodejs";
@@ -134,17 +135,27 @@ export async function POST(req) {
       },
     });
 
-    // Destinataire déterminé par le serveur. Sans adresse valide : la candidature est enregistrée et aucun e-mail ne part.
+    // Destinataire déterminé par le serveur, AVANT toute écriture. Sans adresse e-mail d'employeur valide, la route répond par une erreur
+    // qui indique en texte comment postuler directement (l'ancienne application mobile affiche ce message) : rien n'est enregistré.
     let destinataire = null;
+    let moyens = [];
     if (UUID_RE.test(String(jobId))) {
-      const { data: offreDestinataire } = await supabase
+      const { data: offre, error: erreurOffre } = await supabase
         .from("job_offers")
-        .select("application_email, contact_email")
+        .select("title, company, application_email, contact_email, application_url, external_link, contact_phone, contact_whatsapp")
         .eq("id", String(jobId))
         .maybeSingle();
-      destinataire = destinataireDepuisOffre(offreDestinataire);
-    } else if (!explicitRecruiterId) {
-      destinataire = destinataireSpontane(SPONTANEOUS_COMPANIES, jobId, company);
+      if (erreurOffre || !offre) {
+        return NextResponse.json({ error: "Offre introuvable." }, { status: 404 });
+      }
+      destinataire = destinataireDepuisOffre(offre);
+      if (!destinataire) moyens = moyensDirects(offre);
+    } else {
+      if (!explicitRecruiterId) destinataire = destinataireSpontane(SPONTANEOUS_COMPANIES, jobId, company);
+      if (!destinataire) moyens = modeCandidatureHorsBase(SPONTANEOUS_COMPANIES, { id: jobId, company, recruiterId: explicitRecruiterId }).moyens;
+    }
+    if (!destinataire) {
+      return NextResponse.json({ success: false, code: "aucune_adresse", error: messageSansAdresse(moyens) }, { status: 422 });
     }
 
     // Règle métier : email strictement obligatoire pour candidater — voir
@@ -431,8 +442,7 @@ export async function POST(req) {
     const isResendOnboarding = recruiterSender.includes("onboarding@resend.dev") || candidateSender.includes("onboarding@resend.dev");
 
     const testRecipient = isResendOnboarding ? (process.env.RESEND_TEST_RECIPIENT || process.env.RESEND_VERIFIED_EMAIL || null) : null;
-    // Sans destinataire issu de l'offre, aucun envoi (le destinataire de test ne remplace que une vraie adresse).
-    const finalRecruiterEmail = destinataire ? testRecipient || destinataire : null;
+    const finalRecruiterEmail = testRecipient || destinataire;
     const finalCandidateEmail = testRecipient || email;
 
     // Auto-création d'une conversation et d'un message 'OFFRE' dans Supabase,
@@ -482,7 +492,7 @@ export async function POST(req) {
           }
         }
 
-        let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${destinataire || "boîte de réception de l'offre sur Facilité"}\n📊 Score CV : ${cvMatchScore || 0}%`;
+        let messageContent = `💼 Candidature envoyée pour le poste : ${customSubject || jobTitle} (${company})\n📧 Destinataire : ${destinataire}\n📊 Score CV : ${cvMatchScore || 0}%`;
         if (coverLetter && coverLetter.trim()) {
           messageContent += `\n\n💬 Message du candidat :\n${coverLetter.trim()}`;
         }
@@ -571,10 +581,7 @@ export async function POST(req) {
       expediteur: recruiterSender,
     });
 
-    if (!finalRecruiterEmail) {
-      // Aucune adresse valide : rien ne part, ni vers un employeur ni en confirmation « transmise » au candidat.
-      emailDelivered = false;
-    } else if (allAttachments.length > 0) {
+    if (allAttachments.length > 0) {
       const { error } = await resend.emails.send({
         // E-mail présenté comme un message écrit par le candidat (objet, nom, corps, signature sans mention de la plateforme ; « Répondre » écrit au candidat).
         ...emailRecruteur,
@@ -588,7 +595,7 @@ export async function POST(req) {
       }
     }
 
-    const { error } = !finalRecruiterEmail ? { error: null } : await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: candidateSender,
       to: finalCandidateEmail,
       subject: `Confirmation de votre candidature : ${customSubject || jobTitle} chez ${company}`,
@@ -618,9 +625,7 @@ export async function POST(req) {
     // dans ce cas, un bug que ce garde corrige.
     if (publieurRecoitMessages) {
       try {
-        const emailContentText = finalRecruiterEmail
-          ? `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`
-          : `Candidature enregistrée pour le poste de ${jobTitle} chez ${company}. Elle est dans la boîte de réception de l'offre sur Facilité ; aucun e-mail n'a été envoyé.`;
+        const emailContentText = `📧 [E-mail de confirmation] Candidature transmise avec succès pour le poste de ${jobTitle} chez ${company}.\n\nLe recruteur (${finalRecruiterEmail}) étudiera votre profil avec attention.`;
         const { error: confirmMsgError } = await supabase.from("messages").insert({
           sender_id: offerRecruiterId,
           receiver_id: user.id,
@@ -638,15 +643,7 @@ export async function POST(req) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      candidature,
-      emailDelivered,
-      envoi: finalRecruiterEmail ? "email" : "aucune_adresse",
-      message: finalRecruiterEmail
-        ? undefined
-        : "Candidature enregistrée dans la boîte de réception de l'offre sur Facilité. Aucun e-mail n'a été envoyé : cette offre n'a pas d'adresse de candidature valide.",
-    });
+    return NextResponse.json({ success: true, candidature, emailDelivered });
   } catch (error) {
     console.error("[Quick Apply API Error]", error);
     return NextResponse.json(

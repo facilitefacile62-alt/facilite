@@ -31,8 +31,6 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(false);
-  // Message du serveur quand aucun e-mail n'est parti (offre sans adresse valide).
-  const [messageSansEnvoi, setMessageSansEnvoi] = useState("");
   // « interne » : Facilité peut envoyer (adresse d'employeur valide) ; « direct » : il ne le peut pas ; sinon vérification en cours ou en échec.
   const [modeCandidature, setModeCandidature] = useState({ etat: "chargement", moyens: [] });
 
@@ -103,7 +101,7 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         setCurrentUser(session?.user || null);
         setAuthChecked(true);
 
-        // Pas d'envoi possible : ni connexion exigée, ni intention enregistrée (rien ne partirait plus tard non plus).
+        // Pas d'envoi possible : on montre comment postuler directement, sans exiger de connexion.
         if (mode.etat !== "interne") return;
 
         if (session?.user) {
@@ -209,7 +207,6 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
     setCoverLetter("");
     setErrorMsg("");
     setSuccess(false);
-    setMessageSansEnvoi("");
     setModeCandidature({ etat: "chargement", moyens: [] });
     setMatchWarning(null);
   }, [isOpen, job, selectedLang]);
@@ -370,11 +367,9 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         throw err;
       }
 
-      const sansEnvoi = result.envoi === "aucune_adresse";
-      setMessageSansEnvoi(sansEnvoi ? result.message || "" : "");
       setSuccess(true);
       if (triggerToast) {
-        triggerToast(sansEnvoi ? "Candidature enregistrée sur Facilité." : "Candidature envoyée avec succès !", "fa-paper-plane");
+        triggerToast("Candidature envoyée avec succès !", "fa-paper-plane");
       }
     } catch (err) {
       console.error("Erreur postuler:", err);
@@ -454,19 +449,13 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
               <i className="fa-solid fa-circle-check text-4xl sm:text-5xl"></i>
             </div>
             <div className="space-y-2 px-1">
-              <h4 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">{messageSansEnvoi ? "Candidature Enregistrée" : "Candidature Envoyée !"}</h4>
-              {messageSansEnvoi ? (
-                <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">{messageSansEnvoi}</p>
-              ) : (
-              <>
+              <h4 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Candidature Envoyée !</h4>
               <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">
                 Votre candidature pour <span className="text-gray-900 dark:text-white font-extrabold">{subject || (selectedLang === "FR" ? job.titleFR : job.titleEN)}</span> chez <span className="text-gray-900 dark:text-white font-extrabold">{job.company}</span> a bien été transmise avec toutes vos pièces jointes.
               </p>
               <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium pt-2">
                 Vous recevrez un e-mail de confirmation à l&apos;adresse <strong className="text-gray-700 dark:text-gray-200">{email}</strong>.
               </p>
-              </>
-              )}
             </div>
             <div className="pt-2">
               <button

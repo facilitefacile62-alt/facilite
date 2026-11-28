@@ -30,16 +30,34 @@ test("candidature spontanée : l'adresse vient de l'annuaire du serveur, jamais 
   expect(destinataireSpontane(annuaire, "inconnue", "Entreprise Inconnue")).toBeNull();
 });
 
-test("la route ignore l'adresse du navigateur, n'a plus de repli et n'envoie rien sans adresse", () => {
+test("la route ignore l'adresse du navigateur, n'a plus de repli, et refuse sans rien enregistrer quand l'offre n'a pas d'adresse", () => {
   const route = lire("src/app/api/postuler/route.js");
   expect(route).not.toMatch(/formData\.get\(["']recruiterEmail["']\)/);
   expect(route).not.toContain("facilite.sn");
-  expect(route).toContain("destinataireDepuisOffre(offreDestinataire)");
-  expect(route).toContain("const finalRecruiterEmail = destinataire ? testRecipient || destinataire : null;");
-  expect(route).toContain("if (!finalRecruiterEmail) {");
-  expect(route).toContain('envoi: finalRecruiterEmail ? "email" : "aucune_adresse"');
+  expect(route).toContain("destinataire = destinataireDepuisOffre(offre);");
+  expect(route).toContain("const finalRecruiterEmail = testRecipient || destinataire;");
+  // Le refus (422, message en texte) précède TOUTE écriture : intention, fichier, CV, candidature.
+  const refus = route.indexOf('code: "aucune_adresse", error: messageSansAdresse(moyens) }, { status: 422 }');
+  expect(refus).toBeGreaterThan(-1);
+  for (const ecriture of ['.from("candidature_intentions")', ".upload(", '.from("resumes")', '.from("candidatures")', "resend.emails.send"]) {
+    const premiere = route.indexOf(ecriture);
+    if (premiere !== -1) expect(refus, ecriture).toBeLessThan(premiere);
+  }
   // Une seule déclaration d'UUID_RE : une seconde, plus bas, cassait la lecture en amont.
   expect(route.match(/const UUID_RE\b/g)).toHaveLength(1);
+});
+
+test("le message du serveur dit que rien n'est parti et donne le moyen de postuler en texte", async () => {
+  const { messageSansAdresse, moyensDirects } = await import("../../src/lib/moyensCandidature.js");
+  const message = messageSansAdresse(
+    moyensDirects({ application_url: "https://recrutement.exemple.sn/postuler", contact_whatsapp: "77 000 00 00", contact_phone: "33 800 00 00" })
+  );
+  expect(message).toContain("Rien n'a été envoyé.");
+  expect(message).toContain("site : https://recrutement.exemple.sn/postuler");
+  expect(message).toContain("WhatsApp : +221770000000");
+  expect(message).toContain("téléphone : +221338000000");
+  expect(message).not.toContain("wa.me");
+  expect(messageSansAdresse([])).toContain("Regardez l'affiche et la description de l'offre.");
 });
 
 test("le formulaire ne fabrique plus d'adresse et n'en envoie plus", () => {
