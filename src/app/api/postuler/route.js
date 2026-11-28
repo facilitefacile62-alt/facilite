@@ -160,32 +160,14 @@ export async function POST(req) {
 
     // Règle métier : email strictement obligatoire pour candidater — voir
     // supabase/migrations/20260912030000_candidature_email_obligatoire.sql.
-    // Défense en profondeur : ApplyModal.jsx bloque déjà ce cas côté client
-    // (voir son propre commentaire), mais un appel direct à cette route,
-    // sans passer par le formulaire, doit être refusé ici aussi — jamais une
-    // vérification uniquement côté client, contournable via un appel API
-    // direct. L'intention est mémorisée ici aussi, pour que même une
-    // candidature tentée hors du formulaire soit automatiquement finalisée
-    // une fois l'email confirmé (finaliser_candidatures_en_attente).
+    // Défense en profondeur : ApplyModal.jsx bloque déjà ce cas côté client,
+    // mais un appel direct à cette route doit être refusé ici aussi. Aucune
+    // « intention » n'est mémorisée : rien n'est jamais envoyé plus tard.
     if (!user.email_confirmed_at) {
-      const jobIdStr = String(jobId);
-      const isUuidOffer = UUID_RE.test(jobIdStr);
-      const isLegacyOffer = !isUuidOffer && !Number.isNaN(Number(jobIdStr));
-      const { error: intentionError } = await supabase.from("candidature_intentions").insert({
-        user_id: user.id,
-        job_offer_id: isUuidOffer ? jobIdStr : null,
-        job_id: isLegacyOffer ? Number(jobIdStr) : null,
-        job_title: String(jobTitle),
-        company: String(company),
-        recruiter_email: destinataire,
-      });
-      if (intentionError && intentionError.code !== "23505") {
-        console.warn("Intention de candidature non enregistrée (postuler):", intentionError.message);
-      }
       return NextResponse.json(
         {
           error:
-            "Un email confirmé est obligatoire pour postuler. Ajoutez-le dans votre profil (Sécurité du compte) : votre candidature sera envoyée automatiquement dès qu'il sera confirmé, sans rien refaire.",
+            "Un e-mail confirmé est obligatoire pour postuler. Confirmez votre adresse dans votre profil (Sécurité du compte), puis revenez sur l'offre pour envoyer votre candidature.",
           code: "email_requis",
         },
         { status: 403 }

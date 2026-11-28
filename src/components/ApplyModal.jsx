@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { computeApplicationMatch } from "@/lib/matchScore";
 import { subscribeFeatureFlagsTree, isFeatureAllowed, DEFAULT_FEATURE_TREE } from "@/lib/featureFlags";
-import { enregistrerIntentionCandidature } from "@/lib/candidatureIntentions";
 import { modeCandidatureOffre, modeCandidatureHorsBase } from "@/lib/moyensCandidature";
 import { SPONTANEOUS_COMPANIES } from "@/lib/spontaneousData";
 import CandidatureDirecte from "@/components/CandidatureDirecte";
@@ -105,32 +104,13 @@ export default function ApplyModal({ isOpen, onClose, job, selectedLang, t, trig
         if (mode.etat !== "interne") return;
 
         if (session?.user) {
-          // Règle métier : email strictement obligatoire pour candidater.
-          // Point d'interception unique — ApplyModal est le seul composant
-          // réellement rendu derrière tous les boutons "Postuler" (offre
-          // détaillée, accueil, liste d'offres, recruteur, candidature
-          // spontanée) ; voir supabase/migrations/20260912030000_candidature_email_obligatoire.sql.
-          // L'intention est mémorisée côté serveur (jamais sessionStorage :
-          // le lien de confirmation d'email s'ouvre souvent dans un autre
-          // onglet/appareil), puis on bloque l'ouverture du formulaire et on
-          // redirige automatiquement vers l'écran de gestion de l'email.
+          // Règle métier : email strictement obligatoire pour candidater (point d'interception unique : ce composant est derrière tous les
+          // boutons « Postuler » ; la route le vérifie aussi). Aucune candidature n'est mémorisée pour être envoyée plus tard : on
+          // demande de confirmer l'adresse, puis de revenir sur l'offre.
           if (!session.user.email_confirmed_at) {
-            try {
-              const isUuidOffer = job?.id != null && !job.isSpontaneous && UUID_RE.test(String(job.id));
-              const isLegacyOffer = job?.id != null && !job.isSpontaneous && !isUuidOffer && !Number.isNaN(Number(job.id));
-              await enregistrerIntentionCandidature({
-                userId: session.user.id,
-                jobOfferId: isUuidOffer ? job.id : null,
-                jobId: isLegacyOffer ? Number(job.id) : null,
-                jobTitle: (selectedLang === "FR" ? job?.titleFR : job?.titleEN) || job?.title || "Candidature",
-                company: job?.company || "",
-              });
-            } catch (err) {
-              console.warn("Intention de candidature non enregistrée :", err.message);
-            }
             if (triggerToast) {
               triggerToast(
-                "Un email confirmé est obligatoire pour postuler. Ajoutez-le dans votre profil : votre candidature sera envoyée automatiquement dès qu'il sera confirmé.",
+                "Un e-mail confirmé est obligatoire pour postuler. Confirmez votre adresse dans votre profil, puis revenez sur l'offre.",
                 "fa-envelope-circle-check"
               );
             }

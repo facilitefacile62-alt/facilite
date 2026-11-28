@@ -42,9 +42,21 @@ test("le formulaire et l'extracteur ne proposent pas l'envoi quand Facilité ne 
   const modale = lire("src/components/ApplyModal.jsx");
   expect(modale).toContain('modeCandidature.etat === "direct" ? (');
   expect(modale).toContain('if (modeCandidature.etat !== "interne") return;');
-  // Aucune intention de candidature « envoyée plus tard » pour une offre sans adresse.
-  expect(modale.indexOf('if (mode.etat !== "interne") return;')).toBeLessThan(modale.indexOf("await enregistrerIntentionCandidature"));
+  // Pas d'envoi possible : ni connexion exigée ni suite.
+  expect(modale).toContain('if (mode.etat !== "interne") return;');
   const extracteur = lire("src/app/candidat/extracteur/page.js");
   expect(extracteur).toContain("if (posterOffer && !destinataireDepuisOffre(posterOffer)) return;");
   expect(extracteur).not.toContain("recruteur@entreprise.com");
+});
+
+test("e-mail non confirmé : le texte demande de confirmer l'adresse, sans promettre d'envoi, et aucune intention n'est mémorisée", () => {
+  const fichiers = ["src/components/ApplyModal.jsx", "src/app/api/postuler/route.js", "src/components/SecurityTabContent.jsx", "src/context/AuthContext.jsx"];
+  for (const f of fichiers) {
+    const t = lire(f);
+    expect(t, f).not.toContain("sera envoyée automatiquement");
+    expect(t, f).not.toMatch(/enregistrerIntentionCandidature|finaliserCandidaturesEnAttente|candidature_intentions/);
+  }
+  expect(lire("src/app/api/postuler/route.js")).toContain("puis revenez sur l'offre pour envoyer votre candidature");
+  expect(lire("src/components/SecurityTabContent.jsx")).toContain("elle n'est pas envoyée automatiquement");
+  expect(fs.existsSync(path.join(racine, "src/lib/candidatureIntentions.js"))).toBe(false);
 });

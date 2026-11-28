@@ -576,7 +576,7 @@ export default function SecurityTabContent({ userSession, intentCandidature = fa
               : "Ajoutez votre adresse email dans « Informations du compte »."}
           </p>
           <p className="text-xs text-blue-700 font-semibold leading-relaxed">
-            Dès qu'elle sera confirmée, votre candidature sera envoyée automatiquement — vous n'aurez rien à refaire.
+            Une fois votre adresse confirmée, revenez sur l'offre pour envoyer votre candidature : elle n'est pas envoyée automatiquement.
           </p>
         </div>
       )}

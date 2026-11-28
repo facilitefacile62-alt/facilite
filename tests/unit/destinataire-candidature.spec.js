@@ -65,5 +65,4 @@ test("le formulaire ne fabrique plus d'adresse et n'en envoie plus", () => {
   expect(modale).not.toContain("destinationEmail");
   expect(modale).not.toContain("@gmail.com");
   expect(modale).not.toMatch(/formData\.append\(["']recruiterEmail["']/);
-  expect(lire("src/lib/candidatureIntentions.js")).not.toContain("recruiter_email");
 });
