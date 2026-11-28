@@ -8,23 +8,25 @@ export const runtime = "nodejs";
 // rarement au-delà d'une poignée de relances.
 export const maxDuration = 60;
 
-const PENDING_CANDIDATURE_REMINDER_DAYS = 3;
 const ABANDONED_CV_DRAFT_REMINDER_DAYS = 2;
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')) ? process.env.NEXT_PUBLIC_APP_URL : "https://ffacilite.com";
 
 /**
  * Relances automatiques quotidiennes (Vercel Cron, voir vercel.json) :
- * - candidatures restées "pending" sans action du recruteur depuis
- *   PENDING_CANDIDATURE_REMINDER_DAYS jours ;
  * - brouillons de CV créés mais jamais finalisés (aucune commande "paid"
  *   associée) depuis ABANDONED_CV_DRAFT_REMINDER_DAYS jours ;
  * - notifications « Joyeux anniversaire » (souhaiter_anniversaires).
  *
+ * La relance « Votre candidature est toujours en cours d'examen » a été
+ * retirée le 28/11/2026 : elle affirmait un examen par un recruteur sans
+ * rien en savoir, y compris pour des candidatures jamais arrivées chez
+ * l'employeur (adresse fabriquée par l'ancien formulaire).
+ *
  * reminder_sent_at rend chaque relance strictement unique : une fois
  * envoyée, la ligne ne sera plus jamais reciblée par une exécution future
  * (voir migration 20260801230000_reminder_tracking_columns.sql) — sans ça,
- * la même candidature/le même brouillon recevrait un rappel chaque jour.
+ * le même brouillon recevrait un rappel chaque jour.
  */
 export async function GET(req) {
   const cronSecret = process.env.CRON_SECRET;
@@ -46,7 +48,6 @@ export async function GET(req) {
     return NextResponse.json({ error: configError.message }, { status: 502 });
   }
 
-  const candidatureResult = await remindStalePendingCandidatures(admin);
   const cvDraftResult = await remindAbandonedCvDrafts(admin);
 
   // Anniversaires du jour : notification « Joyeux anniversaire » (profiles.date_naissance), une seule par personne et par an.
@@ -54,62 +55,10 @@ export async function GET(req) {
   if (anniversaireError) console.error("[Cron Reminders] Anniversaires :", anniversaireError.message);
 
   return NextResponse.json({
-    candidatureReminders: candidatureResult.sent,
-    candidatureErrors: candidatureResult.errors,
     cvDraftReminders: cvDraftResult.sent,
     cvDraftErrors: cvDraftResult.errors,
     anniversaires: anniversaireError ? 0 : anniversaires ?? 0,
   });
-}
-
-async function remindStalePendingCandidatures(admin) {
-  const cutoff = new Date(Date.now() - PENDING_CANDIDATURE_REMINDER_DAYS * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data: staleCandidatures, error } = await admin
-    .from("candidatures")
-    .select("id, full_name, email, job_title, company")
-    .eq("status", "pending")
-    .is("reminder_sent_at", null)
-    .lt("created_at", cutoff);
-
-  if (error) {
-    console.error("[Cron Reminders] Échec lecture candidatures en attente :", error.message);
-    return { sent: 0, errors: 1 };
-  }
-
-  let sent = 0;
-  let errors = 0;
-
-  for (const candidature of staleCandidatures || []) {
-    const { delivered } = await sendReminderEmail({
-      to: candidature.email,
-      fullName: candidature.full_name,
-      subject: `[Facilite] Votre candidature chez ${candidature.company} est toujours en cours d'examen`,
-      message: `Votre candidature pour le poste « ${candidature.job_title} » chez ${candidature.company} est toujours en attente d'examen par le recruteur. Nous vous invitons à suivre son évolution depuis votre espace candidat.`,
-      ctaLabel: "Suivre ma candidature",
-      ctaUrl: `${APP_URL}/candidat/candidatures`,
-    });
-
-    if (!delivered) {
-      errors += 1;
-      continue;
-    }
-
-    const { error: updateError } = await admin
-      .from("candidatures")
-      .update({ reminder_sent_at: new Date().toISOString() })
-      .eq("id", candidature.id);
-
-    if (updateError) {
-      console.error("[Cron Reminders] Échec marquage reminder_sent_at (candidature) :", updateError.message);
-      errors += 1;
-      continue;
-    }
-
-    sent += 1;
-  }
-
-  return { sent, errors };
 }
 
 async function remindAbandonedCvDrafts(admin) {
