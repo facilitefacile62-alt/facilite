@@ -13,6 +13,7 @@ import OfferImageWatermark from "@/components/OfferImageWatermark";
 import OfferMediaGallery from "@/components/OfferMediaGallery";
 import { isOfferExpired } from "@/lib/offerExpiration";
 import { contactExterneNonVerifie, MESSAGE_CONTACT_EXTERNE } from "@/lib/contactExterne";
+import { surDomaineSansMessagerie } from "@/lib/destinataireCandidature";
 import { nettoyerPourAffichage } from "@/lib/nettoyerTexteOffre";
 import { libelleContrat } from "@/lib/contratOffre";
 import SignalerOffre from "@/components/SignalerOffre";
@@ -584,7 +585,7 @@ export default function OffreDetailClient({ initialOffer }) {
                       </span>
                     </div>
                   )}
-                  {offer.contact_email && (
+                  {offer.contact_email && !surDomaineSansMessagerie(offer.contact_email) && (
                     <div className="flex items-center gap-2">
                       <i className="fa-solid fa-envelope text-emerald-600 w-4 text-center"></i>
                       <span>

@@ -2,6 +2,20 @@
  * Helper unifié pour la détection automatique de numéro de téléphone / WhatsApp
  * et la génération des liens directs de contact pour toute offre d'emploi ou publication.
  */
+import { surDomaineSansMessagerie } from "./destinataireCandidature.js";
+
+// Une adresse sur un domaine qui ne reçoit pas de courrier est traitée comme absente : aucun bouton ne propose d'y écrire.
+function sansAdressesMuettes(offer) {
+  if (!offer) return offer;
+  const copie = { ...offer };
+  for (const champ of ["application_email", "contact_email", "recruiter_email", "recruiterEmail"]) {
+    if (surDomaineSansMessagerie(copie[champ])) copie[champ] = "";
+  }
+  for (const champ of ["external_link", "externalLink"]) {
+    if (typeof copie[champ] === "string" && copie[champ].startsWith("mailto:") && surDomaineSansMessagerie(copie[champ])) copie[champ] = "";
+  }
+  return copie;
+}
 
 /**
  * Nettoie une chaîne de numéro de téléphone pour obtenir le format international standard (chiffres uniquement).
@@ -134,7 +148,8 @@ export function buildWhatsAppLink(phoneNumber, offer = {}) {
  * - WhatsApp direct (wa.me - UNIQUEMENT si explicitement indiqué)
  * - Portail web externe (https://...)
  */
-export function extractOfferContactMethods(offer = {}) {
+export function extractOfferContactMethods(offreBrute = {}) {
+  const offer = sansAdressesMuettes(offreBrute);
   // 1. Détection WhatsApp (Strictement si explicitement demandé)
   const phone = detectWhatsAppNumber(offer);
   const waUrl = phone ? buildWhatsAppLink(phone, offer) : null;
@@ -176,7 +191,8 @@ export function extractOfferContactMethods(offer = {}) {
  * 3. WhatsApp UNIQUEMENT si l'offre le demande explicitement
  * 4. Candidature interne Facilité standard
  */
-export function resolveOfferAction(offer = {}, options = {}) {
+export function resolveOfferAction(offreBrute = {}, options = {}) {
+  const offer = sansAdressesMuettes(offreBrute);
   const { customLabel } = options;
 
   const extLink = offer?.external_link || offer?.externalLink || offer?.apply_url || offer?.source_url || offer?.url;

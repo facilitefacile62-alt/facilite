@@ -5,12 +5,23 @@
 // Domaines qui ne reçoivent rien ou qui n'appartiennent à aucun employeur réel.
 const DOMAINES_REFUSES = ["facilite.sn", "facilite-demo.local", "example.com", "example.org", "exemple.com", "test.com"];
 
+// Nos propres domaines qui ne REÇOIVENT PAS encore de courrier (aucun enregistrement MX, vérifié le 28/11/2026) : une adresse sur l'un d'eux compte
+// comme « pas d'adresse ». Retirer le domaine de cette liste dès que sa réception d'e-mails est en place et vérifiée.
+export const DOMAINES_SANS_MESSAGERIE = ["ffacilite.com"];
+
+/** L'adresse (ou le lien « mailto: ») est-elle sur un de ces domaines, ou un de leurs sous-domaines ? */
+export function surDomaineSansMessagerie(valeur) {
+  const apres = typeof valeur === "string" ? valeur.split("@")[1] || "" : "";
+  const domaine = apres.split("?")[0].trim().replace(/[.;,>]+$/, "").toLowerCase();
+  return DOMAINES_SANS_MESSAGERIE.some((d) => domaine === d || domaine.endsWith(`.${d}`));
+}
+
 /** L'adresse nettoyée si elle est utilisable, sinon null. */
 export function adresseValide(valeur) {
   const brut = typeof valeur === "string" ? valeur.trim().replace(/^mailto:/i, "").replace(/[.;,]+$/, "") : "";
   if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(brut)) return null;
   const domaine = brut.split("@")[1].toLowerCase();
-  if (DOMAINES_REFUSES.includes(domaine) || domaine.endsWith(".local") || domaine.endsWith(".invalid")) return null;
+  if (DOMAINES_REFUSES.includes(domaine) || surDomaineSansMessagerie(brut) || domaine.endsWith(".local") || domaine.endsWith(".invalid")) return null;
   return brut;
 }
 

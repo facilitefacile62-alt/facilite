@@ -18,6 +18,34 @@ test("seule une adresse réelle de l'offre est retenue ; ni domaine par défaut 
   expect(destinataireDepuisOffre(null)).toBeNull();
 });
 
+test("une adresse @ffacilite.com compte comme « pas d'adresse » tant que le domaine ne reçoit pas de courrier", async () => {
+  const { adresseValide, destinataireDepuisOffre, destinataireSpontane, surDomaineSansMessagerie, DOMAINES_SANS_MESSAGERIE } = await import(
+    "../../src/lib/destinataireCandidature.js"
+  );
+  expect(DOMAINES_SANS_MESSAGERIE).toEqual(["ffacilite.com"]);
+  for (const muette of ["contact@ffacilite.com", "RH@FFacilite.com", "mailto:rh@ffacilite.com?subject=x", "rh@recrutement.ffacilite.com"]) {
+    expect(surDomaineSansMessagerie(muette), muette).toBe(true);
+    expect(adresseValide(muette.split("?")[0]), muette).toBeNull();
+  }
+  for (const autre of ["rh@pasffacilite.com", "rh@ffacilite.company.sn", "ffacilite.com", "", null]) expect(surDomaineSansMessagerie(autre), String(autre)).toBe(false);
+  expect(destinataireDepuisOffre({ application_email: "contact@ffacilite.com" })).toBeNull();
+  // Une autre adresse valide de la même offre reste utilisée.
+  expect(destinataireDepuisOffre({ application_email: "contact@ffacilite.com", contact_email: "rh@entreprise.sn" })).toBe("rh@entreprise.sn");
+  expect(destinataireSpontane([{ id: "x", company: "X", email: "x@ffacilite.com" }], "x", "X")).toBeNull();
+
+  // Le candidat voit comment postuler directement, et aucun bouton ne propose d'écrire à l'adresse muette.
+  const { modeCandidatureOffre } = await import("../../src/lib/moyensCandidature.js");
+  const { resolveOfferAction, extractOfferContactMethods } = await import("../../src/lib/offerContact.js");
+  const offre = { application_email: "contact@ffacilite.com", contact_email: "contact@ffacilite.com", external_link: "mailto:contact@ffacilite.com", contact_phone: "33 800 00 00" };
+  const mode = modeCandidatureOffre(offre);
+  expect(mode.etat).toBe("direct");
+  expect(mode.moyens.map((m) => m.type)).toEqual(["telephone"]);
+  expect(extractOfferContactMethods(offre).emailUrl).toBeNull();
+  expect(JSON.stringify(resolveOfferAction(offre))).not.toContain("ffacilite.com");
+  expect(lire("src/app/offres/[id]/OffreDetailClient.js")).toContain("{offer.contact_email && !surDomaineSansMessagerie(offer.contact_email) && (");
+  // La route teste l'adresse de l'offre avec la même règle (destinataireDepuisOffre) : refus 422 sans rien enregistrer (test suivant).
+});
+
 test("candidature spontanée : l'adresse vient de l'annuaire du serveur, jamais devinée", async () => {
   const { destinataireSpontane } = await import("../../src/lib/destinataireCandidature.js");
   const annuaire = [
